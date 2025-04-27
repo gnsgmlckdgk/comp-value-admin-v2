@@ -1,19 +1,23 @@
 import Home from '../pages/Home'
-import About from '../pages/About'
+import CompList from '../pages/CompList'
 import NotFound from '../pages/NotFound'
 
 const routes = {
+
     "Home": {
+        section: '기본',
         label: 'Home',
         path: '/',
         element: <Home />
     },
-    "About": {
-        label: '설명',
-        path: '/About',
-        element: <About />
+    "CompList": {
+        section: '기업분석',
+        label: '기업목록',
+        path: '/complist',
+        element: <CompList />
     },
     "NotFound": {
+        section: 'None',
         show: false,
         label: 'NotFound',
         path: '*',

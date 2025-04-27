@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Routes, Route } from 'react-router-dom'
 
 import Header from '@/component/Header'
-import Side from '@/component/Side'
+import SideBar from '@/component/SideBar'
 
 import routes from '@/config/routes'
 import '@/App.css'
@@ -21,7 +21,7 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* 사이드바 */}
-        <Side isSidebarOpen={isSidebarOpen} />
+        <SideBar isSidebarOpen={isSidebarOpen} />
 
         {/* 메인 컨텐츠 */}
         <main className='flex-1 bg-white p-6 overflow-auto'>

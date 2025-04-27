@@ -1,0 +1,21 @@
+// get
+// const response = await axios.get(sendUrl, {
+//     params: {
+//         companyName: companyName,
+//         code: code,
+//         date: date
+//     }
+// }); // GET Sample
+
+// post
+// const response = await axios.post('sendUrl', {
+//     companyName: companyName,
+//     code: code,
+//     date: date
+// }); // POST Sample (async/await, 응답 받을 수 있음)
+
+
+// 에러처리
+// axios.post('/api', data)
+//     .then(response => { })
+//     .catch(error => { }); // POST Promise 기반 Sample(.then을 통해서 응답받음, 전송 후 안기다리고 아래코드 바로 실행됨)

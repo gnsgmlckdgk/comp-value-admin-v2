@@ -23,7 +23,7 @@ export default function Header({ onMenuClick }) {
                 </svg>
 
             </button>
-            <Link to={routes.Home.path} el><h1 className="text-lg font-bold">{title}</h1></Link>
+            <Link to={routes.Home.path}><h1 className="text-lg font-bold">{title}</h1></Link>
 
         </header>
     )

@@ -2,7 +2,9 @@
 
 @font-face {
   font-family: 'BaseFont';
-  src: url('/fonts/CookieRun.ttf') format('opentype');
+  /* src: url('/fonts/Ansungtangmyun-ESG.otf') format('opentype'); */
+  /* src: url('/fonts/BinggraeMelona-Bold.otf') format('opentype'); */
+  src: url('/fonts/CookieRun Regular.ttf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

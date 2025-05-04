@@ -15,7 +15,7 @@ function Button({ children, onClick, type = 'button', variant = 'primary', class
     return (
         <button
             type={type}
-            onClick={onClick}
+            onClick={typeof onClick === 'function' ? onClick : undefined}
             className={`${baseStyle} ${variants[variant]} ${className}`}
         >
             {children}

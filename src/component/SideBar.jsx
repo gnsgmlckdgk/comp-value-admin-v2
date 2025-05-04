@@ -9,13 +9,19 @@ export default function SideBar({ isSidebarOpen }) {
 
                 <h2 className='text-gray-700 font-extrabold'>시작하기</h2>
                 {Object.entries(routes).map(([key, route]) => (
-                    route.show !== false && route.section === "기본" ?
+                    route.show !== false && route.section === "시작하기" ?
                         <Link className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
                 ))}
 
                 <h2 className='text-gray-700 font-extrabold'>기업분석</h2>
                 {Object.entries(routes).map(([key, route]) => (
                     route.show !== false && route.section === "기업분석" ?
+                        <Link className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
+                ))}
+
+                <h2 className='text-gray-700 font-extrabold'>게시판</h2>
+                {Object.entries(routes).map(([key, route]) => (
+                    route.show !== false && route.section === "게시판" ?
                         <Link className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
                 ))}
 

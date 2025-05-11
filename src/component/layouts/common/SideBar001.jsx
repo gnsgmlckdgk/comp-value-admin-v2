@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import routes from '../config/routes'
+import routes from '@/config/routes'
 
-export default function SideBar({ isSidebarOpen }) {
+export default function SideBar001({ isSidebarOpen }) {
     return (
         <aside className={`${isSidebarOpen ? 'block' : 'hidden'} md:block w-64 bg-gray-100 overflow-auto`}>
 

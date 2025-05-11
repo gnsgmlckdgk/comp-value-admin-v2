@@ -1,16 +1,28 @@
 import { useState, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react';
+import { useNavigate } from 'react-router-dom';
+
 import 'ag-grid-community/styles/ag-theme-alpine.css'; // 테마 CSS
 
-import { ModuleRegistry, ClientSideRowModelModule, ValidationModule, PaginationModule } from 'ag-grid-community';
-import { RowDragModule } from 'ag-grid-community';
-ModuleRegistry.registerModules([
+import {
+    ModuleRegistry,
+    RowSelectionModule,
     ClientSideRowModelModule,
-    RowDragModule,
     ValidationModule,
-    PaginationModule
+    PaginationModule,
+    TextFilterModule,
+    NumberFilterModule,
+    DateFilterModule,
+} from 'ag-grid-community';
+ModuleRegistry.registerModules([
+    RowSelectionModule,
+    ClientSideRowModelModule,
+    ValidationModule,
+    PaginationModule,
+    TextFilterModule,
+    NumberFilterModule,
+    DateFilterModule,
 ]);
-
 
 const ProgressComponent = () => {
     return (
@@ -36,10 +48,32 @@ const NoDataComponent = () => {
 }
 
 
-
-function Grid02({ columns, rowData = [], loading = false, showPageNation = false }) {
+/**
+ * AG Grid를 활용하여 데이터를 테이블 형태로 렌더링하는 컴포넌트입니다.
+ *
+ * @component
+ * @param {Object[]} columns - 테이블의 컬럼 정의 배열입니다.
+ * @param {Object[]} [rowData=[]] - 테이블에 표시할 데이터 배열입니다.
+ * @param {boolean} [loading=false] - 데이터 로딩 상태를 나타냅니다.
+ * @param {boolean} [showPageNation=false] - 페이지네이션 표시 여부를 설정합니다.
+ * @returns {JSX.Element} 렌더링된 AG Grid 컴포넌트입니다.
+ *
+ * @example
+ * const columns = [
+ *   { headerName: "이름", field: "name" },
+ *   { headerName: "나이", field: "age" },
+ * ];
+ * const data = [
+ *   { name: "홍길동", age: 30 },
+ *   { name: "김철수", age: 25 },
+ * ];
+ *
+ * <Grid02 columns={columns} rowData={data} loading={false} showPageNation={true} />
+ */
+function Grid02({ columns, rowData = [], loading = false, showPageNation = false, moveViewPage }) {
 
     const [gridApi, setGridApi] = useState(null);
+    const navigate = useNavigate();
 
     // 그리드 상호작용
     useEffect(() => {
@@ -54,33 +88,32 @@ function Grid02({ columns, rowData = [], loading = false, showPageNation = false
                 }
             }
         }
+
     }, [loading, rowData, gridApi]);
-
-
 
     const onGridReady = (params) => {
         setGridApi(params.api);
     };
 
     return (
-        <>
+        <div className="ag-theme-alpine md:h-156 h-96">
             {/* 그리드 */}
-            <div className="ag-theme-alpine md:h-156 h-96">
-                <AgGridReact
-                    onGridReady={onGridReady}
+            <AgGridReact
+                onGridReady={onGridReady}
 
-                    rowData={rowData}
-                    columnDefs={columns}
-                    pagination={showPageNation}
-                    enableCellTextSelection={true}
+                rowData={rowData}
+                columnDefs={columns}
+                pagination={showPageNation}
+                enableCellTextSelection={true}
 
-                    loadingOverlayComponent={ProgressComponent}
-                    noRowsOverlayComponent={NoDataComponent}
+                onCellClicked={(params) => moveViewPage(params)}
 
-                    rowHeight={48}
-                />
-            </div>
-        </>
+                loadingOverlayComponent={ProgressComponent}
+                noRowsOverlayComponent={NoDataComponent}
+
+                rowHeight={48}
+            />
+        </div>
     );
 }
 

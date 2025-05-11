@@ -3,14 +3,13 @@ import Grid01 from '@/component/grid/Grid01'
 
 import { send } from '@/util/ClientUtil';
 
-import Grid02 from '@/component/grid/Grid02';
-import Button from '@/component/common/button/Button';
-import SearchBar from '@/component/search/SearchBar';
+import Board from '@/component/feature/board/List001';
 
 function CompList() {
 
     const [data, setData] = useState('');
     const [loading, setLoading] = useState(false);
+    const [search, setSearch] = useState('');
 
     const columns = [
         { headerName: "기업코드", field: "corpCode", flex: 1, sortable: false, minWidth: 110 },
@@ -21,31 +20,23 @@ function CompList() {
 
     const fetchData = async () => {
         setLoading(true);
-        // const sendUrl = "/dart/disclosure/corpCode";
-        // const { data, error } = await send(sendUrl, {}, "GET");
-        // setData(data.list);
-        // setLoading(false);
 
-        // 테스트
-        setTimeout(() => {
-            setData(
-                Array.from({ length: 200 }, (_, idx) => {
-                    return { corpCode: `000_${idx}`, corpName: "BBB", modifyDate: "yyyy-MM-dd", stockCode: 123123 }
-                })
-            );
-            setLoading(false);
-        }, 3000)
+        const sendUrl = "/dart/disclosure/corpCode";
+        const { data, error } = await send(sendUrl, {}, "GET");
+
+        const searchList = data.list.filter((item) => {
+            const regex = new RegExp(search, 'i');  // i: 대소문자구분없이
+            return regex.test(item.corpName);
+        })
+        setData(searchList);
+
+        setLoading(false);
     }
 
     return (
         <>
             <h1 className='md:text-3xl text-xl mb-5'>기업목록</h1>
-            <div className="rounded-md shadow-sm font-semibold text-gray-600">
-                <div className='mb-3 text-right pr-2'>
-                    <SearchBar fetchData={fetchData} />
-                </div>
-                <Grid02 columns={columns} rowData={data} showPageNation={true} loading={loading} />
-            </div>
+            <Board fetchData={fetchData} columns={columns} rowData={data} loading={loading} searchState={{ search, setSearch }} />
         </>
     )
 

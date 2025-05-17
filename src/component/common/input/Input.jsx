@@ -1,5 +1,4 @@
-
-/**
+/****
  * 사용자 입력을 받는 텍스트 입력 컴포넌트입니다.
  *
  * @component
@@ -24,7 +23,7 @@
  *   onEnter={() => handleSubmit()}
  * />
  */
-function Input({ id, label = '', placeholder = '', className = '', value = '', onEnter, onChange }) {
+function Input({ id, label = '', placeholder = '', className = '', value = '', onEnter, onChange = {}, labelNewLine = false, disabled = false, wdfull = false }) {
 
     // const baseClassName = 'mr-3 w-48 md:w-128 h-10 border border-gray-300 rounded-md shadow-sm px-3';
     const baseClassName = 'h-10 border border-gray-300 rounded-md shadow-sm px-3';
@@ -38,12 +37,13 @@ function Input({ id, label = '', placeholder = '', className = '', value = '', o
 
     return (
         <>
-            <label htmlFor={id}>{label}</label>
+            <label htmlFor={id} className={`${labelNewLine ? 'block' : 'mr-2'} mb-1 text-sm text-gray-700`}>{label}</label>
             <input id={id} placeholder={placeholder}
-                className={`${baseClassName} ${className}`}
+                className={`${baseClassName} ${className} ${disabled ? 'cursor-not-allowed bg-gray-100' : ''} ${wdfull ? 'w-full' : ''}`}
                 value={value}
                 onKeyDown={handleKeyDown}
                 onChange={onChange}
+                disabled={disabled}
             />
         </>
     )

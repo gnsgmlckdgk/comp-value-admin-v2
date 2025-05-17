@@ -20,6 +20,13 @@ function View() {
         navigate(`/freeboard/modi/${id}`, { state: location.state })
     }
 
+    const onDelete = async () => {
+        const sendUrl = `/dart/freeboard/delete/${id}`;
+        await send(sendUrl, {}, "DELETE");
+        alert(`[${id}] 게시글을 삭제하였습니다.`);
+        moveListPage();
+    }
+
     const fetchData = async () => {
         const sendUrl = `/dart/freeboard/view/${id}`;
         const { data, error } = await send(sendUrl, {}, "GET");
@@ -32,7 +39,7 @@ function View() {
 
     return (
         <>
-            <View001 onMoveBack={moveListPage} onMoveUpdate={moveUpdatePage} boardData={boardData}></View001 >
+            <View001 onMoveBack={moveListPage} onMoveUpdate={moveUpdatePage} onDelete={onDelete} boardData={boardData}></View001 >
         </>
     )
 }

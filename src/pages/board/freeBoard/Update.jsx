@@ -20,11 +20,27 @@ function Update() {
         navigate(`/freeboard/view/${id}`, { state });
     }
 
-
+    // 수정할 게시글 조회
     const fetchData = async () => {
         const sendUrl = `/dart/freeboard/view/${id}`;
         const { data, error } = await send(sendUrl, {}, "GET");
         setBoardData(data);
+    }
+
+    const updateData = async (title, content) => {
+        const sendUrl = `/dart/freeboard/modi`;
+
+        const updateBoardData = boardData;
+        updateBoardData.title = title;
+        updateBoardData.content = content;
+
+        const { data, error } = await send(sendUrl, updateBoardData, "PUT");
+
+        if (data != null) {
+            alert("정상처리되었습니다.");
+        }
+
+        moveViewPage();
     }
 
     useEffect(() => {
@@ -34,7 +50,7 @@ function Update() {
 
     return (
         <>
-            <Update001 boardData={boardData} moveViewPage={moveViewPage}></Update001>
+            <Update001 boardData={boardData} onUpdate={updateData} moveViewPage={moveViewPage}></Update001>
         </>
     )
 }

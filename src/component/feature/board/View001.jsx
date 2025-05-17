@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import Button from '@/component/common/button/Button';
 
 
-function View001({ onMoveBack = {}, onMoveUpdate = {}, boardData = {
+function View001({ onMoveBack = {}, onMoveUpdate = {}, onDelete = {}, boardData = {
     title: '',
     content: '',
     author: '',
@@ -42,6 +42,7 @@ function View001({ onMoveBack = {}, onMoveUpdate = {}, boardData = {
             {/* 버튼들 */}
             <div className="flex justify-end">
                 <Button children="수정" variant="outline" onClick={onMoveUpdate} className='mr-1' />
+                <Button children="삭제" variant="danger" onClick={onDelete} className='mr-1' />
                 <Button children="목록" variant="primary" onClick={onMoveBack} />
             </div>
         </div>

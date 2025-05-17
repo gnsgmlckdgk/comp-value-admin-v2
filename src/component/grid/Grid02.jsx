@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { forwardRef, useState, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -73,7 +73,11 @@ const NoDataComponent = () => {
  *
  * <Grid02 columns={columns} rowData={data} loading={false} showPageNation={true} />
  */
-function Grid02({ columns, rowData = [], loading = false, showPageNation = false, moveViewPage }) {
+
+
+
+// function Grid02({ ref, columns, rowData = [], loading = false, showPageNation = false, moveViewPage }) {
+const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNation = false, moveViewPage }, ref) => {
 
     const [gridApi, setGridApi] = useState(null);
     const navigate = useNavigate();
@@ -103,6 +107,7 @@ function Grid02({ columns, rowData = [], loading = false, showPageNation = false
             {/* 그리드 */}
             <AgGridReact
                 onGridReady={onGridReady}
+                ref={ref}
 
                 rowData={rowData}
                 columnDefs={columns}
@@ -124,6 +129,6 @@ function Grid02({ columns, rowData = [], loading = false, showPageNation = false
             />
         </div>
     );
-}
+})
 
 export default Grid02

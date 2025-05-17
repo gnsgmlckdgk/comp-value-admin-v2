@@ -1,30 +1,44 @@
 import BoardList from '@/component/feature/board/List002';
 import { send } from '@/util/ClientUtil';
 
-import { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 
 function List() {
 
+    const location = useLocation();
+    const state = location.state || {};
+
     const [loading, setLoading] = useState(false);
     const [rowData, setRowData] = useState([]);
-    const [search, setSearch] = useState('');
-    const [sgubun, setSgubun] = useState('');  // 검색구분
+    const [search, setSearch] = useState(state.search || '');
+    const [sgubun, setSgubun] = useState(state.sgubun || '');  // 검색구분
 
     const navigate = useNavigate();
 
     // 페이징
     const [totalCount, setTotalCount] = useState(0);
-    const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(state.currentPage || 1);
     // const [pageBlock, setPageBlock] = useState(5);
     // const [pageSize, setPageSize] = useState(20);
 
     const columns = [
-        { headerName: "ID", field: "id", flex: 1, sortable: false },
+        {
+            headerCheckboxSelection: true,
+            checkboxSelection: true,
+            headerName: "ID",
+            field: "id",
+        },
         { headerName: "제목", field: "title", flex: 3, sortable: false, filter: true },
-        { headerName: "작성자", field: "author", flex: 1, sortable: false },
-        { headerName: "작성일자", field: "createdAt", flex: 2, sortable: false },
+        { headerName: "작성자", field: "author", flex: 1, sortable: false, filter: true },
+        {
+            headerName: "작성일자",
+            field: "createdAt",
+            flex: 2,
+            sortable: false,
+            valueFormatter: (params) => new Date(params.value).toLocaleString()
+        },
     ];
 
     const pageNationProps = {
@@ -48,11 +62,16 @@ function List() {
 
     // view 페이지 이동
     const moveViewPage = (param) => {
-        navigate(`/freeboard/view/${param.data.id}`);
+        navigate(`/freeboard/view/${param.data.id}`, {
+            state: {
+                search: search,
+                sgubun: sgubun,
+                currentPage: currentPage
+            }
+        });
     }
 
     const testFetchData = async (page = 1) => {
-
         setLoading(true);
         // 테스트
         setTimeout(() => {
@@ -67,6 +86,7 @@ function List() {
 
     const fetchData = async (page = 1) => {
 
+        setCurrentPage(page);
         setLoading(true);
 
         // page 조회 0 index 부터 시작

@@ -13,6 +13,7 @@ import {
     TextFilterModule,
     NumberFilterModule,
     DateFilterModule,
+    CellStyleModule
 } from 'ag-grid-community';
 ModuleRegistry.registerModules([
     RowSelectionModule,
@@ -22,6 +23,7 @@ ModuleRegistry.registerModules([
     TextFilterModule,
     NumberFilterModule,
     DateFilterModule,
+    CellStyleModule
 ]);
 
 const ProgressComponent = () => {
@@ -50,6 +52,7 @@ const NoDataComponent = () => {
 
 /**
  * AG Grid를 활용하여 데이터를 테이블 형태로 렌더링하는 컴포넌트입니다.
+ * 페이징 포함
  *
  * @component
  * @param {Object[]} columns - 테이블의 컬럼 정의 배열입니다.
@@ -106,10 +109,16 @@ function Grid02({ columns, rowData = [], loading = false, showPageNation = false
                 pagination={showPageNation}
                 enableCellTextSelection={true}
 
-                onCellClicked={(params) => moveViewPage(params)}
-
+                onCellClicked={(params) => {
+                    if (params.colDef.field !== 'id') {
+                        moveViewPage(params)
+                    }
+                }}
                 loadingOverlayComponent={ProgressComponent}
                 noRowsOverlayComponent={NoDataComponent}
+
+                rowSelection="multiple"
+                rowMultiSelectWithClick={true}
 
                 rowHeight={48}
             />

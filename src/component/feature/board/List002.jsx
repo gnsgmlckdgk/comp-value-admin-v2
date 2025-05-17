@@ -23,7 +23,7 @@ function List002({ columns = [], rowData = [], fetchData, loading = false, moveV
     return (
         <div className="rounded-md shadow-sm font-semibold text-gray-600 p-3">
 
-            <SearchBar fetchData={() => fetchData(pageNationProps.currentPage)} searchBarLabel='' searchState={searchState} />
+            <SearchBar fetchData={() => fetchData(1)} searchBarLabel='' searchState={searchState} />
 
             <Grid02 columns={gColumns} rowData={rowData} loading={loading} moveViewPage={moveViewPage} />
             <PageNation

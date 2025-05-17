@@ -49,7 +49,7 @@ function SearchBar002({ fetchData, label = '', searchState }) {
 
             <Input {...inputProps} />
 
-            <Button children='조회하기' onClick={fetchData} variant='select' className="md:basis-[15%] ml-1 md:ml-0" />
+            <Button children='조회하기' onClick={() => fetchData()} variant='select' className="md:basis-[15%] ml-1 md:ml-0" />
         </div >
     )
 }

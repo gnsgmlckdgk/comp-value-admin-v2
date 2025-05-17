@@ -1,24 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
-import View001 from '@/component/feature/board/View001';
+import Update001 from '@/component/feature/board/Update001';
 import { send } from '@/util/ClientUtil';
 
-function View() {
 
-    const [boardData, setBoardData] = useState();
+function Update() {
 
     const { id } = useParams(); // ← URL에서 :id 값 가져옴
+    const [boardData, setBoardData] = useState({});
+
     const navigate = useNavigate();
     const location = useLocation();
+    const state = location.state;
 
-    const moveListPage = () => {
-        navigate(`/freeboard/`, { state: location.state })
+
+    // view 페이지 이동
+    const moveViewPage = () => {
+        navigate(`/freeboard/view/${id}`, { state });
     }
 
-    const moveUpdatePage = () => {
-        navigate(`/freeboard/modi/${id}`, { state: location.state })
-    }
 
     const fetchData = async () => {
         const sendUrl = `/dart/freeboard/view/${id}`;
@@ -30,11 +31,12 @@ function View() {
         fetchData();
     }, [])
 
+
     return (
         <>
-            <View001 onMoveBack={moveListPage} onMoveUpdate={moveUpdatePage} boardData={boardData}></View001 >
+            <Update001 boardData={boardData} moveViewPage={moveViewPage}></Update001>
         </>
     )
 }
 
-export default View
+export default Update

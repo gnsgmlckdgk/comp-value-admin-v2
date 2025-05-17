@@ -4,6 +4,7 @@ import FreeBoard from '@/pages/board/freeBoard/FreeBoard'
 import FreeBoardList from '@/pages/board/freeBoard/List'
 import NotFound from '@/pages/NotFound'
 import FreeBoardView from '@/pages/board/freeBoard/View'
+import FreeBoardUpdate from '@/pages/board/freeBoard/Update'
 
 const routes = {
 
@@ -33,7 +34,7 @@ const routes = {
             { section: '게시판', show: false, label: '게시글등록', path: 'regi', element: <Home /> },
             { section: '게시판', show: false, label: '게시글삭제', path: 'delete', element: <Home /> },
             { section: '게시판', show: false, label: '게시글상세', path: 'view/:id', element: <FreeBoardView /> },
-            { section: '게시판', show: false, label: '게시글수정', path: 'modi', element: <Home /> },
+            { section: '게시판', show: false, label: '게시글수정', path: 'modi/:id', element: <FreeBoardUpdate /> },
         ]
     }
 }

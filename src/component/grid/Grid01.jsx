@@ -27,6 +27,7 @@ const NoDataComponent = () => {
 
 /**
  * Grid01 컴포넌트는 react-data-table-component를 사용하여 데이터를 표 형식으로 표시합니다.
+ * 페이징 없음(AgGrid 자체 페이지네이션은 있음)
  *
  * @component
  * @param {Object} props - 컴포넌트 속성

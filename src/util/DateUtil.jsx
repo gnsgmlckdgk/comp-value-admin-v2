@@ -8,3 +8,15 @@ export const formatTimestamp = (timestamp) => {
     const ss = String(date.getSeconds()).padStart(2, '0');
     return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
 };
+
+export const getToday = (format = 'yyyyMMdd') => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const MM = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+
+    return format
+        .replace(/yyyy/g, yyyy)
+        .replace(/MM/g, MM)
+        .replace(/dd/g, dd);
+};

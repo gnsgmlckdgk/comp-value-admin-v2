@@ -6,6 +6,7 @@ import NotFound from '@/pages/NotFound'
 import FreeBoardView from '@/pages/board/freeBoard/View'
 import FreeBoardUpdate from '@/pages/board/freeBoard/Update'
 import Register from '@/pages/board/freeBoard/Register'
+import CompValue from '@/pages/trade/CompValue'
 
 const routes = {
 
@@ -17,12 +18,8 @@ const routes = {
     },
 
     /* 기업분석 */
-    "CompList": {
-        section: '기업분석',
-        label: '기업목록',
-        path: '/complist',
-        element: <CompList />
-    },
+    "CompList": { section: '기업분석', label: '기업목록', path: '/complist', element: <CompList /> },
+    "CompValue": { section: '기업분석', label: '기업분석', path: '/compvalue', element: <CompValue /> },
 
     /* 게시판 */
     "FreeBoard": {

@@ -42,7 +42,7 @@ jobs:
             -f docker/DockerFile \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            --push compvalue
+            --push .
       
       # (6) 사용하지 않는 Docker 리소스 삭제
       - name: Clean up Docker (optional)

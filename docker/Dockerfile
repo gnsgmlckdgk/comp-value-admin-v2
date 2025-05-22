@@ -8,7 +8,7 @@ RUN npm ci
 
 COPY . .
 # RUN npm run build
-RUN echo "------ ENV DUMP ------" && cat .env && env | grep REACT_APP && npm run build
+RUN echo "------ ENV DUMP ------" && env | grep VITE_ && npm run build
 
 # ------------------------------------------------
 

@@ -39,7 +39,7 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg YARN_TIMEOUT=60000 \
-            -f docker/DockerFile \
+            -f docker/Dockerfile \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             --push .

@@ -3,8 +3,14 @@ import routes from '@/config/routes'
 
 export default function SideBar001({ isSidebarOpen }) {
     return (
-        <aside className={`${isSidebarOpen ? 'block' : 'hidden'} md:block w-64 bg-gray-100 overflow-auto`}>
-
+        <aside
+            className={`
+                        ${isSidebarOpen ? 'block' : 'hidden'}
+                        md:block
+                        bg-gray-100 overflow-auto z-40
+                        md:static md:w-64
+                        absolute top-14 left-0 w-full
+                    `}>
             <nav className="flex flex-col space-y-4 p-6">
 
                 <h2 className='text-gray-700 font-extrabold'>시작하기</h2>

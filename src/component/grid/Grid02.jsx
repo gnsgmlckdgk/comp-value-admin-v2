@@ -77,7 +77,7 @@ const NoDataComponent = () => {
 
 
 // function Grid02({ ref, columns, rowData = [], loading = false, showPageNation = false, moveViewPage }) {
-const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNation = false, moveViewPage }, ref) => {
+const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNation = false, moveViewPage = null }, ref) => {
 
     const [gridApi, setGridApi] = useState(null);
     const navigate = useNavigate();
@@ -114,11 +114,14 @@ const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNat
                 pagination={showPageNation}
                 enableCellTextSelection={true}
 
-                onCellClicked={(params) => {
-                    if (params.colDef.field !== 'id') {
-                        moveViewPage(params)
+                {...(typeof moveViewPage === 'function' && {
+                    onCellClicked: (params) => {
+                        if (params.colDef.field !== 'id') {
+                            moveViewPage(params);
+                        }
                     }
-                }}
+                })}
+
                 loadingOverlayComponent={ProgressComponent}
                 noRowsOverlayComponent={NoDataComponent}
 

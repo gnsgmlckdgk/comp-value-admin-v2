@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
-import Grid01 from '@/component/grid/Grid01'
 
 import { send } from '@/util/ClientUtil';
-
 import Board from '@/component/feature/board/List001';
 
 function CompList() {

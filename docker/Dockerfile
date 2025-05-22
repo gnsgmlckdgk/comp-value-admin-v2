@@ -8,7 +8,7 @@ RUN npm ci
 
 COPY . .
 # RUN npm run build
-RUN echo "------ ENV DUMP ------" && env | grep VITE_ && npm run build
+RUN npm run build || (echo "======= BUILD FAILED =======" && ls -al && cat dist/index.html || true && exit 1)
 
 # ------------------------------------------------
 

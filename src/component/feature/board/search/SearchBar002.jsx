@@ -1,5 +1,6 @@
 import Button from '@/component/common/button/Button';
 import Input from '@/component/common/input/Input';
+import Select from '@/component/common/select/Select001';
 
 /**
  * 검색어 입력과 조회 버튼을 제공하는 검색 바 컴포넌트입니다.
@@ -29,27 +30,23 @@ function SearchBar002({ fetchData, label = '', searchState }) {
         value: searchState.search,
         onEnter: fetchData,
         onChange: (e) => searchState.setSearch(e.target.value),
-        className: 'md:basis-[70%]'
+        className: 'w-full md:flex-1'
     }
 
     return (
-        <div className="flex flex-col md:flex-row gap-1 p-3">
+        <div className="flex flex-col md:flex-row gap-y-1 p-3">
 
-            {/* TODO: 컴포넌트로 빼기 */}
-            <select
-                value={searchState.sgubun}
-                onChange={e => searchState.setSgubun(e.target.value)}
-                className="md:basis-[15%] border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-700">
-                {searchState.searchGubunList.map((child, idx) => {
-                    return (
-                        <option key={idx} value={child.value}>{child.name}</option>
-                    )
-                })}
-            </select>
+            <Select value={searchState.sgubun} onChange={e => searchState.setSgubun(e.target.value)} options={searchState.searchGubunList} />
 
-            <Input {...inputProps} />
-
-            <Button children='조회하기' onClick={() => fetchData()} variant='select' className="md:basis-[15%] ml-1 md:ml-0" />
+            <div className="flex flex-col gap-1 w-full md:flex-row md:justify-end md:items-center md:flex-1 md:-ml-1">
+                <Input {...inputProps} />
+                <Button
+                    children="조회하기"
+                    onClick={() => fetchData()}
+                    variant="select"
+                    className="w-full md:w-auto md:min-w-[120px]"
+                />
+            </div>
         </div >
     )
 }

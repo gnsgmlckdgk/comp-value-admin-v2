@@ -45,7 +45,7 @@ const InfoTable = ({ headers = [], rows = [], colWidths = ['20%'] }) => {
                                 idx2 === 0 ? (
                                     <th
                                         key={idx2}
-                                        className="px-4 py-3 font-medium bg-gray-50"
+                                        className="px-4 py-3 font-medium bg-gray-50 text-sm break-keep whitespace-pre-wrap w-[110px] md:w-auto"
                                         style={colWidths[idx2] ? { width: colWidths[idx2] } : {}}
                                     >
                                         {cell}
@@ -53,7 +53,7 @@ const InfoTable = ({ headers = [], rows = [], colWidths = ['20%'] }) => {
                                 ) : (
                                     <td
                                         key={idx2}
-                                        className="px-4 py-3 font-semibold"
+                                        className="px-4 py-3 font-semibold text-sm"
                                         style={colWidths[idx2] ? { width: colWidths[idx2] } : {}}
                                     >
                                         {cell}

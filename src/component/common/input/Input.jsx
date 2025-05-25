@@ -41,7 +41,7 @@ function Input({
     wdfull = false,
     inputMode = null
 }) {
-    const baseClassName = 'h-10 border border-gray-300 rounded-md shadow-sm px-3';
+    const baseClassName = 'h-10 md:h-10 py-2 border border-gray-300 rounded-md shadow-sm px-3';
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {

@@ -27,29 +27,59 @@ function List() {
     // const [pageBlock, setPageBlock] = useState(5);
     // const [pageSize, setPageSize] = useState(20);
 
+    // 그리드
+    const [columns, setColumns] = useState([]);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     useEffect(() => {
         fetchData(currentPage);
     }, []);
 
+    // 반응형 그리드 설정용
+    useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            updateColumns(mobile);
+        };
 
-    const columns = [
-        {
-            headerCheckboxSelection: true,
-            checkboxSelection: true,
-            headerName: "ID",
-            field: "id",
-        },
-        { headerName: "제목", field: "title", flex: 3, sortable: false, filter: true },
-        { headerName: "작성자", field: "author", flex: 1, sortable: false, filter: true },
-        {
-            headerName: "작성일자",
-            field: "createdAt",
-            flex: 2,
-            sortable: false,
-            valueFormatter: (params) => new Date(params.value).toLocaleString()
-        },
-    ];
+        window.addEventListener('resize', handleResize);
+        handleResize(); // 초기 실행
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
+
+    const updateColumns = (mobile) => {
+        const newCols = [
+            {
+                headerCheckboxSelection: true,
+                checkboxSelection: true,
+                headerName: "ID",
+                field: "id",
+                hide: mobile,
+            },
+            {
+                headerName: "제목", field: "title", flex: 3, sortable: false, filter: true,
+                ...(mobile && {
+                    headerCheckboxSelection: true,
+                    checkboxSelection: true,
+                })
+            },
+            { headerName: "작성자", field: "author", flex: 1, sortable: false, filter: true, hide: mobile },
+            {
+                headerName: "작성일자",
+                field: "createdAt",
+                flex: 2,
+                sortable: false,
+                valueFormatter: (params) => new Date(params.value).toLocaleString(),
+                hide: mobile,
+            },
+        ];
+
+        setColumns(newCols);
+    }
 
     const pageNationProps = {
         currentPage,

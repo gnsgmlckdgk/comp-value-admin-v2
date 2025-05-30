@@ -44,7 +44,7 @@ const CompValue = () => {
     return (
         <>
             <h1 className='md:text-3xl text-xl mb-5'>기업분석</h1>
-            <div className="px-2 py-8 md:px-4 max-w-4xl mx-auto">
+            <div className="px-2 py-8 md:px-4">
 
                 <Loading show={isLoading} />
                 {isPopup && (

@@ -44,7 +44,7 @@ const CompValue = () => {
     return (
         <>
             <h1 className='md:text-3xl text-xl mb-5'>기업분석</h1>
-            <div className="px-2 py-8 md:px-4">
+            <div className="px-2 py-8 md:px-4 max-w-4xl mx-auto">
 
                 <Loading show={isLoading} />
                 {isPopup && (
@@ -59,8 +59,8 @@ const CompValue = () => {
                             수동계산이랑 값이 다를 수 있음.</p>
                     </div>
                     {/* 입력란 */}
-                    <div className="flex flex-col md:flex-row md:items-end mb-4 gap-y-3 md:gap-y-0">
-                        <div className="flex flex-col md:flex-row flex-1 gap-y-2 md:gap-y-0 md:gap-x-1">
+                    <div className="flex flex-col md:flex-row md:items-end mb-4 gap-y-3 md:gap-y-0 flex-wrap w-full">
+                        <div className="flex flex-col md:flex-row flex-1 gap-y-2 md:gap-y-0 md:gap-x-1 w-full">
                             <Input id="compName" placeholder='기업명' value={compName} onEnter={fetchData} onChange={(e) => setCompName(e.target.value)} className="min-w-0 flex-[2]" />
                             <Input id="compCode" placeholder='기업코드' value={compCode} onEnter={fetchData} onChange={(e) => setCompCode(e.target.value)} className="min-w-0 flex-[2]" />
                             <Input
@@ -75,7 +75,7 @@ const CompValue = () => {
                                 className="min-w-0 flex-1"
                             />
                         </div>
-                        <div className="flex flex-col md:flex-row justify-center md:justify-start gap-y-2 md:gap-x-2 mt-2 md:mt-0 md:ml-2 w-full md:w-auto">
+                        <div className="flex flex-col md:flex-row justify-end items-stretch md:items-center gap-y-2 md:gap-x-2 mt-3 md:mt-2 md:ml-2 flex-wrap w-full">
                             <Button children='분석' variant='primary' onClick={fetchData} className='h-10 px-4' />
                             <Button children='대량분석' variant='primary' onClick={() => setIsPopup(true)} className="h-10 px-4" />
                         </div>

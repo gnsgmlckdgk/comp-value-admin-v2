@@ -23,6 +23,7 @@
  *   id="username"
  *   label="사용자 이름"
  *   placeholder="이름을 입력하세요"
+ *   type="text"
  *   value={username}
  *   onChange={(e) => setUsername(e.target.value)}
  *   onEnter={() => handleSubmit()}
@@ -34,6 +35,7 @@ function Input({
     labelNewLine = false,
     placeholder = '',
     className = '',
+    type = 'text',
     value = '',
     onChange = () => { },
     onEnter,
@@ -67,6 +69,7 @@ function Input({
           ${disabled ? 'cursor-not-allowed bg-gray-100' : ''}
           ${wdfull ? 'w-full' : ''}
         `}
+                type={type}
                 value={value}
                 onKeyDown={handleKeyDown}
                 onChange={onChange}

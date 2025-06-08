@@ -28,7 +28,8 @@ function Button({ children, onClick, type = 'button', variant = 'primary', class
         danger: 'bg-red-500 text-white hover:bg-red-600',
         outline: 'border border-gray-400 text-gray-700 bg-white hover:bg-gray-100',
 
-        select: 'border border-amber-600 text-amber-600 hover:bg-amber-100 hover:shadow-lg transition-all duration-300'
+        select: 'border border-amber-600 text-amber-600 hover:bg-amber-100 hover:shadow-lg transition-all duration-300',
+        close: 'px-4 py-2 bg-gray-300 text-black rounded'
     }
 
     return (

@@ -18,6 +18,9 @@ const routes = {
         section: 'None', show: false, label: 'NotFound', path: '*', element: <NotFound />
     },
 
+    /* 회원정보 */
+    "로그인": { section: '회원정보', label: '로그인', path: '/', element: <Home /> },
+
     /* 기업분석 */
     "CompList": { section: '기업분석', label: '기업목록', path: '/complist', element: <CompList /> },
     "CompValue": { section: '기업분석', label: '기업분석', path: '/compvalue', element: <CompValue /> },

@@ -2,6 +2,7 @@ import BoardList from '@/component/feature/board/List002';
 import SearchBar from '@/component/feature/board/search/SearchBar002';
 import Button from '@/component/common/button/Button';
 
+import { useAuth } from '@/context/AuthContext';
 import { send } from '@/util/ClientUtil';
 
 import { useState, useRef, useEffect } from 'react';
@@ -13,6 +14,8 @@ function List() {
     const location = useLocation();
     const state = location.state || {};
     const gridRef = useRef();   // 자식 컴포넌트 정보를 담기위해 생성(그리드 정보)
+
+    const { isLoggedIn } = useAuth(); // 로그인 상태
 
     const [loading, setLoading] = useState(false);
     const [rowData, setRowData] = useState([]);
@@ -32,7 +35,7 @@ function List() {
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     useEffect(() => {
-        fetchData(currentPage);
+        if (isLoggedIn) fetchData(currentPage);
     }, []);
 
     // 반응형 그리드 설정용

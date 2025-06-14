@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
 import Loading from '@/component/common/display/Loading';
@@ -13,6 +15,14 @@ export default function LoginModal({
     setPassword,
 }) {
 
+    const usernameRef = useRef(null);
+
+    useEffect(() => {
+        if (show && usernameRef.current) {
+            usernameRef.current.focus();
+        }
+    }, [show]);
+
     // show가 false일 경우 아무것도 렌더링하지 않음
     if (!show) return null;
 
@@ -25,7 +35,7 @@ export default function LoginModal({
             <div className="bg-white p-4 md:p-6 rounded shadow-md text-black w-[90%] max-w-md">
                 <h2 className="text-lg font-bold mb-4">로그인</h2>
                 {/* 아이디 입력창 */}
-                <Input label='아이디' type='text' value={username} onChange={e => setUsername(e.target.value)} onEnter={{}} wdfull={true} />
+                <Input inputRef={usernameRef} label='아이디' type='text' value={username} onChange={e => setUsername(e.target.value)} onEnter={{}} wdfull={true} />
                 {/* 비밀번호 입력창 */}
                 <Input label='비밀번호' type='password' value={password} onChange={e => setPassword(e.target.value)} onEnter={onLogin} wdfull={true} />
 

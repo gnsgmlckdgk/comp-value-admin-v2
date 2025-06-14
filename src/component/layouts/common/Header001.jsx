@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import routes from '@/config/routes'
 import { send } from '@/util/ClientUtil';
@@ -18,6 +18,8 @@ export default function Header001({ onMenuClick }) {
     const [password, setPassWord] = useState('');
     const [nickName, setNickName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    const navigate = useNavigate();
 
 
     const login = async () => {
@@ -57,6 +59,8 @@ export default function Header001({ onMenuClick }) {
         if (error == null) {
             alert('로그아웃 되었습니다.');
             setIsLoggedIn(false);
+
+            navigate(`/`);
         }
         else alert(error);
 

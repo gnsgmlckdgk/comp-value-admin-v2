@@ -41,7 +41,8 @@ function Input({
     onEnter,
     disabled = false,
     wdfull = false,
-    inputMode = null
+    inputMode = null,
+    inputRef = null
 }) {
     const baseClassName = 'h-10 md:h-10 py-2 border border-gray-300 rounded-md shadow-sm px-3';
 
@@ -61,6 +62,7 @@ function Input({
                 {label}
             </label>
             <input
+                ref={inputRef}
                 id={id}
                 placeholder={placeholder}
                 className={`

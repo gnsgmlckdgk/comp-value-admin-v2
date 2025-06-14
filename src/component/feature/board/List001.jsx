@@ -37,6 +37,7 @@ import { useState, useEffect } from 'react';
 function List001({ columns = [], rowData = [], fetchData, loading = false, searchState }) {
 
     const [gColumns, setGColumns] = useState([]);
+    const [count, setCount] = useState(0);
 
     const testColumns = [
         { headerName: "H1", field: "h1", flex: 1, sortable: false, minWidth: 110 },
@@ -49,10 +50,17 @@ function List001({ columns = [], rowData = [], fetchData, loading = false, searc
         setGColumns(columns.length === 0 ? testColumns : columns);
     }, []);
 
+    useEffect(() => {
+        setCount(rowData.length);
+    }, [rowData])
+
     return (
         <>
             <div className="rounded-md shadow-sm font-semibold text-gray-600 p-3">
                 <SearchBar001 fetchData={fetchData} searchBarLabel='' searchState={searchState} />
+                <div className="flex justify-end mb-2">
+                    <span>{count} 건</span>
+                </div>
                 <Grid02 columns={gColumns} rowData={rowData} loading={loading} />
             </div>
         </>

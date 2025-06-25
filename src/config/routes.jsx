@@ -8,6 +8,7 @@ import FreeBoardUpdate from '@/pages/board/freeBoard/Update'
 import Register from '@/pages/board/freeBoard/Register'
 import CompValue from '@/pages/trade/CompValue'
 import CompValueCustom from '@/pages/trade/CompValueCustom'
+import TransactionOverview from '@/pages/transaction/TransactionOverview'
 
 const routes = {
 
@@ -25,6 +26,9 @@ const routes = {
     "CompList": { section: '기업분석', label: '기업목록', path: '/complist', element: <CompList /> },
     "CompValue": { section: '기업분석', label: '기업분석', path: '/compvalue', element: <CompValue /> },
     "CompValueCustom": { section: '기업분석', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
+
+    /* 거래 */
+    "TransactionOverview": { section: '거래', label: '거래현황', path: '/transaction/overview', element: <TransactionOverview /> },
 
     /* 게시판 */
     "FreeBoard": {

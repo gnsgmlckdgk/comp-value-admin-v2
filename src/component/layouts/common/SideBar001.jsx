@@ -37,6 +37,12 @@ export default function SideBar001({ isSidebarOpen, setSidebarOpen }) {
                         <Link onClick={() => isMobile && setSidebarOpen(false)} className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
                 ))}
 
+                <h2 className='text-gray-700 font-extrabold'>거래</h2>
+                {Object.entries(routes).map(([key, route]) => (
+                    route.show !== false && route.section === "거래" ?
+                        <Link onClick={() => isMobile && setSidebarOpen(false)} className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
+                ))}
+
                 <h2 className='text-gray-700 font-extrabold'>게시판</h2>
                 {Object.entries(routes).map(([key, route]) => (
                     route.show !== false && route.section === "게시판" ?

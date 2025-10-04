@@ -5,7 +5,7 @@ import '@/App.css'
 
 import Layout from '@/component/layouts/Layout001'
 import routes from '@/config/routes'
-import PrivateRoute from '@/config/privateRoutes';
+import PrivateRoute from '@/config/PrivateRoutes';
 import Loading from '@/component/common/display/Loading';
 
 import { send } from '@/util/ClientUtil';

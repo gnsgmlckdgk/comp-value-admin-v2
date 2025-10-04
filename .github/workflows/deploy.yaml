@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: gnsgmlckdgk/comp-value-admin-v2
@@ -16,7 +20,7 @@ jobs:
 
     steps:
       # (1) 소스코드 체크아웃
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # (2) QEMU 설정 (멀티 아키텍처 빌드를 위한 가상화)
       - name: Set up QEMU (for cross-build)
@@ -31,7 +35,7 @@ jobs:
 
       # (4) GHCR 로그인 (PAT 사용)
       - name: Login to GHCR
-        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       # (5) Docker 이미지 빌드 및 푸시 (linux/amd64 + linux/arm64), latest 태그 포함
       - name: Build and Push Multi-Arch Image (amd64 + arm64)

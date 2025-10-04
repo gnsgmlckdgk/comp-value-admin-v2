@@ -321,13 +321,13 @@ const AbroadCompValue = () => {
                                                     <div className="text-slate-500 whitespace-nowrap">{k}</div>
                                                     <div className="text-right break-all font-medium max-w-[60%]">
                                                         {Array.isArray(v) ? (
-                                                            <details className="text-left inline-block">
+                                                            <details className="inline-block float-right text-right">
                                                                 <summary className="cursor-pointer text-slate-600">[{v.length}] 배열</summary>
                                                                 <pre className="mt-1 p-2 bg-slate-50 rounded text-xs whitespace-pre-wrap">{JSON.stringify(v, null, 2)}</pre>
                                                             </details>
                                                         ) : (typeof v === 'object' && v !== null) ? (
-                                                            <details className="text-left inline-block max-w-[min(90vw,900px)]">
-                                                                <summary className="cursor-pointer text-slate-600 select-none">객체 펼치기</summary>
+                                                            <details className="inline-block float-right text-right max-w-[min(90vw,900px)]">
+                                                                <summary className="cursor-pointer text-slate-600 select-none">자세히 보기</summary>
                                                                 <div className="mt-2 p-3 bg-slate-50 rounded text-xs overflow-auto max-h-[55vh]">
                                                                     <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
                                                                         {Object.entries(v).map(([kk, vv]) => (

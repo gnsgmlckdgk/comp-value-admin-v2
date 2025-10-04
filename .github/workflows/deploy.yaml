@@ -28,7 +28,7 @@ jobs:
 
       # (4) GHCR 로그인 (GITHUB_TOKEN 사용)
       - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
 
       # (3) Docker Buildx 설정 (멀티 플랫폼 빌드를 위해 필요)
       - name: Set up Docker Buildx

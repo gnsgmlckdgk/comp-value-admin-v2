@@ -9,6 +9,7 @@ import Register from '@/pages/board/freeBoard/Register'
 import CompValue from '@/pages/trade/CompValue'
 import CompValueCustom from '@/pages/trade/CompValueCustom'
 import TransactionOverview from '@/pages/transaction/TransactionOverview'
+import AbroadCompValue from '@/pages/trade/AbroadCompValue'
 
 const routes = {
 
@@ -23,8 +24,9 @@ const routes = {
     "로그인": { section: '회원정보', label: '로그인', path: '/', element: <Home /> },
 
     /* 기업분석 */
-    "CompList": { section: '기업분석', label: '기업목록', path: '/complist', element: <CompList /> },
-    "CompValue": { section: '기업분석', label: '기업분석', path: '/compvalue', element: <CompValue /> },
+    "CompList": { section: '기업분석', label: '기업목록(국내)', path: '/complist', element: <CompList /> },
+    "CompValue": { section: '기업분석', label: '기업분석(국내)', path: '/compvalue', element: <CompValue /> },
+    "AbroadCompValue": { section: '기업분석', label: '기업분석(미국)', path: '/compvalue/abroad', element: <AbroadCompValue /> },
     "CompValueCustom": { section: '기업분석', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
 
     /* 거래 */

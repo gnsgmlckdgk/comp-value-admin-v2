@@ -43,7 +43,7 @@ const CompValue = () => {
 
     return (
         <>
-            <h1 className='md:text-3xl text-xl mb-5'>기업분석</h1>
+            <h1 className='text-2xl md:text-3xl font-bold tracking-tight text-slate-800'>기업분석</h1>
             <div className="px-2 py-8 md:px-4">
 
                 <Loading show={isLoading} />

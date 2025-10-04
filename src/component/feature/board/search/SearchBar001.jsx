@@ -30,14 +30,13 @@ function SearchBar001({ fetchData, label = '', searchState }) {
         placeholder: '검색어 입력',
         value: search,
         onEnter: fetchData,
-        onChange: (e) => setSearch(e.target.value),
-        className: 'md:basis-[90%]'
+        onChange: (e) => setSearch(e.target.value)
     }
 
     return (
-        <div className='flex flex-col md:flex-row gap-1 p-3'>
-            <Input {...inputProps} />
-            <Button children='조회하기' onClick={fetchData} variant='select' className='md:basis-[10%]' />
+        <div className='flex flex-wrap items-center gap-2 p-1'>
+            <Input {...inputProps} className='flex-1 min-w-0' />
+            <Button children='조회하기' onClick={fetchData} variant='select' className='whitespace-nowrap w-fit min-w-[72px]' />
         </div>
     )
 }

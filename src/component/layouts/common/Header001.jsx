@@ -14,8 +14,8 @@ export default function Header001({ onMenuClick }) {
     const [showLogin, setShowLogin] = useState(false);
 
     const { isLoggedIn, setIsLoggedIn } = useAuth();
-    const [username, setUserName] = useState('');
-    const [password, setPassWord] = useState('');
+    const [username, setUserName] = useState('admin');
+    const [password, setPassWord] = useState('1q2w3e4r!');
     const [nickName, setNickName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 

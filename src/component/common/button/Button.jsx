@@ -21,7 +21,9 @@
  */
 function Button({ children, onClick, type = 'button', variant = 'primary', className = '' }) {
 
-    const baseStyle = 'px-5 py-2.5 rounded-lg shadow-md font-semibold transition-all duration-300 text-sm cursor-pointer'
+    // const baseStyle = 'px-5 py-2.5 rounded-lg shadow-md font-semibold transition-all duration-300 text-sm cursor-pointer'
+    // const baseStyle = 'whitespace-nowrap w-fit px-4 py-2 md:px-5 md:py-2.5 rounded-lg shadow-md font-semibold transition-all duration-300 text-sm cursor-pointer';
+    const baseStyle = 'whitespace-nowrap w-fit px-3 py-2 md:px-5 md:py-2.5 text-sm md:text-base rounded-lg shadow-md font-semibold transition-all duration-300 cursor-pointer';
 
     const variants = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700',

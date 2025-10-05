@@ -160,7 +160,7 @@ const AbroadCompValue = () => {
                         value={compName}
                         onChange={e => setCompName(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); compSymbolSearch(); } }}
-                        placeholder="심볼/회사명으로 검색 (Enter)"
+                        placeholder="회사명으로 검색 (Enter)"
                         className="w-[min(520px,90vw)] px-3 py-2 rounded-md border border-slate-300 bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                     <button

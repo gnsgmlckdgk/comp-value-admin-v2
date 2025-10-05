@@ -19,6 +19,8 @@ export default function Header001({ onMenuClick }) {
     const [nickName, setNickName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const nickNameKey = "nickname";
+
     const navigate = useNavigate();
 
 
@@ -35,12 +37,17 @@ export default function Header001({ onMenuClick }) {
         setIsLoading(false);
 
         if (error == null) {
+
             const sessionKey = data.response ? data.response.sessionKey : null;
+
             if (sessionKey == null) alert("인증 실패");
             else {
+
+                localStorage.setItem(nickNameKey, data.response.nickName);
+
                 setUserName('');
                 setPassWord('');
-                setNickName(data.response.nickName);
+                setNickName(localStorage.getItem(nickNameKey));
                 setShowLogin(false);
                 setIsLoggedIn(true);
             }
@@ -59,6 +66,7 @@ export default function Header001({ onMenuClick }) {
         if (error == null) {
             alert('로그아웃 되었습니다.');
             setIsLoggedIn(false);
+            localStorage.removeItem(nickNameKey);
 
             navigate(`/`);
         }
@@ -90,7 +98,7 @@ export default function Header001({ onMenuClick }) {
 
                 {isLoggedIn ? (
                     <div className="ml-auto flex items-center space-x-4 text-sm">
-                        <span>{nickName}</span>
+                        <span>{localStorage.getItem(nickNameKey)}</span>
                         <span className="cursor-pointer underline" onClick={logout}>로그아웃</span>
                     </div>
                 ) : (

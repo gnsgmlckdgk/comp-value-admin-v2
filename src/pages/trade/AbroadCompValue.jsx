@@ -67,25 +67,34 @@ const AbroadCompValue = () => {
         return undefined;
     };
 
-    // Look into common nested containers as well (one level deep)
-    const getValDeep = (obj, keys) => {
+    // Deep search for keys across arbitrarily nested objects (guards against cycles).
+    const getValDeep = (obj, keys, seen = new Set()) => {
+        if (!obj || typeof obj !== 'object') return undefined;
+        if (seen.has(obj)) return undefined;
+        seen.add(obj);
+
+        // 1) check at current level
         const direct = getVal(obj, keys);
         if (direct !== undefined) return direct;
-        if (!obj || typeof obj !== 'object') return undefined;
+
+        // 2) prefer common containers if present (fast path)
         const containers = ['상세', '상세정보', 'detail', 'details', 'metric', 'metrics', 'valuation', 'summary', 'data'];
         for (const c of containers) {
-            if (obj[c] && typeof obj[c] === 'object') {
-                const found = getVal(obj[c], keys);
+            const v = obj[c];
+            if (v && typeof v === 'object') {
+                const found = getValDeep(v, keys, seen);
                 if (found !== undefined) return found;
             }
         }
-        // one-level shallow scan of any object-typed child
-        for (const [k, v] of Object.entries(obj)) {
+
+        // 3) fallback: recurse into all nested plain objects
+        for (const [, v] of Object.entries(obj)) {
             if (v && typeof v === 'object' && !Array.isArray(v)) {
-                const found = getVal(v, keys);
+                const found = getValDeep(v, keys, seen);
                 if (found !== undefined) return found;
             }
         }
+
         return undefined;
     };
 
@@ -250,7 +259,11 @@ const AbroadCompValue = () => {
                                         const name = getValDeep(v, ['companyName', 'name', 'company', '기업명']);
                                         const price = getValDeep(v, ['currentPrice', 'price', 'close', '현재가격', '현재가', '종가']);
                                         const target = getValDeep(v, ['fairValue', 'perValue', 'estimatedValue', 'targetPrice', '적정가', '주당가치', '적정가(추정)']);
-                                        const per = getValDeep(v, ['per', 'PER', 'pe', 'peRatio', '성장률보정PER']);
+                                        const per = getValDeep(v, ['per', 'PER', 'pe', 'peRatio', 'perTTM', 'PER(TTM)']);
+                                        // 성장률 보정 PER 은 PEG 와 다른 값이므로 peg 키는 제외
+                                        const perAdj = getValDeep(v, ['성장률보정PER', 'growthAdjustedPER', 'perGrowthAdjusted']);
+                                        // 백엔드에서 계산/전달되는 PEG 값을 우선 사용 (없으면 프론트에서 계산)
+                                        const pegBackend = getValDeep(v, ['PEG', 'peg', 'pegRatio', 'pegTTM', '성장률보정PEG']);
                                         const eps = getValDeep(v, ['epsTtm', 'epsTTM', 'eps', 'EPS', 'EPS(TTM)']);
                                         const upside = (price != null && target != null) ? (toNumber(target) / toNumber(price) - 1) : null;
 
@@ -263,15 +276,63 @@ const AbroadCompValue = () => {
                                                 <div className="flex gap-2">
                                                     {(() => {
                                                         const perNum = toNumber(per);
+                                                        const perAdjNum = toNumber(perAdj);
                                                         const epsNum = toNumber(eps);
                                                         const showPer = !Number.isNaN(perNum);
+                                                        const showPerAdj = !Number.isNaN(perAdjNum);
                                                         const showEps = !Number.isNaN(epsNum);
+
+                                                        // 1) 백엔드 PEG 우선
+                                                        const pegBackendNum = toNumber(pegBackend);
+
+                                                        // 2) 프론트 계산 PEG (백업)
+                                                        // PEG = PER ÷ 이익성장률(%) — growth can come as 0.12 or 12, normalize to %
+                                                        const growthRaw = getValDeep(v, [
+                                                            'growthRate', '이익성장률', 'growth', 'growthPct', 'growthPercent', 'growthPercentage',
+                                                            'epsGrowth', 'epsGrowthRate', 'earningsGrowth', 'ttmEpsGrowth', 'forwardEarningsGrowth',
+                                                            'nextYearGrowth', 'profitGrowth', 'netIncomeGrowth'
+                                                        ]);
+                                                        const gNum = toNumber(growthRaw);
+                                                        // normalize: 0.12 => 12, 12 => 12 (abs 로 음수 방지)
+                                                        const growthPct = Number.isNaN(gNum) ? NaN : Math.abs(gNum > 1 ? gNum : gNum * 100);
+                                                        const pegCalc = (!Number.isNaN(perNum) && !Number.isNaN(growthPct) && growthPct !== 0)
+                                                            ? perNum / growthPct
+                                                            : NaN;
+
+                                                        const pegToShow = !Number.isNaN(pegBackendNum) ? pegBackendNum : pegCalc;
+                                                        const showPeg = Number.isFinite(pegToShow);
+
                                                         return (
                                                             <>
                                                                 {showPer && (
-                                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium text-slate-700 bg-slate-50">
+                                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium text-slate-700 bg-slate-50" title="Price / Earnings">
                                                                         PER {fmtNum(per)}
                                                                     </span>
+                                                                )}
+                                                                {showPerAdj && (
+                                                                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium text-slate-700 bg-slate-50" title="성장률 보정 PER">
+                                                                        성장률 보정 PER {fmtNum(perAdj)}
+                                                                    </span>
+                                                                )}
+                                                                {showPeg && (
+                                                                    // price/target for recommendation
+                                                                    (() => {
+                                                                        const price = getValDeep(v, ['currentPrice', 'price', 'close', '현재가격', '현재가', '종가']);
+                                                                        const target = getValDeep(v, ['fairValue', 'perValue', 'estimatedValue', 'targetPrice', '적정가', '주당가치', '적정가(추정)']);
+                                                                        const priceNum = toNumber(price);
+                                                                        const targetNum = toNumber(target);
+                                                                        const isRecommended = showPeg && pegToShow <= 1 && !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum;
+                                                                        return (
+                                                                            <span
+                                                                                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${isRecommended ? 'text-emerald-700 border-emerald-300 bg-emerald-50' : 'text-slate-700 bg-slate-50'
+                                                                                    }`}
+                                                                                title="Price / Earnings to Growth (PEG)"
+                                                                            >
+                                                                                PEG {fmtNum(pegToShow, 2)}
+                                                                                {isRecommended && <span className="ml-1 text-[11px] text-emerald-600">(투자 권장)</span>}
+                                                                            </span>
+                                                                        );
+                                                                    })()
                                                                 )}
                                                                 {showEps && (
                                                                     <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium text-slate-700 bg-slate-50">
@@ -284,6 +345,41 @@ const AbroadCompValue = () => {
                                                 </div>
                                             </div>
                                         );
+                                    })()}
+
+                                    {/* PEG 설명 */}
+                                    <p className="text-[12px] text-slate-500 mt-1">
+                                        💡 PEG = PER ÷ 이익성장률(%) — PEG가 1 이하이면 성장 대비 저평가, 1 이상이면 고평가 가능
+                                    </p>
+
+                                    {/* PEG 추천 배너 */}
+                                    {(() => {
+                                        // reuse the same logic for visibility; compute again safely
+                                        const v = compValueData || {};
+                                        const pegBackend = getValDeep(v, ['PEG', 'peg', 'pegRatio', 'pegTTM', '성장률보정PEG']);
+                                        const pegBackendNum = toNumber(pegBackend);
+                                        const per = getValDeep(v, ['per', 'PER', 'pe', 'peRatio', 'perTTM', 'PER(TTM)']);
+                                        const perNum = toNumber(per);
+                                        const growthRaw = getValDeep(v, [
+                                            'growthRate', '이익성장률', 'growth', 'growthPct', 'growthPercent', 'growthPercentage',
+                                            'epsGrowth', 'epsGrowthRate', 'earningsGrowth', 'ttmEpsGrowth', 'forwardEarningsGrowth',
+                                            'nextYearGrowth', 'profitGrowth', 'netIncomeGrowth'
+                                        ]);
+                                        const gNum = toNumber(growthRaw);
+                                        const growthPct = Number.isNaN(gNum) ? NaN : Math.abs(gNum > 1 ? gNum : gNum * 100);
+                                        const pegCalc = (!Number.isNaN(perNum) && !Number.isNaN(growthPct) && growthPct !== 0) ? perNum / growthPct : NaN;
+                                        const pegToShow = !Number.isNaN(pegBackendNum) ? pegBackendNum : pegCalc;
+                                        const showPeg = Number.isFinite(pegToShow);
+                                        const price = getValDeep(v, ['currentPrice', 'price', 'close', '현재가격', '현재가', '종가']);
+                                        const target = getValDeep(v, ['fairValue', 'perValue', 'estimatedValue', 'targetPrice', '적정가', '주당가치', '적정가(추정)']);
+                                        const priceNum = toNumber(price);
+                                        const targetNum = toNumber(target);
+                                        const isRecommended = showPeg && pegToShow <= 1 && !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum;
+                                        return isRecommended ? (
+                                            <div className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800">
+                                                📈 조건 충족: PEG ≤ 1 이고 적정가 &gt; 현재가 — <span className="font-semibold">투자 권장</span>
+                                            </div>
+                                        ) : null;
                                     })()}
 
                                     {/* Highlight cards */}

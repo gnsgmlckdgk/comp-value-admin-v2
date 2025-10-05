@@ -1,21 +1,29 @@
 import { useAuth } from '@/context/AuthContext';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { send } from '@/util/ClientUtil';
 
 function PrivateRoute({ children }) {
-
     const { isLoggedIn, setIsLoggedIn } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+
     const [checking, setChecking] = useState(false);
     const [hasChecked, setHasChecked] = useState(false);
 
+    // Guard for stale async results when effect re-runs
+    const runIdRef = useRef(0);
+    // Ensure one alert per check (and do not show on '/')
+    const alertShownRef = useRef(false);
+
     useEffect(() => {
-        let active = true;
+        const myId = ++runIdRef.current;
+        alertShownRef.current = false;
+
+        const atRoot = window.location.pathname === '/';
 
         const run = async () => {
-            // 이미 로그인 true면 검사 생략하고 체크 완료 표시
+            // 이미 로그인 상태면 추가 검사 없이 통과
             if (isLoggedIn === true) {
                 setHasChecked(true);
                 return;
@@ -24,37 +32,47 @@ function PrivateRoute({ children }) {
             setChecking(true);
             try {
                 const { data } = await send('/dart/member/me', {}, 'GET');
-                if (!active) return;
+                if (runIdRef.current !== myId) return; // newer run exists
+
                 const ok = !!(data && data.success);
-                const isRoot = location.pathname === '/';
                 setIsLoggedIn(ok);
                 setHasChecked(true);
-                if (!ok && !isRoot) {
+
+                if (!ok && !atRoot && !alertShownRef.current) {
+                    alertShownRef.current = true;
                     alert('로그인이 필요합니다.');
-                    navigate('/', { replace: true });
+                    navigate('/', { replace: true, state: { from: location } });
                 }
             } catch (e) {
-                if (!active) return;
+                if (runIdRef.current !== myId) return; // newer run exists
                 setIsLoggedIn(false);
                 setHasChecked(true);
-                alert('로그인이 필요합니다.');
-                navigate('/', { replace: true });
+
+                if (!atRoot && !alertShownRef.current) {
+                    alertShownRef.current = true;
+                    alert('로그인이 필요합니다.');
+                    navigate('/', { replace: true, state: { from: location } });
+                }
             } finally {
-                if (active) setChecking(false);
+                if (runIdRef.current === myId) setChecking(false);
             }
         };
 
         run();
-        return () => { active = false; };
-    }, [location.pathname, isLoggedIn, navigate, setIsLoggedIn]);
+        // no cleanup: runIdRef guards staleness
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname]);
 
-    // 아직 검사 전이거나 검사 중이면 아무 것도 렌더하지 않음 (깜빡임/되돌림 방지)
+    const atRoot = location.pathname === '/';
+
+    // 검사 전/검사 중: 보호 라우트는 잠시 막고, 홈('/')은 항상 렌더
     if (!hasChecked || checking) {
-        return null;
+        return atRoot ? children : null;
     }
 
-    if (isLoggedIn === false && location.pathname !== '/') {
-        return <Navigate to="/" replace state={{ from: location }} />;
+    // 미로그인: 보호 라우트만 막고, 홈('/')은 렌더
+    if (isLoggedIn === false) {
+        return atRoot ? children : null;
     }
 
     return children;

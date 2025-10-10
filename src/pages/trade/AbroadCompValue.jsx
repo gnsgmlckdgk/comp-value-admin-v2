@@ -18,6 +18,7 @@ const AbroadCompValue = () => {
     const [showPopup, setShowPopup] = useState(false);
     const popupRef = useRef(null);
     const [toast, setToast] = useState(null);
+    const [showGuide, setShowGuide] = useState(false);
 
     useEffect(() => {
         const onKey = (e) => {
@@ -32,6 +33,13 @@ const AbroadCompValue = () => {
         const t = setTimeout(() => setToast(null), 1800);
         return () => clearTimeout(t);
     }, [toast]);
+
+    useEffect(() => {
+        if (!showGuide) return;
+        const onKey = (e) => { if (e.key === 'Escape') setShowGuide(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [showGuide]);
 
     // ---- helpers for popup rendering ----
     const toNumber = (v) => {
@@ -347,10 +355,24 @@ const AbroadCompValue = () => {
                                         );
                                     })()}
 
-                                    {/* PEG 설명 */}
-                                    <p className="text-[12px] text-slate-500 mt-1">
-                                        💡 PEG = PER ÷ 이익성장률(%) — PEG가 1 이하이면 성장 대비 저평가, 1 이상이면 고평가 가능
-                                    </p>
+                                    {/* PEG 설명 + 해석 요약 버튼 */}
+                                    <div className="mt-1 flex items-center justify-between">
+                                        <p className="text-[12px] text-slate-500">
+                                            💡 PEG = PER ÷ 이익성장률(%) — PEG가 1 이하이면 성장 대비 저평가, 1 이상이면 고평가 가능
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowGuide(true)}
+                                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[12px] text-slate-700 hover:bg-slate-50"
+                                            title="해석 요약 보기"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+                                                <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-.75 6a.75.75 0 0 1 1.5 0v.008a.75.75 0 0 1-1.5 0V8.25Zm0 3a.75.75 0 0 1 1.5 0v5.25a.75.75 0 0 1-1.5 0V11.25Z" clipRule="evenodd" />
+                                            </svg>
+                                            해석 요약
+                                        </button>
+                                    </div>
+                                    {/* guide overlay moved outside popup container */}
 
                                     {/* PEG 추천 배너 */}
                                     {(() => {
@@ -476,6 +498,55 @@ const AbroadCompValue = () => {
                             )}
                         </div>
                     </div>
+
+                    {showGuide && (
+                        <>
+                            {/* overlay backdrop (fullscreen) */}
+                            <div
+                                className="fixed inset-0 z-[70] bg-black/50"
+                                onClick={() => setShowGuide(false)}
+                            />
+
+                            {/* diagram card (fullscreen, centered) */}
+                            <div
+                                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5">
+                                    <div className="text-sm font-semibold text-slate-800">📈 해석 요약</div>
+                                    <button
+                                        className="text-xs rounded border px-2 py-1 hover:bg-slate-50"
+                                        onClick={() => setShowGuide(false)}
+                                    >닫기 (Esc)</button>
+                                </div>
+
+                                <div className="px-4 pt-3 pb-4 text-[12px] text-slate-600">
+                                    PEG(↓: 저평가, ↑: 고평가)와 적정가(↑/↓) 조합으로 간단한 해석 매트릭스입니다. 아무 곳이나 클릭하면 닫힙니다.
+                                </div>
+
+                                <div className="px-4 pb-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                                            <div className="mb-1 text-[11px] font-semibold text-emerald-700">적정가↑ / PEG↓</div>
+                                            <div className="text-[12px] text-emerald-800">성장 대비 저평가 (투자유효)</div>
+                                        </div>
+                                        <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                                            <div className="mb-1 text-[11px] font-semibold text-amber-700">적정가↑ / PEG↑</div>
+                                            <div className="text-[12px] text-amber-800">성장성 반영된 고평가 (관망)</div>
+                                        </div>
+                                        <div className="rounded-md border border-rose-200 bg-rose-50 p-3">
+                                            <div className="mb-1 text-[11px] font-semibold text-rose-700">적정가↓ / PEG↑</div>
+                                            <div className="text-[12px] text-rose-800">성장둔화 + 고평가 (주의)</div>
+                                        </div>
+                                        <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                                            <div className="mb-1 text-[11px] font-semibold text-slate-700">적정가↓ / PEG↓</div>
+                                            <div className="text-[12px] text-slate-800">성장정체지만 밸류 낮음 (저PER 반등 가능)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </>
             )}
 

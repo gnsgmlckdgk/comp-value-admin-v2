@@ -19,14 +19,10 @@ const AbroadCompValue = () => {
     const popupRef = useRef(null);
     const [toast, setToast] = useState(null);
     const [showGuide, setShowGuide] = useState(false);
+    const [showDetail, setShowDetail] = useState(false);
+    const [detailTitle, setDetailTitle] = useState('');
+    const [detailData, setDetailData] = useState(null);
 
-    useEffect(() => {
-        const onKey = (e) => {
-            if (e.key === 'Escape') setShowPopup(false);
-        };
-        if (showPopup) window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [showPopup]);
 
     useEffect(() => {
         if (!toast) return;
@@ -34,12 +30,17 @@ const AbroadCompValue = () => {
         return () => clearTimeout(t);
     }, [toast]);
 
+    // ESC key: close the topmost layer only (detail > guide > popup)
     useEffect(() => {
-        if (!showGuide) return;
-        const onKey = (e) => { if (e.key === 'Escape') setShowGuide(false); };
+        const onKey = (e) => {
+            if (e.key !== 'Escape') return;
+            if (showDetail) { setShowDetail(false); return; }
+            if (showGuide) { setShowGuide(false); return; }
+            if (showPopup) { setShowPopup(false); }
+        };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [showGuide]);
+    }, [showPopup, showGuide, showDetail]);
 
     // ---- helpers for popup rendering ----
     const toNumber = (v) => {
@@ -444,27 +445,13 @@ const AbroadCompValue = () => {
                                                                 <pre className="mt-1 p-2 bg-slate-50 rounded text-xs whitespace-pre-wrap">{JSON.stringify(v, null, 2)}</pre>
                                                             </details>
                                                         ) : (typeof v === 'object' && v !== null) ? (
-                                                            <details className="inline-block float-right text-right max-w-[min(90vw,900px)]">
-                                                                <summary className="cursor-pointer text-slate-600 select-none">자세히 보기</summary>
-                                                                <div className="mt-2 p-3 bg-slate-50 rounded text-xs overflow-auto max-h-[55vh]">
-                                                                    <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
-                                                                        {Object.entries(v).map(([kk, vv]) => (
-                                                                            <div key={kk} className="rounded border border-slate-200 bg-white px-2.5 py-2">
-                                                                                <div className="text-[11px] text-slate-500 mb-1 truncate" title={kk}>{kk}</div>
-                                                                                <div className="text-[12px] font-mono tabular-nums break-words whitespace-pre-wrap">
-                                                                                    {Array.isArray(vv)
-                                                                                        ? JSON.stringify(vv, null, 2)
-                                                                                        : (typeof vv === 'object' && vv !== null)
-                                                                                            ? JSON.stringify(vv, null, 2)
-                                                                                            : (typeof vv === 'number'
-                                                                                                ? fmtNum(vv, 4)
-                                                                                                : (vv == null ? '-' : String(vv)))}
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            </details>
+                                                            <button
+                                                                type="button"
+                                                                className="inline-block float-right text-slate-600 underline text-xs hover:text-indigo-600"
+                                                                onClick={() => { setDetailTitle(k); setDetailData(v); setShowDetail(true); }}
+                                                            >
+                                                                자세히 보기
+                                                            </button>
                                                         ) : (
                                                             typeof v === 'number' ? fmtNum(v, 4) : (v == null ? '-' : String(v))
                                                         )}
@@ -543,6 +530,57 @@ const AbroadCompValue = () => {
                                             <div className="text-[12px] text-slate-800">성장정체지만 밸류 낮음 (저PER 반등 가능)</div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {showDetail && (
+                        <>
+                            <div className="fixed inset-0 z-[75] bg-black/50" onClick={() => setShowDetail(false)} />
+                            <div
+                                className="fixed z-[85] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(900px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5">
+                                    <div className="text-sm font-semibold text-slate-800">🔎 {detailTitle || '상세보기'}</div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            className="text-xs rounded border px-2 py-1 hover:bg-slate-50"
+                                            onClick={async () => {
+                                                try {
+                                                    await navigator.clipboard.writeText(JSON.stringify(detailData, null, 2));
+                                                    setToast('상세 JSON이 복사되었습니다.');
+                                                } catch {
+                                                    setToast('복사에 실패했습니다.');
+                                                }
+                                            }}
+                                        >JSON 복사</button>
+                                        <button className="text-xs rounded border px-2 py-1 hover:bg-slate-50" onClick={() => setShowDetail(false)}>닫기 (Esc)</button>
+                                    </div>
+                                </div>
+
+                                <div className="p-3">
+                                    {detailData && typeof detailData === 'object' ? (
+                                        <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+                                            {Object.entries(detailData).map(([kk, vv]) => (
+                                                <div key={kk} className="rounded border border-slate-200 bg-white px-2.5 py-2">
+                                                    <div className="text-[11px] text-slate-500 mb-1 truncate" title={kk}>{kk}</div>
+                                                    <div className="text-[12px] font-mono tabular-nums break-words whitespace-pre-wrap">
+                                                        {Array.isArray(vv)
+                                                            ? JSON.stringify(vv, null, 2)
+                                                            : (typeof vv === 'object' && vv !== null)
+                                                                ? JSON.stringify(vv, null, 2)
+                                                                : (typeof vv === 'number'
+                                                                    ? fmtNum(vv, 4)
+                                                                    : (vv == null ? '-' : String(vv)))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <pre className="text-xs">{String(detailData)}</pre>
+                                    )}
                                 </div>
                             </div>
                         </>

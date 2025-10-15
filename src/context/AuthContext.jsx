@@ -10,10 +10,13 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
     // 로그인 상태를 관리하는 state
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [userName, setUserName] = useState('admin');  // admin => 테스트용
+    const [userRole, setUserRole] = useState('');
+    const [nickName, setNickName] = useState('');
 
     return (
         // value 객체로 로그인 상태와 변경 함수 전달
-        <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn }}>
+        <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn, userName, setUserName, userRole, setUserRole, nickName, setNickName }}>
             {children}
         </AuthContext.Provider>
     );

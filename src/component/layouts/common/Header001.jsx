@@ -13,20 +13,21 @@ export default function Header001({ onMenuClick }) {
     const [title, setTitle] = useState('CompValue');
     const [showLogin, setShowLogin] = useState(false);
 
-    const { isLoggedIn, setIsLoggedIn } = useAuth();
-    const [username, setUserName] = useState('admin');
+    const { isLoggedIn, setIsLoggedIn, userName, setUserName, userRole, setUserRole, nickName, setNickName } = useAuth();
+
     const [password, setPassWord] = useState('1q2w3e4r!');
-    const [nickName, setNickName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const nickNameKey = "nickname";
+    // const nickNameKey = "nickname";
 
     const navigate = useNavigate();
 
     useEffect(() => {
         const onForceLogout = () => {
             setIsLoggedIn(false);
-            localStorage.removeItem(nickNameKey);
+            setUserRole && setUserRole('');
+            setUserName && setUserName('');
+            setNickName && setNickName('');
             setShowLogin(false);
 
             // 2) 즉시 홈으로 이동 (백지 구간 제거)
@@ -48,7 +49,7 @@ export default function Header001({ onMenuClick }) {
         setIsLoading(true);
 
         const { data, error } = await send(sendUrl, {
-            username: username,
+            username: userName,
             password: password
         }, "POST");
 
@@ -60,14 +61,16 @@ export default function Header001({ onMenuClick }) {
 
             if (sessionKey == null) alert("인증 실패");
             else {
+                const res = data.response || {};
+                const nextUserName = res.username ?? userName;
+                const nextNick = res.nickName ?? res.nickname ?? res.name ?? nextUserName;
+                const nextRole = res.role ?? (Array.isArray(res.roles) ? res.roles[0] : userRole);
 
-                localStorage.setItem(nickNameKey, data.response.nickName);
-
-                setUserName('');
-                setPassWord('');
-                setNickName(localStorage.getItem(nickNameKey));
-                setShowLogin(false);
+                setUserName(nextUserName);
+                setNickName(nextNick);
+                setUserRole(nextRole || '');
                 setIsLoggedIn(true);
+                setShowLogin(false);
             }
 
         } else {
@@ -84,8 +87,9 @@ export default function Header001({ onMenuClick }) {
         if (error == null) {
             alert('로그아웃 되었습니다.');
             setIsLoggedIn(false);
-            localStorage.removeItem(nickNameKey);
-
+            setUserRole('');
+            setUserName('');
+            setNickName('');
             navigate(`/`);
         }
         else alert(error);
@@ -116,7 +120,7 @@ export default function Header001({ onMenuClick }) {
 
                 {isLoggedIn ? (
                     <div className="ml-auto flex items-center space-x-4 text-sm">
-                        <span>{localStorage.getItem(nickNameKey)}</span>
+                        <span>{nickName || userName}</span>
                         <span className="cursor-pointer underline" onClick={logout}>로그아웃</span>
                     </div>
                 ) : (
@@ -131,7 +135,7 @@ export default function Header001({ onMenuClick }) {
                     onClose={() => setShowLogin(false)}
                     onLogin={login}
                     isLoading={isLoading}
-                    username={username}
+                    username={userName}
                     setUsername={setUserName}
                     password={password}
                     setPassword={setPassWord}

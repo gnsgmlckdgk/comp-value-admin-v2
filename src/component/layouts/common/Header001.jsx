@@ -63,8 +63,12 @@ export default function Header001({ onMenuClick }) {
             else {
                 const res = data.response || {};
                 const nextUserName = res.username ?? userName;
-                const nextNick = res.nickName ?? res.nickname ?? res.name ?? nextUserName;
+                const nextNick = res.nickName ?? nextUserName;
                 const nextRole = res.role ?? (Array.isArray(res.roles) ? res.roles[0] : userRole);
+
+                localStorage.setItem("userName", nextUserName);
+                localStorage.setItem("nickName", nextNick);
+                localStorage.setItem("role", nextRole);
 
                 setUserName(nextUserName);
                 setNickName(nextNick);
@@ -90,6 +94,11 @@ export default function Header001({ onMenuClick }) {
             setUserRole('');
             setUserName('');
             setNickName('');
+
+            localStorage.removeItem("userName");
+            localStorage.removeItem("nickName");
+            localStorage.removeItem("role");
+
             navigate(`/`);
         }
         else alert(error);
@@ -120,7 +129,7 @@ export default function Header001({ onMenuClick }) {
 
                 {isLoggedIn ? (
                     <div className="ml-auto flex items-center space-x-4 text-sm">
-                        <span>{nickName || userName}</span>
+                        <span>{localStorage.getItem("nickName") || localStorage.getItem("userName")}</span>
                         <span className="cursor-pointer underline" onClick={logout}>로그아웃</span>
                     </div>
                 ) : (

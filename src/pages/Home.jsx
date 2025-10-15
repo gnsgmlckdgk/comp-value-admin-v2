@@ -60,10 +60,10 @@ export default function Home() {
     return (
         <div className="p-6 md:p-8">
             <h1 className="text-2xl font-bold mb-2">
-                {userName ? `${userName}님, 환영합니다 👋` : '환영합니다 👋'}
+                {localStorage.getItem("nickName") ? `${localStorage.getItem("userName")}님, 환영합니다 👋` : '환영합니다 👋'}
             </h1>
             <p className="text-slate-600 mb-6">
-                {userRole ? `현재 권한: ${userRole}` : '오늘도 좋은 분석 되세요!'}
+                {localStorage.getItem("role") ? `현재 권한: ${localStorage.getItem("role")}` : '오늘도 좋은 분석 되세요!'}
             </p>
 
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">

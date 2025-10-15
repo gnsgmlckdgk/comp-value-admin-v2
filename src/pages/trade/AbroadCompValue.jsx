@@ -146,9 +146,6 @@ const AbroadCompValue = () => {
         const sendUrl = `/dart/main/cal/per_value/abroad/v2?symbol=${symbol}`;
         const { data, error } = await send(sendUrl, {}, "GET");
 
-        console.log('data', data);
-        console.log('error', error);
-
         if (error == null && data && data.response && Object.keys(data.response).length > 0) {
             setCompValueData(data.response);
             setShowPopup(true);

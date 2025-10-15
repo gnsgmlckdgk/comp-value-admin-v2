@@ -23,6 +23,24 @@ export default function Header001({ onMenuClick }) {
 
     const navigate = useNavigate();
 
+    useEffect(() => {
+        const onForceLogout = () => {
+            setIsLoggedIn(false);
+            localStorage.removeItem(nickNameKey);
+            setShowLogin(false);
+
+            // 2) 즉시 홈으로 이동 (백지 구간 제거)
+            try {
+                alert("인증정보가 존재하지 않습니다.");
+                navigate('/', { replace: true, state: { reason: '401' } });
+            } catch {
+                window.location.href = '/';
+            }
+        };
+        window.addEventListener('auth:logout', onForceLogout);
+        return () => window.removeEventListener('auth:logout', onForceLogout);
+    }, [setIsLoggedIn]);
+
 
     const login = async () => {
         const sendUrl = `/dart/member/login`;

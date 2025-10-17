@@ -113,7 +113,7 @@ const AbroadCompValue = () => {
     const compSymbolSearch = async () => {
         setIsLoading(true);
 
-        const sendUrl = `/dart/abroad/company/search/symbol?cn=${compName}`;
+        const sendUrl = `/dart/abroad/company/search/symbol?cn=${compName}&symbol=${compName}`;
         const { data, error } = await send(sendUrl, {}, "GET");
 
         if (error == null) {

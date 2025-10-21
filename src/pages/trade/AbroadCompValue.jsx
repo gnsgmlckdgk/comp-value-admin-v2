@@ -1,6 +1,7 @@
 import Loading from '@/component/common/display/Loading';
 import { useState, useEffect, useRef } from 'react'
 
+import BulkQueryModal from '@/pages/trade/popup/BulkQueryModal';
 import { send } from '@/util/ClientUtil';
 
 /**
@@ -18,8 +19,11 @@ const AbroadCompValue = () => {
     const [showPopup, setShowPopup] = useState(false);
     const popupRef = useRef(null);
     const [toast, setToast] = useState(null);
+
     const [showGuide, setShowGuide] = useState(false);
     const [showDetail, setShowDetail] = useState(false);
+    const [showBulk, setShowBulk] = useState(false);
+
     const [detailTitle, setDetailTitle] = useState('');
     const [detailData, setDetailData] = useState(null);
 
@@ -183,6 +187,12 @@ const AbroadCompValue = () => {
                         className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 active:bg-indigo-700 transition-colors"
                     >
                         검색
+                    </button>
+                    <button
+                        onClick={() => setShowBulk(true)}
+                        className="px-3 py-2 rounded-md border text-sm font-medium hover:bg-slate-50"
+                    >
+                        대량 조회
                     </button>
                     <span className="text-sm text-slate-500">{Array.isArray(compNameData) ? compNameData.length : 0}건</span>
                 </div>
@@ -590,6 +600,12 @@ const AbroadCompValue = () => {
                     {toast}
                 </div>
             )}
+
+            <BulkQueryModal
+                open={showBulk}
+                onClose={() => setShowBulk(false)}
+            />
+
         </div>
     );
 }

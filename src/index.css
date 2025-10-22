@@ -38,11 +38,11 @@
   scrollbar-gutter: auto;
 }
 
-/* 작은 화면에서만 스크롤바 공간을 고정 예약하여 레이아웃 흔들림 방지 => 공간예약하지 않음으로 변경함 */
+/* 위: 작은 화면에서만 스크롤바 공간을 고정 예약하여 레이아웃 흔들림 방지, 아래: 공간예약하지 않음으로 변경함 */
 @media (max-width: 768px) {
   .scrollbar-always {
-    /* scrollbar-gutter: stable both-edges; */
-    scrollbar-gutter: auto;
+    scrollbar-gutter: stable both-edges;
+    /* scrollbar-gutter: auto; */
   }
 }
 

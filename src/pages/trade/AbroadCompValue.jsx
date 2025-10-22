@@ -173,28 +173,32 @@ const AbroadCompValue = () => {
 
             <div className="space-y-4">
                 {/* search */}
-                <div className="flex items-center gap-2">
-                    <input
-                        type="text"
-                        value={compName}
-                        onChange={e => setCompName(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); compSymbolSearch(); } }}
-                        placeholder="심볼 및 회사명으로 검색 (Enter)"
-                        className="w-[min(520px,90vw)] px-3 py-2 rounded-md border border-slate-300 bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    <button
-                        onClick={compSymbolSearch}
-                        className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 active:bg-indigo-700 transition-colors"
-                    >
-                        검색
-                    </button>
-                    <button
-                        onClick={() => setShowBulk(true)}
-                        className="px-3 py-2 rounded-md border text-sm font-medium hover:bg-slate-50"
-                    >
-                        대량 조회
-                    </button>
-                    <span className="text-sm text-slate-500">{Array.isArray(compNameData) ? compNameData.length : 0}건</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={compName}
+                            onChange={e => setCompName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); compSymbolSearch(); } }}
+                            placeholder="심볼 및 회사명으로 검색 (Enter)"
+                            className="w-[min(520px,90vw)] px-3 py-2 rounded-md border border-slate-300 bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                        <button
+                            onClick={compSymbolSearch}
+                            className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 active:bg-indigo-700 transition-colors"
+                        >
+                            검색
+                        </button>
+                        <button
+                            onClick={() => setShowBulk(true)}
+                            className="px-3 py-2 rounded-md border text-sm font-medium hover:bg-slate-50"
+                        >
+                            대량 조회
+                        </button>
+                    </div>
+                    <div className="text-xs sm:text-sm text-slate-500 sm:ml-1">
+                        {Array.isArray(compNameData) ? compNameData.length : 0}건
+                    </div>
                 </div>
 
                 {/* result table */}

@@ -35,13 +35,17 @@
 /* 항상 보이는 가로 스크롤바 */
 .scrollbar-always {
   /* 기본은 공간 예약하지 않음(넓은 화면 여백 방지) */
-  scrollbar-gutter: auto;
+  /* scrollbar-gutter: auto; */
+  /* 스크롤바 공간 예약 */
+  scrollbar-gutter: stable both-edges;
 }
 
-/* 위: 작은 화면에서만 스크롤바 공간을 고정 예약하여 레이아웃 흔들림 방지, 아래: 공간예약하지 않음으로 변경함 */
+/* 작은 화면 */
 @media (max-width: 768px) {
   .scrollbar-always {
+    /* 스크롤바 공간 예약 */
     scrollbar-gutter: stable both-edges;
+    /* 공간 예약하지 않음(넓은 화면 여백 방지) */
     /* scrollbar-gutter: auto; */
   }
 }

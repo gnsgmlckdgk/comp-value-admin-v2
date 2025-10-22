@@ -137,151 +137,159 @@ export default function TransactionOverview() {
     ];
 
     return (
-        <div className="p-4 md:p-6">
-            <div className="mb-3 flex items-center justify-between">
-                <h1 className="text-xl font-semibold text-slate-800">보유 종목 관리</h1>
-                <div className="flex items-center gap-3 text-sm">
-                    <button
-                        onClick={refreshPrices}
-                        className="rounded-md border px-3 py-1.5 hover:bg-slate-50 disabled:opacity-60"
-                        disabled={loading || rows.length === 0}
-                    >
-                        현재가격 갱신
-                    </button>
-                    <span className="text-slate-500">
-                        {lastUpdated ? `갱신: ${new Date(lastUpdated).toLocaleString()}` : '갱신 정보 없음'}
-                    </span>
-                </div>
-            </div>
+        <>
+            {/* 페이지 제목 - 다른 화면과 동일 스타일 */}
+            <h1 className='text-2xl md:text-3xl font-bold tracking-tight text-slate-800'>보유 종목 관리</h1>
 
-            <div className="mx-0">
-                <div className="overflow-x-auto bg-white border border-slate-200 rounded-md scrollbar-always">
-                    <table className="table-fixed min-w-[1040px] w-full">
-                        <colgroup>
-                            <col className="w-12" />  {/* No */}
-                            <col className="w-20" />  {/* 티커 */}
-                            <col className="w-48" />  {/* 기업명 */}
-                            <col className="w-24" />  {/* 매수가격 */}
-                            <col className="w-28" />  {/* 총매수가격 */}
-                            <col className="w-28" />  {/* 매수일자 */}
-                            <col className="w-24" />  {/* 현재가격 */}
-                            <col className="w-24" />  {/* 매도목표가 */}
-                            <col className="w-20" />  {/* 작업 */}
-                        </colgroup>
-                        <thead>
-                            <tr className="bg-slate-50 text-slate-600 text-xs md:text-sm sticky top-0 z-10">
-                                {headers.map((h) => (
-                                    <th key={h} className="px-3 py-2 text-left font-medium border-b border-slate-200 whitespace-nowrap">
-                                        {h}
-                                    </th>
+            {/* 페이지 패딩 컨테이너 - 다른 화면과 동일 여백 */}
+            <div className="px-2 py-8 md:px-4">
+                {/* 상단 우측 액션 영역 */}
+                <div className="mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div className="hidden md:block" />
+                    <div className="flex items-center gap-3 text-sm">
+                        <button
+                            onClick={refreshPrices}
+                            className="rounded-md border px-3 py-1.5 hover:bg-slate-50 disabled:opacity-60"
+                            disabled={loading || rows.length === 0}
+                        >
+                            현재가격 갱신
+                        </button>
+                        <span className="text-slate-500">
+                            {lastUpdated ? `갱신: ${new Date(lastUpdated).toLocaleString()}` : '갱신 정보 없음'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* 표 */}
+                <div className="mx-0">
+                    <div className="overflow-x-auto bg-white border border-slate-200 rounded-md scrollbar-always">
+                        <table className="table-fixed min-w-[1040px] w-full">
+                            <colgroup>
+                                <col className="w-12" />  {/* No */}
+                                <col className="w-20" />  {/* 티커 */}
+                                <col className="w-48" />  {/* 기업명 */}
+                                <col className="w-24" />  {/* 매수가격 */}
+                                <col className="w-28" />  {/* 총매수가격 */}
+                                <col className="w-28" />  {/* 매수일자 */}
+                                <col className="w-24" />  {/* 현재가격 */}
+                                <col className="w-24" />  {/* 매도목표가 */}
+                                <col className="w-20" />  {/* 작업 */}
+                            </colgroup>
+                            <thead>
+                                <tr className="bg-slate-50 text-slate-600 text-xs md:text-sm sticky top-0 z-10">
+                                    {headers.map((h) => (
+                                        <th key={h} className="px-3 py-2 text-left font-medium border-b border-slate-200 whitespace-nowrap">
+                                            {h}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm whitespace-nowrap">
+                                {rows.map((r, i) => (
+                                    <tr key={r.id} className="border-b last:border-b-0">
+                                        <Td>{i + 1}</Td>
+                                        <EditableTd row={r} field="symbol" value={r.symbol} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
+                                        <EditableTd row={r} field="companyName" value={r.companyName} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
+                                        <EditableTd row={r} field="buyPrice" value={r.buyPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+                                        <EditableTd row={r} field="totalBuyAmount" value={r.totalBuyAmount} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+                                        <EditableTd row={r} field="buyDate" value={r.buyDate} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="date" />
+                                        <EditableTd row={r} field="currentPrice" value={r.currentPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+                                        <EditableTd row={r} field="targetPrice" value={r.targetPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+                                        <Td>
+                                            <button
+                                                onClick={() => removeRow(r.id)}
+                                                className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300"
+                                                disabled={saving}
+                                            >
+                                                삭제
+                                            </button>
+                                        </Td>
+                                    </tr>
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody className="text-sm whitespace-nowrap">
-                            {rows.map((r, i) => (
-                                <tr key={r.id} className="border-b last:border-b-0">
-                                    <Td>{i + 1}</Td>
-                                    <EditableTd row={r} field="symbol" value={r.symbol} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
-                                    <EditableTd row={r} field="companyName" value={r.companyName} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
-                                    <EditableTd row={r} field="buyPrice" value={r.buyPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
-                                    <EditableTd row={r} field="totalBuyAmount" value={r.totalBuyAmount} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
-                                    <EditableTd row={r} field="buyDate" value={r.buyDate} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="date" />
-                                    <EditableTd row={r} field="currentPrice" value={r.currentPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
-                                    <EditableTd row={r} field="targetPrice" value={r.targetPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+
+                                {/* 신규 입력 행 */}
+                                <tr className="bg-slate-50/60">
+                                    <Td />
+                                    <Td>
+                                        <input
+                                            value={newRow.symbol}
+                                            onChange={(e) => setNewRow((p) => ({ ...p, symbol: e.target.value }))}
+                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            placeholder="티커"
+                                        />
+                                    </Td>
+                                    <Td>
+                                        <input
+                                            value={newRow.companyName}
+                                            onChange={(e) => setNewRow((p) => ({ ...p, companyName: e.target.value }))}
+                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            placeholder="기업명"
+                                        />
+                                    </Td>
+                                    <Td>
+                                        <input
+                                            value={newRow.buyPrice}
+                                            onChange={(e) => setNewRow((p) => ({ ...p, buyPrice: e.target.value }))}
+                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            placeholder="매수가"
+                                            type="number"
+                                        />
+                                    </Td>
+                                    <Td>
+                                        <input
+                                            value={newRow.totalBuyAmount}
+                                            onChange={(e) => setNewRow((p) => ({ ...p, totalBuyAmount: e.target.value }))}
+                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            placeholder="총매수"
+                                            type="number"
+                                        />
+                                    </Td>
+                                    <Td>
+                                        <input
+                                            value={newRow.buyDate}
+                                            onChange={(e) => setNewRow((p) => ({ ...p, buyDate: e.target.value }))}
+                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            type="date"
+                                        />
+                                    </Td>
+                                    <Td>
+                                        <input
+                                            value={newRow.currentPrice}
+                                            onChange={(e) => setNewRow((p) => ({ ...p, currentPrice: e.target.value }))}
+                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            placeholder="현재가"
+                                            type="number"
+                                        />
+                                    </Td>
+                                    <Td>
+                                        <input
+                                            value={newRow.targetPrice}
+                                            onChange={(e) => setNewRow((p) => ({ ...p, targetPrice: e.target.value }))}
+                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            placeholder="목표가"
+                                            type="number"
+                                        />
+                                    </Td>
                                     <Td>
                                         <button
-                                            onClick={() => removeRow(r.id)}
-                                            className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300"
+                                            onClick={addRow}
+                                            className="px-2.5 py-1 rounded-md border text-xs hover:bg-emerald-50 hover:border-emerald-300"
                                             disabled={saving}
                                         >
-                                            삭제
+                                            등록
                                         </button>
                                     </Td>
                                 </tr>
-                            ))}
-
-                            {/* 신규 입력 행 */}
-                            <tr className="bg-slate-50/60">
-                                <Td />
-                                <Td>
-                                    <input
-                                        value={newRow.symbol}
-                                        onChange={(e) => setNewRow((p) => ({ ...p, symbol: e.target.value }))}
-                                        className="w-full rounded border px-2 py-1 text-sm"
-                                        placeholder="티커"
-                                    />
-                                </Td>
-                                <Td>
-                                    <input
-                                        value={newRow.companyName}
-                                        onChange={(e) => setNewRow((p) => ({ ...p, companyName: e.target.value }))}
-                                        className="w-full rounded border px-2 py-1 text-sm"
-                                        placeholder="기업명"
-                                    />
-                                </Td>
-                                <Td>
-                                    <input
-                                        value={newRow.buyPrice}
-                                        onChange={(e) => setNewRow((p) => ({ ...p, buyPrice: e.target.value }))}
-                                        className="w-full rounded border px-2 py-1 text-sm"
-                                        placeholder="매수가"
-                                        type="number"
-                                    />
-                                </Td>
-                                <Td>
-                                    <input
-                                        value={newRow.totalBuyAmount}
-                                        onChange={(e) => setNewRow((p) => ({ ...p, totalBuyAmount: e.target.value }))}
-                                        className="w-full rounded border px-2 py-1 text-sm"
-                                        placeholder="총매수"
-                                        type="number"
-                                    />
-                                </Td>
-                                <Td>
-                                    <input
-                                        value={newRow.buyDate}
-                                        onChange={(e) => setNewRow((p) => ({ ...p, buyDate: e.target.value }))}
-                                        className="w-full rounded border px-2 py-1 text-sm"
-                                        type="date"
-                                    />
-                                </Td>
-                                <Td>
-                                    <input
-                                        value={newRow.currentPrice}
-                                        onChange={(e) => setNewRow((p) => ({ ...p, currentPrice: e.target.value }))}
-                                        className="w-full rounded border px-2 py-1 text-sm"
-                                        placeholder="현재가"
-                                        type="number"
-                                    />
-                                </Td>
-                                <Td>
-                                    <input
-                                        value={newRow.targetPrice}
-                                        onChange={(e) => setNewRow((p) => ({ ...p, targetPrice: e.target.value }))}
-                                        className="w-full rounded border px-2 py-1 text-sm"
-                                        placeholder="목표가"
-                                        type="number"
-                                    />
-                                </Td>
-                                <Td>
-                                    <button
-                                        onClick={addRow}
-                                        className="px-2.5 py-1 rounded-md border text-xs hover:bg-emerald-50 hover:border-emerald-300"
-                                        disabled={saving}
-                                    >
-                                        등록
-                                    </button>
-                                </Td>
-                            </tr>
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            {loading && (
-                <div className="mt-3 text-sm text-slate-500">불러오는 중…</div>
-            )}
-        </div>
+                {loading && (
+                    <div className="mt-3 text-sm text-slate-500">불러오는 중…</div>
+                )}
+            </div>
+        </>
     );
 }
 

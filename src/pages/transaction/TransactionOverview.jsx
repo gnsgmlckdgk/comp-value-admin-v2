@@ -24,6 +24,20 @@ function fmtDate(d) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+// 심볼, 매수일 순 정렬 헬퍼
+function sortRowsBySymbolAndDate(list) {
+    return [...list].sort((a, b) => {
+        const sa = String(a.symbol || '').toUpperCase();
+        const sb = String(b.symbol || '').toUpperCase();
+        if (sa === sb) {
+            const da = a.buyDate ? new Date(a.buyDate) : new Date(0);
+            const db = b.buyDate ? new Date(b.buyDate) : new Date(0);
+            return da - db; // ASC
+        }
+        return sa.localeCompare(sb);
+    });
+}
+
 export default function TransactionOverview() {
 
     const { isLoggedIn } = useAuth();
@@ -55,7 +69,7 @@ export default function TransactionOverview() {
             setLoading(true);
             try {
                 const list = await fetchTransactions();
-                setRows(list);
+                setRows(sortRowsBySymbolAndDate(list));
                 setLastUpdated(new Date());
             } finally {
                 setLoading(false);
@@ -104,7 +118,7 @@ export default function TransactionOverview() {
         try {
             await deleteTransaction(id);
             const list = await fetchTransactions();
-            setRows(list);
+            setRows(sortRowsBySymbolAndDate(list));
             setLastUpdated(new Date());
         } catch (e) {
             alert('삭제에 실패했습니다.');
@@ -137,7 +151,7 @@ export default function TransactionOverview() {
                     ? { ...r, currentPrice: prevCp }
                     : r;
             });
-            setRows(merged);
+            setRows(sortRowsBySymbolAndDate(merged));
 
             // 4) 방금 등록한 심볼만이 아니라 화면 내 **모든 심볼**의 현재가를 동기화
             const allSymbols = Array.from(new Set(merged.map((r) => r.symbol)));
@@ -203,6 +217,50 @@ export default function TransactionOverview() {
     const diffPct = totals.buySum > 0 ? (diff / totals.buySum) * 100 : 0;
     const fx = fxRate || 0;
     // -------------------------------------------------------------------------
+
+    // 그룹 행 구성: 같은 티커가 2개 이상인 경우, 해당 그룹 마지막 아래에 합계 행 삽입
+    const groupedRows = (() => {
+        const out = [];
+        let i = 0;
+        const n = rows.length;
+        while (i < n) {
+            const start = i;
+            const sym = String(rows[i].symbol || '').toUpperCase();
+            let end = i;
+            while (end < n && String(rows[end].symbol || '').toUpperCase() === sym) end++;
+            const count = end - start;
+            // push group rows
+            for (let k = start; k < end; k++) out.push(rows[k]);
+            // subtotal if 2+
+            if (count >= 2) {
+                const slice = rows.slice(start, end);
+                const qtySum = slice.reduce((s, r) => s + toNum(r.totalBuyAmount), 0);
+                const buySumUSD = slice.reduce((s, r) => s + toNum(r.buyPrice) * toNum(r.totalBuyAmount), 0);
+                const curSumUSD = slice.reduce((s, r) => s + toNum(r.currentPrice) * toNum(r.totalBuyAmount), 0);
+                const diffUSD = curSumUSD - buySumUSD;
+                const diffPct = buySumUSD > 0 ? (diffUSD / buySumUSD) * 100 : 0;
+                // 현재가: 동일하다고 가정하되, 안전하게 평균값 사용 (빈 값 제외)
+                const curList = slice.map(r => toNum(r.currentPrice)).filter(v => v > 0);
+                const curUSD = curList.length ? (curList.reduce((a, b) => a + b, 0) / curList.length) : 0;
+                // 매도목표가: 평균값 (빈 값 제외)
+                const tgtList = slice.map(r => toNum(r.targetPrice)).filter(v => v > 0);
+                const targetAvgUSD = tgtList.length ? (tgtList.reduce((a, b) => a + b, 0) / tgtList.length) : 0;
+                out.push({
+                    __type: 'groupTotal',
+                    symbol: sym,
+                    qtySum,
+                    buySumUSD,
+                    curSumUSD,
+                    diffUSD,
+                    diffPct,
+                    curUSD,
+                    targetAvgUSD,
+                });
+            }
+            i = end;
+        }
+        return out;
+    })();
 
 
     // 심볼 목록으로 현재가를 조회해서 모든 동일 심볼 행에 머지
@@ -284,49 +342,88 @@ export default function TransactionOverview() {
                                 </tr>
                             </thead>
                             <tbody className="text-sm whitespace-nowrap">
-                                {rows.map((r, i) => (
-                                    <tr key={r.id} className="border-b last:border-b-0">
-                                        <Td>{i + 1}</Td>
-                                        <EditableTd row={r} field="symbol" value={r.symbol} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
-                                        <EditableTd row={r} field="companyName" value={r.companyName} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
+                                {groupedRows.map((r, i) => {
+                                    if (r.__type === 'groupTotal') {
+                                        const cls = r.diffUSD >= 0 ? 'text-rose-600' : 'text-blue-600';
+                                        return (
+                                            <tr key={`g-${r.symbol}-${i}`} className="bg-slate-50 font-semibold">
+                                                <Td />
+                                                <Td className="font-semibold text-slate-700">{r.symbol} 합계</Td>
+                                                <Td />
+                                                <Td />
+                                                <Td />
+                                                <Td /> {/* 매수가격(₩) 자리 채움 */}
+                                                {/* 수량 합계 */}
+                                                <Td><div className="px-1">{r.qtySum ? fmtNum(r.qtySum, 0) : ''}</div></Td>
+                                                {/* 총매수금액(USD/₩) */}
+                                                <UsdCell value={r.buySumUSD} />
+                                                <KrwCell value={Math.round(r.buySumUSD * (fx || 0))} />
+                                                {/* 현재가격 (USD/₩) */}
+                                                <UsdCell value={r.curUSD} />
+                                                <KrwCell value={Math.round(r.curUSD * (fx || 0))} />
+                                                {/* 총현재가치(USD/₩) */}
+                                                <UsdCell value={r.curSumUSD} />
+                                                <KrwCell value={Math.round(r.curSumUSD * (fx || 0))} />
+                                                {/* 매도목표가 평균(USD) */}
+                                                <UsdCell value={r.targetAvgUSD} />
+                                                {/* 가격차 합산 */}
+                                                <Td>
+                                                    <div className="px-1 leading-tight">
+                                                        <div className={cls}>{(r.diffUSD >= 0 ? '+' : '') + '$ ' + fmtNum(r.diffUSD)}</div>
+                                                        <div className="text-[11px] text-slate-500">{fx ? `₩ ${Math.round(r.diffUSD * fx).toLocaleString()}` : ''}</div>
+                                                        <div className={cls + ' text-[12px]'}>{(r.diffUSD >= 0 ? '+' : '') + r.diffPct.toFixed(2)}%</div>
+                                                    </div>
+                                                </Td>
+                                                {/* 작업 공란 */}
+                                                <Td />
+                                            </tr>
+                                        );
+                                    }
 
-                                        {/* 매수일자 */}
-                                        <EditableTd row={r} field="buyDate" value={r.buyDate} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="date" />
+                                    return (
+                                        <tr key={r.id} className="border-b last:border-b-0">
+                                            <Td>{i + 1}</Td>
+                                            <EditableTd row={r} field="symbol" value={r.symbol} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
+                                            <EditableTd row={r} field="companyName" value={r.companyName} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
 
-                                        {/* 매수가격 USD + 원화환산 */}
-                                        <EditableTd row={r} field="buyPrice" value={r.buyPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
-                                        <KrwCell value={toNum(r.buyPrice) * (fx || 0)} />
+                                            {/* 매수일자 */}
+                                            <EditableTd row={r} field="buyDate" value={r.buyDate} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="date" />
 
-                                        {/* 수량(=총매수가격 컬럼을 수량으로 사용) + 총매수금액(USD/₩) */}
-                                        <EditableTd row={r} field="totalBuyAmount" value={r.totalBuyAmount} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
-                                        <UsdCell value={toNum(r.totalBuyAmount) * toNum(r.buyPrice)} />
-                                        <KrwCell value={Math.round(toNum(r.totalBuyAmount) * toNum(r.buyPrice) * (fx || 0))} />
+                                            {/* 매수가격 USD + 원화환산 */}
+                                            <EditableTd row={r} field="buyPrice" value={r.buyPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+                                            <KrwCell value={toNum(r.buyPrice) * (fx || 0)} />
 
-                                        {/* 현재가격 USD + 원화환산 (읽기 전용) */}
-                                        <UsdCell value={toNum(r.currentPrice)} />
-                                        <KrwCell value={toNum(r.currentPrice) * (fx || 0)} />
+                                            {/* 수량 + 총매수금액(USD/₩) */}
+                                            <EditableTd row={r} field="totalBuyAmount" value={r.totalBuyAmount} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+                                            <UsdCell value={toNum(r.totalBuyAmount) * toNum(r.buyPrice)} />
+                                            <KrwCell value={Math.round(toNum(r.totalBuyAmount) * toNum(r.buyPrice) * (fx || 0))} />
 
-                                        {/* 총현재가치 (USD/₩) */}
-                                        <UsdCell value={toNum(r.currentPrice) * toNum(r.totalBuyAmount)} />
-                                        <KrwCell value={Math.round(toNum(r.currentPrice) * toNum(r.totalBuyAmount) * (fx || 0))} />
+                                            {/* 현재가격 USD + 원화환산 (읽기 전용) */}
+                                            <UsdCell value={toNum(r.currentPrice)} />
+                                            <KrwCell value={toNum(r.currentPrice) * (fx || 0)} />
 
-                                        {/* 매도목표가 */}
-                                        <EditableTd row={r} field="targetPrice" value={r.targetPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+                                            {/* 총현재가치 (USD/₩) */}
+                                            <UsdCell value={toNum(r.currentPrice) * toNum(r.totalBuyAmount)} />
+                                            <KrwCell value={Math.round(toNum(r.currentPrice) * toNum(r.totalBuyAmount) * (fx || 0))} />
 
-                                        {/* 가격차 (현재-매수): USD, KRW, % */}
-                                        <DiffCell buy={toNum(r.buyPrice)} cur={toNum(r.currentPrice)} fx={fx} />
+                                            {/* 매도목표가 */}
+                                            <EditableTd row={r} field="targetPrice" value={r.targetPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
 
-                                        <Td>
-                                            <button
-                                                onClick={() => removeRow(r.id)}
-                                                className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300"
-                                                disabled={saving}
-                                            >
-                                                삭제
-                                            </button>
-                                        </Td>
-                                    </tr>
-                                ))}
+                                            {/* 가격차 (현재-매수): USD, KRW, % */}
+                                            <DiffCell buy={toNum(r.buyPrice)} cur={toNum(r.currentPrice)} fx={fx} />
+
+                                            <Td>
+                                                <button
+                                                    onClick={() => removeRow(r.id)}
+                                                    className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300"
+                                                    disabled={saving}
+                                                >
+                                                    삭제
+                                                </button>
+                                            </Td>
+                                        </tr>
+                                    );
+                                })}
 
                                 {/* 신규 입력 행 */}
                                 <tr className="bg-slate-50/60">
@@ -445,8 +542,8 @@ export default function TransactionOverview() {
     );
 }
 
-function Td({ children }) {
-    return <td className="px-3 py-2 align-middle">{children}</td>;
+function Td({ children, className = '' }) {
+    return <td className={`px-3 py-2 align-middle ${className}`}>{children}</td>;
 }
 
 function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, setDraft, commitEdit, type = 'text' }) {

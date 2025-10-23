@@ -7,6 +7,7 @@ import {
     deleteTransaction,
     refreshCurrentPrices,
     fetchFxRate,
+    fetchCurrentPricesBySymbols,
 } from '@/pages/transaction/services/TransactionService'
 
 const toNum = (v) => (v == null || v === '' || isNaN(Number(v)) ? 0 : Number(v));
@@ -117,9 +118,32 @@ export default function TransactionOverview() {
         if (!payload.symbol) return alert('티커를 입력해주세요.');
         setSaving(true);
         try {
+            // 0) 기존 rows 의 현재가를 심볼로 보존 (refetch 시 사라지는 문제 방지)
+            const prevPriceBySym = new Map(
+                rows.map((r) => [String(r.symbol || '').toUpperCase(), r.currentPrice])
+            );
+
+            // 1) 등록
             await createTransaction(payload);
+
+            // 2) 목록 재조회
             const list = await fetchTransactions();
-            setRows(list);
+
+            // 3) 재조회된 목록에 기존 현재가(있던 값) 우선 머지
+            const merged = list.map((r) => {
+                const sym = String(r.symbol || '').toUpperCase();
+                const prevCp = prevPriceBySym.get(sym);
+                return (prevCp !== undefined && prevCp !== null && prevCp !== '')
+                    ? { ...r, currentPrice: prevCp }
+                    : r;
+            });
+            setRows(merged);
+
+            // 4) 방금 등록한 심볼만이 아니라 화면 내 **모든 심볼**의 현재가를 동기화
+            const allSymbols = Array.from(new Set(merged.map((r) => r.symbol)));
+            await mergePricesBySymbols(allSymbols);
+
+            // 5) 입력값 초기화 및 갱신시각 기록
             setNewRow({ symbol: '', companyName: '', buyPrice: '', totalBuyAmount: '', buyDate: '', currentPrice: '', targetPrice: '' });
             setLastUpdated(new Date());
         } catch (e) {
@@ -132,13 +156,11 @@ export default function TransactionOverview() {
     const refreshPrices = async () => {
         setLoading(true);
         try {
-            const ids = rows.map((r) => r.id);
-            const [refreshed, fx] = await Promise.all([
-                refreshCurrentPrices(ids),
-                fetchFxRate(),
-            ]);
-            const map = new Map(refreshed.map((r) => [r.id, r]));
-            setRows((prev) => prev.map((r) => (map.has(r.id) ? { ...r, ...map.get(r.id) } : r)));
+            // 1) 모든 행의 심볼로 현재가 갱신 (동일 심볼은 전부 같은 값 적용)
+            await mergePricesBySymbols(rows.map((r) => r.symbol));
+
+            // 2) 환율도 함께 갱신
+            const fx = await fetchFxRate();
             setFxRate(fx?.rate ?? fxRate);
             setFxUpdatedAt(fx?.updatedAt ? new Date(fx.updatedAt) : new Date());
             setLastUpdated(new Date());
@@ -180,6 +202,28 @@ export default function TransactionOverview() {
     const diff = totals.curSum - totals.buySum;
     const diffPct = totals.buySum > 0 ? (diff / totals.buySum) * 100 : 0;
     const fx = fxRate || 0;
+    // -------------------------------------------------------------------------
+
+
+    // 심볼 목록으로 현재가를 조회해서 모든 동일 심볼 행에 머지
+    const mergePricesBySymbols = async (symbols = []) => {
+        const unique = Array.from(
+            new Set(symbols.filter(Boolean).map((s) => String(s).toUpperCase()))
+        );
+        if (unique.length === 0) return;
+
+        const priceList = await fetchCurrentPricesBySymbols(unique);
+        const bySym = new Map(priceList.map((p) => [String(p.symbol).toUpperCase(), p]));
+
+        setRows((prev) =>
+            prev.map((r) => {
+                const sym = String(r.symbol || '').toUpperCase();
+                const hit = bySym.get(sym);
+                return hit ? { ...r, currentPrice: Number(hit.currentPrice) } : r;
+            })
+        );
+        setLastUpdated(new Date());
+    };
 
     return (
         <>
@@ -258,8 +302,8 @@ export default function TransactionOverview() {
                                         <UsdCell value={toNum(r.totalBuyAmount) * toNum(r.buyPrice)} />
                                         <KrwCell value={Math.round(toNum(r.totalBuyAmount) * toNum(r.buyPrice) * (fx || 0))} />
 
-                                        {/* 현재가격 USD + 원화환산 */}
-                                        <EditableTd row={r} field="currentPrice" value={r.currentPrice} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} type="number" />
+                                        {/* 현재가격 USD + 원화환산 (읽기 전용) */}
+                                        <UsdCell value={toNum(r.currentPrice)} />
                                         <KrwCell value={toNum(r.currentPrice) * (fx || 0)} />
 
                                         {/* 총현재가치 (USD/₩) */}
@@ -338,16 +382,8 @@ export default function TransactionOverview() {
                                     <Td />
                                     {/* 총매수금액(₩) - 계산필드(빈칸) */}
                                     <Td />
-                                    {/* 현재가격(USD) */}
-                                    <Td>
-                                        <input
-                                            value={newRow.currentPrice}
-                                            onChange={(e) => setNewRow((p) => ({ ...p, currentPrice: e.target.value }))}
-                                            className="w-full rounded border px-2 py-1 text-sm"
-                                            placeholder="현재가"
-                                            type="number"
-                                        />
-                                    </Td>
+                                    {/* 현재가격(USD) - 백단 갱신 필드(입력 불가) */}
+                                    <Td />
                                     {/* 현재가격(₩) - 계산필드(빈칸) */}
                                     <Td />
                                     {/* 총현재가치(USD) - 계산필드(빈칸) */}

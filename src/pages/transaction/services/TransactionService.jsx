@@ -97,3 +97,26 @@ export async function fetchFxRate() {
     const rate = 1390.25; // 1 USD -> KRW
     return { rate, updatedAt: new Date().toISOString() };
 }
+
+// ---------------------------------------------------------------------------
+// 티커 기준 현재가 조회 (백단 연동 지점)
+// - 실제 구현 시 서버 API 호출로 교체하세요.
+// - 반환 형식: [{ symbol: 'AAPL', currentPrice: 123.45, updatedAt: 'iso-string' }, ...]
+export async function fetchCurrentPricesBySymbols(symbols = []) {
+    await delay(120);
+    // MOCK: 심볼별 임의 가격 생성 (실서버에서는 제거)
+    const now = new Date().toISOString();
+    return symbols
+        .filter(Boolean)
+        .map((s) => ({
+            symbol: String(s).toUpperCase(),
+            currentPrice: Number((100 + Math.random() * 100)).toFixed(2),
+            updatedAt: now,
+        }));
+}
+
+// 단일 티커 현재가 조회 (편의용)
+export async function fetchCurrentPriceBySymbol(symbol) {
+    const list = await fetchCurrentPricesBySymbols([symbol]);
+    return list[0] || null;
+}

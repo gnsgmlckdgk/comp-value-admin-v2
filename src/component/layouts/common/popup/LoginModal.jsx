@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
@@ -23,6 +23,20 @@ export default function LoginModal({
         }
     }, [show]);
 
+    const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+    useEffect(() => {
+        const handleResize = () => {
+            const visualViewport = window.visualViewport;
+            if (visualViewport) {
+                const offset = window.innerHeight - visualViewport.height;
+                setKeyboardOffset(offset > 0 ? offset : 0);
+            }
+        };
+        window.visualViewport?.addEventListener('resize', handleResize);
+        return () => window.visualViewport?.removeEventListener('resize', handleResize);
+    }, []);
+
     // show가 false일 경우 아무것도 렌더링하지 않음
     if (!show) return null;
 
@@ -39,8 +53,10 @@ export default function LoginModal({
             onClick={handleOutsideClick}
         >
             <Loading show={isLoading} />
-
-            <div className="relative bg-white p-4 md:p-6 rounded shadow-md text-black w-full max-w-md transition-transform duration-200 ease-out transform">
+            <div
+                className="relative bg-white p-4 md:p-6 rounded shadow-md text-black w-full max-w-md transition-transform duration-200 ease-out"
+                style={{ transform: `translateY(-${keyboardOffset}px)` }}
+            >
                 <h2 className="text-lg font-bold mb-4">로그인</h2>
                 <Input
                     inputRef={usernameRef}

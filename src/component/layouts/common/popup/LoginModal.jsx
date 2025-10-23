@@ -48,14 +48,17 @@ export default function LoginModal({
 
     return (
         <div
-            className="login-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            className="login-modal-overlay fixed inset-0 z-50 flex justify-center p-4 overflow-y-auto"
+            style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                paddingBottom: (keyboardOffset ? keyboardOffset + 16 : 16),
+                alignItems: keyboardOffset ? 'flex-end' : 'center',
+            }}
             onClick={handleOutsideClick}
         >
             <Loading show={isLoading} />
             <div
-                className="relative bg-white p-4 md:p-6 rounded shadow-md text-black w-full max-w-md transition-transform duration-200 ease-out"
-                style={{ transform: `translateY(-${keyboardOffset}px)` }}
+                className="relative bg-white p-4 md:p-6 rounded shadow-md text-black w-full max-w-md transition-transform duration-200 ease-out max-h-[85vh] overflow-auto"
             >
                 <h2 className="text-lg font-bold mb-4">로그인</h2>
                 <Input

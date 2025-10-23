@@ -20,38 +20,6 @@ export default function Home() {
                 <p className="text-slate-600 mb-8 max-w-[680px]">
                     주식의 내재가치를 정량적으로 평가하고, 기업의 성장성과 밸류에이션을 시각적으로 비교해보세요.
                 </p>
-
-                <div className="flex items-center gap-3">
-                    <Button
-                        text="로그인하고 시작하기"
-                        onClick={() => {
-                            // 헤더 로그인 모달을 띄우고 싶다면 전역 이벤트로 요청
-                            try { window.dispatchEvent(new CustomEvent('ui:openLogin')); } catch { }
-                        }}
-                    />
-                    <button
-                        type="button"
-                        className="text-sm text-slate-600 underline"
-                        onClick={() => navigate('/compvalue/abroad')}
-                    >
-                        먼저 화면만 둘러보기
-                    </button>
-                </div>
-
-                <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-5xl">
-                    <LandingCard
-                        title="국내기업 조회"
-                        desc="국내 등록된 기업 목록을 조회"
-                    />
-                    <LandingCard
-                        title="기업가치 계산(국내)"
-                        desc="종목별 밸류에이션, 성장률, PEG 비율 등을 조회"
-                    />
-                    <LandingCard
-                        title="기업가치 계산(미국)"
-                        desc="종목별 밸류에이션, 성장률, PEG 비율 등을 조회"
-                    />
-                </div>
             </div>
         );
     }

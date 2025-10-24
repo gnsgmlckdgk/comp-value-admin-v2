@@ -17,6 +17,14 @@ function fmtNum(n, d = 2) {
     return Number(n).toLocaleString(undefined, { maximumFractionDigits: d });
 }
 
+function fmtUsd(n) {
+    if (n == null || n === '' || isNaN(Number(n))) return '';
+    return Number(n).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
 function fmtDate(d) {
     if (!d) return '';
     const date = typeof d === 'string' ? new Date(d) : d;
@@ -368,7 +376,7 @@ export default function TransactionOverview() {
                                                     <UsdCell key="c13" value={r.targetAvgUSD} />,
                                                     <Td key="c14">
                                                         <div className="px-1 leading-tight">
-                                                            <div className={cls}>{(r.diffUSD >= 0 ? '+' : '') + '$ ' + fmtNum(r.diffUSD)}</div>
+                                                            <div className={cls}>{(r.diffUSD >= 0 ? '+' : '') + '$ ' + fmtUsd(r.diffUSD)}</div>
                                                             <div className="text-[11px] text-slate-500">{fx ? `₩ ${Math.round(r.diffUSD * fx).toLocaleString()}` : ''}</div>
                                                             <div className={cls + ' text-[12px]'}>{(r.diffUSD >= 0 ? '+' : '') + r.diffPct.toFixed(2)}%</div>
                                                         </div>
@@ -514,17 +522,17 @@ export default function TransactionOverview() {
                         <div className="p-3 border-t border-slate-200 text-sm flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                                 <span className="text-slate-600">
-                                    총매수금액: <b>${fmtNum(totals.buySum)}</b>
+                                    총매수금액: <b>$ {fmtUsd(totals.buySum)}</b>
                                     {fx ? ` (≈ ₩${Math.round(totals.buySum * fx).toLocaleString()})` : ''}
                                 </span>
                                 <span className="text-slate-600">
-                                    총현재가치: <b>${fmtNum(totals.curSum)}</b>
+                                    총현재가치: <b>$ {fmtUsd(totals.curSum)}</b>
                                     {fx ? ` (≈ ₩${Math.round(totals.curSum * fx).toLocaleString()})` : ''}
                                 </span>
                             </div>
                             <div className="mt-1 md:mt-0">
                                 <span className={diff >= 0 ? 'text-rose-600 font-semibold' : 'text-blue-600 font-semibold'}>
-                                    {diff >= 0 ? '+' : ''}{fmtNum(diff)} USD
+                                    $ {diff >= 0 ? '+' : ''}{fmtUsd(diff)}
                                     {fx ? `  (≈ ₩${Math.round(diff * fx).toLocaleString()})` : ''}
                                     {`  ( ${diff >= 0 ? '+' : ''}${diffPct.toFixed(2)}% )`}
                                 </span>
@@ -551,7 +559,7 @@ function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, 
     if (!isEdit) {
         const isMoney = field.toLowerCase().includes('price');
         const isDate = field === 'buyDate';
-        const main = isMoney ? `$ ${fmtNum(value)}` : isDate ? fmtDate(value) : (value ?? '');
+        const main = isMoney ? `$ ${fmtUsd(value)}` : isDate ? fmtDate(value) : (value ?? '');
         const showKrw = false;      // 별도 KRW 컬럼에서 표시
         let sub = null;
         if (showKrw) {
@@ -607,7 +615,7 @@ function KrwCell({ value }) {
     return (
         <Td>
             <div className="px-1 h-9 flex items-center">
-                {v ? `₩ ${v.toLocaleString()}` : ''}
+                {v ? `₩ ${Math.round(v).toLocaleString()}` : ''}
             </div>
         </Td>
     );
@@ -618,7 +626,7 @@ function UsdCell({ value }) {
     return (
         <Td>
             <div className="px-1 h-9 flex items-center">
-                {v ? `$ ${fmtNum(v)}` : ''}
+                {v ? `$ ${fmtUsd(v)}` : ''}
             </div>
         </Td>
     );
@@ -636,7 +644,7 @@ function DiffCell({ buy, cur, fx }) {
     return (
         <Td>
             <div className="px-1 leading-tight">
-                <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtNum(d)}</div>
+                <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
                 <div className="text-[11px] text-slate-500">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
                 <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
             </div>

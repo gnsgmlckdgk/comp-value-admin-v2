@@ -208,7 +208,7 @@ export default function TransactionOverview() {
         '총현재가치(USD)',
         '총현재가치(₩)',
         '매도목표가',
-        '가격차(현재-매수)',
+        '단일가격차(현재-매수)',
         '작업',
     ];
 

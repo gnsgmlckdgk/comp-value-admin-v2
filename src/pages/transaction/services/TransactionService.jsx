@@ -1,6 +1,8 @@
 // TransactionService.jsx
 // 실제 백엔드 API와 연동하거나, 현재는 모킹 데이터를 반환하는 예시 서비스
 
+import { send } from '@/util/ClientUtil';
+
 let _mock = [
     {
         id: 1,
@@ -39,37 +41,73 @@ let _id = 4;
 // 거래내역 조회
 export async function fetchTransactions() {
     await delay(200);
-    return _mock.slice();
+    //return _mock.slice();   // test
+
+    const sendUrl = `/dart/tranrecord`;
+    const { data, error } = await send(sendUrl, "", "GET");
+
+    if (error == null) {
+        return data.response;
+    } else {
+        return data.response;
+    }
+
 }
 
 // 거래내역 등록
 export async function createTransaction(payload) {
     await delay(200);
-    _mock.push({ id: _id++, ...payload });
-    return true;
+    //_mock.push({ id: _id++, ...payload });  // test
+
+    const sendUrl = `/dart/tranrecord/regi`;
+    const { data, error } = await send(sendUrl, payload, "POST");
+
+    if (error == null) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // 거래내역 수정
 export async function updateTransaction(id, patch) {
     await delay(150);
-    const idx = _mock.findIndex((x) => x.id === id);
-    if (idx >= 0) {
-        _mock[idx] = { ..._mock[idx], ...normalizePatch(patch) };
-        return _mock[idx];
+    // test
+    // const idx = _mock.findIndex((x) => x.id === id);
+    // if (idx >= 0) {
+    //     _mock[idx] = { ..._mock[idx], ...normalizePatch(patch) };
+    //     return _mock[idx];
+    // }
+
+    const sendUrl = `/dart/tranrecord/modi`;
+    const { data, error } = await send(sendUrl, { "id": id, ...patch }, "POST");
+
+    if (error == null) {
+        return data.response;
+    } else {
+        throw new Error('not found');
     }
-    throw new Error('not found');
 }
 
 // 거래내역 삭제
 export async function deleteTransaction(id) {
     await delay(150);
-    _mock = _mock.filter((x) => x.id !== id);
-    return true;
+    //_mock = _mock.filter((x) => x.id !== id);   // test
+
+    const sendUrl = `/dart/tranrecord/del`;
+    const { data, error } = await send(sendUrl, { "id": id }, "POST");
+
+    if (error == null) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // 현재가격 갱신 (랜덤 변동)
 export async function refreshCurrentPrices(ids) {
     await delay(400);
+    // test
     _mock = _mock.map((x) =>
         ids.includes(x.id)
             ? { ...x, currentPrice: Number((Number(x.currentPrice) * (0.99 + Math.random() * 0.02)).toFixed(2)) }
@@ -104,15 +142,28 @@ export async function fetchFxRate() {
 // - 반환 형식: [{ symbol: 'AAPL', currentPrice: 123.45, updatedAt: 'iso-string' }, ...]
 export async function fetchCurrentPricesBySymbols(symbols = []) {
     await delay(120);
+
     // MOCK: 심볼별 임의 가격 생성 (실서버에서는 제거)
-    const now = new Date().toISOString();
-    return symbols
-        .filter(Boolean)
-        .map((s) => ({
-            symbol: String(s).toUpperCase(),
-            currentPrice: Number((100 + Math.random() * 100)).toFixed(2),
-            updatedAt: now,
-        }));
+    // const now = new Date().toISOString();
+    // return symbols
+    //     .filter(Boolean)
+    //     .map((s) => ({
+    //         symbol: String(s).toUpperCase(),
+    //         currentPrice: Number((100 + Math.random() * 100)).toFixed(2),
+    //         updatedAt: now,
+    //     }));
+
+    const sendUrl = `/dart/tranrecord/price`;
+    const { data, error } = await send(sendUrl, { "symbols": symbols }, "POST");
+
+    if (error == null && data && data.success) {
+        // 백엔드의 response 배열만 반환
+        return data.response;
+    } else {
+        console.error('[fetchCurrentPricesBySymbols] error:', error || data);
+        return [];
+    }
+
 }
 
 // 단일 티커 현재가 조회 (편의용)

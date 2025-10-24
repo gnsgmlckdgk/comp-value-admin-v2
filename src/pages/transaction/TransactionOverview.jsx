@@ -315,22 +315,26 @@ export default function TransactionOverview() {
                     <div className="overflow-x-auto bg-white border border-slate-200 rounded-md scrollbar-always">
                         <table className="table-fixed min-w-[1760px] w-full">
                             <colgroup>
-                                <col className="w-12" />  {/* No */}
-                                <col className="w-20" />  {/* 티커 */}
-                                <col className="w-44" />  {/* 기업명 */}
-                                <col className="w-28" />  {/* 매수일자 */}
-                                <col className="w-24" />  {/* 매수가격(USD) */}
-                                <col className="w-28" />  {/* 매수가격(₩) */}
-                                <col className="w-24" />  {/* 수량 */}
-                                <col className="w-28" />  {/* 총매수금액(USD) */}
-                                <col className="w-32" />  {/* 총매수금액(₩) */}
-                                <col className="w-24" />  {/* 현재가격(USD) */}
-                                <col className="w-28" />  {/* 현재가격(₩) */}
-                                <col className="w-32" />  {/* 총현재가치(USD) */}
-                                <col className="w-36" />  {/* 총현재가치(₩) */}
-                                <col className="w-24" />  {/* 매도목표가 */}
-                                <col className="w-36" />  {/* 가격차 */}
-                                <col className="w-20" />  {/* 작업 */}
+                                {[
+                                    'w-12',   // No
+                                    'w-20',   // 티커
+                                    'w-44',   // 기업명
+                                    'w-28',   // 매수일자
+                                    'w-24',   // 매수가격(USD)
+                                    'w-28',   // 매수가격(₩)
+                                    'w-24',   // 수량
+                                    'w-28',   // 총매수금액(USD)
+                                    'w-32',   // 총매수금액(₩)
+                                    'w-24',   // 현재가격(USD)
+                                    'w-28',   // 현재가격(₩)
+                                    'w-32',   // 총현재가치(USD)
+                                    'w-36',   // 총현재가치(₩)
+                                    'w-24',   // 매도목표가
+                                    'w-36',   // 가격차
+                                    'w-20',   // 작업
+                                ].map((w, i) => (
+                                    <col key={i} className={w} />
+                                ))}
                             </colgroup>
                             <thead>
                                 <tr className="bg-slate-50 text-slate-600 text-xs md:text-sm sticky top-0 z-10">
@@ -347,35 +351,30 @@ export default function TransactionOverview() {
                                         const cls = r.diffUSD >= 0 ? 'text-rose-600' : 'text-blue-600';
                                         return (
                                             <tr key={`g-${r.symbol}-${i}`} className="bg-slate-50 font-semibold">
-                                                <Td />
-                                                <Td className="font-semibold text-slate-700">{r.symbol} 합계</Td>
-                                                <Td />
-                                                <Td />
-                                                <Td />
-                                                <Td /> {/* 매수가격(₩) 자리 채움 */}
-                                                {/* 수량 합계 */}
-                                                <Td><div className="px-1">{r.qtySum ? fmtNum(r.qtySum, 0) : ''}</div></Td>
-                                                {/* 총매수금액(USD/₩) */}
-                                                <UsdCell value={r.buySumUSD} />
-                                                <KrwCell value={Math.round(r.buySumUSD * (fx || 0))} />
-                                                {/* 현재가격 (USD/₩) */}
-                                                <UsdCell value={r.curUSD} />
-                                                <KrwCell value={Math.round(r.curUSD * (fx || 0))} />
-                                                {/* 총현재가치(USD/₩) */}
-                                                <UsdCell value={r.curSumUSD} />
-                                                <KrwCell value={Math.round(r.curSumUSD * (fx || 0))} />
-                                                {/* 매도목표가 평균(USD) */}
-                                                <UsdCell value={r.targetAvgUSD} />
-                                                {/* 가격차 합산 */}
-                                                <Td>
-                                                    <div className="px-1 leading-tight">
-                                                        <div className={cls}>{(r.diffUSD >= 0 ? '+' : '') + '$ ' + fmtNum(r.diffUSD)}</div>
-                                                        <div className="text-[11px] text-slate-500">{fx ? `₩ ${Math.round(r.diffUSD * fx).toLocaleString()}` : ''}</div>
-                                                        <div className={cls + ' text-[12px]'}>{(r.diffUSD >= 0 ? '+' : '') + r.diffPct.toFixed(2)}%</div>
-                                                    </div>
-                                                </Td>
-                                                {/* 작업 공란 */}
-                                                <Td />
+                                                {[
+                                                    <Td key="c0" />,
+                                                    <Td key="c1" className="font-semibold text-slate-700">{r.symbol} 합계</Td>,
+                                                    <Td key="c2" />,
+                                                    <Td key="c3" />,
+                                                    <Td key="c4" />,
+                                                    <Td key="c5" />,
+                                                    <Td key="c6"><div className="px-1">{r.qtySum ? fmtNum(r.qtySum, 0) : ''}</div></Td>,
+                                                    <UsdCell key="c7" value={r.buySumUSD} />,
+                                                    <KrwCell key="c8" value={Math.round(r.buySumUSD * (fx || 0))} />,
+                                                    <UsdCell key="c9" value={r.curUSD} />,
+                                                    <KrwCell key="c10" value={Math.round(r.curUSD * (fx || 0))} />,
+                                                    <UsdCell key="c11" value={r.curSumUSD} />,
+                                                    <KrwCell key="c12" value={Math.round(r.curSumUSD * (fx || 0))} />,
+                                                    <UsdCell key="c13" value={r.targetAvgUSD} />,
+                                                    <Td key="c14">
+                                                        <div className="px-1 leading-tight">
+                                                            <div className={cls}>{(r.diffUSD >= 0 ? '+' : '') + '$ ' + fmtNum(r.diffUSD)}</div>
+                                                            <div className="text-[11px] text-slate-500">{fx ? `₩ ${Math.round(r.diffUSD * fx).toLocaleString()}` : ''}</div>
+                                                            <div className={cls + ' text-[12px]'}>{(r.diffUSD >= 0 ? '+' : '') + r.diffPct.toFixed(2)}%</div>
+                                                        </div>
+                                                    </Td>,
+                                                    <Td key="c15" />
+                                                ]}
                                             </tr>
                                         );
                                     }

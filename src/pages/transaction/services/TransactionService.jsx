@@ -131,9 +131,23 @@ function normalizePatch(patch) {
 // 환율 조회 (모킹). TODO: 실제 연동 시 서버 API로 교체하세요.
 export async function fetchFxRate() {
     await delay(120);
+
     // 예시: 고정 환율 + 갱신 시각
-    const rate = 1390.25; // 1 USD -> KRW
-    return { rate, updatedAt: new Date().toISOString() };
+    // const rate = 1390.25; // 1 USD -> KRW
+    // return { rate, updatedAt: new Date().toISOString() };
+
+    const currency = "USDKRW";
+
+    const sendUrl = `/dart/tranrecord/rate`;
+    const { data, error } = await send(sendUrl, { "currency": currency }, "POST");
+
+    if (error == null && data && data.success) {
+        return data.response;
+    } else {
+        console.error('[fetchCurrentPricesBySymbols] error:', error || data);
+        return [];
+    }
+
 }
 
 // ---------------------------------------------------------------------------

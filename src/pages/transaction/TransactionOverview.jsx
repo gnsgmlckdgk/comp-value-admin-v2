@@ -358,7 +358,7 @@ export default function TransactionOverview() {
                                                     <Td key="c3" />,
                                                     <Td key="c4" />,
                                                     <Td key="c5" />,
-                                                    <Td key="c6"><div className="px-1">{r.qtySum ? fmtNum(r.qtySum, 0) : ''}</div></Td>,
+                                                    <Td key="c6"><div className="px-1 h-9 flex items-center">{r.qtySum ? fmtNum(r.qtySum, 0) : ''}</div></Td>,
                                                     <UsdCell key="c7" value={r.buySumUSD} />,
                                                     <KrwCell key="c8" value={Math.round(r.buySumUSD * (fx || 0))} />,
                                                     <UsdCell key="c9" value={r.curUSD} />,
@@ -431,7 +431,7 @@ export default function TransactionOverview() {
                                         <input
                                             value={newRow.symbol}
                                             onChange={(e) => setNewRow((p) => ({ ...p, symbol: e.target.value }))}
-                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            className="w-full h-9 rounded border px-2 text-sm"
                                             placeholder="티커"
                                         />
                                     </Td>
@@ -439,7 +439,7 @@ export default function TransactionOverview() {
                                         <input
                                             value={newRow.companyName}
                                             onChange={(e) => setNewRow((p) => ({ ...p, companyName: e.target.value }))}
-                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            className="w-full h-9 rounded border px-2 text-sm"
                                             placeholder="기업명"
                                         />
                                     </Td>
@@ -448,7 +448,7 @@ export default function TransactionOverview() {
                                         <input
                                             value={newRow.buyDate}
                                             onChange={(e) => setNewRow((p) => ({ ...p, buyDate: e.target.value }))}
-                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            className="w-full h-9 rounded border px-2 text-sm"
                                             type="date"
                                         />
                                     </Td>
@@ -457,7 +457,7 @@ export default function TransactionOverview() {
                                         <input
                                             value={newRow.buyPrice}
                                             onChange={(e) => setNewRow((p) => ({ ...p, buyPrice: e.target.value }))}
-                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            className="w-full h-9 rounded border px-2 text-sm"
                                             placeholder="매수가"
                                             type="number"
                                         />
@@ -469,7 +469,7 @@ export default function TransactionOverview() {
                                         <input
                                             value={newRow.totalBuyAmount}
                                             onChange={(e) => setNewRow((p) => ({ ...p, totalBuyAmount: e.target.value }))}
-                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            className="w-full h-9 rounded border px-2 text-sm"
                                             placeholder="수량"
                                             type="number"
                                         />
@@ -491,7 +491,7 @@ export default function TransactionOverview() {
                                         <input
                                             value={newRow.targetPrice}
                                             onChange={(e) => setNewRow((p) => ({ ...p, targetPrice: e.target.value }))}
-                                            className="w-full rounded border px-2 py-1 text-sm"
+                                            className="w-full h-9 rounded border px-2 text-sm"
                                             placeholder="목표가"
                                             type="number"
                                         />
@@ -569,7 +569,7 @@ function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, 
         return (
             <Td>
                 <div
-                    className="min-h-[30px] cursor-pointer hover:bg-slate-50 rounded px-1"
+                    className="h-9 flex items-center cursor-pointer hover:bg-slate-50 rounded px-1"
                     onDoubleClick={() => startEdit(row, field)}
                     title="더블클릭하여 수정"
                 >
@@ -596,7 +596,7 @@ function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, 
                     }
                 }}
                 onBlur={commitEdit}
-                className="w-full rounded border px-2 py-1 text-sm"
+                className="w-full h-9 rounded border px-2 text-sm"
             />
         </Td>
     );
@@ -606,7 +606,7 @@ function KrwCell({ value }) {
     const v = toNum(value);
     return (
         <Td>
-            <div className="px-1">
+            <div className="px-1 h-9 flex items-center">
                 {v ? `₩ ${v.toLocaleString()}` : ''}
             </div>
         </Td>
@@ -617,7 +617,7 @@ function UsdCell({ value }) {
     const v = toNum(value);
     return (
         <Td>
-            <div className="px-1">
+            <div className="px-1 h-9 flex items-center">
                 {v ? `$ ${fmtNum(v)}` : ''}
             </div>
         </Td>

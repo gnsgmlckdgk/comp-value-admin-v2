@@ -322,7 +322,7 @@ export default function TransactionOverview() {
 
                 {/* 표 */}
                 <div className="mx-0">
-                    <div className="overflow-x-auto overflow-hidden bg-white border border-slate-200 rounded-md scrollbar-always">
+                    <div className="overflow-x-auto overflow-y-auto bg-white border border-slate-200 rounded-md scrollbar-always max-h-[70vh]">
                         <table className="table-fixed min-w-[1880px] w-full border-collapse">
                             <colgroup>
                                 {[

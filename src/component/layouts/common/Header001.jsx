@@ -15,7 +15,7 @@ export default function Header001({ onMenuClick }) {
 
     const { isLoggedIn, setIsLoggedIn, userName, setUserName, userRole, setUserRole, nickName, setNickName } = useAuth();
 
-    const [password, setPassWord] = useState('1q2w3e4r!');
+    const [password, setPassWord] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     // const nickNameKey = "nickname";

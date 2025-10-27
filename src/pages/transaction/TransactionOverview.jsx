@@ -69,6 +69,7 @@ export default function TransactionOverview() {
         buyDate: '',
         currentPrice: '',
         targetPrice: '',
+        rmk: '',
     });
 
     // 최초 로드 시 목록 조회
@@ -208,7 +209,8 @@ export default function TransactionOverview() {
         '총현재가치(USD)',
         '총현재가치(₩)',
         '매도목표가',
-        '단일가격차(현재-매수)',
+        '단일가격차\n(현재-매수)',
+        '비고',
         '작업',
     ];
 
@@ -320,8 +322,8 @@ export default function TransactionOverview() {
 
                 {/* 표 */}
                 <div className="mx-0">
-                    <div className="overflow-x-auto bg-white border border-slate-200 rounded-md scrollbar-always">
-                        <table className="table-fixed min-w-[1760px] w-full">
+                    <div className="overflow-x-auto overflow-hidden bg-white border border-slate-200 rounded-md scrollbar-always">
+                        <table className="table-fixed min-w-[1880px] w-full border-collapse">
                             <colgroup>
                                 {[
                                     'w-12',   // No
@@ -338,17 +340,28 @@ export default function TransactionOverview() {
                                     'w-32',   // 총현재가치(USD)
                                     'w-36',   // 총현재가치(₩)
                                     'w-24',   // 매도목표가
-                                    'w-36',   // 가격차
-                                    'w-20',   // 작업
+                                    'w-24',   // 가격차 (축소)
+                                    "w-48",   // 비고 (확대)
+                                    "w-20",   // 작업
                                 ].map((w, i) => (
                                     <col key={i} className={w} />
                                 ))}
                             </colgroup>
                             <thead>
-                                <tr className="bg-slate-50 text-slate-600 text-xs md:text-sm sticky top-0 z-10">
-                                    {headers.map((h) => (
-                                        <th key={h} className="px-3 py-2 text-left font-medium border-b border-slate-200 whitespace-nowrap">
-                                            {h}
+                                <tr className="bg-slate-50 text-slate-600 text-xs md:text-sm sticky top-0 z-50">
+                                    {headers.map((h, idx) => (
+                                        <th
+                                            key={h}
+                                            className={`px-3 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap sticky top-0 bg-slate-50 ${idx === 0 ? 'left-0 z-60' : idx === 1 ? 'left-12 z-60' : 'z-50'
+                                                }`}
+                                        >
+                                            {typeof h === 'string' && h.includes('\n') ? (
+                                                <div className="leading-tight">
+                                                    {h.split('\n').map((line, i2) => (
+                                                        <div key={i2} className={i2 === 1 ? 'text-[11px] font-normal text-slate-500' : ''}>{line}</div>
+                                                    ))}
+                                                </div>
+                                            ) : h}
                                         </th>
                                     ))}
                                 </tr>
@@ -360,8 +373,8 @@ export default function TransactionOverview() {
                                         return (
                                             <tr key={`g-${r.symbol}-${i}`} className="bg-slate-50 font-semibold">
                                                 {[
-                                                    <Td key="c0" />,
-                                                    <Td key="c1" className="font-semibold text-slate-700">{r.symbol} 합계</Td>,
+                                                    <Td key="c0" className="sticky left-0 z-10 bg-slate-50" />,
+                                                    <Td key="c1" className="sticky left-12 z-10 bg-slate-50 font-semibold text-slate-700">{r.symbol} 합계</Td>,
                                                     <Td key="c2" />,
                                                     <Td key="c3" />,
                                                     <Td key="c4" />,
@@ -381,16 +394,23 @@ export default function TransactionOverview() {
                                                             <div className={cls + ' text-[12px]'}>{(r.diffUSD >= 0 ? '+' : '') + r.diffPct.toFixed(2)}%</div>
                                                         </div>
                                                     </Td>,
-                                                    <Td key="c15" />
+                                                    <Td key="c15" />,
+                                                    <Td key="c16" />
                                                 ]}
                                             </tr>
                                         );
                                     }
 
+                                    // 목표가 달성 여부
+                                    const isHit = toNum(r.targetPrice) > 0 && toNum(r.currentPrice) >= toNum(r.targetPrice);
+
                                     return (
-                                        <tr key={r.id} className="border-b last:border-b-0">
-                                            <Td>{i + 1}</Td>
-                                            <EditableTd row={r} field="symbol" value={r.symbol} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
+                                        <tr
+                                            key={r.id}
+                                            className={`border-b last:border-b-0 ${isHit ? 'bg-yellow-50' : ''}`}
+                                        >
+                                            <Td className={`sticky left-0 z-10 ${isHit ? 'bg-yellow-50' : 'bg-white'}`}>{i + 1}</Td>
+                                            <EditableTd tdClassName={`sticky left-12 z-10 ${isHit ? 'bg-yellow-50' : 'bg-white'}`} row={r} field="symbol" value={r.symbol} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
                                             <EditableTd row={r} field="companyName" value={r.companyName} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
 
                                             {/* 매수일자 */}
@@ -419,6 +439,9 @@ export default function TransactionOverview() {
                                             {/* 가격차 (현재-매수): USD, KRW, % */}
                                             <DiffCell buy={toNum(r.buyPrice)} cur={toNum(r.currentPrice)} fx={fx} />
 
+                                            {/* 비고 */}
+                                            <EditableTd row={r} field="rmk" value={r.rmk} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
+
                                             <Td>
                                                 <button
                                                     onClick={() => removeRow(r.id)}
@@ -434,8 +457,8 @@ export default function TransactionOverview() {
 
                                 {/* 신규 입력 행 */}
                                 <tr className="bg-slate-50/60">
-                                    <Td />
-                                    <Td>
+                                    <Td className="sticky left-0 z-10 bg-white" />
+                                    <Td className="sticky left-12 z-10 bg-white">
                                         <input
                                             value={newRow.symbol}
                                             onChange={(e) => setNewRow((p) => ({ ...p, symbol: e.target.value }))}
@@ -506,6 +529,15 @@ export default function TransactionOverview() {
                                     </Td>
                                     {/* 가격차(현재-매수) - 계산필드(빈칸) */}
                                     <Td />
+                                    {/* 비고 입력 */}
+                                    <Td>
+                                        <input
+                                            value={newRow.rmk}
+                                            onChange={(e) => setNewRow((p) => ({ ...p, rmk: e.target.value }))}
+                                            className="w-full h-9 rounded border px-2 text-sm"
+                                            placeholder="비고"
+                                        />
+                                    </Td>
                                     <Td>
                                         <button
                                             onClick={addRow}
@@ -553,7 +585,7 @@ function Td({ children, className = '' }) {
     return <td className={`px-3 py-2 align-middle ${className}`}>{children}</td>;
 }
 
-function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, setDraft, commitEdit, type = 'text' }) {
+function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, setDraft, commitEdit, type = 'text', tdClassName = '' }) {
     const isEdit = editing && editing.id === row.id && editing.field === field;
 
     if (!isEdit) {
@@ -575,7 +607,7 @@ function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, 
             subTotal = `₩ ${krwTotal.toLocaleString()}`; // (매수가 * 수량) KRW
         }
         return (
-            <Td>
+            <Td className={tdClassName}>
                 <div
                     className="h-9 flex items-center cursor-pointer hover:bg-slate-50 rounded px-1"
                     onDoubleClick={() => startEdit(row, field)}
@@ -590,7 +622,7 @@ function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, 
     }
 
     return (
-        <Td>
+        <Td className={tdClassName}>
             <input
                 autoFocus
                 type={type}

@@ -606,15 +606,35 @@ function EditableTd({ row, field, value, startEdit, editing, setEditing, draft, 
             const krwTotal = Math.round(qty * buy * fx);
             subTotal = `₩ ${krwTotal.toLocaleString()}`; // (매수가 * 수량) KRW
         }
+        // 매도목표가 셀: 현재가와의 차이를 보조 줄에 표시 (읽기 전용)
+        let subTargetDiff = null;
+        if (field === 'targetPrice') {
+            const cur = toNum(row.currentPrice);
+            const tgt = toNum(value);
+            if (cur || tgt) {
+                const d = cur - tgt; // 현재가 - 목표가
+                const pos = d >= 0;
+                const cls = pos ? 'text-rose-600' : 'text-blue-600';
+                subTargetDiff = (
+                    <div className={`${cls} text-[11px]`}>{`(${pos ? '+' : ''}$ ${fmtUsd(d)})`}</div>
+                );
+            }
+        }
+        const isTwoLine = field === 'targetPrice' && !!subTargetDiff;
         return (
             <Td className={tdClassName}>
                 <div
-                    className="h-9 flex items-center cursor-pointer hover:bg-slate-50 rounded px-1"
+                    className={
+                        isTwoLine
+                            ? 'min-h-[40px] flex flex-col justify-center items-start cursor-pointer hover:bg-slate-50 rounded px-1'
+                            : 'h-9 flex items-center cursor-pointer hover:bg-slate-50 rounded px-1'
+                    }
                     onDoubleClick={() => startEdit(row, field)}
                     title="더블클릭하여 수정"
                 >
                     <div>{main}</div>
                     {sub && <div className="text-[11px] text-slate-500">{sub}</div>}
+                    {subTargetDiff}
                     {subTotal && <div className="text-[11px] text-slate-500">{subTotal}</div>}
                 </div>
             </Td>

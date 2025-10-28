@@ -577,6 +577,10 @@ export default function TransactionOverview() {
                                     </Td>
                                     {/* 가격차(현재-매수) - 계산필드(빈칸) */}
                                     <Td />
+                                    {/* 총가격차(현재-매수) - 계산필드(빈칸) */}
+                                    <Td>
+
+                                    </Td>
                                     {/* 비고 입력 */}
                                     <Td>
                                         <input

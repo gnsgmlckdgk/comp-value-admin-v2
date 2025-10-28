@@ -210,6 +210,7 @@ export default function TransactionOverview() {
         '총현재가치(₩)',
         '매도목표가\n(현재-목표)',
         '단일가격차\n(현재-매수)',
+        '총 가격차\n(총현재-총매수)',
         '비고',
         '작업',
     ];
@@ -341,6 +342,7 @@ export default function TransactionOverview() {
                                     'w-36',   // 총현재가치(₩)
                                     'w-24',   // 매도목표가
                                     'w-24',   // 가격차 (축소)
+                                    'w-36',   // 총 가격차
                                     "w-48",   // 비고 (확대)
                                     "w-20",   // 작업
                                 ].map((w, i) => (
@@ -369,7 +371,7 @@ export default function TransactionOverview() {
                             <tbody className="text-sm whitespace-nowrap">
                                 {groupedRows.map((r, i) => {
                                     if (r.__type === 'groupTotal') {
-                                        const cls = r.diffUSD >= 0 ? 'text-rose-600' : 'text-blue-600';
+                                        // c14: 단일가격차(현재-매수) per-share, c15: 총 가격차(총현재-총매수)
                                         return (
                                             <tr key={`g-${r.symbol}-${i}`} className="bg-slate-50 font-semibold">
                                                 {[
@@ -386,16 +388,60 @@ export default function TransactionOverview() {
                                                     <KrwCell key="c10" value={Math.round(r.curUSD * (fx || 0))} />,
                                                     <UsdCell key="c11" value={r.curSumUSD} />,
                                                     <KrwCell key="c12" value={Math.round(r.curSumUSD * (fx || 0))} />,
-                                                    <UsdCell key="c13" value={r.targetAvgUSD} />,
-                                                    <Td key="c14">
-                                                        <div className="px-1 leading-tight">
-                                                            <div className={cls}>{(r.diffUSD >= 0 ? '+' : '') + '$ ' + fmtUsd(r.diffUSD)}</div>
-                                                            <div className="text-[11px] text-slate-500">{fx ? `₩ ${Math.round(r.diffUSD * fx).toLocaleString()}` : ''}</div>
-                                                            <div className={cls + ' text-[12px]'}>{(r.diffUSD >= 0 ? '+' : '') + r.diffPct.toFixed(2)}%</div>
+                                                    <Td key="c13">
+                                                        <div className="px-1 leading-tight text-center">
+                                                            <div>{r.targetAvgUSD ? `$ ${fmtUsd(r.targetAvgUSD)}` : ''}</div>
+                                                            {(() => {
+                                                                const cur = toNum(r.curUSD);
+                                                                const tgt = toNum(r.targetAvgUSD);
+                                                                if (!(cur || tgt)) return null;
+                                                                const d = cur - tgt; // 현재가 - 목표가(평균)
+                                                                const pos = d >= 0;
+                                                                const cls = pos ? 'text-rose-600' : 'text-blue-600';
+                                                                return <div className={`${cls} text-[11px]`}>{`(${pos ? '+' : ''}$ ${fmtUsd(d)})`}</div>;
+                                                            })()}
                                                         </div>
                                                     </Td>,
-                                                    <Td key="c15" />,
-                                                    <Td key="c16" />
+                                                    // c14: per-share 단일가격차(현재-매수)
+                                                    <Td key="c14">
+                                                        {(() => {
+                                                            const qty = toNum(r.qtySum);
+                                                            const cur = toNum(r.curUSD);
+                                                            const buyAvg = qty > 0 ? toNum(r.buySumUSD) / qty : 0;
+                                                            const d = cur - buyAvg; // per-share diff
+                                                            if (!(cur || buyAvg)) return null;
+                                                            const pos = d >= 0;
+                                                            const cls = pos ? 'text-rose-600' : 'text-blue-600';
+                                                            const dKrw = (fx || 0) ? Math.round(d * (fx || 0)) : 0;
+                                                            const pct = buyAvg > 0 ? (d / buyAvg) * 100 : 0;
+                                                            return (
+                                                                <div className="px-1 leading-tight text-center">
+                                                                    <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
+                                                                    <div className="text-[11px] text-slate-500">{dKrw ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
+                                                                    <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </Td>,
+                                                    // c15: 총 가격차(총현재-총매수)
+                                                    <Td key="c15">
+                                                        {(() => {
+                                                            const d = toNum(r.diffUSD);
+                                                            const pos = d >= 0;
+                                                            const cls = pos ? 'text-rose-600' : 'text-blue-600';
+                                                            const dKrw = (fx || 0) ? Math.round(d * (fx || 0)) : 0;
+                                                            const pct = toNum(r.buySumUSD) > 0 ? (d / toNum(r.buySumUSD)) * 100 : 0;
+                                                            return (
+                                                                <div className="px-1 leading-tight text-center">
+                                                                    <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
+                                                                    <div className="text-[11px] text-slate-500">{dKrw ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
+                                                                    <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </Td>,
+                                                    <Td key="c16" />,
+                                                    <Td key="c17" />
                                                 ]}
                                             </tr>
                                         );
@@ -438,6 +484,8 @@ export default function TransactionOverview() {
 
                                             {/* 가격차 (현재-매수): USD, KRW, % */}
                                             <DiffCell buy={toNum(r.buyPrice)} cur={toNum(r.currentPrice)} fx={fx} />
+                                            {/* 총 가격차 (총현재-총매수) */}
+                                            <TotalDiffCell buy={toNum(r.buyPrice)} cur={toNum(r.currentPrice)} qty={toNum(r.totalBuyAmount)} fx={fx} />
 
                                             {/* 비고 */}
                                             <EditableTd row={r} field="rmk" value={r.rmk} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />
@@ -695,7 +743,30 @@ function DiffCell({ buy, cur, fx }) {
 
     return (
         <Td>
-            <div className="px-1 leading-tight">
+            <div className="px-1 leading-tight text-center">
+                <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
+                <div className="text-[11px] text-slate-500">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
+                <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+            </div>
+        </Td>
+    );
+}
+
+function TotalDiffCell({ buy, cur, qty, fx }) {
+    const b = toNum(buy);
+    const c = toNum(cur);
+    const q = toNum(qty);
+    const buySum = b * q;
+    const curSum = c * q;
+    const d = curSum - buySum; // total diff USD
+    const dKrw = fx ? Math.round(d * fx) : 0;
+    const pct = buySum > 0 ? (d / buySum) * 100 : 0;
+    const pos = d >= 0;
+    const cls = pos ? 'text-rose-600' : 'text-blue-600';
+
+    return (
+        <Td>
+            <div className="px-1 leading-tight text-center">
                 <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
                 <div className="text-[11px] text-slate-500">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
                 <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>

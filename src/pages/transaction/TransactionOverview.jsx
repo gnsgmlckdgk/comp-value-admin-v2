@@ -46,6 +46,17 @@ function sortRowsBySymbolAndDate(list) {
     });
 }
 
+const INITIAL_NEW_ROW = {
+    symbol: '',
+    companyName: '',
+    buyPrice: '',
+    totalBuyAmount: '',
+    buyDate: '',
+    currentPrice: '',
+    targetPrice: '',
+    rmk: '',
+};
+
 export default function TransactionOverview() {
 
     const { isLoggedIn } = useAuth();
@@ -61,16 +72,7 @@ export default function TransactionOverview() {
     const [fxUpdatedAt, setFxUpdatedAt] = useState(null);
 
     // 신규 등록용 입력값
-    const [newRow, setNewRow] = useState({
-        symbol: '',
-        companyName: '',
-        buyPrice: '',
-        totalBuyAmount: '',
-        buyDate: '',
-        currentPrice: '',
-        targetPrice: '',
-        rmk: '',
-    });
+    const [newRow, setNewRow] = useState(INITIAL_NEW_ROW);
 
     // 최초 로드 시 목록 조회
     useEffect(() => {
@@ -167,7 +169,7 @@ export default function TransactionOverview() {
             await mergePricesBySymbols(allSymbols);
 
             // 5) 입력값 초기화 및 갱신시각 기록
-            setNewRow({ symbol: '', companyName: '', buyPrice: '', totalBuyAmount: '', buyDate: '', currentPrice: '', targetPrice: '' });
+            setNewRow(INITIAL_NEW_ROW);
             setLastUpdated(new Date());
         } catch (e) {
             alert('등록에 실패했습니다.');

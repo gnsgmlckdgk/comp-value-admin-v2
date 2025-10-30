@@ -242,8 +242,22 @@ export default function TransactionOverview() {
             let end = i;
             while (end < n && String(rows[end].symbol || '').toUpperCase() === sym) end++;
             const count = end - start;
-            // push group rows
-            for (let k = start; k < end; k++) out.push(rows[k]);
+            // push group rows (annotate only when it is a real group of 2+)
+            if (count >= 2) {
+                // add a synthetic divider row before the group to draw a thick top line
+                out.push({ __type: 'groupStartDivider', symbol: sym });
+                for (let k = start; k < end; k++) {
+                    out.push({
+                        ...rows[k],
+                        __groupKey: sym,
+                        __isGroupStart: k === start,
+                        __isGroupEnd: k === end - 1,
+                    });
+                }
+            } else {
+                // single row (not grouped) stays as-is
+                for (let k = start; k < end; k++) out.push(rows[k]);
+            }
             // subtotal if 2+
             if (count >= 2) {
                 const slice = rows.slice(start, end);
@@ -258,6 +272,15 @@ export default function TransactionOverview() {
                 // 매도목표가: 평균값 (빈 값 제외)
                 const tgtList = slice.map(r => toNum(r.targetPrice)).filter(v => v > 0);
                 const targetAvgUSD = tgtList.length ? (tgtList.reduce((a, b) => a + b, 0) / tgtList.length) : 0;
+                // lookahead: check if next chunk is also a real group (>=2)
+                let nextIsGroup = false;
+                if (end < n) {
+                    const nextSym = String(rows[end].symbol || '').toUpperCase();
+                    let j = end;
+                    while (j < n && String(rows[j].symbol || '').toUpperCase() === nextSym) j++;
+                    const nextCount = j - end;
+                    nextIsGroup = nextCount >= 2;
+                }
                 out.push({
                     __type: 'groupTotal',
                     symbol: sym,
@@ -268,6 +291,7 @@ export default function TransactionOverview() {
                     diffPct,
                     curUSD,
                     targetAvgUSD,
+                    hasNextGroupDivider: nextIsGroup,
                 });
             }
             i = end;
@@ -372,10 +396,22 @@ export default function TransactionOverview() {
                             </thead>
                             <tbody className="text-sm whitespace-nowrap">
                                 {groupedRows.map((r, i) => {
+                                    if (r.__type === 'groupStartDivider') {
+                                        return (
+                                            <tr key={`gs-${r.symbol}-${i}`}>
+                                                <td colSpan={headers.length} className="p-0">
+                                                    <div className="h-0 border-t-2 border-slate-400" />
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
                                     if (r.__type === 'groupTotal') {
                                         // c14: 단일가격차(현재-매수) per-share, c15: 총 가격차(총현재-총매수)
                                         return (
-                                            <tr key={`g-${r.symbol}-${i}`} className="bg-slate-50 font-semibold">
+                                            <tr
+                                                key={`g-${r.symbol}-${i}`}
+                                                className={`bg-slate-50 font-semibold border-t-0 ${r.hasNextGroupDivider ? 'border-b-0' : 'border-b-2'} border-slate-400`}
+                                            >
                                                 {[
                                                     <Td key="c0" className="sticky left-0 z-10 bg-slate-50" />,
                                                     <Td key="c1" className="sticky left-12 z-10 bg-slate-50 font-semibold text-slate-700">{r.symbol} 합계</Td>,
@@ -455,7 +491,7 @@ export default function TransactionOverview() {
                                     return (
                                         <tr
                                             key={r.id}
-                                            className={`border-b last:border-b-0 ${isHit ? 'bg-yellow-50' : ''}`}
+                                            className={`border-b border-slate-200 ${r.__isGroupEnd ? 'border-b-0' : ''} ${isHit ? 'bg-yellow-50' : ''}`}
                                         >
                                             <Td className={`sticky left-0 z-10 ${isHit ? 'bg-yellow-50' : 'bg-white'}`}>{i + 1}</Td>
                                             <EditableTd tdClassName={`sticky left-12 z-10 ${isHit ? 'bg-yellow-50' : 'bg-white'}`} row={r} field="symbol" value={r.symbol} startEdit={startEdit} editing={editing} setEditing={setEditing} draft={draft} setDraft={setDraft} commitEdit={commitEdit} />

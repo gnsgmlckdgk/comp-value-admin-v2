@@ -376,11 +376,11 @@ export default function TransactionOverview() {
                                 ))}
                             </colgroup>
                             <thead>
-                                <tr className="bg-slate-50 text-slate-600 text-xs md:text-sm sticky top-0 z-50">
+                                <tr className="bg-slate-50 text-slate-600 text-xs md:text-sm sticky top-0 z-20">
                                     {headers.map((h, idx) => (
                                         <th
                                             key={h}
-                                            className={`px-3 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap sticky top-0 bg-slate-50 ${idx === 0 ? 'left-0 z-60' : idx === 1 ? 'left-12 z-60' : 'z-50'
+                                            className={`px-3 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap sticky top-0 bg-slate-50 ${idx === 0 ? 'left-0 z-30' : idx === 1 ? 'left-12 z-30' : 'z-20'
                                                 }`}
                                         >
                                             {typeof h === 'string' && h.includes('\n') ? (

@@ -1,0 +1,129 @@
+import { Td, EditableTd, UsdCell, KrwCell, DiffCell, TotalDiffCell } from './TableCells';
+import { toNum } from '../utils/formatters';
+
+/**
+ * 거래 데이터 행
+ */
+export function TransactionRow({
+    row,
+    index,
+    fx,
+    editing,
+    setEditing,
+    draft,
+    setDraft,
+    startEdit,
+    commitEdit,
+    onRemove,
+    saving,
+}) {
+    const isHit = toNum(row.targetPrice) > 0 && toNum(row.currentPrice) >= toNum(row.targetPrice);
+
+    return (
+        <tr
+            className={`border-b border-slate-200 ${row.__isGroupEnd ? 'border-b-0' : ''} ${isHit ? 'bg-yellow-50' : ''}`}
+        >
+            <Td className={`sticky left-0 z-10 ${isHit ? 'bg-yellow-50' : 'bg-white'}`}>{index + 1}</Td>
+            <EditableTd
+                tdClassName={`sticky left-12 z-10 ${isHit ? 'bg-yellow-50' : 'bg-white'}`}
+                row={row}
+                field="symbol"
+                value={row.symbol}
+                startEdit={startEdit}
+                editing={editing}
+                setEditing={setEditing}
+                draft={draft}
+                setDraft={setDraft}
+                commitEdit={commitEdit}
+            />
+            <EditableTd
+                row={row}
+                field="companyName"
+                value={row.companyName}
+                startEdit={startEdit}
+                editing={editing}
+                setEditing={setEditing}
+                draft={draft}
+                setDraft={setDraft}
+                commitEdit={commitEdit}
+            />
+            <EditableTd
+                row={row}
+                field="buyDate"
+                value={row.buyDate}
+                startEdit={startEdit}
+                editing={editing}
+                setEditing={setEditing}
+                draft={draft}
+                setDraft={setDraft}
+                commitEdit={commitEdit}
+                type="date"
+            />
+            <EditableTd
+                row={row}
+                field="buyPrice"
+                value={row.buyPrice}
+                startEdit={startEdit}
+                editing={editing}
+                setEditing={setEditing}
+                draft={draft}
+                setDraft={setDraft}
+                commitEdit={commitEdit}
+                type="number"
+            />
+            <KrwCell value={toNum(row.buyPrice) * (fx || 0)} />
+            <EditableTd
+                row={row}
+                field="totalBuyAmount"
+                value={row.totalBuyAmount}
+                startEdit={startEdit}
+                editing={editing}
+                setEditing={setEditing}
+                draft={draft}
+                setDraft={setDraft}
+                commitEdit={commitEdit}
+                type="number"
+            />
+            <UsdCell value={toNum(row.totalBuyAmount) * toNum(row.buyPrice)} />
+            <KrwCell value={Math.round(toNum(row.totalBuyAmount) * toNum(row.buyPrice) * (fx || 0))} />
+            <UsdCell value={toNum(row.currentPrice)} />
+            <KrwCell value={toNum(row.currentPrice) * (fx || 0)} />
+            <UsdCell value={toNum(row.currentPrice) * toNum(row.totalBuyAmount)} />
+            <KrwCell value={Math.round(toNum(row.currentPrice) * toNum(row.totalBuyAmount) * (fx || 0))} />
+            <EditableTd
+                row={row}
+                field="targetPrice"
+                value={row.targetPrice}
+                startEdit={startEdit}
+                editing={editing}
+                setEditing={setEditing}
+                draft={draft}
+                setDraft={setDraft}
+                commitEdit={commitEdit}
+                type="number"
+            />
+            <DiffCell buy={toNum(row.buyPrice)} cur={toNum(row.currentPrice)} fx={fx} />
+            <TotalDiffCell buy={toNum(row.buyPrice)} cur={toNum(row.currentPrice)} qty={toNum(row.totalBuyAmount)} fx={fx} />
+            <EditableTd
+                row={row}
+                field="rmk"
+                value={row.rmk}
+                startEdit={startEdit}
+                editing={editing}
+                setEditing={setEditing}
+                draft={draft}
+                setDraft={setDraft}
+                commitEdit={commitEdit}
+            />
+            <Td>
+                <button
+                    onClick={() => onRemove(row.id)}
+                    className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300"
+                    disabled={saving}
+                >
+                    삭제
+                </button>
+            </Td>
+        </tr>
+    );
+}

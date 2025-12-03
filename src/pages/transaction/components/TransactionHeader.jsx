@@ -17,7 +17,7 @@ export function TransactionHeader({ loading, rows, lastUpdated, fxRate, onRefres
                     {lastUpdated ? `갱신: ${new Date(lastUpdated).toLocaleString()}` : '갱신 정보 없음'}
                 </span>
                 <span className="text-slate-500">
-                    {fxRate ? `환율: 1 USD ≈ ${Math.round(fxRate).toLocaleString()}원` : '환율 정보 없음'}
+                    {fxRate ? `환율: 1 USD ≈ ${Number(fxRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원` : '환율 정보 없음'}
                 </span>
             </div>
         </div>

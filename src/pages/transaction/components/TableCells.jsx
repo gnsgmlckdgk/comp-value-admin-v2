@@ -123,19 +123,20 @@ export function EditableTd({
         }
 
         const isTwoLine = field === 'targetPrice' && !!subTargetDiff;
+        const isCompanyName = field === 'companyName';
 
         return (
             <Td className={tdClassName}>
                 <div
                     className={
                         isTwoLine
-                            ? 'min-h-[40px] flex flex-col justify-center items-start cursor-pointer hover:bg-slate-50 rounded px-1'
-                            : 'h-9 flex items-center cursor-pointer hover:bg-slate-50 rounded px-1'
+                            ? 'min-h-[40px] flex flex-col justify-center items-start cursor-pointer bg-blue-50/30 hover:bg-blue-100/40 rounded px-1 border border-dashed border-blue-200/50'
+                            : 'h-9 flex items-center cursor-pointer bg-blue-50/30 hover:bg-blue-100/40 rounded px-1 border border-dashed border-blue-200/50'
                     }
                     onDoubleClick={() => startEdit(row, field)}
-                    title="더블클릭하여 수정"
+                    title={isCompanyName ? `${main}\n(더블클릭하여 수정)` : "더블클릭하여 수정"}
                 >
-                    <div>{main}</div>
+                    <div className={isCompanyName ? "truncate w-full" : ""}>{main}</div>
                     {subTargetDiff}
                 </div>
             </Td>

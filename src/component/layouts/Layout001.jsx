@@ -11,6 +11,14 @@ function Layout001() {
         <div className="flex min-h-screen flex-col bg-slate-50">
             <Header onMenuClick={() => setIsSidebarOpen((prev) => !prev)} />
 
+            {/* 모바일에서 사이드바가 열렸을 때 배경 클릭 시 닫히는 오버레이 */}
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-16 inset-x-0 z-20 bg-black/20 md:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             <div className="mx-auto flex w-full max-w-7xl flex-1 gap-0 px-3 pb-4 pt-3 md:gap-4 md:px-6">
                 <SideBar isSidebarOpen={isSidebarOpen} setSidebarOpen={setIsSidebarOpen} />
 

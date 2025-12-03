@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/component/common/button/Button';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function Home() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { isLoggedIn, userName, userRole } = useAuth();
 
     useEffect(() => {
@@ -12,10 +13,22 @@ export default function Home() {
         document.title = isLoggedIn ? '대시보드 | CompValue' : 'CompValue — 기업가치 분석';
     }, [isLoggedIn]);
 
+    const reason = location.state?.reason;
+
     if (!isLoggedIn) {
         // 🔓 비로그인 랜딩 화면
         return (
             <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center text-center px-6">
+                {reason === 'logout' && (
+                    <div className="mb-6 w-full max-w-xl rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs text-emerald-700 shadow-sm">
+                        안전하게 로그아웃되었습니다. 다시 이용하시려면 상단의 로그인 버튼을 눌러주세요.
+                    </div>
+                )}
+                {reason === '401' && (
+                    <div className="mb-6 w-full max-w-xl rounded-2xl border border-amber-100 bg-amber-50 px-4 py-2.5 text-xs text-amber-800 shadow-sm">
+                        인증 정보가 만료되었습니다. 보안을 위해 자동으로 로그아웃되었어요. 다시 로그인해 주세요.
+                    </div>
+                )}
                 <h1 className="text-3xl font-bold mb-3">📊 CompValue — 기업가치 분석 플랫폼</h1>
                 <p className="text-slate-600 mb-8 max-w-[680px]">
                     주식의 내재가치를 정량적으로 평가하고, 기업의 성장성과 밸류에이션을 시각적으로 비교해보세요.

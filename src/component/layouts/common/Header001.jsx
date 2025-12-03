@@ -24,6 +24,7 @@ export default function Header001({ onMenuClick }) {
             setUserRole && setUserRole('');
             setUserName && setUserName('');
             setNickName && setNickName('');
+            setPassWord('');
             setShowLogin(false);
 
             try {
@@ -33,8 +34,19 @@ export default function Header001({ onMenuClick }) {
                 window.location.href = '/';
             }
         };
+
+        const onOpenLogin = () => {
+            setPassWord('');
+            setShowLogin(true);
+        };
+
         window.addEventListener('auth:logout', onForceLogout);
-        return () => window.removeEventListener('auth:logout', onForceLogout);
+        window.addEventListener('auth:login:open', onOpenLogin);
+
+        return () => {
+            window.removeEventListener('auth:logout', onForceLogout);
+            window.removeEventListener('auth:login:open', onOpenLogin);
+        };
     }, [setIsLoggedIn, setNickName, setUserName, setUserRole, navigate]);
 
     const login = async () => {
@@ -71,6 +83,7 @@ export default function Header001({ onMenuClick }) {
                 setNickName(nextNick);
                 setUserRole(nextRole || '');
                 setIsLoggedIn(true);
+                setPassWord('');
                 setShowLogin(false);
             }
         } else {
@@ -85,17 +98,17 @@ export default function Header001({ onMenuClick }) {
 
         const { data, error } = await send(sendUrl, {}, 'DELETE');
         if (error == null) {
-            alert('로그아웃 되었습니다.');
             setIsLoggedIn(false);
             setUserRole('');
             setUserName('');
             setNickName('');
+            setPassWord('');
 
             localStorage.removeItem('userName');
             localStorage.removeItem('nickName');
             localStorage.removeItem('role');
 
-            navigate(`/`);
+            navigate('/', { replace: true, state: { reason: 'logout' } });
         } else alert(error);
 
         setIsLoading(false);
@@ -149,7 +162,10 @@ export default function Header001({ onMenuClick }) {
                             <button
                                 type="button"
                                 className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-sky-600 hover:to-indigo-600"
-                                onClick={() => setShowLogin(true)}
+                                onClick={() => {
+                                    setPassWord('');
+                                    setShowLogin(true);
+                                }}
                             >
                                 로그인
                             </button>
@@ -161,7 +177,10 @@ export default function Header001({ onMenuClick }) {
             {showLogin && (
                 <LoginModal
                     show={showLogin}
-                    onClose={() => setShowLogin(false)}
+                    onClose={() => {
+                        setShowLogin(false);
+                        setPassWord('');
+                    }}
                     onLogin={login}
                     isLoading={isLoading}
                     username={userName}

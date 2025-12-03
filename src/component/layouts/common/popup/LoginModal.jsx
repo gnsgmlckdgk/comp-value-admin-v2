@@ -50,40 +50,81 @@ export default function LoginModal({
         <div
             className="login-modal-overlay fixed inset-0 z-50 flex justify-center p-4 overflow-y-auto"
             style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                paddingBottom: (keyboardOffset ? keyboardOffset + 16 : 16),
+                backgroundColor: 'rgba(15, 23, 42, 0.5)',
+                paddingBottom: keyboardOffset ? keyboardOffset + 16 : 16,
                 alignItems: keyboardOffset ? 'flex-end' : 'center',
             }}
             onClick={handleOutsideClick}
         >
             <Loading show={isLoading} />
-            <div
-                className="relative bg-white p-4 md:p-6 rounded shadow-md text-black w-full max-w-md transition-transform duration-200 ease-out max-h-[85vh] overflow-auto"
-            >
-                <h2 className="text-lg font-bold mb-4">로그인</h2>
-                <Input
-                    inputRef={usernameRef}
-                    label='아이디'
-                    type='text'
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    onEnter={onLogin}
-                    wdfull={true}
-                />
-                <Input
-                    label='비밀번호'
-                    type='password'
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    onEnter={onLogin}
-                    wdfull={true}
-                />
+            <div className="relative w-full max-w-md max-h-[85vh] overflow-auto rounded-2xl bg-white p-5 text-slate-900 shadow-xl ring-1 ring-slate-900/5 md:p-6">
+                {/* 상단 닫기 버튼 */}
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="absolute right-3 top-3 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="닫기"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            fillRule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clipRule="evenodd"
+                        />
+                    </svg>
+                </button>
 
-                <div className="flex justify-between items-center mt-4">
-                    <Button children='닫기' variant='close' onClick={onClose} />
-                    <div className="flex space-x-2">
-                        <Button children='로그인' onClick={onLogin} />
+                {/* 헤더 영역 */}
+                <div className="mb-5 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-500 text-white shadow-sm">
+                        <span className="text-base font-semibold">CV</span>
                     </div>
+                    <div className="flex flex-col">
+                        <h2 className="text-lg font-semibold text-slate-900">CompValue 로그인</h2>
+                        <p className="text-xs text-slate-500">
+                            보유 종목 관리와 기업가치 분석 기능을 이용하려면 로그인이 필요합니다.
+                        </p>
+                    </div>
+                </div>
+
+                {/* 입력 영역 */}
+                <div className="space-y-3">
+                    <Input
+                        inputRef={usernameRef}
+                        label="아이디"
+                        type="text"
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                        onEnter={onLogin}
+                        wdfull={true}
+                    />
+                    <Input
+                        label="비밀번호"
+                        type="password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        onEnter={onLogin}
+                        wdfull={true}
+                    />
+                </div>
+
+                {/* 버튼 영역 */}
+                <div className="mt-5 flex items-center justify-between gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded-full border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 hover:border-slate-300 hover:text-slate-800"
+                    >
+                        닫기
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onLogin}
+                        className="inline-flex flex-1 items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-sky-600 hover:to-indigo-600 disabled:opacity-60"
+                        disabled={isLoading}
+                    >
+                        로그인
+                    </button>
                 </div>
             </div>
         </div>

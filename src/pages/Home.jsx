@@ -24,38 +24,62 @@ export default function Home() {
         );
     }
 
-    // 🔐 로그인 후 대시보드
+    // 🔐 로그인 후 환영 페이지
     return (
-        <div className="p-6 md:p-8">
-            <h1 className="text-2xl font-bold mb-2">
-                {localStorage.getItem("nickName") ? `${localStorage.getItem("userName")}님, 환영합니다 👋` : '환영합니다 👋'}
-            </h1>
-            <p className="text-slate-600 mb-6">
-                {localStorage.getItem("role") ? `현재 권한: ${localStorage.getItem("role")}` : '오늘도 좋은 분석 되세요!'}
-            </p>
+        <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center text-center px-6">
+            <div className="mb-8">
+                <div className="text-6xl mb-4">📊</div>
+                <h1 className="text-3xl md:text-4xl font-bold mb-3 text-slate-800">
+                    {localStorage.getItem("nickName") || localStorage.getItem("userName") || '환영합니다'}님, 반갑습니다
+                </h1>
+                <p className="text-slate-600 text-lg mb-2">
+                    {new Date().toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'long'
+                    })}
+                </p>
+                <p className="text-slate-500">
+                    오늘도 좋은 투자 분석이 되시길 바랍니다
+                </p>
+            </div>
 
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                <DashCard
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-5xl w-full">
+                <MenuCard
+                    emoji="💼"
+                    title="보유종목(미국)"
+                    desc="내 포트폴리오를 관리하고 수익률을 확인하세요"
+                    onClick={() => navigate('/transaction/overview')}
+                />
+                <MenuCard
                     emoji="🧮"
                     title="국내기업 조회"
                     desc="국내 등록된 기업 목록을 조회"
-                    cta="기업 조회"
                     onClick={() => navigate('/complist')}
                 />
-                <DashCard
+                <MenuCard
                     emoji="📈"
-                    title="기업가치 계산(국내)"
-                    desc="종목별 밸류에이션, PEG 비율 등을 조회"
-                    cta="가치 분석"
+                    title="기업가치(국내)"
+                    desc="국내 종목의 밸류에이션 분석"
                     onClick={() => navigate('/compvalue')}
                 />
-                <DashCard
-                    emoji="🧾"
-                    title="기업가치 계산(미국)"
-                    desc="종목별 밸류에이션, 성장률, PEG 비율 등을 조회"
-                    cta="가치 분석"
+                <MenuCard
+                    emoji="🌎"
+                    title="기업가치(미국)"
+                    desc="미국 종목의 밸류에이션 분석"
                     onClick={() => navigate('/compvalue/abroad')}
                 />
+            </div>
+
+            <div className="mt-12 max-w-3xl">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
+                    <h2 className="text-lg font-semibold mb-2 text-slate-800">CompValue 소개</h2>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                        주식의 내재가치를 정량적으로 평가하고, 기업의 성장성과 밸류에이션을 시각적으로 비교하는 플랫폼입니다.
+                        PER, PEG, ROE 등 다양한 지표를 활용하여 합리적인 투자 의사결정을 지원합니다.
+                    </p>
+                </div>
             </div>
         </div>
     );
@@ -74,13 +98,15 @@ function LandingCard({ title, desc, onClick }) {
     );
 }
 
-function DashCard({ emoji, title, desc, cta, onClick }) {
+function MenuCard({ emoji, title, desc, onClick }) {
     return (
-        <div className="rounded-lg border bg-white p-4 shadow-sm hover:shadow-md transition">
-            <div className="text-2xl mb-2">{emoji}</div>
-            <div className="text-lg font-semibold mb-1">{title}</div>
-            <div className="text-sm text-slate-600 mb-3">{desc}</div>
-            <Button text={cta} onClick={onClick} />
-        </div>
+        <button
+            onClick={onClick}
+            className="text-center rounded-lg border bg-white p-6 shadow-sm hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer"
+        >
+            <div className="text-4xl mb-3">{emoji}</div>
+            <div className="text-lg font-semibold mb-2 text-slate-800">{title}</div>
+            <div className="text-sm text-slate-600 leading-snug">{desc}</div>
+        </button>
     );
 }

@@ -30,7 +30,7 @@ const routes = {
     "CompValueCustom": { section: '기업분석', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
 
     /* 거래 */
-    "TransactionOverview": { section: '거래', label: '거래현황', path: '/transaction/overview', element: <TransactionOverview /> },
+    "TransactionOverview": { section: '거래', label: '거래현황(미국)', path: '/transaction/overview', element: <TransactionOverview /> },
 
     /* 게시판 */
     "FreeBoard": {

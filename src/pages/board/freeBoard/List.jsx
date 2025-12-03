@@ -1,6 +1,7 @@
 import BoardList from '@/component/feature/board/List002';
 import SearchBar from '@/component/feature/board/search/SearchBar002';
 import Button from '@/component/common/button/Button';
+import BoardAlertModal from '@/component/layouts/common/popup/BoardAlertModal';
 
 import { useAuth } from '@/context/AuthContext';
 import { send } from '@/util/ClientUtil';
@@ -8,19 +9,17 @@ import { send } from '@/util/ClientUtil';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-
 function List() {
-
     const location = useLocation();
     const state = location.state || {};
-    const gridRef = useRef();   // 자식 컴포넌트 정보를 담기위해 생성(그리드 정보)
+    const gridRef = useRef(); // 자식 컴포넌트 정보를 담기위해 생성(그리드 정보)
 
     const { isLoggedIn } = useAuth(); // 로그인 상태
 
     const [loading, setLoading] = useState(false);
     const [rowData, setRowData] = useState([]);
     const [search, setSearch] = useState(state.search || '');
-    const [sgubun, setSgubun] = useState(state.sgubun || '');  // 검색구분
+    const [sgubun, setSgubun] = useState(state.sgubun || ''); // 검색구분
 
     const navigate = useNavigate();
 
@@ -33,6 +32,7 @@ function List() {
     // 그리드
     const [columns, setColumns] = useState([]);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '' });
 
     useEffect(() => {
         if (isLoggedIn) fetchData(currentPage);
@@ -103,20 +103,22 @@ function List() {
         { name: "제목, 내용", value: "4" },
     ]
 
+    const openAlert = (message) => {
+        setAlertConfig({ open: true, message });
+    };
+
     const handleCheckSelected = async () => {
         if (!gridRef.current || !gridRef.current.api) {
             console.warn("그리드가 아직 초기화되지 않았습니다.");
             return;
         }
         const selectedRows = gridRef.current.api.getSelectedRows();
-        if (!selectedRows || selectedRows.length == 0) {
-            alert('선택된 행이 없습니다.');
+        if (!selectedRows || selectedRows.length === 0) {
+            openAlert('선택된 행이 없습니다.');
             return;
         }
 
-        const idList = selectedRows.map((child, idx) => (
-            child.id
-        ));
+        const idList = selectedRows.map((row) => row.id);
 
         let count = 0;
         for (const id of idList) {
@@ -124,7 +126,7 @@ function List() {
             await send(sendUrl, {}, "DELETE");
             count++;
         }
-        alert(`${count}건 의 게시글을 삭제했습니다.`);
+        openAlert(`${count}건의 게시글을 삭제했습니다.`);
 
         fetchData(currentPage);
     };
@@ -187,28 +189,39 @@ function List() {
 
     return (
         <>
+            {/* 상단 영역 */}
+            <div className="mt-4 mb-4 w-full px-2 md:px-4">
+                <div className="mb-3 flex items-center justify-end gap-2">
+                    <Button children="등록" onClick={moveRegisterPage} className="w-24" />
+                    <Button children="삭제" onClick={handleCheckSelected} variant="danger" className="w-24" />
+                </div>
 
-            {/* 상단 검색 + 버튼 영역 */}
-            <div className="w-full px-6 mt-4 mb-4">
                 {/* SearchBar */}
-                <div className="mb-3">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                     <SearchBar
                         fetchData={() => fetchData(1)}
                         searchBarLabel=""
                         searchState={{ search, setSearch, sgubun, setSgubun, searchGubunList }}
                     />
                 </div>
-
-                {/* 버튼 영역 */}
-                <div className="flex justify-end gap-2">
-                    <Button children="등록" onClick={moveRegisterPage} className="w-24" />
-                    <Button children="삭제" onClick={handleCheckSelected} variant="danger" className="w-24" />
-                </div>
             </div>
 
-            <BoardList ref={gridRef} fetchData={fetchData} columns={columns} rowData={rowData} loading={loading} moveViewPage={moveViewPage}
+            <BoardList
+                ref={gridRef}
+                fetchData={fetchData}
+                columns={columns}
+                rowData={rowData}
+                loading={loading}
+                moveViewPage={moveViewPage}
                 searchState={{ search, setSearch, sgubun, setSgubun, searchGubunList }}
-                pageNationProps={pageNationProps} />
+                pageNationProps={pageNationProps}
+            />
+
+            <BoardAlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={() => setAlertConfig({ open: false, message: '' })}
+            />
 
         </>
     )

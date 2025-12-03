@@ -1,24 +1,20 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
-import routes from '@/config/routes'
+import routes from '@/config/routes';
 import { send } from '@/util/ClientUtil';
 import { useAuth } from '@/context/AuthContext';
 
 import LoginModal from '@/component/layouts/common/popup/LoginModal';
 
-
 export default function Header001({ onMenuClick }) {
-
-    const [title, setTitle] = useState('CompValue');
+    const [title] = useState('CompValue');
     const [showLogin, setShowLogin] = useState(false);
 
     const { isLoggedIn, setIsLoggedIn, userName, setUserName, userRole, setUserRole, nickName, setNickName } = useAuth();
 
     const [password, setPassWord] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    // const nickNameKey = "nickname";
 
     const navigate = useNavigate();
 
@@ -30,9 +26,8 @@ export default function Header001({ onMenuClick }) {
             setNickName && setNickName('');
             setShowLogin(false);
 
-            // 2) 즉시 홈으로 이동 (백지 구간 제거)
             try {
-                alert("인증정보가 존재하지 않습니다.");
+                alert('인증정보가 존재하지 않습니다.');
                 navigate('/', { replace: true, state: { reason: '401' } });
             } catch {
                 window.location.href = '/';
@@ -40,35 +35,37 @@ export default function Header001({ onMenuClick }) {
         };
         window.addEventListener('auth:logout', onForceLogout);
         return () => window.removeEventListener('auth:logout', onForceLogout);
-    }, [setIsLoggedIn]);
-
+    }, [setIsLoggedIn, setNickName, setUserName, setUserRole, navigate]);
 
     const login = async () => {
         const sendUrl = `/dart/member/login`;
 
         setIsLoading(true);
 
-        const { data, error } = await send(sendUrl, {
-            username: userName,
-            password: password
-        }, "POST");
+        const { data, error } = await send(
+            sendUrl,
+            {
+                username: userName,
+                password: password,
+            },
+            'POST'
+        );
 
         setIsLoading(false);
 
         if (error == null) {
-
             const sessionKey = data.response ? data.response.sessionKey : null;
 
-            if (sessionKey == null) alert("인증 실패");
+            if (sessionKey == null) alert('인증 실패');
             else {
                 const res = data.response || {};
                 const nextUserName = res.username ?? userName;
                 const nextNick = res.nickName ?? nextUserName;
                 const nextRole = res.role ?? (Array.isArray(res.roles) ? res.roles[0] : userRole);
 
-                localStorage.setItem("userName", nextUserName);
-                localStorage.setItem("nickName", nextNick);
-                localStorage.setItem("role", nextRole);
+                localStorage.setItem('userName', nextUserName);
+                localStorage.setItem('nickName', nextNick);
+                localStorage.setItem('role', nextRole);
 
                 setUserName(nextUserName);
                 setNickName(nextNick);
@@ -76,18 +73,17 @@ export default function Header001({ onMenuClick }) {
                 setIsLoggedIn(true);
                 setShowLogin(false);
             }
-
         } else {
             alert(error);
         }
-    }
+    };
 
     const logout = async () => {
         const sendUrl = `/dart/member/logout`;
 
         setIsLoading(true);
 
-        const { data, error } = await send(sendUrl, {}, "DELETE");
+        const { data, error } = await send(sendUrl, {}, 'DELETE');
         if (error == null) {
             alert('로그아웃 되었습니다.');
             setIsLoggedIn(false);
@@ -95,47 +91,71 @@ export default function Header001({ onMenuClick }) {
             setUserName('');
             setNickName('');
 
-            localStorage.removeItem("userName");
-            localStorage.removeItem("nickName");
-            localStorage.removeItem("role");
+            localStorage.removeItem('userName');
+            localStorage.removeItem('nickName');
+            localStorage.removeItem('role');
 
             navigate(`/`);
-        }
-        else alert(error);
+        } else alert(error);
 
         setIsLoading(false);
-    }
+    };
 
+    const displayName = localStorage.getItem('nickName') || localStorage.getItem('userName');
 
     return (
         <>
-            <header className="h-16 bg-sky-600 text-white flex items-center px-4 shadow-md">
-                <button
-                    className='md:hidden text-gray-200 focus:outline-none pr-3'
-                    onClick={onMenuClick}>
-
-                    {/* 햄버거 아이콘 */}
-                    <svg
-                        className="w-6 h-6 animate__animated animate__swing"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+            <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
+                <div className="mx-auto flex h-16 max-w-6xl items-center px-3 md:px-6">
+                    <button
+                        className="mr-2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 md:hidden"
+                        onClick={onMenuClick}
+                        aria-label="메뉴 열기"
                     >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
+                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
 
-                </button>
-                <Link to={routes.Home.path}><h1 className="text-lg font-bold">{title}</h1></Link>
+                    <Link to={routes.Home.path} className="flex items-center gap-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-indigo-500 text-white shadow-sm">
+                            <span className="text-lg font-bold">CV</span>
+                        </div>
+                        <div className="flex flex-col leading-tight">
+                            <span className="text-base font-semibold text-slate-900">{title}</span>
+                            <span className="text-[11px] text-slate-500 hidden sm:inline">기업가치 분석 & 포트폴리오</span>
+                        </div>
+                    </Link>
 
-                {isLoggedIn ? (
-                    <div className="ml-auto flex items-center space-x-4 text-sm">
-                        <span>{localStorage.getItem("nickName") || localStorage.getItem("userName")}</span>
-                        <span className="cursor-pointer underline" onClick={logout}>로그아웃</span>
+                    <div className="ml-auto flex items-center gap-4 text-sm">
+                        {isLoggedIn && displayName && (
+                            <div className="hidden items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-slate-700 shadow-sm md:flex">
+                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-400 text-xs font-semibold text-white">
+                                    {displayName.charAt(0)}
+                                </div>
+                                <span className="max-w-[120px] truncate">{displayName} 님</span>
+                            </div>
+                        )}
+
+                        {isLoggedIn ? (
+                            <button
+                                type="button"
+                                onClick={logout}
+                                className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-sky-400 hover:text-sky-600 hover:shadow-sm"
+                            >
+                                로그아웃
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-sky-600 hover:to-indigo-600"
+                                onClick={() => setShowLogin(true)}
+                            >
+                                로그인
+                            </button>
+                        )}
                     </div>
-                ) : (
-                    <div className="ml-auto text-sm cursor-pointer" onClick={() => setShowLogin(true)}>로그인</div>
-                )}
-
+                </div>
             </header>
 
             {showLogin && (
@@ -151,5 +171,5 @@ export default function Header001({ onMenuClick }) {
                 />
             )}
         </>
-    )
+    );
 }

@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import routes from '@/config/routes'
+import { Link, useLocation } from 'react-router-dom';
+import routes from '@/config/routes';
 import { useState, useEffect } from 'react';
 
 function useIsMobile(breakpoint = 768) {
@@ -12,44 +12,59 @@ function useIsMobile(breakpoint = 768) {
     return isMobile;
 }
 
+const SECTIONS = ['시작하기', '기업분석', '거래', '게시판'];
+
 export default function SideBar001({ isSidebarOpen, setSidebarOpen }) {
     const isMobile = useIsMobile();
+    const location = useLocation();
+
+    const handleLinkClick = () => {
+        if (isMobile && setSidebarOpen) setSidebarOpen(false);
+    };
+
+    const renderSection = (sectionLabel) => {
+        const items = Object.entries(routes).filter(
+            ([, route]) => route.show !== false && route.section === sectionLabel
+        );
+        if (!items.length) return null;
+
+        return (
+            <div key={sectionLabel} className="mt-4">
+                <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    <span>{sectionLabel}</span>
+                </div>
+                <div className="space-y-1">
+                    {items.map(([key, route]) => {
+                        const isActive = location.pathname === route.path;
+                        return (
+                            <Link
+                                key={key}
+                                to={route.path}
+                                onClick={handleLinkClick}
+                                className={`flex items-center rounded-md px-3 py-2 text-sm transition-all ${
+                                    isActive
+                                        ? 'bg-sky-50 text-sky-700 font-semibold border border-sky-100'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                }`}
+                            >
+                                <span className="truncate">{route.label}</span>
+                            </Link>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <aside
-            className={`
-                        ${isSidebarOpen ? 'block' : 'hidden'}
-                        md:block
-                        bg-gray-100 overflow-auto z-40
-                        md:static md:w-64
-                        absolute top-14 left-0 w-full
-                    `}>
-            <nav className="flex flex-col space-y-4 p-6">
-
-                <h2 className='text-gray-700 font-extrabold'>시작하기</h2>
-                {Object.entries(routes).map(([key, route]) => (
-                    route.show !== false && route.section === "시작하기" ?
-                        <Link onClick={() => isMobile && setSidebarOpen(false)} className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
-                ))}
-
-                <h2 className='text-gray-700 font-extrabold'>기업분석</h2>
-                {Object.entries(routes).map(([key, route]) => (
-                    route.show !== false && route.section === "기업분석" ?
-                        <Link onClick={() => isMobile && setSidebarOpen(false)} className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
-                ))}
-
-                <h2 className='text-gray-700 font-extrabold'>거래</h2>
-                {Object.entries(routes).map(([key, route]) => (
-                    route.show !== false && route.section === "거래" ?
-                        <Link onClick={() => isMobile && setSidebarOpen(false)} className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
-                ))}
-
-                <h2 className='text-gray-700 font-extrabold'>게시판</h2>
-                {Object.entries(routes).map(([key, route]) => (
-                    route.show !== false && route.section === "게시판" ?
-                        <Link onClick={() => isMobile && setSidebarOpen(false)} className='text-gray-700 hover:text-blue-500 pl-6 border-l-2 border-gray-300' key={key} to={route.path}>{route.label}</Link> : ''
-                ))}
-
+            className={`${
+                isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
+            } fixed inset-y-16 left-0 z-30 w-60 transform border-r border-slate-200 bg-white/95 px-3 py-4 text-sm shadow-lg transition-all duration-200 ease-out md:static md:inset-y-0 md:translate-x-0 md:opacity-100 md:w-64 md:bg-white md:shadow-none`}
+        >
+            <nav className="scrollbar-always flex h-full flex-col overflow-y-auto pb-6">
+                {SECTIONS.map(renderSection)}
             </nav>
         </aside>
-    )
+    );
 }

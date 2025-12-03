@@ -1,31 +1,25 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom';
 
-import Header from '@/component/layouts/common/Header001'
-import SideBar from '@/component/layouts/common/SideBar001'
+import Header from '@/component/layouts/common/Header001';
+import SideBar from '@/component/layouts/common/SideBar001';
 
 function Layout001() {
-
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
-        <div className='flex flex-col min-h-screen'>
-            {/* 헤더 */}
-            <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <div className="flex min-h-screen flex-col bg-slate-50">
+            <Header onMenuClick={() => setIsSidebarOpen((prev) => !prev)} />
 
-            {/* 본문 영역 */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="mx-auto flex w-full max-w-7xl flex-1 gap-0 px-3 pb-4 pt-3 md:gap-4 md:px-6">
+                <SideBar isSidebarOpen={isSidebarOpen} setSidebarOpen={setIsSidebarOpen} />
 
-                {/* 사이드바 */}
-                <SideBar isSidebarOpen={isSidebarOpen} />
-
-                {/* 메인 컨텐츠 */}
-                <main className='flex-1 bg-white p-6 overflow-auto'>
-                    <Outlet></Outlet>
+                <main className="scrollbar-always relative flex-1 overflow-auto rounded-xl bg-white p-4 shadow-sm md:p-6">
+                    <Outlet />
                 </main>
             </div>
         </div>
-    )
+    );
 }
 
 export default Layout001;

@@ -1,4 +1,4 @@
-import { Td, EditableTd, UsdCell, KrwCell, DiffCell, TotalDiffCell } from './TableCells';
+import { Td, EditableTd, UsdCell, KrwCell, CombinedPriceCell, DiffCell, TotalDiffCell } from './TableCells';
 import { toNum } from '../utils/formatters';
 
 /**
@@ -35,7 +35,7 @@ export function TransactionRow({
 
     return (
         <tr
-            className={`border-b border-slate-200 ${row.__isGroupEnd ? 'border-b-0' : ''} ${isHit ? 'bg-yellow-50 hover:bg-yellow-100' : 'hover:bg-slate-50'} cursor-pointer transition-colors`}
+            className={`border-b ${row.__isGroupEnd ? 'border-b-0' : 'border-slate-300'} ${isHit ? 'bg-yellow-50 hover:bg-yellow-100' : 'bg-white hover:bg-blue-50'} cursor-pointer transition-all duration-150`}
             onDoubleClick={handleCellDoubleClick}
             title="더블클릭하여 기업가치 계산 결과 보기"
         >
@@ -100,12 +100,9 @@ export function TransactionRow({
                 commitEdit={commitEdit}
                 type="number"
             />
-            <UsdCell value={toNum(row.totalBuyAmount) * toNum(row.buyPrice)} />
-            <KrwCell value={Math.round(toNum(row.totalBuyAmount) * toNum(row.buyPrice) * (fx || 0))} />
-            <UsdCell value={toNum(row.currentPrice)} />
-            <KrwCell value={toNum(row.currentPrice) * (fx || 0)} />
-            <UsdCell value={toNum(row.currentPrice) * toNum(row.totalBuyAmount)} />
-            <KrwCell value={Math.round(toNum(row.currentPrice) * toNum(row.totalBuyAmount) * (fx || 0))} />
+            <CombinedPriceCell usdValue={toNum(row.totalBuyAmount) * toNum(row.buyPrice)} fx={fx} />
+            <CombinedPriceCell usdValue={toNum(row.currentPrice)} fx={fx} />
+            <CombinedPriceCell usdValue={toNum(row.currentPrice) * toNum(row.totalBuyAmount)} fx={fx} />
             <EditableTd
                 row={row}
                 field="targetPrice"

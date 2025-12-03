@@ -53,9 +53,6 @@ export function NewTransactionRow({ newRow, setNewRow, onAdd, saving }) {
             <Td />
             <Td />
             <Td />
-            <Td />
-            <Td />
-            <Td />
             <Td>
                 <input
                     value={newRow.targetPrice}

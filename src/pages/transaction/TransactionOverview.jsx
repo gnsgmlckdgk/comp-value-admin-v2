@@ -122,7 +122,7 @@ export default function TransactionOverview() {
                                         return (
                                             <tr key={`gs-${r.symbol}-${i}`}>
                                                 <td colSpan={TABLE_HEADERS.length} className="p-0">
-                                                    <div className="h-0 border-t-2 border-slate-400" />
+                                                    <div className="h-2 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200" />
                                                 </td>
                                             </tr>
                                         );

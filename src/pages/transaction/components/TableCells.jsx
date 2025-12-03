@@ -4,7 +4,7 @@ import { toNum, fmtUsd, fmtDate } from '../utils/formatters';
  * 기본 테이블 셀 컴포넌트
  */
 export function Td({ children, className = '' }) {
-    return <td className={`px-3 py-2 align-middle ${className}`}>{children}</td>;
+    return <td className={`px-3 py-3 align-middle ${className}`}>{children}</td>;
 }
 
 /**
@@ -14,7 +14,7 @@ export function KrwCell({ value }) {
     const v = toNum(value);
     return (
         <Td>
-            <div className="px-1 h-9 flex items-center">
+            <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium">
                 {v ? `₩ ${Math.round(v).toLocaleString()}` : ''}
             </div>
         </Td>
@@ -28,8 +28,27 @@ export function UsdCell({ value }) {
     const v = toNum(value);
     return (
         <Td>
-            <div className="px-1 h-9 flex items-center">
+            <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium">
                 {v ? `$ ${fmtUsd(v)}` : ''}
+            </div>
+        </Td>
+    );
+}
+
+/**
+ * USD + KRW 통합 표시 셀
+ */
+export function CombinedPriceCell({ usdValue, fx }) {
+    const usd = toNum(usdValue);
+    const krw = fx ? Math.round(usd * fx) : 0;
+
+    return (
+        <Td>
+            <div className="px-1 leading-tight text-right">
+                <div className="text-slate-700 font-medium">{usd ? `$ ${fmtUsd(usd)}` : ''}</div>
+                {usd && fx ? (
+                    <div className="text-[11px] text-slate-500">{`₩ ${krw.toLocaleString()}`}</div>
+                ) : null}
             </div>
         </Td>
     );
@@ -50,9 +69,9 @@ export function DiffCell({ buy, cur, fx }) {
     return (
         <Td>
             <div className="px-1 leading-tight text-center">
-                <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
+                <div className={`${cls} font-semibold`}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
                 <div className="text-[11px] text-slate-500">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
-                <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+                <div className={`${cls} text-[12px] font-medium`}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
             </div>
         </Td>
     );
@@ -76,9 +95,9 @@ export function TotalDiffCell({ buy, cur, qty, fx }) {
     return (
         <Td>
             <div className="px-1 leading-tight text-center">
-                <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
+                <div className={`${cls} font-semibold`}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
                 <div className="text-[11px] text-slate-500">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
-                <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+                <div className={`${cls} text-[12px] font-medium`}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
             </div>
         </Td>
     );

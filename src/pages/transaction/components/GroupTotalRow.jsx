@@ -1,4 +1,4 @@
-import { Td, UsdCell, KrwCell } from './TableCells';
+import { Td, UsdCell, KrwCell, CombinedPriceCell } from './TableCells';
 import { toNum, fmtNum, fmtUsd } from '../utils/formatters';
 import { TABLE_HEADERS } from '../constants';
 
@@ -10,12 +10,12 @@ export function GroupTotalRow({ data, fx }) {
 
     return (
         <tr
-            className={`bg-slate-50 font-semibold border-t-0 ${
+            className={`bg-gradient-to-r from-blue-50 to-indigo-50 font-semibold border-t-0 ${
                 hasNextGroupDivider ? 'border-b-0' : 'border-b-2'
-            } border-slate-400`}
+            } border-slate-400 shadow-sm`}
         >
-            <Td className="sticky left-0 z-10 bg-slate-50" />
-            <Td className="sticky left-12 z-10 bg-slate-50 font-semibold text-slate-700">{symbol} 합계</Td>
+            <Td className="sticky left-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50" />
+            <Td className="sticky left-12 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 font-bold text-slate-800">{symbol} 합계</Td>
             <Td />
             <Td />
             <Td />
@@ -23,12 +23,9 @@ export function GroupTotalRow({ data, fx }) {
             <Td>
                 <div className="px-1 h-9 flex items-center">{qtySum ? fmtNum(qtySum, 0) : ''}</div>
             </Td>
-            <UsdCell value={buySumUSD} />
-            <KrwCell value={Math.round(buySumUSD * (fx || 0))} />
-            <UsdCell value={curUSD} />
-            <KrwCell value={Math.round(curUSD * (fx || 0))} />
-            <UsdCell value={curSumUSD} />
-            <KrwCell value={Math.round(curSumUSD * (fx || 0))} />
+            <CombinedPriceCell usdValue={buySumUSD} fx={fx} />
+            <CombinedPriceCell usdValue={curUSD} fx={fx} />
+            <CombinedPriceCell usdValue={curSumUSD} fx={fx} />
             <Td>
                 <div className="px-1 leading-tight text-center">
                     <div>{targetAvgUSD ? `$ ${fmtUsd(targetAvgUSD)}` : ''}</div>
@@ -57,9 +54,9 @@ export function GroupTotalRow({ data, fx }) {
                     const pct = buyAvg > 0 ? (d / buyAvg) * 100 : 0;
                     return (
                         <div className="px-1 leading-tight text-center">
-                            <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
+                            <div className={`${cls} font-bold`}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
                             <div className="text-[11px] text-slate-500">{dKrw ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
-                            <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+                            <div className={`${cls} text-[12px] font-semibold`}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
                         </div>
                     );
                 })()}
@@ -74,9 +71,9 @@ export function GroupTotalRow({ data, fx }) {
                     const pct = toNum(buySumUSD) > 0 ? (d / toNum(buySumUSD)) * 100 : 0;
                     return (
                         <div className="px-1 leading-tight text-center">
-                            <div className={cls}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
+                            <div className={`${cls} font-bold`}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
                             <div className="text-[11px] text-slate-500">{dKrw ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
-                            <div className={cls + ' text-[12px]'}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+                            <div className={`${cls} text-[12px] font-semibold`}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
                         </div>
                     );
                 })()}

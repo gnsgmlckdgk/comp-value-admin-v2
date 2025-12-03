@@ -16,12 +16,28 @@ export function TransactionRow({
     commitEdit,
     onRemove,
     saving,
+    onRowDoubleClick,
 }) {
     const isHit = toNum(row.targetPrice) > 0 && toNum(row.currentPrice) >= toNum(row.targetPrice);
 
+    const handleCellDoubleClick = (e) => {
+        // EditableTd에서 이미 처리되었으면 무시
+        if (e.defaultPrevented) return;
+
+        // 더블클릭 이벤트가 버튼에서 발생했으면 무시
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+
+        // 기업가치 조회 호출
+        if (onRowDoubleClick && row.symbol) {
+            onRowDoubleClick(row.symbol);
+        }
+    };
+
     return (
         <tr
-            className={`border-b border-slate-200 ${row.__isGroupEnd ? 'border-b-0' : ''} ${isHit ? 'bg-yellow-50' : ''}`}
+            className={`border-b border-slate-200 ${row.__isGroupEnd ? 'border-b-0' : ''} ${isHit ? 'bg-yellow-50 hover:bg-yellow-100' : 'hover:bg-slate-50'} cursor-pointer transition-colors`}
+            onDoubleClick={handleCellDoubleClick}
+            title="더블클릭하여 기업가치 계산 결과 보기"
         >
             <Td className={`sticky left-0 z-10 ${isHit ? 'bg-yellow-50' : 'bg-white'}`}>{index + 1}</Td>
             <EditableTd

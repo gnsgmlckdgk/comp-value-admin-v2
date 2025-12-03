@@ -119,7 +119,7 @@ export default function Header001({ onMenuClick }) {
     return (
         <>
             <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
-                <div className="mx-auto flex h-16 max-w-6xl items-center px-3 md:px-6">
+                <div className="flex h-16 w-full items-center px-3 md:px-6">
                     <button
                         className="mr-2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 md:hidden"
                         onClick={onMenuClick}

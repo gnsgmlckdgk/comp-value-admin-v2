@@ -19,7 +19,7 @@ function Layout001() {
                 />
             )}
 
-            <div className="mx-auto flex w-full max-w-7xl flex-1 gap-0 px-3 pb-4 pt-3 md:gap-4 md:px-6">
+            <div className="flex w-full flex-1 gap-0 px-3 pb-4 pt-3 md:gap-4 md:px-6">
                 <SideBar isSidebarOpen={isSidebarOpen} setSidebarOpen={setIsSidebarOpen} />
 
                 <main className="scrollbar-always relative flex-1 overflow-auto rounded-xl bg-white p-4 shadow-sm md:p-6">

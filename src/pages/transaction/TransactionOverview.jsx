@@ -32,6 +32,7 @@ export default function TransactionOverview() {
     const [newRow, setNewRow] = useState(INITIAL_NEW_ROW);
     const [showCompValueModal, setShowCompValueModal] = useState(false);
     const [compValueData, setCompValueData] = useState({});
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // 편집 완료 핸들러
     const commitEdit = async () => {
@@ -51,11 +52,14 @@ export default function TransactionOverview() {
 
     // 현재가 갱신
     const handleRefreshPrices = async () => {
+        setIsRefreshing(true);
         try {
             await mergePricesBySymbols(rows.map((r) => r.symbol));
             await refreshFxRate();
         } catch (e) {
             alert('현재가격/환율 갱신에 실패했습니다.');
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -97,7 +101,7 @@ export default function TransactionOverview() {
 
             <div className="px-2 py-8 md:px-4">
                 <TransactionHeader
-                    loading={loading}
+                    loading={loading || isRefreshing}
                     rows={rows}
                     lastUpdated={lastUpdated}
                     fxRate={fxRate}
@@ -173,6 +177,7 @@ export default function TransactionOverview() {
                 </div>
 
                 {loading && <div className="mt-3 text-sm text-slate-500">불러오는 중…</div>}
+                {saving && <div className="mt-3 text-sm text-blue-600 font-medium">저장 중...</div>}
             </div>
 
             <CompanyValueResultModal

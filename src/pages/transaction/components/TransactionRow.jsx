@@ -131,7 +131,7 @@ export function TransactionRow({
             <Td>
                 <button
                     onClick={() => onRemove(row.id)}
-                    className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300"
+                    className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300 cursor-pointer disabled:cursor-not-allowed"
                     disabled={saving}
                 >
                     삭제

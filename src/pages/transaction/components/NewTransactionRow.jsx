@@ -75,7 +75,7 @@ export function NewTransactionRow({ newRow, setNewRow, onAdd, saving }) {
             <Td>
                 <button
                     onClick={onAdd}
-                    className="px-2.5 py-1 rounded-md border text-xs hover:bg-emerald-50 hover:border-emerald-300"
+                    className="px-2.5 py-1 rounded-md border text-xs hover:bg-emerald-50 hover:border-emerald-300 cursor-pointer disabled:cursor-not-allowed"
                     disabled={saving}
                 >
                     등록

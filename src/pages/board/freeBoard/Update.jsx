@@ -33,7 +33,13 @@ function Update() {
     const fetchData = async () => {
         const sendUrl = `/dart/freeboard/view/${id}`;
         const { data, error } = await send(sendUrl, {}, 'GET');
-        setBoardData(data);
+        if (error === null && data) {
+            const payload = data.response ?? data;
+            setBoardData({
+                ...payload,
+                author: payload.memberNickname ?? payload.memberUsername ?? '',
+            });
+        }
     };
 
     const updateData = async (title, content) => {

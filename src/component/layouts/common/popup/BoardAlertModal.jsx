@@ -21,3 +21,4 @@ export default function BoardAlertModal({ open, title = '알림', message, onClo
 }
 
 
+

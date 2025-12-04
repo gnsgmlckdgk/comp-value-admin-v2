@@ -6,10 +6,15 @@ function View001({
     onMoveBack = () => {},
     onMoveUpdate = () => {},
     onDelete = () => {},
+    canEdit = false,
+    canDelete = false,
     boardData = {
         title: '',
         content: '',
         author: '',
+        viewCount: 0,
+        memberUsername: '',
+        memberNickname: '',
         createdAt: '',
         updatedAt: '',
     },
@@ -25,19 +30,24 @@ function View001({
 
             {/* 게시글 */}
             <div className="mb-6 space-y-4 rounded bg-white p-6 shadow-md">
-                <div className="mb-2 flex justify-end text-sm text-gray-600">
-                    <div className="space-y-1 text-right">
+                <div className="mb-2 flex justify-between text-xs text-gray-600">
+                    <div className="space-y-1">
                         <div>
-                            <span className="font-medium text-gray-700">작성자:</span> {boardData.author}
+                            <span className="font-medium text-gray-700">작성자:</span>{' '}
+                            {boardData.author || boardData.memberNickname || boardData.memberUsername || '-'}
                         </div>
                         <div>
                             <span className="font-medium text-gray-700">작성일:</span>{' '}
-                            {boardData.createdAt ? new Date(boardData.createdAt).toLocaleString() : '-'}
+                            {boardData.createdAt || '-'}
                         </div>
                         <div>
                             <span className="font-medium text-gray-700">수정일:</span>{' '}
-                            {boardData.updatedAt ? new Date(boardData.updatedAt).toLocaleString() : '-'}
+                            {boardData.updatedAt || '-'}
                         </div>
+                    </div>
+                    <div className="flex items-start gap-1">
+                        <span className="mt-[2px] text-[11px] text-gray-500">조회수</span>
+                        <span className="text-sm font-semibold text-gray-700">{boardData.viewCount ?? 0}</span>
                     </div>
                 </div>
                 <p className="whitespace-pre-line text-lg text-gray-700">{boardData.content}</p>
@@ -45,8 +55,12 @@ function View001({
 
             {/* 버튼들 */}
             <div className="flex justify-end">
-                <Button children="수정" variant="outline" onClick={onMoveUpdate} className="mr-1" />
-                <Button children="삭제" variant="danger" onClick={onDelete} className="mr-1" />
+                {canEdit && (
+                    <Button children="수정" variant="outline" onClick={onMoveUpdate} className="mr-1" />
+                )}
+                {canDelete && (
+                    <Button children="삭제" variant="danger" onClick={onDelete} className="mr-1" />
+                )}
                 <Button children="목록" variant="primary" onClick={onMoveBack} />
             </div>
         </div>

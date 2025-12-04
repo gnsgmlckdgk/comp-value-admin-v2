@@ -14,7 +14,7 @@ function List() {
     const state = location.state || {};
     const gridRef = useRef(); // 자식 컴포넌트 정보를 담기위해 생성(그리드 정보)
 
-    const { isLoggedIn } = useAuth(); // 로그인 상태
+    const { isLoggedIn, roles } = useAuth(); // 로그인 상태 및 역할
 
     const [loading, setLoading] = useState(false);
     const [rowData, setRowData] = useState([]);
@@ -120,15 +120,31 @@ function List() {
 
         const idList = selectedRows.map((row) => row.id);
 
-        let count = 0;
+        let successCount = 0;
+        let failCount = 0;
+        let lastErrorMessage = '';
+
         for (const id of idList) {
             const sendUrl = `/dart/freeboard/delete/${id}`;
-            await send(sendUrl, {}, "DELETE");
-            count++;
+            const { data, error } = await send(sendUrl, {}, "DELETE");
+            if (error) {
+                failCount++;
+                lastErrorMessage = error;
+                // 권한 문제나 기타 오류가 계속 날 수 있으므로, 나머지는 더 이상 시도하지 않고 중단
+                break;
+            } else {
+                successCount++;
+            }
         }
-        openAlert(`${count}건의 게시글을 삭제했습니다.`);
 
-        fetchData(currentPage);
+        if (successCount > 0) {
+            const suffix = failCount > 0 ? '\n일부 게시글은 삭제되지 않았습니다.' : '';
+            openAlert(`${successCount}건의 게시글을 삭제했습니다.${suffix}`);
+            fetchData(currentPage);
+        } else if (failCount > 0) {
+            // 모두 실패한 경우 → 서버에서 내려준 에러 메시지를 그대로 노출
+            openAlert(lastErrorMessage || '게시글 삭제 중 오류가 발생했습니다.');
+        }
     };
 
     // view 페이지 이동
@@ -176,9 +192,20 @@ function List() {
         const sendUrl = "/dart/freeboard" + query;
         const { data, error } = await send(sendUrl, {}, "GET");
 
-        if (error === null) {
-            setTotalCount(data.total);
-            setRowData(data.data);
+        if (error === null && data) {
+            // 백엔드 응답 형태:
+            // 1) 기존: { total, data }
+            // 2) 신규: { success, code, message, response: { total, data } }
+            const payload = data.response ?? data;
+            const rows = (payload.data ?? []).map((item) => ({
+                // 기존 구조 호환을 위해 전체를 그대로 두고
+                ...item,
+                // 그리드에서 사용하는 author 컬럼을 백엔드 작성자 필드에 맞춰 매핑
+                author: item.memberNickname ?? item.memberUsername ?? '',
+            }));
+
+            setTotalCount(payload.total ?? 0);
+            setRowData(rows);
         } else {
             setTotalCount(0);
             setRowData([]);
@@ -187,13 +214,37 @@ function List() {
         setLoading(false);
     }
 
+    // ---- 역할 계산 (ROLE_SUPER_ADMIN / ROLE_ADMIN / ROLE_USER 등) ----
+    let storedRoles = [];
+    try {
+        const raw = localStorage.getItem('roles');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                storedRoles = parsed;
+            }
+        }
+    } catch {
+        storedRoles = [];
+    }
+
+    const effectiveRoles = (roles && roles.length ? roles : storedRoles).map((r) =>
+        (r || '').toString().toUpperCase()
+    );
+
+    const isSuperAdmin = effectiveRoles.some((r) => r.includes('SUPER_ADMIN'));
+    const isAdmin = !isSuperAdmin && effectiveRoles.some((r) => r.includes('ADMIN'));
+    const canDelete = isSuperAdmin || isAdmin;
+
     return (
         <>
             {/* 상단 영역 */}
             <div className="mt-4 mb-4 w-full px-2 md:px-4">
                 <div className="mb-3 flex items-center justify-end gap-2">
                     <Button children="등록" onClick={moveRegisterPage} className="w-24" />
-                    <Button children="삭제" onClick={handleCheckSelected} variant="danger" className="w-24" />
+                    {canDelete && (
+                        <Button children="삭제" onClick={handleCheckSelected} variant="danger" className="w-24" />
+                    )}
                 </div>
 
                 {/* SearchBar */}

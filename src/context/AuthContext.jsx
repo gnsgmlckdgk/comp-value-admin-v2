@@ -11,12 +11,12 @@ export function AuthProvider({ children }) {
     // 로그인 상태를 관리하는 state
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userName, setUserName] = useState('');
-    const [userRole, setUserRole] = useState('');
     const [nickName, setNickName] = useState('');
+    const [roles, setRoles] = useState([]);
 
     return (
         // value 객체로 로그인 상태와 변경 함수 전달
-        <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn, userName, setUserName, userRole, setUserRole, nickName, setNickName }}>
+        <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn, userName, setUserName, nickName, setNickName, roles, setRoles }}>
             {children}
         </AuthContext.Provider>
     );

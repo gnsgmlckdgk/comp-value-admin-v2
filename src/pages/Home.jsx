@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 export default function Home() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { isLoggedIn, userName, userRole } = useAuth();
+    const { isLoggedIn, userName } = useAuth();
 
     useEffect(() => {
         // 페이지 타이틀 가볍게 세팅

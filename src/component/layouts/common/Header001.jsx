@@ -11,7 +11,7 @@ export default function Header001({ onMenuClick }) {
     const [title] = useState('CompValue');
     const [showLogin, setShowLogin] = useState(false);
 
-    const { isLoggedIn, setIsLoggedIn, userName, setUserName, userRole, setUserRole, nickName, setNickName } = useAuth();
+    const { isLoggedIn, setIsLoggedIn, userName, setUserName, nickName, setNickName, roles, setRoles } = useAuth();
 
     const [password, setPassWord] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -21,9 +21,9 @@ export default function Header001({ onMenuClick }) {
     useEffect(() => {
         const onForceLogout = () => {
             setIsLoggedIn(false);
-            setUserRole && setUserRole('');
             setUserName && setUserName('');
             setNickName && setNickName('');
+            setRoles && setRoles([]);
             setPassWord('');
             setShowLogin(false);
 
@@ -47,7 +47,7 @@ export default function Header001({ onMenuClick }) {
             window.removeEventListener('auth:logout', onForceLogout);
             window.removeEventListener('auth:login:open', onOpenLogin);
         };
-    }, [setIsLoggedIn, setNickName, setUserName, setUserRole, navigate]);
+    }, [setIsLoggedIn, setNickName, setUserName, setRoles, navigate]);
 
     const login = async () => {
         const sendUrl = `/dart/member/login`;
@@ -73,15 +73,17 @@ export default function Header001({ onMenuClick }) {
                 const res = data.response || {};
                 const nextUserName = res.username ?? userName;
                 const nextNick = res.nickName ?? nextUserName;
-                const nextRole = res.role ?? (Array.isArray(res.roles) ? res.roles[0] : userRole);
+                const nextRoles = Array.isArray(res.roles) ? res.roles : (res.role ? [res.role] : []);
+
+                console.log("[TEST] login res", res);
 
                 localStorage.setItem('userName', nextUserName);
                 localStorage.setItem('nickName', nextNick);
-                localStorage.setItem('role', nextRole);
+                localStorage.setItem('roles', JSON.stringify(nextRoles));
 
                 setUserName(nextUserName);
                 setNickName(nextNick);
-                setUserRole(nextRole || '');
+                setRoles(nextRoles);
                 setIsLoggedIn(true);
                 setPassWord('');
                 setShowLogin(false);
@@ -99,14 +101,14 @@ export default function Header001({ onMenuClick }) {
         const { data, error } = await send(sendUrl, {}, 'DELETE');
         if (error == null) {
             setIsLoggedIn(false);
-            setUserRole('');
             setUserName('');
             setNickName('');
+            setRoles([]);
             setPassWord('');
 
             localStorage.removeItem('userName');
             localStorage.removeItem('nickName');
-            localStorage.removeItem('role');
+            localStorage.removeItem('roles');
 
             navigate('/', { replace: true, state: { reason: 'logout' } });
         } else alert(error);

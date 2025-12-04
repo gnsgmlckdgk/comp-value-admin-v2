@@ -197,12 +197,25 @@ function List() {
             // 1) 기존: { total, data }
             // 2) 신규: { success, code, message, response: { total, data } }
             const payload = data.response ?? data;
+
+            console.log("[DEBUG] 백엔드에서 받은 데이터 순서 확인:", payload.data?.map(item => ({
+                id: item.id,
+                createdAt: item.createdAt,
+                title: item.title
+            })));
+
             const rows = (payload.data ?? []).map((item) => ({
                 // 기존 구조 호환을 위해 전체를 그대로 두고
                 ...item,
                 // 그리드에서 사용하는 author 컬럼을 백엔드 작성자 필드에 맞춰 매핑
                 author: item.memberNickname ?? item.memberUsername ?? '',
             }));
+
+            console.log("[DEBUG] 그리드에 전달되는 데이터 순서:", rows.map(item => ({
+                id: item.id,
+                createdAt: item.createdAt,
+                title: item.title
+            })));
 
             setTotalCount(payload.total ?? 0);
             setRowData(rows);

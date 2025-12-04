@@ -82,7 +82,21 @@ export function useTransactions() {
         setSaving(true);
         try {
             const updated = await updateTransaction(id, { [field]: value });
-            setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...updated } : r)));
+
+            setRows((prev) => {
+                const newRows = prev.map((r) => {
+                    if (r.id === id) {
+                        // currentPrice는 프론트에서만 관리되는 필드이므로 절대 덮어쓰면 안됨
+                        // 백엔드 응답에서 currentPrice를 제외하고 나머지만 업데이트
+                        const { currentPrice: _, ...backendData } = updated || {};
+
+                        // 기존 row에 백엔드 데이터를 머지 (currentPrice는 보존됨)
+                        return { ...r, ...backendData };
+                    }
+                    return r;
+                });
+                return newRows;
+            });
             return true;
         } catch (e) {
             alert('수정에 실패했습니다.');

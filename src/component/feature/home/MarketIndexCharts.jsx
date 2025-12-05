@@ -26,8 +26,6 @@ export default function MarketIndexCharts() {
         const to = new Date().toISOString().split('T')[0];
         const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-        console.log('MarketIndexCharts: Loading data from', from, 'to', to);
-
         const queries = US_INDICES.map(index => ({
             symbol: index.symbol,
             from,
@@ -36,8 +34,6 @@ export default function MarketIndexCharts() {
 
         try {
             const results = await fetchMultipleIndices(queries);
-            console.log('MarketIndexCharts: API results', results);
-
             const dataMap = {};
             let hasAnyData = false;
 
@@ -47,8 +43,6 @@ export default function MarketIndexCharts() {
                     return;
                 }
 
-                console.log(`Data for ${symbol}:`, data);
-
                 if (data?.success && data?.response) {
                     // 날짜 기준 오름차순 정렬
                     const sortedData = [...data.response].sort((a, b) =>
@@ -56,21 +50,16 @@ export default function MarketIndexCharts() {
                     );
                     dataMap[symbol] = sortedData;
                     hasAnyData = true;
-                    console.log(`${symbol}: Loaded ${sortedData.length} data points`);
-                } else {
-                    console.warn(`${symbol}: No valid data in response`, data);
                 }
             });
 
             if (!hasAnyData) {
-                setError('차트 데이터가 없습니다. 서버 응답을 확인해주세요.');
-                console.error('No data loaded for any index');
+                setError('차트 데이터를 불러올 수 없습니다.');
             }
 
             setChartsData(dataMap);
         } catch (err) {
-            const errorMsg = '차트 데이터를 불러오는데 실패했습니다: ' + (err.message || String(err));
-            setError(errorMsg);
+            setError('차트 데이터를 불러오는데 실패했습니다.');
             console.error('MarketIndexCharts error:', err);
         } finally {
             setLoading(false);

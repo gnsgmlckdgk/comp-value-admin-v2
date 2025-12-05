@@ -118,7 +118,7 @@ export default function MarketIndexCharts() {
         <div className="w-full">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
                 <h2 className="text-xl font-bold text-slate-800 flex-shrink-0">미국 주요 지수</h2>
-                <div className="w-full sm:w-auto overflow-x-auto scrollbar-always min-w-0 p-0 m-0 border-none">
+                <div className="overflow-x-auto scrollbar-always min-w-0">
                     <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
                 </div>
             </div>

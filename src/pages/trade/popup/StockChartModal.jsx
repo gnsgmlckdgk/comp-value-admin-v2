@@ -93,8 +93,8 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
-                <div className="sticky top-0 px-5 py-4 border-b bg-white z-10">
-                    <div className="flex items-center justify-between mb-3">
+                <div className="sticky top-0 z-10 px-5 py-4 border-b bg-white">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
                         <div>
                             <div className="flex items-center gap-3">
                                 <h2 className="text-lg font-semibold text-slate-800">
@@ -128,7 +128,9 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                         </button>
                     </div>
                     {/* 기간 선택 */}
-                    <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
+                    <div className="w-full sm:w-auto overflow-x-auto scrollbar-always min-w-0 p-0 m-0 border-none">
+                        <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
+                    </div>
                 </div>
 
                 {/* 콘텐츠 */}
@@ -317,17 +319,18 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
  */
 const PeriodSelector = ({ period, onChange, disabled }) => {
     return (
-        <div className="flex items-center gap-1 bg-slate-50 border rounded-lg p-1">
+        <div className="inline-flex whitespace-nowrap gap-1 min-w-0">
             {PERIOD_OPTIONS.map(option => (
                 <button
                     key={option.value}
                     onClick={() => onChange(option.value)}
                     disabled={disabled}
-                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                    className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
                         period === option.value
                             ? 'bg-blue-600 text-white'
                             : 'text-slate-600 hover:bg-slate-100'
                     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    style={{ minWidth: 48 }}
                 >
                     {option.label}
                 </button>

@@ -116,9 +116,11 @@ export default function MarketIndexCharts() {
 
     return (
         <div className="w-full">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-slate-800">미국 주요 지수</h2>
-                <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <h2 className="text-xl font-bold text-slate-800 flex-shrink-0">미국 주요 지수</h2>
+                <div className="w-full sm:w-auto overflow-x-auto scrollbar-always min-w-0 p-0 m-0 border-none">
+                    <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
+                </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {US_INDICES.map(index => {
@@ -154,17 +156,18 @@ export default function MarketIndexCharts() {
  */
 function PeriodSelector({ period, onChange, disabled }) {
     return (
-        <div className="flex items-center gap-1 bg-white border rounded-lg p-1 shadow-sm">
+        <div className="inline-flex whitespace-nowrap gap-1 min-w-0">
             {PERIOD_OPTIONS.map(option => (
                 <button
                     key={option.value}
                     onClick={() => onChange(option.value)}
                     disabled={disabled}
-                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                    className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
                         period === option.value
                             ? 'bg-blue-600 text-white'
                             : 'text-slate-600 hover:bg-slate-100'
                     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    style={{ minWidth: 48 }}
                 >
                     {option.label}
                 </button>

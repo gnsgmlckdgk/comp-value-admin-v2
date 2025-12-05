@@ -5,6 +5,7 @@ import ToggleSection from '@/component/common/display/ToggleSection';
 import SimpleList from '@/component/common/list/SimpleList';
 import Loading from '@/component/common/display/Loading';
 import BulkCalcPopup from './popup/BulkCalcPopup';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
 import { useState, useEffect } from 'react'
 
@@ -23,6 +24,17 @@ const CompValue = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const [isPopup, setIsPopup] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+
+    const openAlert = (message, onConfirm) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
+    };
+
+    const handleCloseAlert = () => {
+        const { onConfirm } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null });
+        if (onConfirm) onConfirm();
+    };
 
 
     const fetchData = async () => {
@@ -48,7 +60,7 @@ const CompValue = () => {
 
                 <Loading show={isLoading} />
                 {isPopup && (
-                    <BulkCalcPopup onClose={() => setIsPopup(false)} year={baseYear} />
+                    <BulkCalcPopup onClose={() => setIsPopup(false)} year={baseYear} openAlert={openAlert} />
                 )}
 
                 <div>
@@ -114,6 +126,12 @@ const CompValue = () => {
                     </ToggleSection>
                 </div>
             </div>
+
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={handleCloseAlert}
+            />
         </>
     )
 }

@@ -13,9 +13,25 @@ import { groupRowsBySymbol } from './utils/grouping';
 import { calculateTotals, calculateDiffAndPercent } from './utils/calculations';
 import { COLUMN_WIDTHS, INITIAL_NEW_ROW, TABLE_HEADERS } from './constants';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { send } from '@/util/ClientUtil';
 
 export default function TransactionOverview() {
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+
+    const openAlert = (message, onConfirm) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
+    };
+
+    const handleCloseAlert = () => {
+        const { onConfirm } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null });
+        if (onConfirm) onConfirm();
+    };
+
+    // confirm은 일단 기본 confirm 사용 (나중에 모달로 변경 가능)
+    const openConfirm = (message) => confirm(message);
+
     const {
         rows,
         loading,
@@ -25,7 +41,7 @@ export default function TransactionOverview() {
         updateTransactionField,
         removeTransaction,
         mergePricesBySymbols,
-    } = useTransactions();
+    } = useTransactions(openAlert, openConfirm);
 
     const { fxRate, refreshFxRate } = useFxRate();
     const { editing, setEditing, draft, setDraft, startEdit, cancelEdit } = useEditing();
@@ -57,7 +73,7 @@ export default function TransactionOverview() {
             await mergePricesBySymbols(rows.map((r) => r.symbol));
             await refreshFxRate();
         } catch (e) {
-            alert('현재가격/환율 갱신에 실패했습니다.');
+            openAlert('현재가격/환율 갱신에 실패했습니다.');
         } finally {
             setIsRefreshing(false);
         }
@@ -66,7 +82,7 @@ export default function TransactionOverview() {
     // 기업가치 계산 조회
     const handleRowDoubleClick = async (symbol) => {
         if (!symbol || !symbol.trim()) {
-            alert('티커 정보가 존재하지 않습니다.');
+            openAlert('티커 정보가 존재하지 않습니다.');
             return;
         }
 
@@ -78,10 +94,10 @@ export default function TransactionOverview() {
                 setCompValueData(data.response);
                 setShowCompValueModal(true);
             } else {
-                alert('조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
+                openAlert('조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
             }
         } catch (e) {
-            alert('요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+            openAlert('요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
         }
     };
 
@@ -200,6 +216,12 @@ export default function TransactionOverview() {
                 isOpen={showCompValueModal}
                 onClose={() => setShowCompValueModal(false)}
                 data={compValueData}
+            />
+
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={handleCloseAlert}
             />
         </>
     );

@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import BulkQueryModal from '@/pages/trade/popup/BulkQueryModal';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { send } from '@/util/ClientUtil';
 
 // ----------------------------------------------
@@ -28,6 +29,17 @@ const AbroadCompValue = () => {
     const [compValueData, setCompValueData] = useState({});
     const [showPopup, setShowPopup] = useState(false);
     const [showBulk, setShowBulk] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+
+    const openAlert = (message, onConfirm) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
+    };
+
+    const handleCloseAlert = () => {
+        const { onConfirm } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null });
+        if (onConfirm) onConfirm();
+    };
 
     const inFlight = useRef({ search: false, calc: false });
     const latestSearchReqId = useRef(0);
@@ -90,13 +102,13 @@ const AbroadCompValue = () => {
     const compValueCal = useCallback(
         async (row) => {
             if (!Array.isArray(compNameData) || compNameData.length === 0) {
-                alert('기업 정보가 존재하지 않습니다.');
+                openAlert('기업 정보가 존재하지 않습니다.');
                 return;
             }
 
             const symbol = row && row.symbol ? row.symbol.trim() : '';
             if (!symbol) {
-                alert('심볼 정보가 존재하지 않습니다.');
+                openAlert('심볼 정보가 존재하지 않습니다.');
                 return;
             }
 
@@ -114,11 +126,11 @@ const AbroadCompValue = () => {
                     setShowPopup(true);
                 } else {
                     setCompValueData({});
-                    alert('조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
+                    openAlert('조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
                 }
             } catch (e) {
                 setCompValueData({});
-                alert('요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                openAlert('요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
             } finally {
                 setIsLoading(false);
                 inFlight.current.calc = false;
@@ -224,7 +236,13 @@ const AbroadCompValue = () => {
                 data={compValueData}
             />
 
-            <BulkQueryModal open={showBulk} onClose={() => setShowBulk(false)} />
+            <BulkQueryModal open={showBulk} onClose={() => setShowBulk(false)} openAlert={openAlert} />
+
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={handleCloseAlert}
+            />
         </div>
     );
 };

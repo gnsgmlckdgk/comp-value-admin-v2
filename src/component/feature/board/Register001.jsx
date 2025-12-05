@@ -4,17 +4,17 @@ import Button from '@/component/common/button/Button';
 import Input from '@/component/common/input/Input';
 import TextArea from '@/component/common/textarea/TextArea';
 
-function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAuthor = '' }) {
+function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAuthor = '', openAlert = (msg) => alert(msg) }) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
 
     const handleSubmit = () => {
         if (!title.trim()) {
-            alert('제목을 입력해 주세요.');
+            openAlert('제목을 입력해 주세요.');
             return;
         }
         if (!content.trim()) {
-            alert('내용을 입력해 주세요.');
+            openAlert('내용을 입력해 주세요.');
             return;
         }
         onRegister(title, content);

@@ -13,7 +13,7 @@ import { INITIAL_NEW_ROW } from '../constants';
 /**
  * 거래 목록 관리 커스텀 훅
  */
-export function useTransactions() {
+export function useTransactions(openAlert = (msg) => alert(msg), openConfirm = (msg) => confirm(msg)) {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -37,7 +37,7 @@ export function useTransactions() {
 
     const addTransaction = async (payload, mergePricesBySymbols) => {
         if (!payload.symbol) {
-            alert('티커를 입력해주세요.');
+            openAlert('티커를 입력해주세요.');
             return false;
         }
 
@@ -71,7 +71,7 @@ export function useTransactions() {
             setLastUpdated(new Date());
             return true;
         } catch (e) {
-            alert('등록에 실패했습니다.');
+            openAlert('등록에 실패했습니다.');
             return false;
         } finally {
             setSaving(false);
@@ -99,7 +99,7 @@ export function useTransactions() {
             });
             return true;
         } catch (e) {
-            alert('수정에 실패했습니다.');
+            openAlert('수정에 실패했습니다.');
             return false;
         } finally {
             setSaving(false);
@@ -107,7 +107,7 @@ export function useTransactions() {
     };
 
     const removeTransaction = async (id) => {
-        if (!confirm('삭제하시겠어요?')) return false;
+        if (!openConfirm('삭제하시겠어요?')) return false;
 
         setSaving(true);
         try {
@@ -117,7 +117,7 @@ export function useTransactions() {
             setLastUpdated(new Date());
             return true;
         } catch (e) {
-            alert('삭제에 실패했습니다.');
+            openAlert('삭제에 실패했습니다.');
             return false;
         } finally {
             setSaving(false);

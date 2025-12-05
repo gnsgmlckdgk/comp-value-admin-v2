@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import View001 from '@/component/feature/board/View001';
 import { send } from '@/util/ClientUtil';
-import BoardAlertModal from '@/component/layouts/common/popup/BoardAlertModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useAuth } from '@/context/AuthContext';
 
 function View() {
@@ -111,7 +111,7 @@ function View() {
                 canEdit={canEdit}
                 canDelete={canDelete}
             />
-            <BoardAlertModal open={alertConfig.open} message={alertConfig.message} onClose={handleCloseAlert} />
+            <AlertModal open={alertConfig.open} message={alertConfig.message} onClose={handleCloseAlert} />
         </>
     );
 }

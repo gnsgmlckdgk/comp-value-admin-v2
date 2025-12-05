@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import Update001 from '@/component/feature/board/Update001';
 import { send } from '@/util/ClientUtil';
-import BoardAlertModal from '@/component/layouts/common/popup/BoardAlertModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
 function Update() {
     const { id } = useParams(); // ← URL에서 :id 값 가져옴
@@ -62,7 +62,7 @@ function Update() {
     return (
         <>
             <Update001 boardData={boardData} onUpdate={updateData} moveViewPage={moveViewPage} />
-            <BoardAlertModal open={alertConfig.open} message={alertConfig.message} onClose={handleCloseAlert} />
+            <AlertModal open={alertConfig.open} message={alertConfig.message} onClose={handleCloseAlert} />
         </>
     );
 }

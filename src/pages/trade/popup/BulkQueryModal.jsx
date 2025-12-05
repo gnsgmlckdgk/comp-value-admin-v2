@@ -11,8 +11,9 @@ import { send } from '@/util/ClientUtil';
  *  - onClose: () => void
  *  - fetcher?: (symbols: string[]) => Promise<Array<any>>
  *      // 백단 연동 함수(주입 가능). 미주입 시 defaultBulkFetcher 사용
+ *  - openAlert?: (msg: string) => void
  */
-export default function BulkQueryModal({ open, onClose, fetcher }) {
+export default function BulkQueryModal({ open, onClose, fetcher, openAlert = (msg) => alert(msg) }) {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -30,7 +31,7 @@ export default function BulkQueryModal({ open, onClose, fetcher }) {
     const run = async () => {
 
         if (symbols.length === 0) {
-            alert('심볼을 한 줄에 하나씩 입력해주세요.');
+            openAlert('심볼을 한 줄에 하나씩 입력해주세요.');
             return;
         }
         setLoading(true);
@@ -41,7 +42,7 @@ export default function BulkQueryModal({ open, onClose, fetcher }) {
             await exportToExcel(Array.isArray(items) ? items : []);
         } catch (e) {
             console.error(e);
-            alert('조회/엑셀 생성 중 오류가 발생했습니다.');
+            openAlert('조회/엑셀 생성 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }

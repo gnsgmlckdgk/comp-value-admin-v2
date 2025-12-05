@@ -1,7 +1,7 @@
 import BoardList from '@/component/feature/board/List002';
 import SearchBar from '@/component/feature/board/search/SearchBar002';
 import Button from '@/component/common/button/Button';
-import BoardAlertModal from '@/component/layouts/common/popup/BoardAlertModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
 import { useAuth } from '@/context/AuthContext';
 import { send } from '@/util/ClientUtil';
@@ -287,7 +287,7 @@ function List() {
                 pageNationProps={pageNationProps}
             />
 
-            <BoardAlertModal
+            <AlertModal
                 open={alertConfig.open}
                 message={alertConfig.message}
                 onClose={() => setAlertConfig({ open: false, message: '' })}

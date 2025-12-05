@@ -36,7 +36,7 @@ const delayWithProgress = (ms, setItemProgress) => {
     });
 };
 
-const BulkCalcPopup = ({ onClose, year = new Date().getFullYear() }) => {
+const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (msg) => alert(msg) }) => {
     const [inputText, setInputText] = useState('');
     // 전체 진행도 상태 (예: { current: 3, total: 10 })
     const [progress, setProgress] = useState({ current: 0, total: 0 });
@@ -53,7 +53,7 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear() }) => {
             .filter(line => line !== '');
 
         if (companyNames.length === 0) {
-            alert('기업명을 입력해주세요.');
+            openAlert('기업명을 입력해주세요.');
             setIsLoading(false);
             return;
         }

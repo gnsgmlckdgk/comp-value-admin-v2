@@ -1,6 +1,6 @@
 import Button from '@/component/common/button/Button';
 
-export default function BoardAlertModal({ open, title = '알림', message, onClose }) {
+export default function AlertModal({ open, title = '알림', message, onClose }) {
     if (!open) return null;
 
     return (

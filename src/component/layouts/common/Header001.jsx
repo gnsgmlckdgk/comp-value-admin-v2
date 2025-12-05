@@ -6,6 +6,7 @@ import { send } from '@/util/ClientUtil';
 import { useAuth } from '@/context/AuthContext';
 
 import LoginModal from '@/component/layouts/common/popup/LoginModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
 export default function Header001({ onMenuClick }) {
     const [title] = useState('CompValue');
@@ -15,8 +16,19 @@ export default function Header001({ onMenuClick }) {
 
     const [password, setPassWord] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
 
     const navigate = useNavigate();
+
+    const openAlert = (message, onConfirm) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
+    };
+
+    const handleCloseAlert = () => {
+        const { onConfirm } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null });
+        if (onConfirm) onConfirm();
+    };
 
     useEffect(() => {
         const onForceLogout = () => {
@@ -28,8 +40,9 @@ export default function Header001({ onMenuClick }) {
             setShowLogin(false);
 
             try {
-                alert('인증정보가 존재하지 않습니다.');
-                navigate('/', { replace: true, state: { reason: '401' } });
+                openAlert('인증정보가 존재하지 않습니다.', () => {
+                    navigate('/', { replace: true, state: { reason: '401' } });
+                });
             } catch {
                 window.location.href = '/';
             }
@@ -68,8 +81,9 @@ export default function Header001({ onMenuClick }) {
         if (error == null) {
             const sessionKey = data.response ? data.response.sessionKey : null;
 
-            if (sessionKey == null) alert('인증 실패');
-            else {
+            if (sessionKey == null) {
+                openAlert('인증 실패');
+            } else {
                 const res = data.response || {};
                 const nextUserName = res.username ?? userName;
                 const nextNick = res.nickName ?? nextUserName;
@@ -89,7 +103,7 @@ export default function Header001({ onMenuClick }) {
                 setShowLogin(false);
             }
         } else {
-            alert(error);
+            openAlert(error);
         }
     };
 
@@ -111,7 +125,9 @@ export default function Header001({ onMenuClick }) {
             localStorage.removeItem('roles');
 
             navigate('/', { replace: true, state: { reason: 'logout' } });
-        } else alert(error);
+        } else {
+            openAlert(error);
+        }
 
         setIsLoading(false);
     };
@@ -191,6 +207,12 @@ export default function Header001({ onMenuClick }) {
                     setPassword={setPassWord}
                 />
             )}
+
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={handleCloseAlert}
+            />
         </>
     );
 }

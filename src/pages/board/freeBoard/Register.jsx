@@ -4,7 +4,7 @@ import Register001 from '@/component/feature/board/Register001';
 
 import { send } from '@/util/ClientUtil';
 import { useAuth } from '@/context/AuthContext';
-import BoardAlertModal from '@/component/layouts/common/popup/BoardAlertModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useState } from 'react';
 
 const Register = () => {
@@ -52,8 +52,8 @@ const Register = () => {
 
     return (
         <>
-            <Register001 onRegister={onRegister} moveListPage={moveListPage} currentAuthor={currentAuthor} />
-            <BoardAlertModal open={alertConfig.open} message={alertConfig.message} onClose={handleCloseAlert} />
+            <Register001 onRegister={onRegister} moveListPage={moveListPage} currentAuthor={currentAuthor} openAlert={openAlert} />
+            <AlertModal open={alertConfig.open} message={alertConfig.message} onClose={handleCloseAlert} />
         </>
     );
 };

@@ -26,6 +26,8 @@ export default function MarketIndexCharts() {
         const to = new Date().toISOString().split('T')[0];
         const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+        console.log('MarketIndexCharts: Loading data from', from, 'to', to);
+
         const queries = US_INDICES.map(index => ({
             symbol: index.symbol,
             from,
@@ -34,7 +36,10 @@ export default function MarketIndexCharts() {
 
         try {
             const results = await fetchMultipleIndices(queries);
+            console.log('MarketIndexCharts: API results', results);
+
             const dataMap = {};
+            let hasAnyData = false;
 
             results.forEach(({ symbol, data, error }) => {
                 if (error) {
@@ -42,19 +47,31 @@ export default function MarketIndexCharts() {
                     return;
                 }
 
+                console.log(`Data for ${symbol}:`, data);
+
                 if (data?.success && data?.response) {
                     // 날짜 기준 오름차순 정렬
                     const sortedData = [...data.response].sort((a, b) =>
                         new Date(a.date) - new Date(b.date)
                     );
                     dataMap[symbol] = sortedData;
+                    hasAnyData = true;
+                    console.log(`${symbol}: Loaded ${sortedData.length} data points`);
+                } else {
+                    console.warn(`${symbol}: No valid data in response`, data);
                 }
             });
 
+            if (!hasAnyData) {
+                setError('차트 데이터가 없습니다. 서버 응답을 확인해주세요.');
+                console.error('No data loaded for any index');
+            }
+
             setChartsData(dataMap);
         } catch (err) {
-            setError('차트 데이터를 불러오는데 실패했습니다.');
-            console.error(err);
+            const errorMsg = '차트 데이터를 불러오는데 실패했습니다: ' + (err.message || String(err));
+            setError(errorMsg);
+            console.error('MarketIndexCharts error:', err);
         } finally {
             setLoading(false);
         }
@@ -122,6 +139,26 @@ export default function MarketIndexCharts() {
 }
 
 function IndexCard({ index, data, latestData, change, changePercent, isPositive }) {
+    // 데이터가 없는 경우 처리
+    if (!data || data.length === 0) {
+        return (
+            <div className="bg-white rounded-lg border shadow-sm">
+                <div className="p-4 border-b bg-gradient-to-r from-slate-50 to-white">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-slate-800">{index.name}</h3>
+                        <span className="text-xs text-slate-500">{index.symbol}</span>
+                    </div>
+                    <div className="text-sm text-slate-500">데이터 없음</div>
+                </div>
+                <div className="p-4">
+                    <div className="h-[180px] flex items-center justify-center bg-slate-50 rounded">
+                        <span className="text-xs text-slate-400">차트 데이터를 불러올 수 없습니다</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow">
             <div className="p-4 border-b bg-gradient-to-r from-slate-50 to-white">
@@ -129,36 +166,38 @@ function IndexCard({ index, data, latestData, change, changePercent, isPositive 
                     <h3 className="font-semibold text-slate-800">{index.name}</h3>
                     <span className="text-xs text-slate-500">{index.symbol}</span>
                 </div>
-                {latestData && (
-                    <div className="flex items-baseline gap-3">
-                        <span className="text-2xl font-bold text-slate-900">
-                            {latestData.close.toLocaleString('en-US', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}
-                        </span>
-                        <div className={`flex items-center gap-1 text-sm font-medium ${
-                            isPositive ? 'text-emerald-600' : 'text-red-600'
-                        }`}>
-                            <span>{isPositive ? '▲' : '▼'}</span>
-                            <span>{Math.abs(change).toFixed(2)}</span>
-                            <span>({(changePercent * 100).toFixed(2)}%)</span>
+                {latestData ? (
+                    <>
+                        <div className="flex items-baseline gap-3">
+                            <span className="text-2xl font-bold text-slate-900">
+                                {latestData.close.toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })}
+                            </span>
+                            <div className={`flex items-center gap-1 text-sm font-medium ${
+                                isPositive ? 'text-emerald-600' : 'text-red-600'
+                            }`}>
+                                <span>{isPositive ? '▲' : '▼'}</span>
+                                <span>{Math.abs(change).toFixed(2)}</span>
+                                <span>({(changePercent * 100).toFixed(2)}%)</span>
+                            </div>
                         </div>
-                    </div>
-                )}
-                {latestData && (
-                    <div className="text-xs text-slate-500 mt-1">
-                        {new Date(latestData.date).toLocaleDateString('ko-KR', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                        })}
-                    </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                            {new Date(latestData.date).toLocaleDateString('ko-KR', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            })}
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-sm text-slate-500">최신 데이터 없음</div>
                 )}
             </div>
 
-            <div className="p-4">
-                <ResponsiveContainer width="100%" height={180}>
+            <div className="p-4" style={{ width: '100%', height: '200px' }}>
+                <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis

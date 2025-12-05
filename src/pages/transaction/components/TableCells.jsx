@@ -143,6 +143,15 @@ export function EditableTd({
 
         const isTwoLine = field === 'targetPrice' && !!subTargetDiff;
         const isCompanyName = field === 'companyName';
+        const isSymbol = field === 'symbol';
+
+        // 티커 셀의 경우 기업명을 툴팁으로 표시
+        let titleText = "더블클릭하여 수정";
+        if (isCompanyName) {
+            titleText = `${main}\n(더블클릭하여 수정)`;
+        } else if (isSymbol && row.companyName) {
+            titleText = `${row.companyName}\n(더블클릭하여 수정)`;
+        }
 
         return (
             <Td className={tdClassName}>
@@ -157,7 +166,7 @@ export function EditableTd({
                         e.stopPropagation();
                         startEdit(row, field);
                     }}
-                    title={isCompanyName ? `${main}\n(더블클릭하여 수정)` : "더블클릭하여 수정"}
+                    title={titleText}
                 >
                     <div className={isCompanyName ? "truncate w-full" : ""}>{main}</div>
                     {subTargetDiff}

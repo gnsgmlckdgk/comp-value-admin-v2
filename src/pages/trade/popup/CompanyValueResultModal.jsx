@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import StockChartModal from './StockChartModal';
 
 /**
  * 기업가치 계산 결과 모달 컴포넌트
@@ -8,7 +9,8 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
     const [toast, setToast] = useState(null);
     const [overlays, setOverlays] = useState({
         guide: false,
-        detail: false
+        detail: false,
+        chart: false
     });
     const [detailView, setDetailView] = useState({
         title: '',
@@ -29,7 +31,9 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
         const handleEscape = (e) => {
             if (e.key !== 'Escape') return;
 
-            if (overlays.detail) {
+            if (overlays.chart) {
+                setOverlays(prev => ({ ...prev, chart: false }));
+            } else if (overlays.detail) {
                 setOverlays(prev => ({ ...prev, detail: false }));
             } else if (overlays.guide) {
                 setOverlays(prev => ({ ...prev, guide: false }));
@@ -65,6 +69,17 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
 
     if (!isOpen) return null;
 
+    // 심볼과 회사명 추출
+    const getValDeep = (obj, keys) => {
+        if (!obj || typeof obj !== 'object') return undefined;
+        for (const key of keys) {
+            if (obj[key] != null) return obj[key];
+        }
+        return undefined;
+    };
+    const symbol = getValDeep(data, ['symbol', 'ticker', 'code', '주식코드', '주식심볼', '기업심볼']);
+    const companyName = getValDeep(data, ['companyName', 'name', 'company', '기업명']);
+
     return (
         <>
             {/* 배경 오버레이 */}
@@ -83,6 +98,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                     onClose={onClose}
                     onOpenGuide={() => setOverlays(prev => ({ ...prev, guide: true }))}
                     onOpenDetail={openDetailView}
+                    onOpenChart={() => setOverlays(prev => ({ ...prev, chart: true }))}
                 />
             </div>
 
@@ -100,6 +116,14 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                     onCopy={handleCopyToClipboard}
                 />
             )}
+
+            {/* 차트 모달 */}
+            <StockChartModal
+                isOpen={overlays.chart}
+                onClose={() => closeOverlay('chart')}
+                symbol={symbol}
+                companyName={companyName}
+            />
 
             {/* Toast 알림 */}
             {toast && <Toast message={toast} />}
@@ -125,7 +149,7 @@ const ModalHeader = ({ onClose }) => (
 /**
  * 모달 메인 콘텐츠
  */
-const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail }) => {
+const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpenChart }) => {
     const compValueData = data || {};
     const hasData = Object.keys(compValueData).length > 0;
 
@@ -148,6 +172,7 @@ const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail }) => {
                 data={compValueData}
                 onCopy={onCopy}
                 onClose={onClose}
+                onOpenChart={onOpenChart}
             />
         </div>
     );
@@ -354,20 +379,30 @@ const renderValue = (value, label, onOpenDetail) => {
 /**
  * 액션 버튼들
  */
-const ActionButtons = ({ data, onCopy, onClose }) => (
-    <div className="flex justify-end gap-2">
+const ActionButtons = ({ data, onCopy, onClose, onOpenChart }) => (
+    <div className="flex justify-between items-center gap-2">
         <button
-            className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50 transition-colors"
-            onClick={() => onCopy(data, 'JSON이 클립보드에 복사되었습니다.')}
+            className="px-3 py-2 rounded-md border text-sm hover:bg-blue-50 transition-colors flex items-center gap-1.5 text-blue-600 border-blue-300"
+            onClick={onOpenChart}
+            title="주식 가격 및 거래량 차트 보기"
         >
-            JSON 복사
+            <ChartIcon />
+            차트 보기
         </button>
-        <button
-            className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors"
-            onClick={onClose}
-        >
-            닫기
-        </button>
+        <div className="flex gap-2">
+            <button
+                className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50 transition-colors"
+                onClick={() => onCopy(data, 'JSON이 클립보드에 복사되었습니다.')}
+            >
+                JSON 복사
+            </button>
+            <button
+                className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors"
+                onClick={onClose}
+            >
+                닫기
+            </button>
+        </div>
     </div>
 );
 
@@ -505,6 +540,15 @@ const Toast = ({ message }) => (
 const InfoIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
         <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-.75 6a.75.75 0 0 1 1.5 0v.008a.75.75 0 0 1-1.5 0V8.25Zm0 3a.75.75 0 0 1 1.5 0v5.25a.75.75 0 0 1-1.5 0V11.25Z" clipRule="evenodd" />
+    </svg>
+);
+
+/**
+ * Chart 아이콘
+ */
+const ChartIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+        <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75ZM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 0 1-1.875-1.875V8.625ZM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 0 1 3 19.875v-6.75Z" />
     </svg>
 );
 

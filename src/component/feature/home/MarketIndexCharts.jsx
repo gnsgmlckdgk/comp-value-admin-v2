@@ -9,22 +9,35 @@ const US_INDICES = [
     { symbol: '^IXIC', name: 'NASDAQ', color: '#10b981' }, // green
 ];
 
+// 기간 옵션
+const PERIOD_OPTIONS = [
+    { value: 7, label: '7일' },
+    { value: 30, label: '30일' },
+    { value: 90, label: '3개월' },
+    { value: 180, label: '6개월' },
+    { value: 365, label: '1년' },
+    { value: 1095, label: '3년' },
+    { value: 1825, label: '5년' },
+    { value: 3650, label: '10년' },
+];
+
 export default function MarketIndexCharts() {
     const [chartsData, setChartsData] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [period, setPeriod] = useState(30); // 기본값 30일
 
     useEffect(() => {
         loadChartData();
-    }, []);
+    }, [period]);
 
     const loadChartData = async () => {
         setLoading(true);
         setError(null);
 
-        // 최근 30일 데이터 조회
+        // 선택된 기간에 따라 데이터 조회
         const to = new Date().toISOString().split('T')[0];
-        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const from = new Date(Date.now() - period * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         const queries = US_INDICES.map(index => ({
             symbol: index.symbol,
@@ -69,7 +82,10 @@ export default function MarketIndexCharts() {
     if (loading) {
         return (
             <div className="w-full">
-                <h2 className="text-xl font-bold mb-4 text-slate-800">미국 주요 지수</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-slate-800">미국 주요 지수</h2>
+                    <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {US_INDICES.map(index => (
                         <div key={index.symbol} className="bg-white rounded-lg border p-4 shadow-sm">
@@ -87,7 +103,10 @@ export default function MarketIndexCharts() {
     if (error) {
         return (
             <div className="w-full">
-                <h2 className="text-xl font-bold mb-4 text-slate-800">미국 주요 지수</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-slate-800">미국 주요 지수</h2>
+                    <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
+                </div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
                     {error}
                 </div>
@@ -97,7 +116,10 @@ export default function MarketIndexCharts() {
 
     return (
         <div className="w-full">
-            <h2 className="text-xl font-bold mb-4 text-slate-800">미국 주요 지수</h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-slate-800">미국 주요 지수</h2>
+                <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {US_INDICES.map(index => {
                     const data = chartsData[index.symbol] || [];
@@ -123,6 +145,30 @@ export default function MarketIndexCharts() {
                     );
                 })}
             </div>
+        </div>
+    );
+}
+
+/**
+ * 기간 선택 컴포넌트
+ */
+function PeriodSelector({ period, onChange, disabled }) {
+    return (
+        <div className="flex items-center gap-1 bg-white border rounded-lg p-1 shadow-sm">
+            {PERIOD_OPTIONS.map(option => (
+                <button
+                    key={option.value}
+                    onClick={() => onChange(option.value)}
+                    disabled={disabled}
+                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                        period === option.value
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-600 hover:bg-slate-100'
+                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                    {option.label}
+                </button>
+            ))}
         </div>
     );
 }
@@ -169,7 +215,7 @@ function IndexCard({ index, data, latestData, change, changePercent, isPositive 
                             }`}>
                                 <span>{isPositive ? '▲' : '▼'}</span>
                                 <span>{Math.abs(change).toFixed(2)}</span>
-                                <span>({(changePercent * 100).toFixed(2)}%)</span>
+                                <span>({Math.abs(changePercent).toFixed(2)}%)</span>
                             </div>
                         </div>
                         <div className="text-xs text-slate-500 mt-1">

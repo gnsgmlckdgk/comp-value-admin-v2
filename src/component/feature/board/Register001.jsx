@@ -21,45 +21,52 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
     };
 
     return (
-        <div className="mx-auto max-w-3xl px-4 py-8">
-            <h1 className="mb-6 text-2xl font-semibold">게시글 등록</h1>
-            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-                <div>
-                    <Input
-                        id="title"
-                        label="제목"
-                        labelNewLine={true}
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        disabled={false}
-                        wdfull={true}
-                    />
+        <div className="mx-auto max-w-4xl px-4 py-8">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+                <div className="border-b border-slate-200 px-6 py-4">
+                    <h2 className="text-xl font-semibold text-slate-800">게시글 등록</h2>
+                    <p className="text-sm text-slate-500 mt-1">새로운 게시글을 작성해주세요</p>
                 </div>
-                <div>
-                    <Input
-                        id="author"
-                        label="작성자"
-                        labelNewLine={true}
-                        value={currentAuthor}
-                        disabled={true}
-                        wdfull={true}
-                    />
-                </div>
-                <div>
-                    <TextArea
-                        id="content"
-                        label="내용"
-                        labelNewLine={true}
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        wdfull={true}
-                    />
-                </div>
-                <div className="flex justify-end">
-                    <Button children="저장" variant="primary" onClick={handleSubmit} />
-                    <Button children="뒤로가기" variant="outline" onClick={moveListPage} className="ml-1" />
-                </div>
-            </form>
+
+                <form className="p-6 space-y-6" onSubmit={(e) => e.preventDefault()}>
+                    <div>
+                        <Input
+                            id="title"
+                            label="제목"
+                            labelNewLine={true}
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            disabled={false}
+                            wdfull={true}
+                        />
+                    </div>
+                    <div>
+                        <Input
+                            id="author"
+                            label="작성자"
+                            labelNewLine={true}
+                            value={currentAuthor}
+                            disabled={true}
+                            wdfull={true}
+                        />
+                    </div>
+                    <div>
+                        <TextArea
+                            id="content"
+                            label="내용"
+                            labelNewLine={true}
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            wdfull={true}
+                            rows={15}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+                        <Button children="뒤로가기" variant="outline" onClick={moveListPage} />
+                        <Button children="저장" variant="primary" onClick={handleSubmit} />
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

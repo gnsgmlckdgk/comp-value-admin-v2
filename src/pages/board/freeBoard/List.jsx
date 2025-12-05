@@ -252,16 +252,22 @@ function List() {
     return (
         <>
             {/* 상단 영역 */}
-            <div className="mt-4 mb-4 w-full px-2 md:px-4">
-                <div className="mb-3 flex items-center justify-end gap-2">
-                    <Button children="등록" onClick={moveRegisterPage} className="w-24" />
-                    {canDelete && (
-                        <Button children="삭제" onClick={handleCheckSelected} variant="danger" className="w-24" />
-                    )}
+            <div className="mt-4 md:mt-6 mb-4 md:mb-6 w-full px-2 md:px-4">
+                {/* 헤더와 버튼 */}
+                <div className="mb-3 md:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <p className="text-sm text-slate-600 hidden sm:block">자유롭게 의견을 나누는 공간입니다</p>
+                    </div>
+                    <div className="flex items-center gap-2 justify-end">
+                        <Button children="등록" onClick={moveRegisterPage} className="w-20 sm:w-24" />
+                        {canDelete && (
+                            <Button children="삭제" onClick={handleCheckSelected} variant="danger" className="w-20 sm:w-24" />
+                        )}
+                    </div>
                 </div>
 
                 {/* SearchBar */}
-                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm">
                     <SearchBar
                         fetchData={() => fetchData(1)}
                         searchBarLabel=""

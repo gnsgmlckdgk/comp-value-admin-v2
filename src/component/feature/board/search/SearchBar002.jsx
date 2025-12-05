@@ -26,28 +26,38 @@ function SearchBar002({ fetchData, label = '', searchState }) {
     const inputProps = {
         id: 'search',
         label,
-        placeholder: '검색어 입력',
+        placeholder: '검색어를 입력하세요',
         value: searchState.search,
         onEnter: fetchData,
         onChange: (e) => searchState.setSearch(e.target.value),
-        className: 'w-full md:flex-1'
+        wdfull: true
     }
 
     return (
-        <div className="flex flex-col md:flex-row gap-y-1 p-3">
-
-            <Select value={searchState.sgubun} onChange={e => searchState.setSgubun(e.target.value)} options={searchState.searchGubunList} />
-
-            <div className="flex flex-col gap-1 w-full md:flex-row md:justify-end md:items-center md:flex-1 md:-ml-1">
-                <Input {...inputProps} />
-                <Button
-                    children="조회하기"
-                    onClick={() => fetchData()}
-                    variant="select"
-                    className="w-full md:w-auto md:min-w-[120px]"
+        <div className="flex flex-col sm:flex-row gap-3">
+            {/* 검색 구분 선택 */}
+            <div className="w-full sm:w-auto sm:min-w-[140px]">
+                <Select
+                    value={searchState.sgubun}
+                    onChange={e => searchState.setSgubun(e.target.value)}
+                    options={searchState.searchGubunList}
+                    className="w-full"
                 />
             </div>
-        </div >
+
+            {/* 검색어 입력 + 조회 버튼 */}
+            <div className="flex gap-3 flex-1 min-w-0 items-center">
+                <div className="flex-1 min-w-0">
+                    <Input {...inputProps} />
+                </div>
+                <Button
+                    children="조회"
+                    onClick={() => fetchData()}
+                    variant="select"
+                    className="w-20 sm:w-24 h-10 shrink-0 !py-0 flex items-center justify-center"
+                />
+            </div>
+        </div>
     )
 }
 

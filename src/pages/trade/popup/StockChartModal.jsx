@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { fetchStockPriceVolume } from '@/util/ChartApi';
 
@@ -318,25 +318,38 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
  * 기간 선택 컴포넌트
  */
 const PeriodSelector = ({ period, onChange, disabled }) => {
-    return (
-        <div className="inline-flex whitespace-nowrap gap-1 min-w-0">
-            {PERIOD_OPTIONS.map(option => (
-                <button
-                    key={option.value}
-                    onClick={() => onChange(option.value)}
-                    disabled={disabled}
-                    className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
-                        period === option.value
-                            ? 'bg-blue-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-100'
-                    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    style={{ minWidth: 48 }}
-                >
-                    {option.label}
-                </button>
-            ))}
-        </div>
-    );
+  const buttonRefs = useRef({});
+
+  useEffect(() => {
+    if (buttonRefs.current[period]) {
+      buttonRefs.current[period].scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+    }
+  }, [period]);
+
+  return (
+    <div className="inline-flex whitespace-nowrap gap-1 min-w-0 pl-2 pr-2">
+      {PERIOD_OPTIONS.map(option => (
+        <button
+          key={option.value}
+          ref={el => (buttonRefs.current[option.value] = el)}
+          onClick={() => onChange(option.value)}
+          disabled={disabled}
+          className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+            period === option.value
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          style={{ minWidth: 48 }}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
 };
 
 /**

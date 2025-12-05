@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { fetchMultipleIndices } from '@/util/ChartApi';
 
@@ -155,11 +155,24 @@ export default function MarketIndexCharts() {
  * 기간 선택 컴포넌트
  */
 function PeriodSelector({ period, onChange, disabled }) {
+    const buttonRefs = useRef({});
+
+    useEffect(() => {
+        if (buttonRefs.current[period]) {
+            buttonRefs.current[period].scrollIntoView({
+                behavior: 'smooth',
+                inline: 'center',
+                block: 'nearest',
+            });
+        }
+    }, [period]);
+
     return (
-        <div className="inline-flex whitespace-nowrap gap-1 min-w-0">
+        <div className="inline-flex whitespace-nowrap gap-1 min-w-0 pl-2 pr-2">
             {PERIOD_OPTIONS.map(option => (
                 <button
                     key={option.value}
+                    ref={el => (buttonRefs.current[option.value] = el)}
                     onClick={() => onChange(option.value)}
                     disabled={disabled}
                     className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${

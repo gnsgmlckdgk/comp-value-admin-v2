@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/component/common/button/Button';
 import { useLocation, useNavigate } from 'react-router-dom';
+import MarketIndexCharts from '@/component/feature/home/MarketIndexCharts';
 
 export default function Home() {
     const navigate = useNavigate();
@@ -39,59 +40,69 @@ export default function Home() {
 
     // 🔐 로그인 후 환영 페이지
     return (
-        <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-center text-center px-6">
-            <div className="mb-8">
-                <div className="text-6xl mb-4">📊</div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-3 text-slate-800">
-                    {localStorage.getItem("nickName") || localStorage.getItem("userName") || '환영합니다'}님, 반갑습니다
-                </h1>
-                <p className="text-slate-600 text-lg mb-2">
-                    {new Date().toLocaleDateString('ko-KR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        weekday: 'long'
-                    })}
-                </p>
-                <p className="text-slate-500">
-                    오늘도 좋은 투자 분석이 되시길 바랍니다
-                </p>
-            </div>
-
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-5xl w-full">
-                <MenuCard
-                    emoji="💼"
-                    title="보유종목(미국)"
-                    desc="내 포트폴리오를 관리하고 수익률을 확인하세요"
-                    onClick={() => navigate('/transaction/overview')}
-                />
-                <MenuCard
-                    emoji="🧮"
-                    title="국내기업 조회"
-                    desc="국내 등록된 기업 목록을 조회"
-                    onClick={() => navigate('/complist')}
-                />
-                <MenuCard
-                    emoji="📈"
-                    title="기업가치(국내)"
-                    desc="국내 종목의 밸류에이션 분석"
-                    onClick={() => navigate('/compvalue')}
-                />
-                <MenuCard
-                    emoji="🌎"
-                    title="기업가치(미국)"
-                    desc="미국 종목의 밸류에이션 분석"
-                    onClick={() => navigate('/compvalue/abroad')}
-                />
-            </div>
-
-            <div className="mt-12 max-w-3xl">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
-                    <h2 className="text-lg font-semibold mb-2 text-slate-800">CompValue 소개</h2>
-                    <p className="text-sm text-slate-600 leading-relaxed">
-                        주식의 내재가치를 정량적으로 평가하고, 기업의 성장성과 밸류에이션을 시각적으로 비교하는 플랫폼입니다.
-                        PER, PEG, ROE 등 다양한 지표를 활용하여 합리적인 투자 의사결정을 지원합니다.
+        <div className="min-h-[calc(100vh-120px)] px-6 py-8">
+            <div className="max-w-7xl mx-auto">
+                {/* 환영 메시지 */}
+                <div className="text-center mb-12">
+                    <div className="text-6xl mb-4">📊</div>
+                    <h1 className="text-3xl md:text-4xl font-bold mb-3 text-slate-800">
+                        {localStorage.getItem("nickName") || localStorage.getItem("userName") || '환영합니다'}님, 반갑습니다
+                    </h1>
+                    <p className="text-slate-600 text-lg mb-2">
+                        {new Date().toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'long'
+                        })}
                     </p>
+                    <p className="text-slate-500">
+                        오늘도 좋은 투자 분석이 되시길 바랍니다
+                    </p>
+                </div>
+
+                {/* 미국 3대 지수 차트 */}
+                <div className="mb-12">
+                    <MarketIndexCharts />
+                </div>
+
+                {/* 메뉴 카드 */}
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-12">
+                    <MenuCard
+                        emoji="💼"
+                        title="보유종목(미국)"
+                        desc="내 포트폴리오를 관리하고 수익률을 확인하세요"
+                        onClick={() => navigate('/transaction/overview')}
+                    />
+                    <MenuCard
+                        emoji="🧮"
+                        title="국내기업 조회"
+                        desc="국내 등록된 기업 목록을 조회"
+                        onClick={() => navigate('/complist')}
+                    />
+                    <MenuCard
+                        emoji="📈"
+                        title="기업가치(국내)"
+                        desc="국내 종목의 밸류에이션 분석"
+                        onClick={() => navigate('/compvalue')}
+                    />
+                    <MenuCard
+                        emoji="🌎"
+                        title="기업가치(미국)"
+                        desc="미국 종목의 밸류에이션 분석"
+                        onClick={() => navigate('/compvalue/abroad')}
+                    />
+                </div>
+
+                {/* 소개 섹션 */}
+                <div className="max-w-3xl mx-auto">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
+                        <h2 className="text-lg font-semibold mb-2 text-slate-800">CompValue 소개</h2>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                            주식의 내재가치를 정량적으로 평가하고, 기업의 성장성과 밸류에이션을 시각적으로 비교하는 플랫폼입니다.
+                            PER, PEG, ROE 등 다양한 지표를 활용하여 합리적인 투자 의사결정을 지원합니다.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

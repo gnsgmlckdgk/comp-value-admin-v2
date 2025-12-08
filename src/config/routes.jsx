@@ -23,11 +23,13 @@ const routes = {
     /* 회원정보 */
     "로그인": { section: '회원정보', label: '로그인', path: '/', element: <Home /> },
 
-    /* 기업분석 */
-    "CompList": { section: '기업분석', label: '기업목록(국내)', path: '/complist', element: <CompList /> },
-    "CompValue": { section: '기업분석', label: '기업분석(국내)', path: '/compvalue', element: <CompValue /> },
-    "AbroadCompValue": { section: '기업분석', label: '기업분석(미국)', path: '/compvalue/abroad', element: <AbroadCompValue /> },
-    "CompValueCustom": { section: '기업분석', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
+    /* 기업분석(국내) */
+    "CompList": { section: '기업분석(국내)', label: '기업목록', path: '/complist', element: <CompList /> },
+    "CompValue": { section: '기업분석(국내)', label: '기업분석', path: '/compvalue', element: <CompValue /> },
+    "CompValueCustom": { section: '기업분석(국내)', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
+
+    /* 기업분석(미국) */
+    "AbroadCompValue": { section: '기업분석(미국)', label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
 
     /* 거래 */
     "TransactionOverview": { section: '거래', label: '거래현황(미국)', path: '/transaction/overview', element: <TransactionOverview /> },

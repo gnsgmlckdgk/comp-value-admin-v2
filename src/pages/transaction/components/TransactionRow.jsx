@@ -101,8 +101,8 @@ export function TransactionRow({
                 type="number"
             />
             <CombinedPriceCell usdValue={toNum(row.totalBuyAmount) * toNum(row.buyPrice)} fx={fx} />
-            <CombinedPriceCell usdValue={toNum(row.currentPrice)} fx={fx} />
             <CombinedPriceCell usdValue={toNum(row.currentPrice) * toNum(row.totalBuyAmount)} fx={fx} />
+            <CombinedPriceCell usdValue={toNum(row.currentPrice)} fx={fx} />
             <EditableTd
                 row={row}
                 field="targetPrice"

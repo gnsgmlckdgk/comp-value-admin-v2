@@ -12,7 +12,7 @@ function useIsMobile(breakpoint = 768) {
     return isMobile;
 }
 
-const SECTIONS = ['시작하기', '기업분석', '거래', '게시판'];
+const SECTIONS = ['시작하기', '기업분석(국내)', '기업분석(미국)', '거래', '게시판'];
 
 export default function SideBar001({ isSidebarOpen, setSidebarOpen }) {
     const isMobile = useIsMobile();

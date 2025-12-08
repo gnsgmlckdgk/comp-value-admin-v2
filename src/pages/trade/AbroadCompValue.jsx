@@ -47,19 +47,26 @@ const AbroadCompValue = () => {
     const resultCount = useMemo(() => (Array.isArray(compNameData) ? compNameData.length : 0), [compNameData]);
 
     const tableHead = useMemo(() => (
-        <thead className="sticky top-0 z-10 bg-indigo-600 text-white">
+        <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
             <tr>
-                {['symbol', 'name', 'currency', 'exchangeFullName', 'exchange'].map((h) => (
-                    <th key={h} className="px-4 py-2 text-left font-semibold">{h}</th>
-                ))}
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">심볼</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">기업명</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">통화</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">거래소</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">시장</th>
             </tr>
         </thead>
     ), []);
 
     const EmptyState = ({ message }) => (
         <tr>
-            <td className="px-4 py-8 text-center text-slate-500" colSpan={5}>
-                {message}
+            <td className="px-4 py-12 text-center" colSpan={5}>
+                <div className="flex flex-col items-center gap-3">
+                    <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <p className="text-sm text-slate-500">{message}</p>
+                </div>
             </td>
         </tr>
     );
@@ -150,24 +157,26 @@ const AbroadCompValue = () => {
     );
 
     return (
-        <div>
+        <div className="px-2 py-8 md:px-4">
             <Loading show={isLoading} />
 
-            <div className="mb-4">
+            {/* 헤더 */}
+            <div className="mb-6">
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800">기업분석(해외)</h1>
-                <p className="mt-1 text-sm text-slate-500">심볼을 검색하고 행을 클릭하면 기업가치 계산 결과를 팝업으로 확인할 수 있어요.</p>
+                <p className="mt-2 text-sm text-slate-600">심볼을 검색하고 행을 클릭하면 기업가치 계산 결과를 확인할 수 있습니다.</p>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            {/* 검색 영역 */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-4 mb-4">
+                <div className="flex flex-col gap-2 sm:gap-3">
                     <div className="flex items-center gap-2">
                         <input
                             type="text"
                             value={compName}
                             onChange={(e) => setCompName(e.target.value)}
                             onKeyDown={onKeyDown}
-                            placeholder="심볼 및 회사명으로 검색 (Enter)"
-                            className="w-[min(520px,90vw)] px-3 py-2 rounded-md border border-slate-300 bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="심볼 또는 회사명으로 검색"
+                            className="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-300 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                             aria-label="심볼/회사명 검색"
                             disabled={isLoading}
                         />
@@ -175,56 +184,69 @@ const AbroadCompValue = () => {
                             type="button"
                             onClick={compSymbolSearch}
                             disabled={isLoading || !compName.trim()}
-                            className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                            className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap"
                         >
                             검색
                         </button>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
                         <button
                             type="button"
                             onClick={() => setShowBulk(true)}
                             disabled={isLoading}
-                            className="px-3 py-2 rounded-md border text-sm font-medium hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                         >
                             대량 조회
                         </button>
+                        {resultCount > 0 && (
+                            <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-blue-50 text-blue-700 font-medium text-xs sm:text-sm whitespace-nowrap">
+                                {resultCount}건
+                            </span>
+                        )}
                     </div>
-                    <div className="text-xs sm:text-sm text-slate-500 sm:ml-1">{resultCount}건</div>
                 </div>
+            </div>
 
-                <div className="rounded-lg shadow-sm ring-1 ring-slate-200 overflow-hidden">
-                    <div className="overflow-auto max-h-[60vh]">
-                        <table className="min-w-full text-sm">
-                            {tableHead}
-                            <tbody className="divide-y divide-slate-200">
-                                {Array.isArray(compNameData) && compNameData.length > 0 ? (
-                                    compNameData.map((row, idx) => (
-                                        <tr
-                                            key={`${row.symbol || 'row'}-${idx}`}
-                                            className="even:bg-slate-50 hover:bg-indigo-50 cursor-pointer transition-colors"
-                                            role="button"
-                                            tabIndex={0}
-                                            onClick={() => !isLoading && compValueCal(row)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                    e.preventDefault();
-                                                    !isLoading && compValueCal(row);
-                                                }
-                                            }}
-                                            aria-label={`계산 ${row.symbol}`}
-                                        >
-                                            <td className="px-4 py-2 whitespace-nowrap font-medium">{row.symbol}</td>
-                                            <td className="px-4 py-2 whitespace-nowrap">{row.name}</td>
-                                            <td className="px-4 py-2 whitespace-nowrap">{row.currency}</td>
-                                            <td className="px-4 py-2 whitespace-nowrap">{row.exchangeFullName}</td>
-                                            <td className="px-4 py-2 whitespace-nowrap">{row.exchange}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <EmptyState message="검색 결과가 없습니다. 상단 입력창에 키워드를 입력하고 Enter 를 눌러보세요." />
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+            {/* 테이블 영역 */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[65vh]">
+                    <table className="min-w-full text-sm divide-y divide-slate-200" style={{ minWidth: '1000px' }}>
+                        {tableHead}
+                        <tbody className="bg-white divide-y divide-slate-200">
+                            {Array.isArray(compNameData) && compNameData.length > 0 ? (
+                                compNameData.map((row, idx) => (
+                                    <tr
+                                        key={`${row.symbol || 'row'}-${idx}`}
+                                        className="hover:bg-blue-50 cursor-pointer transition-colors"
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => !isLoading && compValueCal(row)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                !isLoading && compValueCal(row);
+                                            }
+                                        }}
+                                        aria-label={`계산 ${row.symbol}`}
+                                    >
+                                        <td className="px-4 py-3 whitespace-nowrap">
+                                            <span className="font-semibold text-slate-900">{row.symbol}</span>
+                                        </td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-slate-700">{row.name}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-slate-600">{row.currency}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-slate-600">{row.exchangeFullName}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap">
+                                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                                {row.exchange}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <EmptyState message="검색 결과가 없습니다. 상단 입력창에 키워드를 입력하고 Enter 를 눌러보세요." />
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

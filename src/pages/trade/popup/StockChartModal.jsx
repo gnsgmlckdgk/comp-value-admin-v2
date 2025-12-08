@@ -85,33 +85,33 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
     return (
         <>
             {/* 배경 오버레이 */}
-            <div className="fixed inset-0 bg-black/50 z-[90]" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-[90]" onClick={onClose} />
 
             {/* 모달 */}
             <div
-                className="fixed z-[95] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-lg max-h-[85vh] w-[min(1000px,90vw)] overflow-auto"
+                className="fixed z-[95] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-lg max-h-[85vh] w-[min(1000px,90vw)] overflow-auto dark:bg-slate-800"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
-                <div className="sticky top-0 z-10 px-5 py-4 border-b bg-white">
+                <div className="sticky top-0 z-10 px-5 py-4 border-b bg-white dark:bg-slate-800 dark:border-slate-700">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
                         <div>
                             <div className="flex items-center gap-3">
-                                <h2 className="text-lg font-semibold text-slate-800">
+                                <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
                                     {companyName || symbol}
                                 </h2>
-                                <span className="text-sm text-slate-500">{symbol}</span>
+                                <span className="text-sm text-slate-500 dark:text-slate-400">{symbol}</span>
                             </div>
                             {latestData && (
                                 <div className="flex items-baseline gap-3 mt-1">
-                                    <span className="text-xl font-bold text-slate-900">
+                                    <span className="text-xl font-bold text-slate-900 dark:text-white">
                                         ${latestData.close.toLocaleString('en-US', {
                                             minimumFractionDigits: 2,
                                             maximumFractionDigits: 2
                                         })}
                                     </span>
                                     <div className={`flex items-center gap-1 text-sm font-medium ${
-                                        isPositive ? 'text-emerald-600' : 'text-red-600'
+                                        isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                                     }`}>
                                         <span>{isPositive ? '▲' : '▼'}</span>
                                         <span>{Math.abs(change).toFixed(2)}</span>
@@ -121,7 +121,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                             )}
                         </div>
                         <button
-                            className="text-sm px-3 py-2 border rounded hover:bg-gray-50 transition-colors"
+                            className="text-sm px-3 py-2 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                             onClick={onClose}
                         >
                             닫기 (Esc)
@@ -137,21 +137,21 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                 <div className="p-5">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
-                            <div className="text-slate-500">차트 데이터를 불러오는 중...</div>
+                            <div className="text-slate-500 dark:text-slate-400">차트 데이터를 불러오는 중...</div>
                         </div>
                     ) : error ? (
                         <div className="flex items-center justify-center py-20">
-                            <div className="text-red-600 text-sm">{error}</div>
+                            <div className="text-red-600 dark:text-red-400 text-sm">{error}</div>
                         </div>
                     ) : chartData.length === 0 ? (
                         <div className="flex items-center justify-center py-20">
-                            <div className="text-slate-500">차트 데이터가 없습니다.</div>
+                            <div className="text-slate-500 dark:text-slate-400">차트 데이터가 없습니다.</div>
                         </div>
                     ) : (
                         <div className="space-y-6">
                             {/* 가격 차트 */}
-                            <div className="bg-white rounded-lg border p-4">
-                                <h3 className="text-sm font-semibold text-slate-700 mb-3">주식 가격 (최근 30일)</h3>
+                            <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
+                                <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">주식 가격 (최근 30일)</h3>
                                 <ResponsiveContainer width="100%" height={300}>
                                     <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -218,7 +218,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                                         />
                                     </LineChart>
                                 </ResponsiveContainer>
-                                <div className="flex justify-center gap-4 mt-3 text-xs text-slate-600">
+                                <div className="flex justify-center gap-4 mt-3 text-xs text-slate-600 dark:text-slate-400">
                                     <div className="flex items-center gap-1">
                                         <div className="w-3 h-0.5 bg-blue-500"></div>
                                         <span>종가</span>
@@ -231,8 +231,8 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                             </div>
 
                             {/* 거래량 차트 */}
-                            <div className="bg-white rounded-lg border p-4">
-                                <h3 className="text-sm font-semibold text-slate-700 mb-3">거래량</h3>
+                            <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
+                                <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">거래량</h3>
                                 <ResponsiveContainer width="100%" height={180}>
                                     <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -282,8 +282,8 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
 
                             {/* 최근 데이터 요약 */}
                             {latestData && (
-                                <div className="bg-slate-50 rounded-lg border p-4">
-                                    <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                                <div className="bg-slate-50 rounded-lg border p-4 dark:bg-slate-700/50 dark:border-slate-600">
+                                    <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">
                                         최근 데이터 ({new Date(latestData.date).toLocaleDateString('ko-KR')})
                                     </h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -296,12 +296,12 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                                         <DataItem
                                             label="변동"
                                             value={`${latestData.change >= 0 ? '+' : ''}${latestData.change.toFixed(2)}`}
-                                            valueClassName={latestData.change >= 0 ? 'text-emerald-600' : 'text-red-600'}
+                                            valueClassName={latestData.change >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}
                                         />
                                         <DataItem
                                             label="변동률"
                                             value={`${latestData.changePercent >= 0 ? '+' : ''}${latestData.changePercent.toFixed(2)}%`}
-                                            valueClassName={latestData.changePercent >= 0 ? 'text-emerald-600' : 'text-red-600'}
+                                            valueClassName={latestData.changePercent >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}
                                         />
                                     </div>
                                 </div>
@@ -340,8 +340,8 @@ const PeriodSelector = ({ period, onChange, disabled }) => {
           disabled={disabled}
           className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
             period === option.value
-              ? 'bg-blue-600 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-blue-600 text-white dark:bg-blue-500'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           style={{ minWidth: 48 }}
         >
@@ -357,8 +357,8 @@ const PeriodSelector = ({ period, onChange, disabled }) => {
  */
 const DataItem = ({ label, value, valueClassName = '' }) => (
     <div>
-        <div className="text-slate-500 mb-1">{label}</div>
-        <div className={`font-semibold ${valueClassName}`}>{value}</div>
+        <div className="text-slate-500 mb-1 dark:text-slate-400">{label}</div>
+        <div className={`font-semibold ${valueClassName || 'dark:text-slate-200'}`}>{value}</div>
     </div>
 );
 

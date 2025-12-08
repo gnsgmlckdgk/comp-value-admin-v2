@@ -1,6 +1,7 @@
 import { forwardRef, useState, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '@/context/ThemeContext';
 
 import 'ag-grid-community/styles/ag-theme-alpine.css'; // 테마 CSS
 
@@ -28,8 +29,8 @@ ModuleRegistry.registerModules([
 
 const ProgressComponent = () => {
     return (
-        <div className="flex flex-col items-center justify-center p-6 text-gray-500">
-            <svg className="animate-spin h-8 w-8 mb-3 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div className="flex flex-col items-center justify-center p-6 text-gray-500 dark:text-slate-400">
+            <svg className="animate-spin h-8 w-8 mb-3 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
             </svg>
@@ -40,7 +41,7 @@ const ProgressComponent = () => {
 
 const NoDataComponent = () => {
     return (
-        <div className="flex flex-col items-center justify-center p-6 text-gray-500" >
+        <div className="flex flex-col items-center justify-center p-6 text-gray-500 dark:text-slate-400" >
             <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M12 3v1m0 16v1m8.485-8.485l-.707.707M4.222 4.222l.707.707M3 12h1m16 0h1m-8.485 8.485l.707-.707M4.222 19.778l.707-.707" />
             </svg>
@@ -81,6 +82,7 @@ const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNat
 
     const [gridApi, setGridApi] = useState(null);
     const navigate = useNavigate();
+    const { isDark } = useTheme();
 
     // 그리드 상호작용
     useEffect(() => {
@@ -103,7 +105,7 @@ const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNat
     };
 
     return (
-        <div className="ag-theme-alpine md:h-156 h-96">
+        <div className={`ag-theme-alpine md:h-156 h-96 ${isDark ? 'dark-mode' : ''}`}>
             {/* 그리드 */}
             <AgGridReact
                 onGridReady={onGridReady}

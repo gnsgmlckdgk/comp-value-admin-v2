@@ -6,13 +6,16 @@ import { BrowserRouter } from 'react-router-dom'
 import 'animate.css';
 
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 createRoot(document.getElementById('root')).render(
   <AuthProvider>
-    <StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </StrictMode>
+    <ThemeProvider>
+      <StrictMode>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </StrictMode>
+    </ThemeProvider>
   </AuthProvider>
 )

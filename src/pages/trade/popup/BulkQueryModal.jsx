@@ -51,23 +51,23 @@ export default function BulkQueryModal({ open, onClose, fetcher, openAlert = (ms
     return (
         <>
             {/* backdrop */}
-            <div className="fixed inset-0 z-[70] bg-black/50" onClick={onClose} />
+            <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={onClose} />
 
             {/* modal */}
             <div
-                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(840px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl"
+                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(840px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5">
-                    <div className="text-sm font-semibold text-slate-800">대량 조회</div>
-                    <button className="text-xs rounded border px-2 py-1 hover:bg-slate-50" onClick={onClose}>
+                <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">
+                    <div className="text-sm font-semibold text-slate-800 dark:text-white">대량 조회</div>
+                    <button className="text-xs rounded border px-2 py-1 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700" onClick={onClose}>
                         닫기 (Esc)
                     </button>
                 </div>
 
                 <div className="p-4 space-y-3">
-                    <p className="text-[12px] text-slate-600">
-                        심볼을 <span className="font-medium">한 줄에 하나씩</span> 입력하고 “엑셀로 내보내기”를 누르면,
+                    <p className="text-[12px] text-slate-600 dark:text-slate-400">
+                        심볼을 <span className="font-medium">한 줄에 하나씩</span> 입력하고 "엑셀로 내보내기"를 누르면,
                         서버 조회 후 결과를 엑셀 파일로 저장합니다.
                     </p>
 
@@ -75,15 +75,15 @@ export default function BulkQueryModal({ open, onClose, fetcher, openAlert = (ms
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder={'예)\nAAPL\nMSFT\nGOOGL\nNVDA'}
-                        className="w-full h-[220px] rounded-md border border-slate-300 bg-slate-50 p-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+                        className="w-full h-[220px] rounded-md border border-slate-300 bg-slate-50 p-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
                     />
 
                     <div className="flex items-center justify-between gap-2">
-                        <div className="text-[12px] text-slate-500">{symbols.length}개 심볼</div>
+                        <div className="text-[12px] text-slate-500 dark:text-slate-400">{symbols.length}개 심볼</div>
                         <div className="flex gap-2">
                             <button
                                 type="button"
-                                className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50"
+                                className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                                 onClick={() => setInput('')}
                                 disabled={loading}
                             >

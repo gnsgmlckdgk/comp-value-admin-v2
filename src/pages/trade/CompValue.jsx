@@ -55,7 +55,7 @@ const CompValue = () => {
 
     return (
         <>
-            <h1 className='text-2xl md:text-3xl font-bold tracking-tight text-slate-800'>기업분석</h1>
+            <h1 className='text-2xl md:text-3xl font-bold tracking-tight text-slate-800 dark:text-white'>기업분석</h1>
             <div className="px-2 py-8 md:px-4">
 
                 <Loading show={isLoading} />
@@ -66,7 +66,7 @@ const CompValue = () => {
                 <div>
                     {/* 설명란 */}
                     <div>
-                        <p className="text-sm text-gray-500 mb-4 leading-relaxed">당기, 전전기 등 현재년도 기준 아직 재무정보가 없는 경우
+                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 leading-relaxed">당기, 전전기 등 현재년도 기준 아직 재무정보가 없는 경우
                             가장 최근 재무정보를 한번 더 읽어서 계산하기 때문에
                             수동계산이랑 값이 다를 수 있음.</p>
                     </div>
@@ -119,7 +119,7 @@ const CompValue = () => {
                             }
                         />
                         {rowData?.상세정보 && (
-                            <div className="mt-4 px-4 py-2 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded text-sm">
+                            <div className="mt-4 px-4 py-2 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded text-sm dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-300">
                                 ⚠️ 위 수치는 단위 적용이 되어있지 않습니다.
                             </div>
                         )}

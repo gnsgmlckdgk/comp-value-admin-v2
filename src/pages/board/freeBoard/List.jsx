@@ -244,7 +244,7 @@ function List() {
                 {/* 헤더와 버튼 */}
                 <div className="mb-3 md:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <p className="text-sm text-slate-600 hidden sm:block">자유롭게 의견을 나누는 공간입니다</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 hidden sm:block">자유롭게 의견을 나누는 공간입니다</p>
                     </div>
                     <div className="flex items-center gap-2 justify-end">
                         <Button children="등록" onClick={moveRegisterPage} className="w-20 sm:w-24" />
@@ -255,7 +255,7 @@ function List() {
                 </div>
 
                 {/* SearchBar */}
-                <div className="rounded-xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                     <SearchBar
                         fetchData={() => fetchData(1)}
                         searchBarLabel=""

@@ -83,15 +83,15 @@ export default function MarketIndexCharts() {
         return (
             <div className="w-full">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-slate-800">미국 주요 지수</h2>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">미국 주요 지수</h2>
                     <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {US_INDICES.map(index => (
-                        <div key={index.symbol} className="bg-white rounded-lg border p-4 shadow-sm">
+                        <div key={index.symbol} className="bg-white rounded-lg border p-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                             <div className="animate-pulse">
-                                <div className="h-4 bg-slate-200 rounded w-1/3 mb-3"></div>
-                                <div className="h-48 bg-slate-100 rounded"></div>
+                                <div className="h-4 bg-slate-200 rounded w-1/3 mb-3 dark:bg-slate-700"></div>
+                                <div className="h-48 bg-slate-100 rounded dark:bg-slate-700"></div>
                             </div>
                         </div>
                     ))}
@@ -104,10 +104,10 @@ export default function MarketIndexCharts() {
         return (
             <div className="w-full">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-slate-800">미국 주요 지수</h2>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">미국 주요 지수</h2>
                     <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
                 </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm dark:bg-red-900/30 dark:border-red-800 dark:text-red-300">
                     {error}
                 </div>
             </div>
@@ -117,7 +117,7 @@ export default function MarketIndexCharts() {
     return (
         <div className="w-full">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-                <h2 className="text-xl font-bold text-slate-800 flex-shrink-0">미국 주요 지수</h2>
+                <h2 className="text-xl font-bold text-slate-800 flex-shrink-0 dark:text-white">미국 주요 지수</h2>
                 <div className="overflow-x-auto scrollbar-always min-w-0">
                     <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
                 </div>
@@ -178,7 +178,7 @@ function PeriodSelector({ period, onChange, disabled }) {
                     className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
                         period === option.value
                             ? 'bg-blue-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-100'
+                            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
                     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     style={{ minWidth: 48 }}
                 >
@@ -193,17 +193,17 @@ function IndexCard({ index, data, latestData, change, changePercent, isPositive 
     // 데이터가 없는 경우 처리
     if (!data || data.length === 0) {
         return (
-            <div className="bg-white rounded-lg border shadow-sm">
-                <div className="p-4 border-b bg-gradient-to-r from-slate-50 to-white">
+            <div className="bg-white rounded-lg border shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                <div className="p-4 border-b bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 dark:border-slate-700">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-slate-800">{index.name}</h3>
-                        <span className="text-xs text-slate-500">{index.symbol}</span>
+                        <h3 className="font-semibold text-slate-800 dark:text-white">{index.name}</h3>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{index.symbol}</span>
                     </div>
-                    <div className="text-sm text-slate-500">데이터 없음</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">데이터 없음</div>
                 </div>
                 <div className="p-4">
-                    <div className="h-[180px] flex items-center justify-center bg-slate-50 rounded">
-                        <span className="text-xs text-slate-400">차트 데이터를 불러올 수 없습니다</span>
+                    <div className="h-[180px] flex items-center justify-center bg-slate-50 rounded dark:bg-slate-700">
+                        <span className="text-xs text-slate-400 dark:text-slate-500">차트 데이터를 불러올 수 없습니다</span>
                     </div>
                 </div>
             </div>
@@ -211,30 +211,30 @@ function IndexCard({ index, data, latestData, change, changePercent, isPositive 
     }
 
     return (
-        <div className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow">
-            <div className="p-4 border-b bg-gradient-to-r from-slate-50 to-white">
+        <div className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow dark:bg-slate-800 dark:border-slate-700">
+            <div className="p-4 border-b bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-slate-800">{index.name}</h3>
-                    <span className="text-xs text-slate-500">{index.symbol}</span>
+                    <h3 className="font-semibold text-slate-800 dark:text-white">{index.name}</h3>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{index.symbol}</span>
                 </div>
                 {latestData ? (
                     <>
                         <div className="flex items-baseline gap-3">
-                            <span className="text-2xl font-bold text-slate-900">
+                            <span className="text-2xl font-bold text-slate-900 dark:text-white">
                                 {latestData.close.toLocaleString('en-US', {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                 })}
                             </span>
                             <div className={`flex items-center gap-1 text-sm font-medium ${
-                                isPositive ? 'text-emerald-600' : 'text-red-600'
+                                isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                             }`}>
                                 <span>{isPositive ? '▲' : '▼'}</span>
                                 <span>{Math.abs(change).toFixed(2)}</span>
                                 <span>({Math.abs(changePercent).toFixed(2)}%)</span>
                             </div>
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">
+                        <div className="text-xs text-slate-500 mt-1 dark:text-slate-400">
                             {new Date(latestData.date).toLocaleDateString('ko-KR', {
                                 year: 'numeric',
                                 month: 'short',
@@ -243,7 +243,7 @@ function IndexCard({ index, data, latestData, change, changePercent, isPositive 
                         </div>
                     </>
                 ) : (
-                    <div className="text-sm text-slate-500">최신 데이터 없음</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">최신 데이터 없음</div>
                 )}
             </div>
 

@@ -14,7 +14,7 @@ export function KrwCell({ value }) {
     const v = toNum(value);
     return (
         <Td>
-            <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium">
+            <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium dark:text-slate-300">
                 {v ? `₩ ${Math.round(v).toLocaleString()}` : ''}
             </div>
         </Td>
@@ -28,7 +28,7 @@ export function UsdCell({ value }) {
     const v = toNum(value);
     return (
         <Td>
-            <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium">
+            <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium dark:text-slate-300">
                 {v ? `$ ${fmtUsd(v)}` : ''}
             </div>
         </Td>
@@ -45,9 +45,9 @@ export function CombinedPriceCell({ usdValue, fx }) {
     return (
         <Td>
             <div className="px-1 leading-tight text-right">
-                <div className="text-slate-700 font-medium">{usd ? `$ ${fmtUsd(usd)}` : ''}</div>
+                <div className="text-slate-700 font-medium dark:text-slate-300">{usd ? `$ ${fmtUsd(usd)}` : ''}</div>
                 {usd && fx ? (
-                    <div className="text-[11px] text-slate-500">{`₩ ${krw.toLocaleString()}`}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">{`₩ ${krw.toLocaleString()}`}</div>
                 ) : null}
             </div>
         </Td>
@@ -64,13 +64,13 @@ export function DiffCell({ buy, cur, fx }) {
     const dKrw = fx ? Math.round(d * fx) : 0;
     const pct = b > 0 ? (d / b) * 100 : 0;
     const pos = d >= 0;
-    const cls = pos ? 'text-rose-600' : 'text-blue-600';
+    const cls = pos ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400';
 
     return (
         <Td>
             <div className="px-1 leading-tight text-center">
                 <div className={`${cls} font-semibold`}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
-                <div className="text-[11px] text-slate-500">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
                 <div className={`${cls} text-[12px] font-medium`}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
             </div>
         </Td>
@@ -90,13 +90,13 @@ export function TotalDiffCell({ buy, cur, qty, fx }) {
     const dKrw = fx ? Math.round(d * fx) : 0;
     const pct = buySum > 0 ? (d / buySum) * 100 : 0;
     const pos = d >= 0;
-    const cls = pos ? 'text-rose-600' : 'text-blue-600';
+    const cls = pos ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400';
 
     return (
         <Td>
             <div className="px-1 leading-tight text-center">
                 <div className={`${cls} font-semibold`}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
-                <div className="text-[11px] text-slate-500">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
                 <div className={`${cls} text-[12px] font-medium`}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
             </div>
         </Td>
@@ -134,7 +134,7 @@ export function EditableTd({
             if (cur || tgt) {
                 const d = cur - tgt; // 현재가 - 목표가
                 const pos = d >= 0;
-                const cls = pos ? 'text-rose-600' : 'text-blue-600';
+                const cls = pos ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400';
                 subTargetDiff = (
                     <div className={`${cls} text-[11px]`}>{`(${pos ? '+' : ''}$ ${fmtUsd(d)})`}</div>
                 );
@@ -158,8 +158,8 @@ export function EditableTd({
                 <div
                     className={
                         isTwoLine
-                            ? 'min-h-[40px] flex flex-col justify-center items-start cursor-pointer bg-blue-50/30 hover:bg-blue-100/40 rounded px-1 border border-dashed border-blue-200/50'
-                            : 'h-9 flex items-center cursor-pointer bg-blue-50/30 hover:bg-blue-100/40 rounded px-1 border border-dashed border-blue-200/50'
+                            ? 'min-h-[40px] flex flex-col justify-center items-start cursor-pointer bg-blue-50/30 hover:bg-blue-100/40 rounded px-1 border border-dashed border-blue-200/50 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:border-blue-800/50'
+                            : 'h-9 flex items-center cursor-pointer bg-blue-50/30 hover:bg-blue-100/40 rounded px-1 border border-dashed border-blue-200/50 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:border-blue-800/50'
                     }
                     onDoubleClick={(e) => {
                         e.preventDefault();
@@ -168,7 +168,7 @@ export function EditableTd({
                     }}
                     title={titleText}
                 >
-                    <div className={isCompanyName ? "truncate w-full" : ""}>{main}</div>
+                    <div className={isCompanyName ? "truncate w-full dark:text-slate-300" : "dark:text-slate-300"}>{main}</div>
                     {subTargetDiff}
                 </div>
             </Td>
@@ -190,7 +190,7 @@ export function EditableTd({
                     }
                 }}
                 onBlur={commitEdit}
-                className="w-full h-9 rounded border px-2 text-sm"
+                className="w-full h-9 rounded border px-2 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
             />
         </Td>
     );

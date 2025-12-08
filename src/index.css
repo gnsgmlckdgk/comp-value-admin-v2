@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@variant dark (&:is(.dark *));
+
+@theme {
+  --color-dark-bg: #0f172a;
+  --color-dark-card: #1e293b;
+  --color-dark-border: #334155;
+}
+
 @font-face {
   font-family: 'BaseFont';
   /* src: url('/fonts/Ansungtangmyun-ESG.otf') format('opentype'); */
@@ -73,4 +81,23 @@
 .scrollbar-always::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
   /* hover (slate-400) */
+}
+
+/* AG Grid 다크모드 스타일 */
+.ag-theme-alpine.dark-mode {
+  --ag-background-color: #1e293b;
+  --ag-foreground-color: #e2e8f0;
+  --ag-border-color: #334155;
+  --ag-secondary-border-color: #475569;
+  --ag-header-background-color: #0f172a;
+  --ag-header-foreground-color: #f1f5f9;
+  --ag-odd-row-background-color: #1e293b;
+  --ag-row-hover-color: #334155;
+  --ag-selected-row-background-color: #1e3a8a;
+  --ag-range-selection-border-color: #3b82f6;
+  --ag-input-border-color: #475569;
+  --ag-input-focus-border-color: #3b82f6;
+  --ag-checkbox-checked-color: #3b82f6;
+  --ag-checkbox-unchecked-color: #64748b;
+  --ag-checkbox-indeterminate-color: #3b82f6;
 }

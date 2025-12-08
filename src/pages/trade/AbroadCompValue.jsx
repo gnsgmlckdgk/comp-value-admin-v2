@@ -65,7 +65,7 @@ const AbroadCompValue = () => {
                     <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <p className="text-sm text-slate-500">{message}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{message}</p>
                 </div>
             </td>
         </tr>
@@ -162,12 +162,12 @@ const AbroadCompValue = () => {
 
             {/* 헤더 */}
             <div className="mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800">기업분석(해외)</h1>
-                <p className="mt-2 text-sm text-slate-600">심볼을 검색하고 행을 클릭하면 기업가치 계산 결과를 확인할 수 있습니다.</p>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800 dark:text-white">기업분석(해외)</h1>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">심볼을 검색하고 행을 클릭하면 기업가치 계산 결과를 확인할 수 있습니다.</p>
             </div>
 
             {/* 검색 영역 */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-4 mb-4">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-4 mb-4 dark:bg-slate-800 dark:border-slate-700">
                 <div className="flex flex-col gap-2 sm:gap-3">
                     <div className="flex items-center gap-2">
                         <input
@@ -176,7 +176,7 @@ const AbroadCompValue = () => {
                             onChange={(e) => setCompName(e.target.value)}
                             onKeyDown={onKeyDown}
                             placeholder="심볼 또는 회사명으로 검색"
-                            className="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-300 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                            className="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-300 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                             aria-label="심볼/회사명 검색"
                             disabled={isLoading}
                         />
@@ -194,7 +194,7 @@ const AbroadCompValue = () => {
                             type="button"
                             onClick={() => setShowBulk(true)}
                             disabled={isLoading}
-                            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
                         >
                             대량 조회
                         </button>
@@ -208,16 +208,16 @@ const AbroadCompValue = () => {
             </div>
 
             {/* 테이블 영역 */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700">
                 <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[65vh]">
-                    <table className="min-w-full text-sm divide-y divide-slate-200" style={{ minWidth: '1000px' }}>
+                    <table className="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700" style={{ minWidth: '1000px' }}>
                         {tableHead}
-                        <tbody className="bg-white divide-y divide-slate-200">
+                        <tbody className="bg-white divide-y divide-slate-200 dark:bg-slate-800 dark:divide-slate-700">
                             {Array.isArray(compNameData) && compNameData.length > 0 ? (
                                 compNameData.map((row, idx) => (
                                     <tr
                                         key={`${row.symbol || 'row'}-${idx}`}
-                                        className="hover:bg-blue-50 cursor-pointer transition-colors"
+                                        className="hover:bg-blue-50 cursor-pointer transition-colors dark:hover:bg-slate-700"
                                         role="button"
                                         tabIndex={0}
                                         onClick={() => !isLoading && compValueCal(row)}
@@ -230,13 +230,13 @@ const AbroadCompValue = () => {
                                         aria-label={`계산 ${row.symbol}`}
                                     >
                                         <td className="px-4 py-3 whitespace-nowrap">
-                                            <span className="font-semibold text-slate-900">{row.symbol}</span>
+                                            <span className="font-semibold text-slate-900 dark:text-white">{row.symbol}</span>
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-slate-700">{row.name}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-slate-600">{row.currency}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-slate-600">{row.exchangeFullName}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-slate-700 dark:text-slate-200">{row.name}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{row.currency}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{row.exchangeFullName}</td>
                                         <td className="px-4 py-3 whitespace-nowrap">
-                                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                                                 {row.exchange}
                                             </span>
                                         </td>

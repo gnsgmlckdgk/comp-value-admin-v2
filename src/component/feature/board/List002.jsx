@@ -6,7 +6,7 @@ import { forwardRef } from 'react';
 const List002 = forwardRef(({ columns = [], rowData = [], fetchData, loading = false, moveViewPage, pageNationProps }, ref) => {
 
     return (
-        <div className="rounded-md shadow-sm font-semibold text-gray-600 p-3">
+        <div className="rounded-md shadow-sm font-semibold text-gray-600 p-3 dark:text-slate-400">
             <Grid02 ref={ref} columns={columns} rowData={rowData} loading={loading} moveViewPage={moveViewPage} />
             <PageNation
                 currentPage={pageNationProps.currentPage}

@@ -20,10 +20,10 @@ function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {} }) {
 
     return (
         <div className="mx-auto max-w-4xl px-4 py-8">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-                <div className="border-b border-slate-200 px-4 sm:px-6 py-4">
-                    <h2 className="text-lg sm:text-xl font-semibold text-slate-800">게시글 수정</h2>
-                    <p className="text-sm text-slate-500 mt-1">게시글 내용을 수정해주세요</p>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+                <div className="border-b border-slate-200 px-4 sm:px-6 py-4 dark:border-slate-700">
+                    <h2 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-white">게시글 수정</h2>
+                    <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">게시글 내용을 수정해주세요</p>
                 </div>
 
                 <form className="p-4 sm:p-6 space-y-6">
@@ -36,7 +36,7 @@ function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {} }) {
                     <div>
                         <TextArea id='content' label='내용' value={content} labelNewLine={true} onChange={(e) => setContent(e.target.value)} wdfull={true} rows={15} />
                     </div>
-                    <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+                    <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
                         <Button children="뒤로가기" variant="outline" onClick={moveViewPage} />
                         <Button children="저장" variant="primary" onClick={() => onUpdate(title, content)} />
                     </div>

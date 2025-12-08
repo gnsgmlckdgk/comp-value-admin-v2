@@ -19,7 +19,7 @@ function Select001({ value, onChange, options, className = '' }) {
         <select
             value={value}
             onChange={onChange}
-            className={`h-10 px-3 text-sm border border-slate-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition-colors hover:border-slate-400 ${className}`}
+            className={`h-10 px-3 text-sm border border-slate-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition-colors hover:border-slate-400 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:hover:border-slate-500 dark:focus:ring-blue-400 ${className}`}
         >
             {options.map((option, idx) => (
                 <option key={idx} value={option.value}>

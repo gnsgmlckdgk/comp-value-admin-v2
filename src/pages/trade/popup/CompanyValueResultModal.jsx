@@ -83,12 +83,12 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
     return (
         <>
             {/* 배경 오버레이 */}
-            <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-40" onClick={onClose} />
 
             {/* 메인 모달 */}
             <div
                 ref={popupRef}
-                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto"
+                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
                 onClick={(e) => e.stopPropagation()}
             >
                 <ModalHeader onClose={onClose} />
@@ -135,10 +135,10 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
  * 모달 헤더
  */
 const ModalHeader = ({ onClose }) => (
-    <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b bg-white z-10">
-        <h2 className="text-lg font-semibold">기업가치 계산 결과</h2>
+    <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b bg-white z-10 dark:bg-slate-800 dark:border-slate-700">
+        <h2 className="text-lg font-semibold dark:text-white">기업가치 계산 결과</h2>
         <button
-            className="text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors"
+            className="text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
             onClick={onClose}
         >
             닫기 (Esc)
@@ -156,7 +156,7 @@ const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpen
     if (!hasData) {
         return (
             <div className="p-4">
-                <p className="text-sm text-gray-600">표시할 데이터가 없습니다.</p>
+                <p className="text-sm text-gray-600 dark:text-slate-400">표시할 데이터가 없습니다.</p>
             </div>
         );
     }
@@ -187,8 +187,8 @@ const CompanySummary = ({ data }) => {
     return (
         <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-                <div className="text-sm text-slate-500">{metrics.symbol || ''}</div>
-                <div className="text-xl font-semibold text-slate-800">{metrics.name || '결과 요약'}</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">{metrics.symbol || ''}</div>
+                <div className="text-xl font-semibold text-slate-800 dark:text-white">{metrics.name || '결과 요약'}</div>
             </div>
             <MetricBadges metrics={metrics} data={data} />
         </div>
@@ -239,8 +239,8 @@ const MetricBadges = ({ metrics, data }) => {
 const Badge = ({ children, title, highlighted = false }) => (
     <span
         className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${highlighted
-                ? 'text-emerald-700 border-emerald-300 bg-emerald-50'
-                : 'text-slate-700 bg-slate-50'
+                ? 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-900/30'
+                : 'text-slate-700 bg-slate-50 dark:text-slate-300 dark:bg-slate-700 dark:border-slate-600'
             }`}
         title={title}
     >
@@ -253,13 +253,13 @@ const Badge = ({ children, title, highlighted = false }) => (
  */
 const PEGExplanation = ({ onOpenGuide }) => (
     <div className="mt-1 flex items-center justify-between gap-2">
-        <p className="text-[12px] text-slate-500">
+        <p className="text-[12px] text-slate-500 dark:text-slate-400">
             💡 PEG = PER ÷ 이익성장률(%) — PEG가 1 이하이면 성장 대비 저평가, 1 이상이면 고평가 가능
         </p>
         <button
             type="button"
             onClick={onOpenGuide}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[12px] text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[12px] text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
             title="해석 요약 보기"
         >
             <InfoIcon />
@@ -277,7 +277,7 @@ const RecommendationBanner = ({ data }) => {
     if (!metrics.isRecommended) return null;
 
     return (
-        <div className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800">
+        <div className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
             📈 조건 충족: PEG ≤ 1 이고 적정가 &gt; 현재가 — <span className="font-semibold">투자 권장</span>
         </div>
     );
@@ -306,9 +306,9 @@ const HighlightCards = ({ data }) => {
  * 지표 카드
  */
 const MetricCard = ({ label, value, valueClassName = '' }) => (
-    <div className="rounded-lg border bg-white p-4 shadow-sm">
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className={`mt-1 text-lg font-semibold ${valueClassName}`}>{value}</div>
+    <div className="rounded-lg border bg-white p-4 shadow-sm dark:bg-slate-700 dark:border-slate-600">
+        <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
+        <div className={`mt-1 text-lg font-semibold ${valueClassName || 'dark:text-white'}`}>{value}</div>
     </div>
 );
 
@@ -316,7 +316,7 @@ const MetricCard = ({ label, value, valueClassName = '' }) => (
  * 데이터 그리드
  */
 const DataGrid = ({ data, onOpenDetail }) => (
-    <div className="rounded-lg border bg-white p-3">
+    <div className="rounded-lg border bg-white p-3 dark:bg-slate-700 dark:border-slate-600">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px]">
             {Object.entries(data).map(([key, value]) => (
                 <DataRow
@@ -334,9 +334,9 @@ const DataGrid = ({ data, onOpenDetail }) => (
  * 데이터 행
  */
 const DataRow = ({ label, value, onOpenDetail }) => (
-    <div className="flex items-start justify-between gap-3 border-b last:border-b-0 py-1">
-        <div className="text-slate-500 whitespace-nowrap">{label}</div>
-        <div className="text-right break-all font-medium max-w-[60%]">
+    <div className="flex items-start justify-between gap-3 border-b last:border-b-0 py-1 dark:border-slate-600">
+        <div className="text-slate-500 whitespace-nowrap dark:text-slate-400">{label}</div>
+        <div className="text-right break-all font-medium max-w-[60%] dark:text-slate-200">
             {renderValue(value, label, onOpenDetail)}
         </div>
     </div>
@@ -349,8 +349,8 @@ const renderValue = (value, label, onOpenDetail) => {
     if (Array.isArray(value)) {
         return (
             <details className="inline-block float-right text-right">
-                <summary className="cursor-pointer text-slate-600">[{value.length}] 배열</summary>
-                <pre className="mt-1 p-2 bg-slate-50 rounded text-xs whitespace-pre-wrap">
+                <summary className="cursor-pointer text-slate-600 dark:text-slate-400">[{value.length}] 배열</summary>
+                <pre className="mt-1 p-2 bg-slate-50 rounded text-xs whitespace-pre-wrap dark:bg-slate-800 dark:text-slate-300">
                     {JSON.stringify(value, null, 2)}
                 </pre>
             </details>
@@ -361,7 +361,7 @@ const renderValue = (value, label, onOpenDetail) => {
         return (
             <button
                 type="button"
-                className="inline-block float-right text-slate-600 underline text-xs hover:text-indigo-600 transition-colors"
+                className="inline-block float-right text-slate-600 underline text-xs hover:text-indigo-600 transition-colors dark:text-slate-400 dark:hover:text-indigo-400"
                 onClick={() => onOpenDetail(label, value)}
             >
                 자세히 보기
@@ -382,7 +382,7 @@ const renderValue = (value, label, onOpenDetail) => {
 const ActionButtons = ({ data, onCopy, onClose, onOpenChart }) => (
     <div className="flex justify-between items-center gap-2">
         <button
-            className="px-3 py-2 rounded-md border text-sm hover:bg-blue-50 transition-colors flex items-center gap-1.5 text-blue-600 border-blue-300"
+            className="px-3 py-2 rounded-md border text-sm hover:bg-blue-50 transition-colors flex items-center gap-1.5 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-900/30"
             onClick={onOpenChart}
             title="주식 가격 및 거래량 차트 보기"
         >
@@ -391,7 +391,7 @@ const ActionButtons = ({ data, onCopy, onClose, onOpenChart }) => (
         </button>
         <div className="flex gap-2">
             <button
-                className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50 transition-colors"
+                className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                 onClick={() => onCopy(data, 'JSON이 클립보드에 복사되었습니다.')}
             >
                 JSON 복사
@@ -411,22 +411,22 @@ const ActionButtons = ({ data, onCopy, onClose, onOpenChart }) => (
  */
 const GuideOverlay = ({ onClose }) => (
     <>
-        <div className="fixed inset-0 z-[70] bg-black/50" onClick={onClose} />
+        <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={onClose} />
         <div
-            className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl"
+            className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5">
-                <div className="text-sm font-semibold text-slate-800">📈 해석 요약</div>
+            <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">
+                <div className="text-sm font-semibold text-slate-800 dark:text-white">📈 해석 요약</div>
                 <button
-                    className="text-xs rounded border px-2 py-1 hover:bg-slate-50 transition-colors"
+                    className="text-xs rounded border px-2 py-1 hover:bg-slate-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                     onClick={onClose}
                 >
                     닫기 (Esc)
                 </button>
             </div>
 
-            <div className="px-4 pt-3 pb-4 text-[12px] text-slate-600">
+            <div className="px-4 pt-3 pb-4 text-[12px] text-slate-600 dark:text-slate-400">
                 PEG(↓: 저평가, ↑: 고평가)와 적정가(↑/↓) 조합으로 간단한 해석 매트릭스입니다.
             </div>
 
@@ -461,34 +461,57 @@ const GuideOverlay = ({ onClose }) => (
 /**
  * 가이드 카드
  */
-const GuideCard = ({ color, title, description }) => (
-    <div className={`rounded-md border border-${color}-200 bg-${color}-50 p-3`}>
-        <div className={`mb-1 text-[11px] font-semibold text-${color}-700`}>{title}</div>
-        <div className={`text-[12px] text-${color}-800`}>{description}</div>
-    </div>
-);
+const GuideCard = ({ color, title, description }) => {
+    const colorStyles = {
+        emerald: 'rounded-md border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-900/30',
+        amber: 'rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/30',
+        rose: 'rounded-md border border-rose-200 bg-rose-50 p-3 dark:border-rose-800 dark:bg-rose-900/30',
+        slate: 'rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-700/30'
+    };
+
+    const titleStyles = {
+        emerald: 'mb-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400',
+        amber: 'mb-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400',
+        rose: 'mb-1 text-[11px] font-semibold text-rose-700 dark:text-rose-400',
+        slate: 'mb-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300'
+    };
+
+    const descStyles = {
+        emerald: 'text-[12px] text-emerald-800 dark:text-emerald-300',
+        amber: 'text-[12px] text-amber-800 dark:text-amber-300',
+        rose: 'text-[12px] text-rose-800 dark:text-rose-300',
+        slate: 'text-[12px] text-slate-800 dark:text-slate-200'
+    };
+
+    return (
+        <div className={colorStyles[color]}>
+            <div className={titleStyles[color]}>{title}</div>
+            <div className={descStyles[color]}>{description}</div>
+        </div>
+    );
+};
 
 /**
  * 상세보기 오버레이
  */
 const DetailOverlay = ({ title, data, onClose, onCopy }) => (
     <>
-        <div className="fixed inset-0 z-[75] bg-black/50" onClick={onClose} />
+        <div className="fixed inset-0 z-[75] bg-black/50 dark:bg-black/70" onClick={onClose} />
         <div
-            className="fixed z-[85] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(900px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl"
+            className="fixed z-[85] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(900px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5">
-                <div className="text-sm font-semibold text-slate-800">🔎 {title || '상세보기'}</div>
+            <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">
+                <div className="text-sm font-semibold text-slate-800 dark:text-white">🔎 {title || '상세보기'}</div>
                 <div className="flex items-center gap-2">
                     <button
-                        className="text-xs rounded border px-2 py-1 hover:bg-slate-50 transition-colors"
+                        className="text-xs rounded border px-2 py-1 hover:bg-slate-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                         onClick={() => onCopy(data, '상세 JSON이 복사되었습니다.')}
                     >
                         JSON 복사
                     </button>
                     <button
-                        className="text-xs rounded border px-2 py-1 hover:bg-slate-50 transition-colors"
+                        className="text-xs rounded border px-2 py-1 hover:bg-slate-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                         onClick={onClose}
                     >
                         닫기 (Esc)
@@ -504,7 +527,7 @@ const DetailOverlay = ({ title, data, onClose, onCopy }) => (
                         ))}
                     </div>
                 ) : (
-                    <pre className="text-xs">{String(data)}</pre>
+                    <pre className="text-xs dark:text-slate-300">{String(data)}</pre>
                 )}
             </div>
         </div>
@@ -515,11 +538,11 @@ const DetailOverlay = ({ title, data, onClose, onCopy }) => (
  * 상세 카드
  */
 const DetailCard = ({ label, value }) => (
-    <div className="rounded border border-slate-200 bg-white px-2.5 py-2">
-        <div className="text-[11px] text-slate-500 mb-1 truncate" title={label}>
+    <div className="rounded border border-slate-200 bg-white px-2.5 py-2 dark:bg-slate-700 dark:border-slate-600">
+        <div className="text-[11px] text-slate-500 mb-1 truncate dark:text-slate-400" title={label}>
             {label}
         </div>
-        <div className="text-[12px] font-mono tabular-nums break-words whitespace-pre-wrap">
+        <div className="text-[12px] font-mono tabular-nums break-words whitespace-pre-wrap dark:text-slate-200">
             {formatDetailValue(value)}
         </div>
     </div>
@@ -529,7 +552,7 @@ const DetailCard = ({ label, value }) => (
  * Toast 컴포넌트
  */
 const Toast = ({ message }) => (
-    <div className="fixed bottom-4 right-4 z-[60] rounded-md bg-slate-900 text-white text-sm px-4 py-2 shadow-lg animate-fade-in">
+    <div className="fixed bottom-4 right-4 z-[60] rounded-md bg-slate-900 text-white text-sm px-4 py-2 shadow-lg animate-fade-in dark:bg-slate-700">
         {message}
     </div>
 );

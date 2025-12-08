@@ -92,16 +92,16 @@ const CompValueCustom = () => {
 
     return (
         <>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800">기업분석(수동)</h1>
-            <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800 dark:text-white mb-6">기업분석(수동)</h1>
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-lg p-6 space-y-6">
                 <Loading show={isLoading} />
 
 
                 <div className="flex items-center space-x-2 mb-4">
                     <Button children="분석" onClick={fetchData} />
                     <Button children="초기화" variant="danger" onClick={resetParam} />
-                    {data && (
-                        <div className="px-4 py-2 bg-green-100 border border-green-300 text-green-800 rounded-md text-sm">
+                    {data !== '' && (
+                        <div className="px-4 py-2 bg-green-100 border border-green-300 text-green-800 rounded-md text-sm dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
                             <span className="font-medium">결과:</span> {data}
                         </div>
                     )}

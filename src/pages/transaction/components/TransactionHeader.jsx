@@ -8,15 +8,15 @@ export function TransactionHeader({ loading, rows, lastUpdated, fxRate, onRefres
             <div className="flex items-center gap-3 text-sm">
                 <button
                     onClick={onRefresh}
-                    className="rounded-md border px-3 py-1.5 hover:bg-slate-50 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                    className="rounded-md border px-3 py-1.5 hover:bg-slate-50 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                     disabled={loading || rows.length === 0}
                 >
                     {loading ? '갱신 중...' : '현재가격 갱신'}
                 </button>
-                <span className="text-slate-500">
+                <span className="text-slate-500 dark:text-slate-400">
                     {lastUpdated ? `갱신: ${new Date(lastUpdated).toLocaleString()}` : '갱신 정보 없음'}
                 </span>
-                <span className="text-slate-500">
+                <span className="text-slate-500 dark:text-slate-400">
                     {fxRate ? `환율: 1 USD ≈ ${Number(fxRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원` : '환율 정보 없음'}
                 </span>
             </div>

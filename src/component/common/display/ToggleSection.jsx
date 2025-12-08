@@ -6,13 +6,13 @@ const ToggleSection = ({ title = '상세', children }) => {
     return (
         <div className="mt-4">
             <button
-                className="w-full text-left px-4 py-2 font-semibold text-gray-700 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 transition"
+                className="w-full text-left px-4 py-2 font-semibold text-gray-700 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 transition dark:text-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700"
                 onClick={() => setOpen(!open)}
             >
                 {title} {open ? '▲' : '▼'}
             </button>
             {open && (
-                <div className="mt-2 px-4 py-3 border border-t-0 border-gray-300 rounded-b bg-white text-sm">
+                <div className="mt-2 px-4 py-3 border border-t-0 border-gray-300 rounded-b bg-white text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
                     {children}
                 </div>
             )}

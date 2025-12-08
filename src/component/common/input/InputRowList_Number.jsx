@@ -9,7 +9,7 @@ const InputRowList = ({ rows }) => {
         <div className="space-y-4">
             {rows.map(([labelNode, value, setter], idx) => (
                 <div key={idx} className="flex flex-col md:flex-row items-center gap-2">
-                    <div className="w-full md:w-1/5 font-medium flex items-center">
+                    <div className="w-full md:w-1/5 font-medium flex items-center text-gray-700 dark:text-slate-300">
                         {labelNode}
                     </div>
                     <div className="w-full md:w-2/5">
@@ -28,7 +28,7 @@ const InputRowList = ({ rows }) => {
                             }}
                         />
                     </div>
-                    <div className="w-full md:w-2/5 text-right font-semibold truncate">
+                    <div className="w-full md:w-2/5 text-right font-semibold truncate text-slate-600 dark:text-slate-300">
                         {Number(value).toLocaleString()}
                     </div>
                 </div>

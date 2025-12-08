@@ -23,31 +23,31 @@ function View001({
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 {/* 헤더 */}
-                <div className="border-b border-slate-200 px-4 sm:px-6 py-5">
+                <div className="border-b border-slate-200 px-4 sm:px-6 py-5 dark:border-slate-700">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                                     #{id}
                                 </span>
                             </div>
-                            <h1 className="text-xl sm:text-2xl font-semibold text-slate-800 break-words">
+                            <h1 className="text-xl sm:text-2xl font-semibold text-slate-800 break-words dark:text-white">
                                 {boardData.title}
                             </h1>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-lg self-start">
-                            <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-lg self-start dark:bg-slate-700">
+                            <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
-                            <span className="text-sm font-medium text-slate-700 whitespace-nowrap">{boardData.viewCount ?? 0}</span>
+                            <span className="text-sm font-medium text-slate-700 whitespace-nowrap dark:text-slate-300">{boardData.viewCount ?? 0}</span>
                         </div>
                     </div>
 
                     {/* 작성자 정보 */}
-                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-slate-600">
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-slate-600 dark:text-slate-400">
                         <div className="flex items-center gap-1.5 min-w-0">
                             <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -61,7 +61,7 @@ function View001({
                             <span className="truncate">{boardData.createdAt || '-'}</span>
                         </div>
                         {boardData.updatedAt && boardData.updatedAt !== boardData.createdAt && (
-                            <div className="flex items-center gap-1.5 text-slate-500 min-w-0">
+                            <div className="flex items-center gap-1.5 text-slate-500 min-w-0 dark:text-slate-500">
                                 <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
                                 </svg>
@@ -74,14 +74,14 @@ function View001({
                 {/* 본문 */}
                 <div className="px-4 sm:px-6 py-8">
                     <div className="prose prose-slate max-w-none">
-                        <p className="whitespace-pre-line text-slate-700 leading-relaxed break-words">
+                        <p className="whitespace-pre-line text-slate-700 leading-relaxed break-words dark:text-slate-300">
                             {boardData.content}
                         </p>
                     </div>
                 </div>
 
                 {/* 버튼들 */}
-                <div className="border-t border-slate-200 px-4 sm:px-6 py-4">
+                <div className="border-t border-slate-200 px-4 sm:px-6 py-4 dark:border-slate-700">
                     <div className="flex justify-between items-center gap-2">
                         <div className="flex gap-2">
                             {canEdit && (

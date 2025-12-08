@@ -35,13 +35,13 @@ export function TransactionRow({
 
     return (
         <tr
-            className={`group border-b ${row.__isGroupEnd ? 'border-b-0' : 'border-slate-300 dark:border-slate-700'} ${isHit ? 'bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30' : 'bg-white hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700/70'} cursor-pointer transition-all duration-150`}
+            className={`group border-b ${row.__isGroupEnd ? 'border-b-0' : 'border-slate-300 dark:border-slate-700'} ${isHit ? 'bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/30' : 'bg-white hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700/70'} cursor-pointer transition-all duration-150`}
             onDoubleClick={handleCellDoubleClick}
             title="더블클릭하여 기업가치 계산 결과 보기"
         >
-            <Td className={`sticky left-0 z-10 dark:text-slate-50 transition-all duration-150`}>{index + 1}</Td>
+            <Td className={`sticky left-0 z-10 bg-white dark:bg-slate-800 dark:text-slate-50 transition-all duration-150`}>{index + 1}</Td>
             <EditableTd
-                tdClassName={`sticky left-12 z-10 transition-all duration-150'}`}
+                tdClassName={`sticky left-12 z-10 bg-white dark:bg-slate-800 transition-all duration-150'}`}
                 row={row}
                 field="symbol"
                 value={row.symbol}

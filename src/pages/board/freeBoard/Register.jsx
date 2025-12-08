@@ -42,7 +42,6 @@ const Register = () => {
             openAlert('게시글 등록이 완료되었습니다.', () => navigate(`/freeboard/`));
         } else {
             openAlert('게시글 등록중 문제가 발생했습니다.\n잠시 후 다시 시도해 주세요.');
-            console.log(error);
         }
     };
 

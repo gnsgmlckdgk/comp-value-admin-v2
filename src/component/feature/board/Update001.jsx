@@ -21,12 +21,12 @@ function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {} }) {
     return (
         <div className="mx-auto max-w-4xl px-4 py-8">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-                <div className="border-b border-slate-200 px-6 py-4">
-                    <h2 className="text-xl font-semibold text-slate-800">게시글 수정</h2>
+                <div className="border-b border-slate-200 px-4 sm:px-6 py-4">
+                    <h2 className="text-lg sm:text-xl font-semibold text-slate-800">게시글 수정</h2>
                     <p className="text-sm text-slate-500 mt-1">게시글 내용을 수정해주세요</p>
                 </div>
 
-                <form className="p-6 space-y-6">
+                <form className="p-4 sm:p-6 space-y-6">
                     <div>
                         <Input id='title' label='제목' value={title} labelNewLine={true} onChange={(e) => setTitle(e.target.value)} disabled={false} wdfull={true} />
                     </div>

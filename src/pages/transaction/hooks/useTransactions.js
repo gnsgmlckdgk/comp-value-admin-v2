@@ -6,6 +6,7 @@ import {
     deleteTransaction,
     fetchFxRate,
     fetchCurrentPricesBySymbols,
+    createSellRecord,
 } from '../services/TransactionService';
 import { sortRowsBySymbolAndDate } from '../utils/sorting';
 import { INITIAL_NEW_ROW } from '../constants';
@@ -143,6 +144,114 @@ export function useTransactions(openAlert = (msg) => alert(msg), openConfirm = (
         setLastUpdated(new Date());
     };
 
+    /**
+     * 매도 처리 (FIFO 방식)
+     * @param {Object} sellData - 매도 정보 { symbol, companyName, sellPrice, sellQty }
+     * @param {Array} targetRows - 매도 대상 행들 (매수일자 기준 오래된 순 정렬 필요)
+     */
+    const processSell = async (sellData, targetRows) => {
+        const { symbol, companyName, sellPrice, sellQty } = sellData;
+
+        setSaving(true);
+        try {
+            // 1. 매도 기록 등록 (실현손익 계산)
+            // FIFO 방식으로 실현손익 계산
+            let remainingQty = sellQty;
+            let totalPnl = 0;
+            const sortedRows = [...targetRows].sort((a, b) =>
+                new Date(a.buyDate || 0) - new Date(b.buyDate || 0)
+            );
+
+            for (const row of sortedRows) {
+                if (remainingQty <= 0) break;
+                const rowQty = row.totalBuyAmount || 0;
+                const sellFromRow = Math.min(remainingQty, rowQty);
+                totalPnl += (sellPrice - (row.buyPrice || 0)) * sellFromRow;
+                remainingQty -= sellFromRow;
+            }
+
+            const sellRecord = {
+                symbol,
+                companyName,
+                sellDate: new Date().toISOString().split('T')[0],
+                sellPrice,
+                sellQty,
+                realizedPnl: totalPnl,
+            };
+
+            await createSellRecord(sellRecord);
+
+            // 2. FIFO 방식으로 수량 차감 및 삭제
+            remainingQty = sellQty;
+            const rowsToDelete = [];
+            const rowsToUpdate = [];
+
+            for (const row of sortedRows) {
+                if (remainingQty <= 0) break;
+                const rowQty = row.totalBuyAmount || 0;
+
+                if (remainingQty >= rowQty) {
+                    // 전량 매도 - 삭제 대상
+                    rowsToDelete.push(row.id);
+                    remainingQty -= rowQty;
+                } else {
+                    // 일부 매도 - 수량 업데이트
+                    rowsToUpdate.push({
+                        id: row.id,
+                        newQty: rowQty - remainingQty,
+                    });
+                    remainingQty = 0;
+                }
+            }
+
+            // 3. 삭제 처리
+            for (const id of rowsToDelete) {
+                await deleteTransaction(id);
+            }
+
+            // 4. 수량 업데이트 처리
+            for (const { id, newQty } of rowsToUpdate) {
+                await updateTransaction(id, { totalBuyAmount: newQty });
+            }
+
+            // 5. 로컬 상태 즉시 업데이트 (API 호출 실패에 대비)
+            setRows((prev) => {
+                let updated = prev.filter((r) => !rowsToDelete.includes(r.id));
+                updated = updated.map((r) => {
+                    const upd = rowsToUpdate.find((u) => u.id === r.id);
+                    return upd ? { ...r, totalBuyAmount: upd.newQty } : r;
+                });
+                return sortRowsBySymbolAndDate(updated);
+            });
+
+            // 6. 백그라운드에서 목록 갱신 시도 (실패해도 무시)
+            try {
+                const list = await fetchTransactions();
+                const prevPriceBySym = new Map(
+                    rows.map((r) => [String(r.symbol || '').toUpperCase(), r.currentPrice])
+                );
+                const merged = list.map((r) => {
+                    const sym = String(r.symbol || '').toUpperCase();
+                    const prevCp = prevPriceBySym.get(sym);
+                    return (prevCp !== undefined && prevCp !== null && prevCp !== '')
+                        ? { ...r, currentPrice: prevCp }
+                        : r;
+                });
+                setRows(sortRowsBySymbolAndDate(merged));
+            } catch (refreshError) {
+                console.warn('목록 갱신 실패 (로컬 상태는 이미 업데이트됨):', refreshError);
+            }
+
+            setLastUpdated(new Date());
+            return { success: true, realizedPnl: totalPnl };
+        } catch (e) {
+            openAlert('매도 처리에 실패했습니다.');
+            return { success: false };
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return {
         rows,
         loading,
@@ -152,5 +261,6 @@ export function useTransactions(openAlert = (msg) => alert(msg), openConfirm = (
         updateTransactionField,
         removeTransaction,
         mergePricesBySymbols,
+        processSell,
     };
 }

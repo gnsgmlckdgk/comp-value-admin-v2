@@ -76,9 +76,13 @@ function createGroupTotalRow(slice, sym, end, n, rows) {
     // 다음 청크가 그룹인지 확인
     const nextIsGroup = isNextChunkGroup(end, n, rows);
 
+    // 기업명 (첫 번째 행에서 가져옴)
+    const companyName = slice[0]?.companyName || '';
+
     return {
         __type: 'groupTotal',
         symbol: sym,
+        companyName,
         qtySum,
         buySumUSD,
         curSumUSD,
@@ -88,6 +92,7 @@ function createGroupTotalRow(slice, sym, end, n, rows) {
         curUSD,
         targetAvgUSD,
         hasNextGroupDivider: nextIsGroup,
+        groupRows: slice, // 매도 처리를 위한 원본 행 데이터
     };
 }
 

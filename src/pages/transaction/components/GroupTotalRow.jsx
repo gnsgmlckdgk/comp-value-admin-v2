@@ -5,8 +5,8 @@ import { TABLE_HEADERS } from '../constants';
 /**
  * 그룹 합계 행
  */
-export function GroupTotalRow({ data, fx }) {
-    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, targetAvgUSD, hasNextGroupDivider } = data;
+export function GroupTotalRow({ data, fx, onSell, saving }) {
+    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, targetAvgUSD, hasNextGroupDivider, companyName, groupRows } = data;
 
     return (
         <tr
@@ -86,7 +86,24 @@ export function GroupTotalRow({ data, fx }) {
                 })()}
             </Td>
             <Td />
-            <Td />
+            <Td>
+                {onSell && (
+                    <button
+                        onClick={() => onSell({
+                            symbol,
+                            companyName,
+                            buyPrice: buyAvgUSD,
+                            totalQty: qtySum,
+                            currentPrice: curUSD,
+                            groupRows,
+                        })}
+                        className="px-2.5 py-1 rounded-md border text-xs hover:bg-blue-50 hover:border-blue-300 cursor-pointer disabled:cursor-not-allowed dark:border-slate-600 dark:text-slate-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-700"
+                        disabled={saving}
+                    >
+                        매도
+                    </button>
+                )}
+            </Td>
         </tr>
     );
 }

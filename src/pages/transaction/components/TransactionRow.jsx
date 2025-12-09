@@ -17,6 +17,8 @@ export function TransactionRow({
     onRemove,
     saving,
     onRowDoubleClick,
+    onSell,
+    isSingleRow = false,
 }) {
     const isHit = toNum(row.targetPrice) > 0 && toNum(row.currentPrice) >= toNum(row.targetPrice);
 
@@ -129,13 +131,24 @@ export function TransactionRow({
                 commitEdit={commitEdit}
             />
             <Td>
-                <button
-                    onClick={() => onRemove(row.id)}
-                    className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300 cursor-pointer disabled:cursor-not-allowed dark:border-slate-600 dark:text-slate-300 dark:hover:bg-rose-900/30 dark:hover:border-rose-700"
-                    disabled={saving}
-                >
-                    삭제
-                </button>
+                <div className="flex gap-1">
+                    {isSingleRow && onSell && (
+                        <button
+                            onClick={() => onSell(row)}
+                            className="px-2.5 py-1 rounded-md border text-xs hover:bg-blue-50 hover:border-blue-300 cursor-pointer disabled:cursor-not-allowed dark:border-slate-600 dark:text-slate-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-700"
+                            disabled={saving}
+                        >
+                            매도
+                        </button>
+                    )}
+                    <button
+                        onClick={() => onRemove(row.id)}
+                        className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300 cursor-pointer disabled:cursor-not-allowed dark:border-slate-600 dark:text-slate-300 dark:hover:bg-rose-900/30 dark:hover:border-rose-700"
+                        disabled={saving}
+                    >
+                        삭제
+                    </button>
+                </div>
             </Td>
         </tr>
     );

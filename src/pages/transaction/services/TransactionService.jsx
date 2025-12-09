@@ -185,3 +185,17 @@ export async function fetchCurrentPriceBySymbol(symbol) {
     const list = await fetchCurrentPricesBySymbols([symbol]);
     return list[0] || null;
 }
+
+// 매도 기록 등록
+export async function createSellRecord(payload) {
+    await delay(200);
+
+    const sendUrl = `/dart/sellrecord/regi`;
+    const { data, error } = await send(sendUrl, payload, "POST");
+
+    if (error == null && data && data.success) {
+        return data.response;
+    } else {
+        throw new Error(data?.message || '매도 기록 등록 실패');
+    }
+}

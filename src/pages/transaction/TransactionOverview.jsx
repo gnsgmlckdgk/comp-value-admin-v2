@@ -15,6 +15,7 @@ import { sortTransactionRows } from './utils/sorting';
 import { COLUMN_WIDTHS, INITIAL_NEW_ROW, TABLE_HEADERS } from './constants';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import SellModal from './components/SellModal';
 import PageTitle from '@/component/common/display/PageTitle';
 import { send } from '@/util/ClientUtil';
 
@@ -44,6 +45,7 @@ export default function TransactionOverview() {
         updateTransactionField,
         removeTransaction,
         mergePricesBySymbols,
+        processSell,
     } = useTransactions(openAlert, openConfirm);
 
     const { fxRate, refreshFxRate } = useFxRate();
@@ -52,6 +54,7 @@ export default function TransactionOverview() {
     const [showCompValueModal, setShowCompValueModal] = useState(false);
     const [compValueData, setCompValueData] = useState({});
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [sellModalData, setSellModalData] = useState({ open: false, data: null, targetRows: [] });
 
     // 편집 완료 핸들러
     const commitEdit = async () => {
@@ -110,6 +113,50 @@ export default function TransactionOverview() {
             column: columnIndex,
             direction: prev.column === columnIndex && prev.direction === 'asc' ? 'desc' : 'asc'
         }));
+    };
+
+    // 매도 모달 열기 (단일 행)
+    const handleOpenSellModalSingle = (row) => {
+        setSellModalData({
+            open: true,
+            data: {
+                symbol: row.symbol,
+                companyName: row.companyName,
+                buyPrice: row.buyPrice,
+                totalQty: row.totalBuyAmount,
+                currentPrice: row.currentPrice,
+            },
+            targetRows: [row],
+        });
+    };
+
+    // 매도 모달 열기 (합계 행)
+    const handleOpenSellModalGroup = (groupData) => {
+        setSellModalData({
+            open: true,
+            data: {
+                symbol: groupData.symbol,
+                companyName: groupData.companyName,
+                buyPrice: groupData.buyPrice,
+                totalQty: groupData.totalQty,
+                currentPrice: groupData.currentPrice,
+            },
+            targetRows: groupData.groupRows || [],
+        });
+    };
+
+    // 매도 실행
+    const handleConfirmSell = async (sellData) => {
+        const result = await processSell(sellData, sellModalData.targetRows);
+        if (result.success) {
+            setSellModalData({ open: false, data: null, targetRows: [] });
+            openAlert(`매도가 완료되었습니다.\n실현손익: $ ${result.realizedPnl?.toFixed(2) || 0}`);
+        }
+    };
+
+    // 매도 모달 닫기
+    const handleCloseSellModal = () => {
+        setSellModalData({ open: false, data: null, targetRows: [] });
     };
 
     // 정렬된 행 목록
@@ -209,10 +256,19 @@ export default function TransactionOverview() {
 
                                         // 그룹 합계 행
                                         if (r.__type === 'groupTotal') {
-                                            return <GroupTotalRow key={`g-${r.symbol}-${i}`} data={r} fx={fxRate} />;
+                                            return (
+                                                <GroupTotalRow
+                                                    key={`g-${r.symbol}-${i}`}
+                                                    data={r}
+                                                    fx={fxRate}
+                                                    onSell={handleOpenSellModalGroup}
+                                                    saving={saving}
+                                                />
+                                            );
                                         }
 
-                                        // 일반 데이터 행
+                                        // 일반 데이터 행 - 단일 행인지 확인 (그룹에 속하지 않은 경우)
+                                        const isSingleRow = !r.__groupKey;
                                         const currentIndex = dataRowIndex;
                                         dataRowIndex++;
                                         return (
@@ -230,6 +286,8 @@ export default function TransactionOverview() {
                                                 onRemove={removeTransaction}
                                                 saving={saving}
                                                 onRowDoubleClick={handleRowDoubleClick}
+                                                onSell={handleOpenSellModalSingle}
+                                                isSingleRow={isSingleRow}
                                             />
                                         );
                                     });
@@ -268,6 +326,15 @@ export default function TransactionOverview() {
                 open={alertConfig.open}
                 message={alertConfig.message}
                 onClose={handleCloseAlert}
+            />
+
+            <SellModal
+                open={sellModalData.open}
+                onClose={handleCloseSellModal}
+                onConfirm={handleConfirmSell}
+                data={sellModalData.data}
+                fx={fxRate}
+                saving={saving}
             />
         </>
     );

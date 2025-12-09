@@ -158,14 +158,14 @@ const AbroadCompValue = () => {
     );
 
     return (
-        <div className="px-2 py-8 md:px-4">
-            <Loading show={isLoading} />
-
-            {/* 헤더 */}
+        <>
             <PageTitle />
-            <div className="mb-6">
-                <p className="text-sm text-slate-600 dark:text-slate-300">심볼을 검색하고 행을 클릭하면 기업가치 계산 결과를 확인할 수 있습니다.</p>
-            </div>
+            {/* <div className="px-2 py-8 md:px-4"> */}
+            {/* 헤더 */}
+
+            <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">심볼을 검색하고 행을 클릭하면 기업가치 계산 결과를 확인할 수 있습니다.</p>
+
+            <Loading show={isLoading} />
 
             {/* 검색 영역 */}
             <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-4 mb-4 dark:bg-slate-800 dark:border-slate-700">
@@ -266,7 +266,8 @@ const AbroadCompValue = () => {
                 message={alertConfig.message}
                 onClose={handleCloseAlert}
             />
-        </div>
+            {/* </div> */}
+        </>
     );
 };
 

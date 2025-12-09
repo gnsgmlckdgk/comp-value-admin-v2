@@ -183,7 +183,23 @@ async function exportToExcel(items) {
         const future = toNum(it.주당가치);
         const peg = toNum(it.peg);
 
+        // PER 정보 추출 (있는 경우)
+        const per = it.json?.상세정보?.per ? toNum(it.json.상세정보.per) :
+                    it.json?.per ? toNum(it.json.per) :
+                    it.json?.PER ? toNum(it.json.PER) : NaN;
+
+        // 성장률보정PER 정보 추출 (있는 경우)
+        const perAdj = it.json?.상세정보?.성장률보정PER ? toNum(it.json.상세정보.성장률보정PER) :
+                       it.json?.성장률보정PER ? toNum(it.json.성장률보정PER) : NaN;
+
+        // 하이라이트 조건: PEG, PER, 성장률보정PER 중 하나라도 음수이면 제외
+        const hasValidMetrics =
+            Number.isFinite(peg) && peg > 0 &&
+            (!Number.isFinite(per) || per > 0) &&
+            (!Number.isFinite(perAdj) || perAdj > 0);
+
         const yellow =
+            hasValidMetrics &&
             Number.isFinite(cur) && Number.isFinite(future) && cur < future && peg < 1.0;
 
         const closePct =
@@ -192,7 +208,7 @@ async function exportToExcel(items) {
                 : NaN;
 
         const sky =
-            !yellow && (
+            hasValidMetrics && !yellow && (
                 ((Number.isFinite(closePct) && closePct <= pctCloseThreshold) && peg < 1.0) ||
                 (cur < future && peg >= 1.0 && peg <= 1.5)
             );

@@ -57,76 +57,72 @@ const CompValue = () => {
     return (
         <>
             <PageTitle />
-            <div className="px-2 py-8 md:px-4">
+            {/* <div className="px-2 py-8 md:px-4"> */}
 
-                <Loading show={isLoading} />
-                {isPopup && (
-                    <BulkCalcPopup onClose={() => setIsPopup(false)} year={baseYear} openAlert={openAlert} />
-                )}
+            <p className="mb-6 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">당기, 전전기 등 현재년도 기준 아직 재무정보가 없는 경우 가장 최근 재무정보를 한번 더 읽어서 계산하기 때문에 수동계산이랑 값이 다를 수 있음.</p>
 
-                <div>
-                    {/* 설명란 */}
-                    <div>
-                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 leading-relaxed">당기, 전전기 등 현재년도 기준 아직 재무정보가 없는 경우
-                            가장 최근 재무정보를 한번 더 읽어서 계산하기 때문에
-                            수동계산이랑 값이 다를 수 있음.</p>
-                    </div>
-                    {/* 입력란 */}
-                    <div className="flex flex-col md:flex-row md:items-end mb-4 gap-y-3 md:gap-y-0 flex-wrap w-full">
-                        <div className="flex flex-col md:flex-row flex-1 gap-y-2 md:gap-y-0 md:gap-x-1 w-full">
-                            <Input id="compName" placeholder='기업명' value={compName} onEnter={fetchData} onChange={(e) => setCompName(e.target.value)} className="min-w-0 flex-[2]" />
-                            <Input id="compCode" placeholder='기업코드' value={compCode} onEnter={fetchData} onChange={(e) => setCompCode(e.target.value)} className="min-w-0 flex-[2]" />
-                            <Input
-                                id="baseDt"
-                                placeholder="기준년도"
-                                inputMode="numeric"
-                                value={baseYear}
-                                onChange={(e) => {
-                                    const numeric = e.target.value.replace(/[^0-9]/g, '');
-                                    setBaseYear(numeric.slice(0, 4));
-                                }}
-                                className="min-w-0 flex-1"
-                            />
-                        </div>
-                        <div className="flex flex-col md:flex-row justify-end items-stretch md:items-center gap-y-2 md:gap-x-2 mt-3 md:mt-2 md:ml-2 flex-wrap w-full">
-                            <Button children='분석' variant='primary' onClick={fetchData} className='h-10 px-4' />
-                            <Button children='대량분석' variant='primary' onClick={() => setIsPopup(true)} className="h-10 px-4" />
-                        </div>
-                    </div>
-                </div>
+            <Loading show={isLoading} />
+            {isPopup && (
+                <BulkCalcPopup onClose={() => setIsPopup(false)} year={baseYear} openAlert={openAlert} />
+            )}
 
-                {/* 결과 */}
-                <div>
-                    <InfoTable
-                        rows={[
-                            ['결과메시지', rowData ? rowData.결과메시지 : ''],
-                            ['기업명', rowData ? rowData.기업명 : ''],
-                            ['기업코드', rowData ? rowData.기업코드 : ''],
-                            ['주식코드', rowData ? rowData.주식코드 : ''],
-                            ['주당가치', rowData?.주당가치 ? Number(rowData.주당가치).toLocaleString() : ''],
-                            ['현재가격', rowData?.현재가격 ? Number(rowData.현재가격).toLocaleString() : ''],
-                            ['확인시간', rowData ? rowData.확인시간 : ''],
-                        ]}
-                    />
-                    {/* 상세결과 */}
-                    <ToggleSection title="상세">
-                        <SimpleList
-                            rows={
-                                rowData?.상세정보
-                                    ? Object.entries(rowData.상세정보).map(([key, value]) => {
-                                        return [key, value];
-                                    })
-                                    : []
-                            }
+            <div>
+                {/* 입력란 */}
+                <div className="flex flex-col md:flex-row md:items-end mb-4 gap-y-3 md:gap-y-0 flex-wrap w-full">
+                    <div className="flex flex-col md:flex-row flex-1 gap-y-2 md:gap-y-0 md:gap-x-1 w-full">
+                        <Input id="compName" placeholder='기업명' value={compName} onEnter={fetchData} onChange={(e) => setCompName(e.target.value)} className="min-w-0 flex-[2]" />
+                        <Input id="compCode" placeholder='기업코드' value={compCode} onEnter={fetchData} onChange={(e) => setCompCode(e.target.value)} className="min-w-0 flex-[2]" />
+                        <Input
+                            id="baseDt"
+                            placeholder="기준년도"
+                            inputMode="numeric"
+                            value={baseYear}
+                            onChange={(e) => {
+                                const numeric = e.target.value.replace(/[^0-9]/g, '');
+                                setBaseYear(numeric.slice(0, 4));
+                            }}
+                            className="min-w-0 flex-1"
                         />
-                        {rowData?.상세정보 && (
-                            <div className="mt-4 px-4 py-2 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded text-sm dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-300">
-                                ⚠️ 위 수치는 단위 적용이 되어있지 않습니다.
-                            </div>
-                        )}
-                    </ToggleSection>
+                    </div>
+                    <div className="flex flex-col md:flex-row justify-end items-stretch md:items-center gap-y-2 md:gap-x-2 mt-3 md:mt-2 md:ml-2 flex-wrap w-full">
+                        <Button children='분석' variant='primary' onClick={fetchData} className='h-10 px-4' />
+                        <Button children='대량분석' variant='primary' onClick={() => setIsPopup(true)} className="h-10 px-4" />
+                    </div>
                 </div>
             </div>
+
+            {/* 결과 */}
+            <div>
+                <InfoTable
+                    rows={[
+                        ['결과메시지', rowData ? rowData.결과메시지 : ''],
+                        ['기업명', rowData ? rowData.기업명 : ''],
+                        ['기업코드', rowData ? rowData.기업코드 : ''],
+                        ['주식코드', rowData ? rowData.주식코드 : ''],
+                        ['주당가치', rowData?.주당가치 ? Number(rowData.주당가치).toLocaleString() : ''],
+                        ['현재가격', rowData?.현재가격 ? Number(rowData.현재가격).toLocaleString() : ''],
+                        ['확인시간', rowData ? rowData.확인시간 : ''],
+                    ]}
+                />
+                {/* 상세결과 */}
+                <ToggleSection title="상세">
+                    <SimpleList
+                        rows={
+                            rowData?.상세정보
+                                ? Object.entries(rowData.상세정보).map(([key, value]) => {
+                                    return [key, value];
+                                })
+                                : []
+                        }
+                    />
+                    {rowData?.상세정보 && (
+                        <div className="mt-4 px-4 py-2 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded text-sm dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-300">
+                            ⚠️ 위 수치는 단위 적용이 되어있지 않습니다.
+                        </div>
+                    )}
+                </ToggleSection>
+            </div>
+            {/* </div> */}
 
             <AlertModal
                 open={alertConfig.open}

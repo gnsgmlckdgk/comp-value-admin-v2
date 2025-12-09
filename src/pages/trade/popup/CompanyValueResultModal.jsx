@@ -667,7 +667,16 @@ const useCompanyMetrics = (data) => {
         const pegToShow = !Number.isNaN(pegBackendNum) ? pegBackendNum : pegCalc;
         const priceNum = toNum(price);
         const targetNum = toNum(target);
-        const isRecommended = Number.isFinite(pegToShow) && pegToShow <= 1 &&
+        const perAdjNum = toNum(perAdj);
+
+        // 투자 권장 조건:
+        // 1. PEG가 0 < PEG <= 1 범위에 있어야 함 (음수 제외)
+        // 2. PER이 양수여야 함 (음수 제외)
+        // 3. 성장률보정PER이 있다면 양수여야 함 (음수 제외)
+        // 4. 적정가 > 현재가
+        const isRecommended = Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
+            Number.isFinite(perNum) && perNum > 0 &&
+            (!Number.isFinite(perAdjNum) || perAdjNum > 0) &&
             !Number.isNaN(priceNum) && !Number.isNaN(targetNum) &&
             targetNum > priceNum;
 
@@ -675,7 +684,7 @@ const useCompanyMetrics = (data) => {
             symbol,
             name,
             per: Number.isNaN(perNum) ? null : perNum,
-            perAdj: Number.isNaN(toNum(perAdj)) ? null : toNum(perAdj),
+            perAdj: Number.isNaN(perAdjNum) ? null : perAdjNum,
             peg: Number.isFinite(pegToShow) ? pegToShow : null,
             eps: Number.isNaN(toNum(eps)) ? null : toNum(eps),
             isRecommended

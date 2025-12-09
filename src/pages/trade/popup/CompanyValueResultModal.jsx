@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import StockChartModal from './StockChartModal';
+import CompanyInfoModal from './CompanyInfoModal';
 
 /**
  * 기업가치 계산 결과 모달 컴포넌트
@@ -10,7 +11,8 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
     const [overlays, setOverlays] = useState({
         guide: false,
         detail: false,
-        chart: false
+        chart: false,
+        companyInfo: false
     });
     const [detailView, setDetailView] = useState({
         title: '',
@@ -31,7 +33,9 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
         const handleEscape = (e) => {
             if (e.key !== 'Escape') return;
 
-            if (overlays.chart) {
+            if (overlays.companyInfo) {
+                setOverlays(prev => ({ ...prev, companyInfo: false }));
+            } else if (overlays.chart) {
                 setOverlays(prev => ({ ...prev, chart: false }));
             } else if (overlays.detail) {
                 setOverlays(prev => ({ ...prev, detail: false }));
@@ -67,6 +71,11 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
         setOverlays(prev => ({ ...prev, [overlayName]: false }));
     }, []);
 
+    // 기업정보 모달 열기
+    const handleOpenCompanyInfo = useCallback(() => {
+        setOverlays(prev => ({ ...prev, companyInfo: true }));
+    }, []);
+
     if (!isOpen) return null;
 
     // 심볼과 회사명 추출
@@ -91,7 +100,11 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                 className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
                 onClick={(e) => e.stopPropagation()}
             >
-                <ModalHeader onClose={onClose} />
+                <ModalHeader
+                    onClose={onClose}
+                    onOpenCompanyInfo={handleOpenCompanyInfo}
+                    symbol={symbol}
+                />
                 <ModalContent
                     data={data}
                     onCopy={handleCopyToClipboard}
@@ -125,6 +138,13 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                 companyName={companyName}
             />
 
+            {/* 기업정보 모달 */}
+            <CompanyInfoModal
+                isOpen={overlays.companyInfo}
+                onClose={() => closeOverlay('companyInfo')}
+                symbol={symbol}
+            />
+
             {/* Toast 알림 */}
             {toast && <Toast message={toast} />}
         </>
@@ -134,15 +154,25 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
 /**
  * 모달 헤더
  */
-const ModalHeader = ({ onClose }) => (
+const ModalHeader = ({ onClose, onOpenCompanyInfo, symbol }) => (
     <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b bg-white z-10 dark:bg-slate-800 dark:border-slate-700">
         <h2 className="text-lg font-semibold dark:text-white">기업가치 계산 결과</h2>
-        <button
-            className="text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-            onClick={onClose}
-        >
-            닫기 (Esc)
-        </button>
+        <div className="flex items-center gap-2">
+            {symbol && (
+                <button
+                    className="text-sm px-3 py-1 border rounded bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/50"
+                    onClick={onOpenCompanyInfo}
+                >
+                    기업정보
+                </button>
+            )}
+            <button
+                className="text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                onClick={onClose}
+            >
+                닫기 (Esc)
+            </button>
+        </div>
     </div>
 );
 

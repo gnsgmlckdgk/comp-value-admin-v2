@@ -62,6 +62,9 @@ function createGroupTotalRow(slice, sym, end, n, rows) {
     const diffUSD = curSumUSD - buySumUSD;
     const diffPct = buySumUSD > 0 ? (diffUSD / buySumUSD) * 100 : 0;
 
+    // 매수가격: 가중 평균 (총매수금액 / 총수량)
+    const buyAvgUSD = qtySum > 0 ? buySumUSD / qtySum : 0;
+
     // 현재가: 평균값 사용 (빈 값 제외)
     const curList = slice.map(r => toNum(r.currentPrice)).filter(v => v > 0);
     const curUSD = curList.length ? (curList.reduce((a, b) => a + b, 0) / curList.length) : 0;
@@ -81,6 +84,7 @@ function createGroupTotalRow(slice, sym, end, n, rows) {
         curSumUSD,
         diffUSD,
         diffPct,
+        buyAvgUSD,
         curUSD,
         targetAvgUSD,
         hasNextGroupDivider: nextIsGroup,

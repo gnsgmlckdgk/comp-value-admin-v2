@@ -6,7 +6,7 @@ import { TABLE_HEADERS } from '../constants';
  * 그룹 합계 행
  */
 export function GroupTotalRow({ data, fx }) {
-    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, targetAvgUSD, hasNextGroupDivider } = data;
+    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, targetAvgUSD, hasNextGroupDivider } = data;
 
     return (
         <tr
@@ -17,8 +17,16 @@ export function GroupTotalRow({ data, fx }) {
             <Td className="sticky left-12 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 font-bold text-slate-800 dark:from-blue-900 dark:to-indigo-900 dark:text-white">{symbol} 합계</Td>
             <Td />
             <Td />
-            <Td />
-            <Td />
+            <Td>
+                <div className="px-1 h-9 flex items-center text-slate-700 font-medium dark:text-slate-300">
+                    {buyAvgUSD ? `$ ${fmtUsd(buyAvgUSD)}` : ''}
+                </div>
+            </Td>
+            <Td>
+                <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium dark:text-slate-300">
+                    {buyAvgUSD && fx ? `₩ ${Math.round(buyAvgUSD * fx).toLocaleString()}` : ''}
+                </div>
+            </Td>
             <Td>
                 <div className="px-1 h-9 flex items-center dark:text-slate-50">{qtySum ? fmtNum(qtySum, 0) : ''}</div>
             </Td>

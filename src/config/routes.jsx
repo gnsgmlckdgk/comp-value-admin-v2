@@ -13,6 +13,8 @@ import AbroadCompValue from '@/pages/trade/AbroadCompValue'
 
 const routes = {
 
+    /** SideBar001.jsx 에 SECTIONS 도 같이 수정 필요 */
+
     "Home": {
         section: '시작하기', label: 'Home', path: '/', element: <Home />
     },
@@ -29,7 +31,7 @@ const routes = {
     "CompValueCustom": { section: '기업분석(국내)', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
 
     /* 기업분석(미국) */
-    "AbroadCompValue": { section: '기업분석(미국)', label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
+    "AbroadCompValue": { section: '기업분석(미국)', label: '보유종목관리', path: '/compvalue/abroad', element: <AbroadCompValue /> },
 
     /* 거래 */
     "TransactionOverview": { section: '거래', label: '거래기록(미국)', path: '/transaction/overview', element: <TransactionOverview /> },

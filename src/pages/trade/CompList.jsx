@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 import { send } from '@/util/ClientUtil';
 import Board from '@/component/feature/board/List001';
+import PageTitle from '@/component/common/display/PageTitle';
 
 function CompList() {
 
@@ -33,7 +34,7 @@ function CompList() {
 
     return (
         <>
-            <h1 className='text-2xl md:text-3xl font-bold tracking-tight text-slate-800 dark:text-white'>기업목록</h1>
+            <PageTitle />
             <Board fetchData={fetchData} columns={columns} rowData={data} loading={loading} searchState={{ search, setSearch }} />
         </>
     )

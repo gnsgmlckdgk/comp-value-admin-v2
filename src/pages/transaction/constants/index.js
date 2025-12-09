@@ -24,7 +24,7 @@ export const TABLE_HEADERS = [
  */
 export const COLUMN_WIDTHS = [
     'w-12',   // No (10 -> 12)
-    'w-20',   // 티커 (16 -> 20)
+    'w-24',   // 티커 (16 -> 24)
     'w-36',   // 기업명 (32 -> 36)
     'w-24',   // 매수일자
     'w-24',   // 매수가격(USD) (20 -> 24)

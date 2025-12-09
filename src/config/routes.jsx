@@ -32,7 +32,7 @@ const routes = {
     "AbroadCompValue": { section: '기업분석(미국)', label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
 
     /* 거래 */
-    "TransactionOverview": { section: '거래', label: '거래현황(미국)', path: '/transaction/overview', element: <TransactionOverview /> },
+    "TransactionOverview": { section: '거래', label: '거래기록(미국)', path: '/transaction/overview', element: <TransactionOverview /> },
 
     /* 게시판 */
     "FreeBoard": {

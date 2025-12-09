@@ -56,12 +56,12 @@ function List001({ columns = [], rowData = [], fetchData, loading = false, searc
 
     return (
         <>
-            <div className="rounded-md shadow-sm font-semibold text-gray-600 p-3">
+            <div className="rounded-md shadow-sm font-semibold text-gray-600 p-3 dark:text-slate-300">
                 <SearchBar001 fetchData={fetchData} searchBarLabel='' searchState={searchState} />
                 <div className="flex justify-end mb-2">
                     <span>{count} 건</span>
                 </div>
-                <Grid02 columns={gColumns} rowData={rowData} loading={loading} />
+                <Grid02 columns={gColumns} rowData={rowData} loading={loading} height="h-[calc(100vh-320px)]" />
             </div>
         </>
     )

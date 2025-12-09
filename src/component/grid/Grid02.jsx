@@ -60,6 +60,7 @@ const NoDataComponent = () => {
  * @param {Object[]} [rowData=[]] - 테이블에 표시할 데이터 배열입니다.
  * @param {boolean} [loading=false] - 데이터 로딩 상태를 나타냅니다.
  * @param {boolean} [showPageNation=false] - 페이지네이션 표시 여부를 설정합니다.
+ * @param {string} [height='md:h-156 h-96'] - 그리드의 높이 클래스 (Tailwind CSS)
  * @returns {JSX.Element} 렌더링된 AG Grid 컴포넌트입니다.
  *
  * @example
@@ -72,13 +73,13 @@ const NoDataComponent = () => {
  *   { name: "김철수", age: 25 },
  * ];
  *
- * <Grid02 columns={columns} rowData={data} loading={false} showPageNation={true} />
+ * <Grid02 columns={columns} rowData={data} loading={false} showPageNation={true} height="h-screen" />
  */
 
 
 
 // function Grid02({ ref, columns, rowData = [], loading = false, showPageNation = false, moveViewPage }) {
-const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNation = false, moveViewPage = null }, ref) => {
+const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNation = false, moveViewPage = null, height = 'md:h-156 h-96' }, ref) => {
 
     const [gridApi, setGridApi] = useState(null);
     const navigate = useNavigate();
@@ -105,7 +106,7 @@ const Grid02 = forwardRef(({ columns, rowData = [], loading = false, showPageNat
     };
 
     return (
-        <div className={`ag-theme-alpine md:h-156 h-96 ${isDark ? 'dark-mode' : ''}`}>
+        <div className={`ag-theme-alpine ${height} ${isDark ? 'dark-mode' : ''}`}>
             {/* 그리드 */}
             <AgGridReact
                 onGridReady={onGridReady}

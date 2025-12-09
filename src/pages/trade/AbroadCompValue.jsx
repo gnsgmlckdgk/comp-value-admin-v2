@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import BulkQueryModal from '@/pages/trade/popup/BulkQueryModal';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import PageTitle from '@/component/common/display/PageTitle';
 import { send } from '@/util/ClientUtil';
 
 // ----------------------------------------------
@@ -161,9 +162,9 @@ const AbroadCompValue = () => {
             <Loading show={isLoading} />
 
             {/* 헤더 */}
+            <PageTitle />
             <div className="mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800 dark:text-white">기업분석(해외)</h1>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">심볼을 검색하고 행을 클릭하면 기업가치 계산 결과를 확인할 수 있습니다.</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300">심볼을 검색하고 행을 클릭하면 기업가치 계산 결과를 확인할 수 있습니다.</p>
             </div>
 
             {/* 검색 영역 */}

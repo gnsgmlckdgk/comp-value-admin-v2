@@ -6,6 +6,7 @@ import SimpleList from '@/component/common/list/SimpleList';
 import Loading from '@/component/common/display/Loading';
 import BulkCalcPopup from './popup/BulkCalcPopup';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import PageTitle from '@/component/common/display/PageTitle';
 
 import { useState, useEffect } from 'react'
 
@@ -55,7 +56,7 @@ const CompValue = () => {
 
     return (
         <>
-            <h1 className='text-2xl md:text-3xl font-bold tracking-tight text-slate-800 dark:text-white'>기업분석</h1>
+            <PageTitle />
             <div className="px-2 py-8 md:px-4">
 
                 <Loading show={isLoading} />

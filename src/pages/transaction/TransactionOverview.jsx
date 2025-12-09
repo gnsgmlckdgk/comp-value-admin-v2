@@ -11,13 +11,16 @@ import { useFxRate } from './hooks/useFxRate';
 import { useEditing } from './hooks/useEditing';
 import { groupRowsBySymbol } from './utils/grouping';
 import { calculateTotals, calculateDiffAndPercent } from './utils/calculations';
+import { sortTransactionRows } from './utils/sorting';
 import { COLUMN_WIDTHS, INITIAL_NEW_ROW, TABLE_HEADERS } from './constants';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import PageTitle from '@/component/common/display/PageTitle';
 import { send } from '@/util/ClientUtil';
 
 export default function TransactionOverview() {
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+    const [sortConfig, setSortConfig] = useState({ column: null, direction: 'asc' });
 
     const openAlert = (message, onConfirm) => {
         setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
@@ -101,8 +104,24 @@ export default function TransactionOverview() {
         }
     };
 
+    // 정렬 핸들러
+    const handleSort = (columnIndex) => {
+        setSortConfig(prev => ({
+            column: columnIndex,
+            direction: prev.column === columnIndex && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    // 정렬된 행 목록
+    const sortedRows = useMemo(() => {
+        if (sortConfig.column === null) {
+            return rows;
+        }
+        return sortTransactionRows(rows, sortConfig.column, sortConfig.direction);
+    }, [rows, sortConfig]);
+
     // 그룹화된 행 목록
-    const groupedRows = useMemo(() => groupRowsBySymbol(rows), [rows]);
+    const groupedRows = useMemo(() => groupRowsBySymbol(sortedRows), [sortedRows]);
 
     // 전체 합계 계산
     const totals = useMemo(() => calculateTotals(rows), [rows]);
@@ -113,7 +132,7 @@ export default function TransactionOverview() {
 
     return (
         <>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800 dark:text-white">보유 종목 관리</h1>
+            <PageTitle />
 
             <div className="mt-3 mb-4 px-2 md:px-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm dark:bg-blue-900/30 dark:border-blue-800">
@@ -149,7 +168,7 @@ export default function TransactionOverview() {
                                 ))}
                             </colgroup>
 
-                            <TransactionTableHeader />
+                            <TransactionTableHeader sortConfig={sortConfig} onSort={handleSort} />
 
                             <tbody className="text-sm whitespace-nowrap">
                                 {rows.length === 0 && !loading && (
@@ -174,42 +193,47 @@ export default function TransactionOverview() {
                                     </tr>
                                 )}
 
-                                {groupedRows.map((r, i) => {
-                                    // 그룹 시작 구분선
-                                    if (r.__type === 'groupStartDivider') {
+                                {(() => {
+                                    let dataRowIndex = 0;
+                                    return groupedRows.map((r, i) => {
+                                        // 그룹 시작 구분선
+                                        if (r.__type === 'groupStartDivider') {
+                                            return (
+                                                <tr key={`gs-${r.symbol}-${i}`}>
+                                                    <td colSpan={TABLE_HEADERS.length} className="p-0">
+                                                        <div className="h-2 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700" />
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }
+
+                                        // 그룹 합계 행
+                                        if (r.__type === 'groupTotal') {
+                                            return <GroupTotalRow key={`g-${r.symbol}-${i}`} data={r} fx={fxRate} />;
+                                        }
+
+                                        // 일반 데이터 행
+                                        const currentIndex = dataRowIndex;
+                                        dataRowIndex++;
                                         return (
-                                            <tr key={`gs-${r.symbol}-${i}`}>
-                                                <td colSpan={TABLE_HEADERS.length} className="p-0">
-                                                    <div className="h-2 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700" />
-                                                </td>
-                                            </tr>
+                                            <TransactionRow
+                                                key={r.id}
+                                                row={r}
+                                                index={currentIndex}
+                                                fx={fxRate}
+                                                editing={editing}
+                                                setEditing={setEditing}
+                                                draft={draft}
+                                                setDraft={setDraft}
+                                                startEdit={startEdit}
+                                                commitEdit={commitEdit}
+                                                onRemove={removeTransaction}
+                                                saving={saving}
+                                                onRowDoubleClick={handleRowDoubleClick}
+                                            />
                                         );
-                                    }
-
-                                    // 그룹 합계 행
-                                    if (r.__type === 'groupTotal') {
-                                        return <GroupTotalRow key={`g-${r.symbol}-${i}`} data={r} fx={fxRate} />;
-                                    }
-
-                                    // 일반 데이터 행
-                                    return (
-                                        <TransactionRow
-                                            key={r.id}
-                                            row={r}
-                                            index={i}
-                                            fx={fxRate}
-                                            editing={editing}
-                                            setEditing={setEditing}
-                                            draft={draft}
-                                            setDraft={setDraft}
-                                            startEdit={startEdit}
-                                            commitEdit={commitEdit}
-                                            onRemove={removeTransaction}
-                                            saving={saving}
-                                            onRowDoubleClick={handleRowDoubleClick}
-                                        />
-                                    );
-                                })}
+                                    });
+                                })()}
 
                                 <NewTransactionRow
                                     newRow={newRow}

@@ -1,6 +1,7 @@
 import Loading from '@/component/common/display/Loading';
 import InputRowList from '@/component/common/input/InputRowList_Number';
 import Button from '@/component/common/button/Button';
+import PageTitle from '@/component/common/display/PageTitle';
 
 import { useState, useEffect } from 'react'
 import { send } from '@/util/ClientUtil';
@@ -92,7 +93,7 @@ const CompValueCustom = () => {
 
     return (
         <>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800 dark:text-white mb-6">기업분석(수동)</h1>
+            <PageTitle />
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-lg p-6 space-y-6">
                 <Loading show={isLoading} />
 

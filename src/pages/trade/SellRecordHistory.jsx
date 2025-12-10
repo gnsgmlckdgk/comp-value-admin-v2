@@ -11,11 +11,11 @@ const COLUMN_WIDTHS = {
     symbol: 'w-14',        // 티커
     companyName: 'w-30',   // 기업명
     sellPrice: 'w-28',     // 매도가
-    sellQty: 'w-16',   // 수량 (w-15는 유효하지 않음, w-16 사용)
+    sellQty: 'w-16',       // 수량 (w-15는 유효하지 않음, w-16 사용)
     sellAmount: 'w-28',    // 매도금액
     realizedPnl: 'w-28',   // 실현손익
     rmk: 'w-30',           // 비고
-    manage: 'w-25',    // 관리
+    manage: 'w-25',        // 관리
 };
 
 export default function SellRecordHistory() {

@@ -11,6 +11,7 @@ import CompValueCustom from '@/pages/trade/CompValueCustom'
 import TransactionOverview from '@/pages/transaction/TransactionOverview'
 import AbroadCompValue from '@/pages/trade/AbroadCompValue'
 import SellRecordHistory from '@/pages/trade/SellRecordHistory'
+import MyProfile from '@/pages/member/MyProfile'
 
 const routes = {
 
@@ -25,6 +26,7 @@ const routes = {
 
     /* 회원정보 */
     "로그인": { section: '회원정보', label: '로그인', path: '/', element: <Home /> },
+    "MyProfile": { section: '회원정보', show: false, label: '내 정보', path: '/member/profile', element: <MyProfile /> },
 
     /* 기업분석(국내) */
     "CompList": { section: '기업분석(국내)', label: '기업목록', path: '/complist', element: <CompList /> },

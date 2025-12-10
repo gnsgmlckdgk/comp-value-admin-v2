@@ -182,12 +182,15 @@ export default function Header001({ onMenuClick }) {
                         </button>
 
                         {isLoggedIn && displayName && (
-                            <div className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-slate-700 shadow-sm md:gap-2 md:px-3 md:py-1.5 dark:bg-slate-700 dark:text-slate-200">
+                            <Link
+                                to="/member/profile"
+                                className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-slate-700 shadow-sm md:gap-2 md:px-3 md:py-1.5 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+                            >
                                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-400 text-xs font-semibold text-white md:h-7 md:w-7">
                                     {displayName.charAt(0)}
                                 </div>
                                 <span className="max-w-[60px] truncate text-xs md:max-w-[120px] md:text-sm">{displayName}<span className="hidden sm:inline"> 님</span></span>
-                            </div>
+                            </Link>
                         )}
 
                         {isLoggedIn ? (

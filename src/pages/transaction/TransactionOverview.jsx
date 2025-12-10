@@ -3,7 +3,6 @@ import { TransactionHeader } from './components/TransactionHeader';
 import { TransactionTableHeader } from './components/TransactionTableHeader';
 import { TransactionRow } from './components/TransactionRow';
 import { GroupTotalRow } from './components/GroupTotalRow';
-import { NewTransactionRow } from './components/NewTransactionRow';
 import { TransactionSummary } from './components/TransactionSummary';
 import { Td } from './components/TableCells';
 import { useTransactions } from './hooks/useTransactions';
@@ -12,10 +11,11 @@ import { useEditing } from './hooks/useEditing';
 import { groupRowsBySymbol } from './utils/grouping';
 import { calculateTotals, calculateDiffAndPercent } from './utils/calculations';
 import { sortTransactionRows } from './utils/sorting';
-import { COLUMN_WIDTHS, INITIAL_NEW_ROW, TABLE_HEADERS } from './constants';
+import { COLUMN_WIDTHS, TABLE_HEADERS } from './constants';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import SellModal from './components/SellModal';
+import TransactionModal from './components/TransactionModal';
 import PageTitle from '@/component/common/display/PageTitle';
 import { send } from '@/util/ClientUtil';
 
@@ -50,11 +50,11 @@ export default function TransactionOverview() {
 
     const { fxRate, refreshFxRate } = useFxRate();
     const { editing, setEditing, draft, setDraft, startEdit, cancelEdit } = useEditing();
-    const [newRow, setNewRow] = useState(INITIAL_NEW_ROW);
     const [showCompValueModal, setShowCompValueModal] = useState(false);
     const [compValueData, setCompValueData] = useState({});
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [sellModalData, setSellModalData] = useState({ open: false, data: null, targetRows: [] });
+    const [transactionModalData, setTransactionModalData] = useState({ open: false, mode: 'add', data: null });
 
     // 편집 완료 핸들러
     const commitEdit = async () => {
@@ -64,12 +64,19 @@ export default function TransactionOverview() {
         cancelEdit();
     };
 
-    // 신규 행 추가
-    const handleAddRow = async () => {
-        const success = await addTransaction(newRow, mergePricesBySymbols);
+    // 종목 추가 모달 열기
+    const handleOpenAddModal = () => {
+        setTransactionModalData({ open: true, mode: 'add', data: null });
+    };
+
+    // 종목 추가/수정 저장
+    const handleSaveTransaction = async (formData) => {
+        const success = await addTransaction(formData, mergePricesBySymbols);
         if (success) {
-            setNewRow(INITIAL_NEW_ROW);
+            setTransactionModalData({ open: false, mode: 'add', data: null });
+            openAlert('종목이 등록되었습니다.');
         }
+        return success;
     };
 
     // 현재가 갱신
@@ -204,6 +211,7 @@ export default function TransactionOverview() {
                     lastUpdated={lastUpdated}
                     fxRate={fxRate}
                     onRefresh={handleRefreshPrices}
+                    onAddClick={handleOpenAddModal}
                 />
 
                 <div className="mx-0">
@@ -292,13 +300,6 @@ export default function TransactionOverview() {
                                         );
                                     });
                                 })()}
-
-                                <NewTransactionRow
-                                    newRow={newRow}
-                                    setNewRow={setNewRow}
-                                    onAdd={handleAddRow}
-                                    saving={saving}
-                                />
                             </tbody>
                         </table>
                     </div>
@@ -335,6 +336,14 @@ export default function TransactionOverview() {
                 data={sellModalData.data}
                 fx={fxRate}
                 saving={saving}
+            />
+
+            <TransactionModal
+                isOpen={transactionModalData.open}
+                mode={transactionModalData.mode}
+                data={transactionModalData.data}
+                onClose={() => setTransactionModalData({ open: false, mode: 'add', data: null })}
+                onSave={handleSaveTransaction}
             />
         </>
     );

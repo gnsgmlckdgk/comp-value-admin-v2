@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
 
-export default function SellRecordModal({ isOpen, mode, data, onClose, onSave }) {
+export default function TransactionModal({ isOpen, mode, data, onClose, onSave }) {
     const [formData, setFormData] = useState({
         symbol: '',
         companyName: '',
-        sellDate: new Date().toISOString().split('T')[0],
-        sellPrice: '',
-        sellQty: '',
-        realizedPnl: '',
+        buyDate: new Date().toISOString().split('T')[0],
+        buyPrice: '',
+        totalBuyAmount: '',
+        targetPrice: '',
         rmk: '',
     });
     const [saving, setSaving] = useState(false);
@@ -38,10 +38,10 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
             setFormData({
                 symbol: data.symbol || '',
                 companyName: data.companyName || '',
-                sellDate: data.sellDate || new Date().toISOString().split('T')[0],
-                sellPrice: data.sellPrice || '',
-                sellQty: data.sellQty || '',
-                realizedPnl: data.realizedPnl || '',
+                buyDate: data.buyDate || new Date().toISOString().split('T')[0],
+                buyPrice: data.buyPrice || '',
+                totalBuyAmount: data.totalBuyAmount || '',
+                targetPrice: data.targetPrice || '',
                 rmk: data.rmk || '',
             });
             setCompanyProfile(null);
@@ -49,10 +49,10 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
             setFormData({
                 symbol: '',
                 companyName: '',
-                sellDate: new Date().toISOString().split('T')[0],
-                sellPrice: '',
-                sellQty: '',
-                realizedPnl: '',
+                buyDate: new Date().toISOString().split('T')[0],
+                buyPrice: '',
+                totalBuyAmount: '',
+                targetPrice: '',
                 rmk: '',
             });
             setCompanyProfile(null);
@@ -102,28 +102,28 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
             alert('기업명을 입력해주세요.');
             return;
         }
-        if (!formData.sellDate) {
-            alert('매도일을 입력해주세요.');
+        if (!formData.buyDate) {
+            alert('매수일을 입력해주세요.');
             return;
         }
-        if (!formData.sellPrice || parseFloat(formData.sellPrice) <= 0) {
-            alert('올바른 매도가를 입력해주세요.');
+        if (!formData.buyPrice || parseFloat(formData.buyPrice) <= 0) {
+            alert('올바른 매수가를 입력해주세요.');
             return;
         }
-        if (!formData.sellQty || parseInt(formData.sellQty) <= 0) {
+        if (!formData.totalBuyAmount || parseInt(formData.totalBuyAmount) <= 0) {
             alert('올바른 수량을 입력해주세요.');
             return;
         }
 
         setSaving(true);
         const success = await onSave({
-            symbol: formData.symbol.trim(),
+            symbol: formData.symbol.trim().toUpperCase(),
             companyName: formData.companyName.trim(),
-            sellDate: formData.sellDate,
-            sellPrice: parseFloat(formData.sellPrice),
-            sellQty: parseInt(formData.sellQty),
-            realizedPnl: parseFloat(formData.realizedPnl) || 0,
-            rmk: formData.rmk.trim() || null,
+            buyDate: formData.buyDate,
+            buyPrice: formData.buyPrice,
+            totalBuyAmount: formData.totalBuyAmount,
+            targetPrice: formData.targetPrice || '',
+            rmk: formData.rmk.trim() || '',
         });
         setSaving(false);
 
@@ -138,7 +138,7 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
         }
     };
 
-    const totalAmount = (parseFloat(formData.sellPrice) || 0) * (parseInt(formData.sellQty) || 0);
+    const totalBuyValue = (parseFloat(formData.buyPrice) || 0) * (parseInt(formData.totalBuyAmount) || 0);
 
     return (
         <div
@@ -151,7 +151,7 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                                {mode === 'edit' ? '매도 기록 수정' : '매도 기록 추가'}
+                                {mode === 'edit' ? '종목 수정' : '종목 추가'}
                             </h2>
                             {fxRate && (
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -205,35 +205,35 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                             />
                         </div>
 
-                        {/* 매도일 */}
+                        {/* 매수일 */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                매도일 <span className="text-red-500">*</span>
+                                매수일 <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="date"
-                                value={formData.sellDate}
-                                onChange={(e) => handleChange('sellDate', e.target.value)}
+                                value={formData.buyDate}
+                                onChange={(e) => handleChange('buyDate', e.target.value)}
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                             />
                         </div>
 
-                        {/* 매도가 */}
+                        {/* 매수가 */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                매도가 ($) <span className="text-red-500">*</span>
+                                매수가 ($) <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
                                 step="0.01"
-                                value={formData.sellPrice}
-                                onChange={(e) => handleChange('sellPrice', e.target.value)}
+                                value={formData.buyPrice}
+                                onChange={(e) => handleChange('buyPrice', e.target.value)}
                                 placeholder="150.50"
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                             />
-                            {fxRate && formData.sellPrice && parseFloat(formData.sellPrice) > 0 && (
+                            {fxRate && formData.buyPrice && parseFloat(formData.buyPrice) > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                    (₩{(parseFloat(formData.sellPrice) * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
+                                    (₩{(parseFloat(formData.buyPrice) * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
                                 </div>
                             )}
                         </div>
@@ -245,29 +245,29 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                             </label>
                             <input
                                 type="number"
-                                value={formData.sellQty}
-                                onChange={(e) => handleChange('sellQty', e.target.value)}
+                                value={formData.totalBuyAmount}
+                                onChange={(e) => handleChange('totalBuyAmount', e.target.value)}
                                 placeholder="10"
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                             />
                         </div>
 
-                        {/* 실현손익 */}
+                        {/* 목표가 */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                실현손익 ($)
+                                목표가 ($)
                             </label>
                             <input
                                 type="number"
                                 step="0.01"
-                                value={formData.realizedPnl}
-                                onChange={(e) => handleChange('realizedPnl', e.target.value)}
-                                placeholder="500.00"
+                                value={formData.targetPrice}
+                                onChange={(e) => handleChange('targetPrice', e.target.value)}
+                                placeholder="200.00"
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                             />
-                            {fxRate && formData.realizedPnl && parseFloat(formData.realizedPnl) !== 0 && (
+                            {fxRate && formData.targetPrice && parseFloat(formData.targetPrice) > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                    (₩{(parseFloat(formData.realizedPnl) * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
+                                    (₩{(parseFloat(formData.targetPrice) * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
                                 </div>
                             )}
                         </div>
@@ -338,14 +338,14 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                     {/* 계산 요약 */}
                     <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600 dark:text-slate-400">매도 금액 (매도가 × 수량)</span>
+                            <span className="text-slate-600 dark:text-slate-400">매수 금액 (매수가 × 수량)</span>
                             <div className="text-right">
                                 <span className="text-lg font-bold text-slate-900 dark:text-white">
-                                    ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ${totalBuyValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
-                                {fxRate && totalAmount > 0 && (
+                                {fxRate && totalBuyValue > 0 && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                        (₩{(totalAmount * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
+                                        (₩{(totalBuyValue * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
                                     </div>
                                 )}
                             </div>
@@ -366,7 +366,7 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                         disabled={saving}
                         className="px-6 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-lg hover:from-sky-600 hover:to-indigo-600 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {saving ? '저장 중...' : mode === 'edit' ? '수정' : '저장'}
+                        {saving ? '저장 중...' : mode === 'edit' ? '수정' : '등록'}
                     </button>
                 </div>
             </div>

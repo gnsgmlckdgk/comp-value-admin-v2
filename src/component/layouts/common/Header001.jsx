@@ -93,8 +93,6 @@ export default function Header001({ onMenuClick }) {
                 const nextNick = res.nickName ?? nextUserName;
                 const nextRoles = Array.isArray(res.roles) ? res.roles : (res.role ? [res.role] : []);
 
-                console.log("[TEST] login res", res);
-
                 localStorage.setItem('userName', nextUserName);
                 localStorage.setItem('nickName', nextNick);
                 localStorage.setItem('roles', JSON.stringify(nextRoles));

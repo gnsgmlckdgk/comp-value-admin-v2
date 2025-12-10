@@ -66,14 +66,6 @@ export default function MyProfile() {
     // 슈퍼관리자 또는 관리자인지 확인
     const isAdmin = userInfo?.roles?.includes('ROLE_ADMIN') || userInfo?.roles?.includes('ROLE_SUPER_ADMIN');
 
-    // 디버깅용 로그
-    console.log('[MyProfile Debug]', {
-        userRoles: userInfo?.roles,
-        isAdmin,
-        hasROLE_ADMIN: userInfo?.roles?.includes('ROLE_ADMIN'),
-        hasROLE_SUPER_ADMIN: userInfo?.roles?.includes('ROLE_SUPER_ADMIN')
-    });
-
     if (loading) {
         return (
             <>

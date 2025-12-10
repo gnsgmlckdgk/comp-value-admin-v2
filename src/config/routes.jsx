@@ -10,6 +10,7 @@ import CompValue from '@/pages/trade/CompValue'
 import CompValueCustom from '@/pages/trade/CompValueCustom'
 import TransactionOverview from '@/pages/transaction/TransactionOverview'
 import AbroadCompValue from '@/pages/trade/AbroadCompValue'
+import SellRecordHistory from '@/pages/trade/SellRecordHistory'
 
 const routes = {
 
@@ -31,10 +32,11 @@ const routes = {
     "CompValueCustom": { section: '기업분석(국내)', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
 
     /* 기업분석(미국) */
-    "AbroadCompValue": { section: '기업분석(미국)', label: '보유종목관리', path: '/compvalue/abroad', element: <AbroadCompValue /> },
+    "AbroadCompValue": { section: '기업분석(미국)', label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
 
     /* 거래 */
-    "TransactionOverview": { section: '거래', label: '거래기록(미국)', path: '/transaction/overview', element: <TransactionOverview /> },
+    "TransactionOverview": { section: '거래', label: '보유종목관리', path: '/transaction/overview', element: <TransactionOverview /> },
+    "SellRecordHistory": { section: '거래', label: '매도현황기록', path: '/trade/sellrecord', element: <SellRecordHistory /> },
 
     /* 게시판 */
     "FreeBoard": {

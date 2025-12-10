@@ -79,7 +79,9 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
     const latestData = chartData[chartData.length - 1];
     const previousData = chartData[chartData.length - 2];
     const change = latestData && previousData ? latestData.close - previousData.close : 0;
-    const changePercent = latestData?.changePercent || 0;
+    const changePercent = latestData && previousData && previousData.close !== 0
+        ? ((change / previousData.close) * 100)
+        : 0;
     const isPositive = change >= 0;
 
     return (
@@ -114,8 +116,8 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                                         isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                                     }`}>
                                         <span>{isPositive ? '▲' : '▼'}</span>
-                                        <span>{Math.abs(change).toFixed(2)}</span>
-                                        <span>({Math.abs(changePercent).toFixed(2)}%)</span>
+                                        <span>{isPositive ? '+' : '-'}{Math.abs(change).toFixed(2)}</span>
+                                        <span>({isPositive ? '+' : '-'}{Math.abs(changePercent).toFixed(2)}%)</span>
                                     </div>
                                 </div>
                             )}

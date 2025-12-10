@@ -16,6 +16,7 @@ export default function Header001({ onMenuClick }) {
     const { isLoggedIn, setIsLoggedIn, userName, setUserName, nickName, setNickName, roles, setRoles } = useAuth();
     const { isDark, toggleTheme } = useTheme();
 
+    const [loginUsername, setLoginUsername] = useState('');
     const [password, setPassWord] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
@@ -51,6 +52,7 @@ export default function Header001({ onMenuClick }) {
         };
 
         const onOpenLogin = () => {
+            setLoginUsername('');
             setPassWord('');
             setShowLogin(true);
         };
@@ -72,7 +74,7 @@ export default function Header001({ onMenuClick }) {
         const { data, error } = await send(
             sendUrl,
             {
-                username: userName,
+                username: loginUsername,
                 password: password,
             },
             'POST'
@@ -87,7 +89,7 @@ export default function Header001({ onMenuClick }) {
                 openAlert('인증 실패');
             } else {
                 const res = data.response || {};
-                const nextUserName = res.username ?? userName;
+                const nextUserName = res.username ?? loginUsername;
                 const nextNick = res.nickName ?? nextUserName;
                 const nextRoles = Array.isArray(res.roles) ? res.roles : (res.role ? [res.role] : []);
 
@@ -101,6 +103,7 @@ export default function Header001({ onMenuClick }) {
                 setNickName(nextNick);
                 setRoles(nextRoles);
                 setIsLoggedIn(true);
+                setLoginUsername('');
                 setPassWord('');
                 setShowLogin(false);
             }
@@ -179,11 +182,11 @@ export default function Header001({ onMenuClick }) {
                         </button>
 
                         {isLoggedIn && displayName && (
-                            <div className="hidden items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-slate-700 shadow-sm md:flex dark:bg-slate-700 dark:text-slate-200">
-                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-400 text-xs font-semibold text-white">
+                            <div className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-slate-700 shadow-sm md:gap-2 md:px-3 md:py-1.5 dark:bg-slate-700 dark:text-slate-200">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-400 text-xs font-semibold text-white md:h-7 md:w-7">
                                     {displayName.charAt(0)}
                                 </div>
-                                <span className="max-w-[120px] truncate">{displayName} 님</span>
+                                <span className="max-w-[60px] truncate text-xs md:max-w-[120px] md:text-sm">{displayName}<span className="hidden sm:inline"> 님</span></span>
                             </div>
                         )}
 
@@ -200,6 +203,7 @@ export default function Header001({ onMenuClick }) {
                                 type="button"
                                 className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-sky-600 hover:to-indigo-600"
                                 onClick={() => {
+                                    setLoginUsername('');
                                     setPassWord('');
                                     setShowLogin(true);
                                 }}
@@ -216,12 +220,13 @@ export default function Header001({ onMenuClick }) {
                     show={showLogin}
                     onClose={() => {
                         setShowLogin(false);
+                        setLoginUsername('');
                         setPassWord('');
                     }}
                     onLogin={login}
                     isLoading={isLoading}
-                    username={userName}
-                    setUsername={setUserName}
+                    username={loginUsername}
+                    setUsername={setLoginUsername}
                     password={password}
                     setPassword={setPassWord}
                 />

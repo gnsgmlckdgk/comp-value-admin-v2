@@ -206,7 +206,7 @@ export default function CompanyInfoModal({ isOpen, onClose, symbol }) {
                                             </div>
                                         </div>
                                     )}
-                                    {companyInfo.lastDividend && (
+                                    {companyInfo.lastDividend != null && companyInfo.lastDividend > 0 && (
                                         <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                                             <div className="text-xs text-slate-500 dark:text-slate-400">배당금</div>
                                             <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">

@@ -45,6 +45,10 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                 rmk: data.rmk || '',
             });
             setCompanyProfile(null);
+            // 수정 모드에서 기업정보 조회
+            if (data.symbol) {
+                fetchCompanyProfileForEdit(data.symbol);
+            }
         } else {
             setFormData({
                 symbol: '',
@@ -58,6 +62,24 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
             setCompanyProfile(null);
         }
     }, [mode, data, isOpen]);
+
+    // 수정 모드 초기 로드 시 기업정보 조회
+    const fetchCompanyProfileForEdit = async (symbol) => {
+        if (!symbol) return;
+
+        setLoadingProfile(true);
+        try {
+            const { data, error } = await send(`/dart/abroad/company/search/profile?symbol=${encodeURIComponent(symbol)}`, {}, 'GET');
+            if (!error && data?.success && data?.response && data.response.length > 0) {
+                const profile = data.response[0];
+                setCompanyProfile(profile);
+            }
+        } catch (e) {
+            console.error('프로파일 조회 실패:', e);
+        } finally {
+            setLoadingProfile(false);
+        }
+    };
 
     if (!isOpen) return null;
 

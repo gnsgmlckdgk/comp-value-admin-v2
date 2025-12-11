@@ -3,6 +3,7 @@ import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import SellRecordModal from './popup/SellRecordModal';
+import SellRecordDetailModal from './popup/SellRecordDetailModal';
 
 // 테이블 컬럼 너비 설정
 // Tailwind 유효한 width 값: w-12, w-14, w-16, w-20, w-24, w-28, w-32, w-36, w-40, w-44, w-48 등
@@ -23,6 +24,7 @@ export default function SellRecordHistory() {
     const [loading, setLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null, onAfterClose: null });
     const [modalConfig, setModalConfig] = useState({ open: false, mode: 'add', data: null });
+    const [detailModalConfig, setDetailModalConfig] = useState({ open: false, data: null });
     const [sortConfig, setSortConfig] = useState({ field: 'sellDate', direction: 'desc' });
     const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 'YYYY-MM'
     const [selectedSymbol, setSelectedSymbol] = useState('all'); // 'all' or ticker symbol
@@ -129,6 +131,11 @@ export default function SellRecordHistory() {
     // 수정
     const handleEdit = (record) => {
         setModalConfig({ open: true, mode: 'edit', data: record });
+    };
+
+    // 상세보기
+    const handleViewDetail = (record) => {
+        setDetailModalConfig({ open: true, data: record });
     };
 
     // 삭제
@@ -304,7 +311,11 @@ export default function SellRecordHistory() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                     {sortedRecords.map((record) => (
-                                        <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                        <tr
+                                            key={record.id}
+                                            className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer"
+                                            onDoubleClick={() => handleViewDetail(record)}
+                                        >
                                             <td className="px-4 py-3 text-sm text-slate-900 dark:text-white whitespace-nowrap">
                                                 {record.sellDate}
                                             </td>
@@ -391,6 +402,15 @@ export default function SellRecordHistory() {
                     data={modalConfig.data}
                     onClose={() => setModalConfig({ open: false, mode: 'add', data: null })}
                     onSave={handleSave}
+                />
+            )}
+
+            {detailModalConfig.open && (
+                <SellRecordDetailModal
+                    isOpen={detailModalConfig.open}
+                    data={detailModalConfig.data}
+                    fxRate={fxRate}
+                    onClose={() => setDetailModalConfig({ open: false, data: null })}
                 />
             )}
         </>

@@ -90,7 +90,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                                 </div>
                                 {fxRate && (
                                     <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                        ₩{(data.sellPrice * fxRate).toLocaleString()}
+                                        ₩{Math.round(data.sellPrice * fxRate).toLocaleString()}
                                     </div>
                                 )}
                             </div>
@@ -109,7 +109,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                             </div>
                             {fxRate && (
                                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                    ₩{(sellAmount * fxRate).toLocaleString()}
+                                    ₩{Math.round(sellAmount * fxRate).toLocaleString()}
                                 </div>
                             )}
                         </div>
@@ -121,7 +121,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                             </div>
                             {fxRate && (
                                 <div className={`text-sm mt-1 ${data.realizedPnl >= 0 ? 'text-emerald-600/70 dark:text-emerald-400/70' : 'text-red-600/70 dark:text-red-400/70'}`}>
-                                    {data.realizedPnl >= 0 ? '+' : ''}₩{(data.realizedPnl * fxRate).toLocaleString()}
+                                    {data.realizedPnl >= 0 ? '+' : ''}₩{Math.round(data.realizedPnl * fxRate).toLocaleString()}
                                 </div>
                             )}
                         </div>
@@ -196,7 +196,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span>환율: 1 USD = ₩{fxRate.toLocaleString()}</span>
+                            <span>환율: 1 USD = ₩{Math.round(fxRate).toLocaleString()}</span>
                         </div>
                     )}
                 </div>

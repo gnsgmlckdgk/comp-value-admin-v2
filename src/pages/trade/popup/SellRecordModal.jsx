@@ -177,7 +177,7 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                             </h2>
                             {fxRate && (
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                    환율: 1 USD = ₩{fxRate.toLocaleString('ko-KR', { maximumFractionDigits: 2 })} · {new Date().toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                    환율: 1 USD = ₩{Math.round(fxRate).toLocaleString('ko-KR')} · {new Date().toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                 </p>
                             )}
                         </div>

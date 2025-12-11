@@ -12,6 +12,7 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 export default function Header001({ onMenuClick }) {
     const [title] = useState('CompValue');
     const [showLogin, setShowLogin] = useState(false);
+    const [displayName, setDisplayName] = useState('');
 
     const { isLoggedIn, setIsLoggedIn, userName, setUserName, nickName, setNickName, roles, setRoles } = useAuth();
     const { isDark, toggleTheme } = useTheme();
@@ -33,6 +34,24 @@ export default function Header001({ onMenuClick }) {
         if (onConfirm) onConfirm();
     };
 
+    // displayName 초기화 및 업데이트
+    useEffect(() => {
+        const updateDisplayName = () => {
+            const name = localStorage.getItem('nickName') || localStorage.getItem('userName');
+            setDisplayName(name || '');
+        };
+
+        // 초기 로드 시 설정
+        updateDisplayName();
+
+        // storage 이벤트 리스너 추가 (localStorage 변경 감지)
+        window.addEventListener('storage', updateDisplayName);
+
+        return () => {
+            window.removeEventListener('storage', updateDisplayName);
+        };
+    }, []);
+
     useEffect(() => {
         const onForceLogout = () => {
             setIsLoggedIn(false);
@@ -41,6 +60,7 @@ export default function Header001({ onMenuClick }) {
             setRoles && setRoles([]);
             setPassWord('');
             setShowLogin(false);
+            setDisplayName('');
 
             try {
                 openAlert('인증정보가 존재하지 않습니다.', () => {
@@ -104,6 +124,7 @@ export default function Header001({ onMenuClick }) {
                 setLoginUsername('');
                 setPassWord('');
                 setShowLogin(false);
+                setDisplayName(nextNick);
             }
         } else {
             openAlert(error);
@@ -134,8 +155,6 @@ export default function Header001({ onMenuClick }) {
 
         setIsLoading(false);
     };
-
-    const displayName = localStorage.getItem('nickName') || localStorage.getItem('userName');
 
     return (
         <>
@@ -181,7 +200,7 @@ export default function Header001({ onMenuClick }) {
 
                         {isLoggedIn && displayName && (
                             <Link
-                                to="/member/profile"
+                                to="/member/myprofile"
                                 className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-slate-700 shadow-sm md:gap-2 md:px-3 md:py-1.5 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer"
                             >
                                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-400 text-xs font-semibold text-white md:h-7 md:w-7">

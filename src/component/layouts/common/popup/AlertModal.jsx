@@ -1,6 +1,6 @@
 import Button from '@/component/common/button/Button';
 
-export default function AlertModal({ open, title = '알림', message, onClose, onConfirm }) {
+export default function AlertModal({ open, title = '알림', message, onClose, onConfirm, onAfterClose }) {
     if (!open) return null;
 
     const handleConfirm = () => {
@@ -8,6 +8,9 @@ export default function AlertModal({ open, title = '알림', message, onClose, o
             onConfirm();
         }
         onClose();
+        if (onAfterClose) {
+            onAfterClose();
+        }
     };
 
     const handleCancel = () => {

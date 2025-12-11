@@ -1,16 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import Input from '@/component/common/input/Input';
+import Button from '@/component/common/button/Button';
 
 export default function MyProfile() {
+    const navigate = useNavigate();
     const [userInfo, setUserInfo] = useState(null);
     const [roles, setRoles] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [alertConfig, setAlertConfig] = useState({ open: false, message: '' });
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onAfterClose: null });
 
-    const openAlert = (message) => {
-        setAlertConfig({ open: true, message });
+    // 회원탈퇴 관련 상태
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const deletePasswordRef = useRef(null);
+
+    const openAlert = (message, onAfterClose = null) => {
+        setAlertConfig({ open: true, message, onAfterClose });
     };
 
     useEffect(() => {
@@ -52,11 +62,54 @@ export default function MyProfile() {
     };
 
     const handleEditProfile = () => {
-        openAlert('회원정보 수정 기능은 준비 중입니다.');
+        navigate('/member/myprofile/edit');
     };
 
     const handleDeleteAccount = () => {
-        openAlert('회원탈퇴 기능은 준비 중입니다.');
+        setShowDeleteModal(true);
+        setDeletePassword('');
+        setTimeout(() => {
+            deletePasswordRef.current?.focus();
+        }, 100);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deletePassword.trim()) {
+            openAlert('비밀번호를 입력해주세요.');
+            return;
+        }
+
+        setDeleteLoading(true);
+        try {
+            const { data, error } = await send('/dart/member/delete', { password: deletePassword }, 'POST');
+            if (error) {
+                setShowDeleteModal(false);
+                openAlert(error);
+            } else if (data?.success) {
+                setShowDeleteModal(false);
+                // 로그아웃 처리 (auth:logout 이벤트 없이 직접 처리)
+                localStorage.setItem('isLoggedIn', 'false');
+                localStorage.removeItem('nickName');
+                openAlert('회원탈퇴가 완료되었습니다.', () => {
+                    navigate('/');
+                    window.location.reload();
+                });
+            } else {
+                setShowDeleteModal(false);
+                openAlert(data?.message || '회원탈퇴에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error('회원탈퇴 실패:', e);
+            setShowDeleteModal(false);
+            openAlert('회원탈퇴 중 오류가 발생했습니다.');
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const handleDeleteCancel = () => {
+        setShowDeleteModal(false);
+        setDeletePassword('');
     };
 
     const handleManageMembers = () => {
@@ -237,8 +290,49 @@ export default function MyProfile() {
             <AlertModal
                 open={alertConfig.open}
                 message={alertConfig.message}
-                onClose={() => setAlertConfig({ open: false, message: '' })}
+                onClose={() => setAlertConfig({ open: false, message: '', onAfterClose: null })}
+                onAfterClose={alertConfig.onAfterClose}
             />
+
+            {/* 회원탈퇴 비밀번호 확인 모달 */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4">
+                    <div className="w-full max-w-sm rounded-2xl bg-white p-5 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+                        <h2 className="mb-2 text-base font-semibold text-red-600 dark:text-red-400">회원 탈퇴</h2>
+                        <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
+                            탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.<br />
+                            계속하시려면 비밀번호를 입력해주세요.
+                        </p>
+                        <div className="mb-5">
+                            <Input
+                                inputRef={deletePasswordRef}
+                                label="비밀번호"
+                                type="password"
+                                value={deletePassword}
+                                onChange={e => setDeletePassword(e.target.value)}
+                                onEnter={handleDeleteConfirm}
+                                wdfull={true}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={handleDeleteCancel}
+                                disabled={deleteLoading}
+                                className="px-4 py-1.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleDeleteConfirm}
+                                disabled={deleteLoading}
+                                className="px-4 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                {deleteLoading ? '처리 중...' : '탈퇴하기'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

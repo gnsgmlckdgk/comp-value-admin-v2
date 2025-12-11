@@ -113,7 +113,7 @@ export default function MyProfile() {
     };
 
     const handleManageMembers = () => {
-        openAlert('회원 관리 기능은 준비 중입니다.');
+        navigate('/member/management');
     };
 
     // 슈퍼관리자 또는 관리자인지 확인

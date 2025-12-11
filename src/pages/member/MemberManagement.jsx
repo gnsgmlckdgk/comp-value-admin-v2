@@ -1,0 +1,554 @@
+import { useState, useEffect } from 'react';
+import { send } from '@/util/ClientUtil';
+import PageTitle from '@/component/common/display/PageTitle';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import Input from '@/component/common/input/Input';
+import Button from '@/component/common/button/Button';
+
+// 테이블 컬럼 너비 상수
+const COLUMN_WIDTHS = {
+    id: 'w-20',           // 회원번호
+    username: 'w-32',     // 사용자 ID
+    nickname: 'w-28',     // 닉네임
+    email: 'w-48',        // 이메일
+    roles: 'w-32',        // 권한
+    approvalStatus: 'w-24', // 승인상태
+    createdAt: 'w-40',    // 가입일
+    actions: 'w-44'       // 관리 버튼
+};
+
+export default function MemberManagement() {
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+
+    // 페이징 상태
+    const [pageNumber, setPageNumber] = useState(0);
+    const [pageSize, setPageSize] = useState(20);
+    const [totalElements, setTotalElements] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
+    // 검색 조건 상태
+    const [searchParams, setSearchParams] = useState({
+        username: '',
+        email: '',
+        nickname: '',
+        createdAtStart: '',
+        createdAtEnd: '',
+        approvalStatus: '',
+        roleName: ''
+    });
+
+    const [showSearchForm, setShowSearchForm] = useState(false);
+    const [roles, setRoles] = useState([]);
+
+    const openAlert = (message, onConfirm = null) => {
+        setAlertConfig({ open: true, message, onConfirm });
+    };
+
+    const handleCloseAlert = () => {
+        const { onConfirm } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null });
+        if (onConfirm) onConfirm();
+    };
+
+    useEffect(() => {
+        fetchRoles();
+        fetchMembers();
+    }, [pageNumber, pageSize]);
+
+    const fetchRoles = async () => {
+        try {
+            const { data, error } = await send('/dart/role', {}, 'GET');
+            if (!error && data?.success && data?.response) {
+                console.log('권한 목록:', data.response);
+                setRoles(data.response);
+            }
+        } catch (e) {
+            console.error('권한 목록 조회 실패:', e);
+        }
+    };
+
+    const fetchMembers = async () => {
+        setLoading(true);
+        try {
+            const requestData = {
+                pageSize,
+                pageNumber,
+                ...Object.fromEntries(
+                    Object.entries(searchParams).filter(([_, v]) => v !== '')
+                )
+            };
+
+            const { data, error } = await send('/dart/member/list', requestData, 'POST');
+
+            if (error) {
+                openAlert(error);
+            } else if (data?.success && data?.response) {
+                const response = data.response;
+                console.log('회원 목록:', response.members);
+                setMembers(response.members || []);
+                setTotalElements(response.totalCount || 0);
+                setTotalPages(response.totalPages || 0);
+            }
+        } catch (e) {
+            console.error('회원 목록 조회 실패:', e);
+            openAlert('회원 목록을 불러오는 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = () => {
+        setPageNumber(0);
+        fetchMembers();
+    };
+
+    const handleResetSearch = () => {
+        setSearchParams({
+            username: '',
+            email: '',
+            nickname: '',
+            createdAtStart: '',
+            createdAtEnd: '',
+            approvalStatus: '',
+            roleName: ''
+        });
+        setPageNumber(0);
+        setTimeout(() => fetchMembers(), 0);
+    };
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 0 && newPage < totalPages) {
+            setPageNumber(newPage);
+        }
+    };
+
+    const handleApprove = (member) => {
+        openAlert(
+            `${member.nickname || member.username} 회원을 승인하시겠습니까?`,
+            () => {
+                // TODO: 승인 API 호출
+                console.log('승인:', member);
+                openAlert('회원 승인 기능은 준비 중입니다.');
+            }
+        );
+    };
+
+    const handleReject = (member) => {
+        openAlert(
+            `${member.nickname || member.username} 회원을 강제탈퇴 처리하시겠습니까?`,
+            () => {
+                // TODO: 강제탈퇴 API 호출
+                console.log('강제탈퇴:', member);
+                openAlert('강제탈퇴 기능은 준비 중입니다.');
+            }
+        );
+    };
+
+    const handleEdit = (member) => {
+        // TODO: 회원 수정 모달 열기
+        console.log('수정:', member);
+        openAlert('회원정보 수정 기능은 준비 중입니다.');
+    };
+
+    const handleChangeRole = (member) => {
+        // TODO: 권한 변경 모달 열기
+        console.log('권한 변경:', member);
+        openAlert('권한 변경 기능은 준비 중입니다.');
+    };
+
+    const getRoleDisplayName = (roleName) => {
+        const role = roles.find(r => r.roleName === roleName);
+        const displayName = role ? role.roleDisplayName : roleName;
+
+        // 역할 매핑이 없을 경우 기본 표시명 사용
+        if (!role) {
+            const defaultNames = {
+                'ROLE_SUPER_ADMIN': '슈퍼관리자',
+                'ROLE_ADMIN': '관리자',
+                'ROLE_USER': '일반사용자'
+            };
+            return defaultNames[roleName] || roleName.replace('ROLE_', '');
+        }
+
+        return displayName;
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '-';
+        return new Date(dateString).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const getApprovalStatusBadge = (status) => {
+        if (status === 'Y') {
+            return <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded text-xs font-medium">승인</span>;
+        } else if (status === 'N') {
+            return <span className="px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded text-xs font-medium">미승인</span>;
+        } else if (status === 'W') {
+            return <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded text-xs font-medium">대기</span>;
+        }
+        return <span className="px-2 py-0.5 bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 rounded text-xs font-medium">{status || '-'}</span>;
+    };
+
+    return (
+        <>
+            <PageTitle />
+
+            <div className="space-y-6 px-4 py-8">
+                {/* 헤더 */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">회원 관리</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            전체 {totalElements.toLocaleString()}명
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setShowSearchForm(!showSearchForm)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        검색 {showSearchForm ? '닫기' : '열기'}
+                    </button>
+                </div>
+
+                {/* 검색 폼 */}
+                {showSearchForm && (
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">검색 조건</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    사용자 ID
+                                </label>
+                                <input
+                                    type="text"
+                                    value={searchParams.username}
+                                    onChange={(e) => setSearchParams({ ...searchParams, username: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="사용자 ID"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    이메일
+                                </label>
+                                <input
+                                    type="text"
+                                    value={searchParams.email}
+                                    onChange={(e) => setSearchParams({ ...searchParams, email: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="이메일"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    닉네임
+                                </label>
+                                <input
+                                    type="text"
+                                    value={searchParams.nickname}
+                                    onChange={(e) => setSearchParams({ ...searchParams, nickname: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="닉네임"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    가입일 시작
+                                </label>
+                                <input
+                                    type="date"
+                                    value={searchParams.createdAtStart}
+                                    onChange={(e) => setSearchParams({ ...searchParams, createdAtStart: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    가입일 종료
+                                </label>
+                                <input
+                                    type="date"
+                                    value={searchParams.createdAtEnd}
+                                    onChange={(e) => setSearchParams({ ...searchParams, createdAtEnd: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    승인 상태
+                                </label>
+                                <select
+                                    value={searchParams.approvalStatus}
+                                    onChange={(e) => setSearchParams({ ...searchParams, approvalStatus: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    <option value="">전체</option>
+                                    <option value="Y">승인</option>
+                                    <option value="N">미승인</option>
+                                    <option value="W">대기</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    권한
+                                </label>
+                                <select
+                                    value={searchParams.roleName}
+                                    onChange={(e) => setSearchParams({ ...searchParams, roleName: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    <option value="">전체</option>
+                                    {roles.map(role => (
+                                        <option key={role.roleName} value={role.roleName}>
+                                            {role.roleDisplayName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button
+                                onClick={handleResetSearch}
+                                className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                            >
+                                초기화
+                            </button>
+                            <button
+                                onClick={handleSearch}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                            >
+                                검색
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* 회원 목록 테이블 */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-20">
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">회원 목록을 불러오는 중...</p>
+                            </div>
+                        </div>
+                    ) : members.length === 0 ? (
+                        <div className="flex items-center justify-center py-20">
+                            <div className="text-center">
+                                <svg className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                                <p className="text-lg font-medium text-slate-700 dark:text-slate-300">회원이 없습니다</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto scrollbar-always">
+                                <table className="w-full min-w-[1000px]">
+                                    <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+                                        <tr>
+                                            <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${COLUMN_WIDTHS.id}`}>
+                                                회원번호
+                                            </th>
+                                            <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${COLUMN_WIDTHS.username}`}>
+                                                사용자 ID
+                                            </th>
+                                            <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${COLUMN_WIDTHS.nickname}`}>
+                                                닉네임
+                                            </th>
+                                            <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${COLUMN_WIDTHS.email}`}>
+                                                이메일
+                                            </th>
+                                            <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${COLUMN_WIDTHS.roles}`}>
+                                                권한
+                                            </th>
+                                            <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${COLUMN_WIDTHS.approvalStatus}`}>
+                                                승인상태
+                                            </th>
+                                            <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${COLUMN_WIDTHS.createdAt}`}>
+                                                가입일
+                                            </th>
+                                            <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider ${COLUMN_WIDTHS.actions}`}>
+                                                관리
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                        {members.map((member) => (
+                                            <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                                <td className={`px-4 py-3 text-sm text-slate-900 dark:text-white ${COLUMN_WIDTHS.id}`}>
+                                                    {member.id}
+                                                </td>
+                                                <td className={`px-4 py-3 text-sm font-medium text-slate-900 dark:text-white ${COLUMN_WIDTHS.username}`}>
+                                                    {member.username}
+                                                </td>
+                                                <td className={`px-4 py-3 text-sm text-slate-900 dark:text-white ${COLUMN_WIDTHS.nickname}`}>
+                                                    {member.nickname || '-'}
+                                                </td>
+                                                <td className={`px-4 py-3 text-sm text-slate-600 dark:text-slate-400 ${COLUMN_WIDTHS.email}`}>
+                                                    {member.email || '-'}
+                                                </td>
+                                                <td className={`px-4 py-3 text-sm ${COLUMN_WIDTHS.roles}`}>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {member.roles && member.roles.length > 0 ? (
+                                                            member.roles.map((role, idx) => (
+                                                                <span
+                                                                    key={idx}
+                                                                    className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded text-xs font-medium"
+                                                                >
+                                                                    {getRoleDisplayName(role)}
+                                                                </span>
+                                                            ))
+                                                        ) : (
+                                                            <span className="text-slate-400 dark:text-slate-500">-</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className={`px-4 py-3 text-sm ${COLUMN_WIDTHS.approvalStatus}`}>
+                                                    {getApprovalStatusBadge(member.approvalStatus)}
+                                                </td>
+                                                <td className={`px-4 py-3 text-sm text-slate-600 dark:text-slate-400 ${COLUMN_WIDTHS.createdAt}`}>
+                                                    {formatDate(member.createdAt)}
+                                                </td>
+                                                <td className={`px-4 py-3 text-sm ${COLUMN_WIDTHS.actions}`}>
+                                                    <div className="flex flex-wrap gap-1 items-center">
+                                                        {member.approvalStatus === 'W' && (
+                                                            <button
+                                                                onClick={() => handleApprove(member)}
+                                                                className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400 rounded text-xs font-medium transition-colors"
+                                                                title="승인"
+                                                            >
+                                                                승인
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleEdit(member)}
+                                                            className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:text-blue-400 rounded text-xs font-medium transition-colors"
+                                                            title="수정"
+                                                        >
+                                                            수정
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleChangeRole(member)}
+                                                            className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 dark:text-purple-400 rounded text-xs font-medium transition-colors"
+                                                            title="권한"
+                                                        >
+                                                            권한
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleReject(member)}
+                                                            className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 rounded text-xs font-medium transition-colors"
+                                                            title="탈퇴"
+                                                        >
+                                                            탈퇴
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* 페이징 */}
+                            <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                                        {totalElements > 0 ? (
+                                            <>
+                                                <span className="font-medium text-slate-900 dark:text-white">
+                                                    {pageNumber * pageSize + 1}
+                                                </span>
+                                                {' - '}
+                                                <span className="font-medium text-slate-900 dark:text-white">
+                                                    {Math.min((pageNumber + 1) * pageSize, totalElements)}
+                                                </span>
+                                                {' / '}
+                                                <span className="font-medium text-slate-900 dark:text-white">
+                                                    {totalElements.toLocaleString()}
+                                                </span>
+                                                {' 명'}
+                                            </>
+                                        ) : (
+                                            '0 명'
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handlePageChange(0)}
+                                            disabled={pageNumber === 0}
+                                            className="px-3 py-1 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            처음
+                                        </button>
+                                        <button
+                                            onClick={() => handlePageChange(pageNumber - 1)}
+                                            disabled={pageNumber === 0}
+                                            className="px-3 py-1 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            이전
+                                        </button>
+                                        <span className="px-4 py-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                            {pageNumber + 1} / {totalPages || 1}
+                                        </span>
+                                        <button
+                                            onClick={() => handlePageChange(pageNumber + 1)}
+                                            disabled={pageNumber >= totalPages - 1}
+                                            className="px-3 py-1 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            다음
+                                        </button>
+                                        <button
+                                            onClick={() => handlePageChange(totalPages - 1)}
+                                            disabled={pageNumber >= totalPages - 1}
+                                            className="px-3 py-1 text-sm font-medium border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            마지막
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-sm text-slate-600 dark:text-slate-400">
+                                            페이지 크기:
+                                        </label>
+                                        <select
+                                            value={pageSize}
+                                            onChange={(e) => {
+                                                setPageSize(Number(e.target.value));
+                                                setPageNumber(0);
+                                            }}
+                                            className="px-3 py-1 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value={10}>10</option>
+                                            <option value={20}>20</option>
+                                            <option value={50}>50</option>
+                                            <option value={100}>100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={handleCloseAlert}
+            />
+        </>
+    );
+}

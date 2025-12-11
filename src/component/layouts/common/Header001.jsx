@@ -106,7 +106,7 @@ export default function Header001({ onMenuClick }) {
             const sessionKey = data.response ? data.response.sessionKey : null;
 
             if (sessionKey == null) {
-                openAlert('인증 실패');
+                openAlert(data.message || '인증 실패');
             } else {
                 const res = data.response || {};
                 const nextUserName = res.username ?? loginUsername;

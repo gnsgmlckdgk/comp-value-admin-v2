@@ -3,6 +3,23 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { send } from '@/util/ClientUtil';
 
+// 로그인 없이 접근 가능한 공개 페이지 목록
+const PUBLIC_ROUTES = [
+    '/',
+    '/member/join'
+];
+
+// 경로가 공개 페이지인지 확인하는 헬퍼 함수
+const isPublicRoute = (pathname) => {
+    return PUBLIC_ROUTES.some(route => {
+        // 정확히 일치하는 경로
+        if (route === pathname) return true;
+        // 와일드카드 패턴 지원 (필요시 확장 가능)
+        // 예: '/public/*' 같은 패턴
+        return false;
+    });
+};
+
 function PrivateRoute({ children }) {
     const { isLoggedIn, setIsLoggedIn } = useAuth();
     const location = useLocation();
@@ -45,16 +62,16 @@ function PrivateRoute({ children }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname]);
 
-    const atRoot = location.pathname === '/';
+    const isPublic = isPublicRoute(location.pathname);
 
-    // 검사 전/검사 중: 보호 라우트는 잠시 막고, 홈('/')은 항상 렌더
+    // 검사 전/검사 중: 보호 라우트는 잠시 막고, 공개 페이지는 항상 렌더
     if (!hasChecked || checking) {
-        return atRoot ? children : null;
+        return isPublic ? children : null;
     }
 
-    // 미로그인: 보호 라우트만 막고, 홈('/')은 렌더
+    // 미로그인: 보호 라우트만 막고, 공개 페이지는 렌더
     if (isLoggedIn === false) {
-        if (atRoot) return children;
+        if (isPublic) return children;
 
         // 보호된 페이지에서 미로그인일 때: 안내 다이어그램 + 로그인 유도
         return (

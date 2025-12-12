@@ -20,7 +20,7 @@ const COLUMN_WIDTHS = {
 };
 
 export default function MemberManagement() {
-    const { roles: currentUserRoles } = useAuth();
+    const { roles: currentUserRoles, userName, setNickName } = useAuth();
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null, onAfterClose: null });
@@ -248,6 +248,12 @@ export default function MemberManagement() {
             if (error) {
                 openAlert(error);
             } else if (data?.success) {
+                // 자기 자신을 수정한 경우 헤더의 닉네임 업데이트
+                if (editTargetMember.username === userName && editNickname.trim()) {
+                    setNickName(editNickname.trim());
+                    localStorage.setItem('nickName', editNickname.trim());
+                }
+
                 setEditModalOpen(false);
                 openAlert('회원 정보가 수정되었습니다.', null, fetchMembers);
             } else {

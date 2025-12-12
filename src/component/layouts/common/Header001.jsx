@@ -52,6 +52,15 @@ export default function Header001({ onMenuClick }) {
         };
     }, []);
 
+    // nickName이 변경될 때 displayName 업데이트
+    useEffect(() => {
+        if (nickName) {
+            setDisplayName(nickName);
+        } else if (userName) {
+            setDisplayName(userName);
+        }
+    }, [nickName, userName]);
+
     useEffect(() => {
         const onForceLogout = () => {
             setIsLoggedIn(false);
@@ -219,17 +228,26 @@ export default function Header001({ onMenuClick }) {
                                 로그아웃
                             </button>
                         ) : (
-                            <button
-                                type="button"
-                                className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-sky-600 hover:to-indigo-600"
-                                onClick={() => {
-                                    setLoginUsername('');
-                                    setPassWord('');
-                                    setShowLogin(true);
-                                }}
-                            >
-                                로그인
-                            </button>
+                            <>
+                                <button
+                                    type="button"
+                                    className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-sky-400 hover:text-sky-600 hover:shadow-sm dark:border-slate-600 dark:text-slate-300 dark:hover:border-sky-400"
+                                    onClick={() => navigate('/member/join')}
+                                >
+                                    회원가입
+                                </button>
+                                <button
+                                    type="button"
+                                    className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-sky-600 hover:to-indigo-600"
+                                    onClick={() => {
+                                        setLoginUsername('');
+                                        setPassWord('');
+                                        setShowLogin(true);
+                                    }}
+                                >
+                                    로그인
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>

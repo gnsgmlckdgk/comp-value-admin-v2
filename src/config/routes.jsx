@@ -14,6 +14,7 @@ import SellRecordHistory from '@/pages/trade/SellRecordHistory'
 import MyProfile from '@/pages/member/MyProfile'
 import EditProfile from '@/pages/member/EditProfile'
 import MemberManagement from '@/pages/member/MemberManagement'
+import Join from '@/pages/member/Join'
 
 const routes = {
 
@@ -28,6 +29,7 @@ const routes = {
 
     /* 회원정보 */
     "로그인": { section: '회원정보', label: '로그인', path: '/', element: <Home /> },
+    "Join": { section: '회원정보', show: false, label: '회원가입', path: '/member/join', element: <Join /> },
     "MyProfile": { section: '회원정보', show: false, label: '내 정보', path: '/member/myprofile', element: <MyProfile /> },
     "EditProfile": { section: '회원정보', show: false, label: '회원정보 수정', path: '/member/myprofile/edit', element: <EditProfile /> },
     "MemberManagement": { section: '회원정보', show: false, label: '회원 관리 (관리자)', path: '/member/management', element: <MemberManagement /> },

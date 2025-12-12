@@ -13,7 +13,7 @@ const COLUMN_WIDTHS = {
     email: 'w-48',        // 이메일
     roles: 'w-32',        // 권한
     approvalStatus: 'w-24', // 승인상태
-    createdAt: 'w-40',    // 가입일
+    createdAt: 'w-28',    // 가입일
     actions: 'w-44'       // 관리 버튼
 };
 
@@ -47,9 +47,7 @@ export default function MemberManagement() {
     };
 
     const handleCloseAlert = () => {
-        const { onConfirm } = alertConfig;
         setAlertConfig({ open: false, message: '', onConfirm: null });
-        if (onConfirm) onConfirm();
     };
 
     useEffect(() => {
@@ -61,11 +59,14 @@ export default function MemberManagement() {
         try {
             const { data, error } = await send('/dart/role', {}, 'GET');
             if (!error && data?.success && data?.response) {
-                console.log('권한 목록:', data.response);
-                setRoles(data.response);
+                const roleList = Array.isArray(data.response) ? data.response : [];
+                setRoles(roleList);
+            } else {
+                setRoles([]);
             }
         } catch (e) {
             console.error('권한 목록 조회 실패:', e);
+            setRoles([]);
         }
     };
 
@@ -124,13 +125,36 @@ export default function MemberManagement() {
         }
     };
 
-    const handleApprove = (member) => {
+    const handleToggleApproval = async (member) => {
+        const newStatus = member.approvalStatus === 'Y' ? 'N' : 'Y';
+        const statusText = newStatus === 'Y' ? '승인' : '미승인';
+
         openAlert(
-            `${member.nickname || member.username} 회원을 승인하시겠습니까?`,
-            () => {
-                // TODO: 승인 API 호출
-                console.log('승인:', member);
-                openAlert('회원 승인 기능은 준비 중입니다.');
+            `${member.nickname || member.username} 회원을 ${statusText} 상태로 변경하시겠습니까?`,
+            async () => {
+                try {
+                    const { data, error } = await send('/dart/member/update/approval', {
+                        id: member.id,
+                        approvalStatus: newStatus
+                    }, 'POST');
+
+                    if (error) {
+                        setTimeout(() => {
+                            openAlert(error);
+                        }, 100);
+                    } else if (data?.success) {
+                        setTimeout(() => {
+                            openAlert(`${statusText} 처리가 완료되었습니다.`);
+                        }, 100);
+                        // 목록 새로고침
+                        fetchMembers();
+                    }
+                } catch (e) {
+                    console.error('승인 상태 변경 실패:', e);
+                    setTimeout(() => {
+                        openAlert('승인 상태 변경 중 오류가 발생했습니다.');
+                    }, 100);
+                }
             }
         );
     };
@@ -141,7 +165,9 @@ export default function MemberManagement() {
             () => {
                 // TODO: 강제탈퇴 API 호출
                 console.log('강제탈퇴:', member);
-                openAlert('강제탈퇴 기능은 준비 중입니다.');
+                setTimeout(() => {
+                    openAlert('강제탈퇴 기능은 준비 중입니다.');
+                }, 100);
             }
         );
     };
@@ -159,20 +185,23 @@ export default function MemberManagement() {
     };
 
     const getRoleDisplayName = (roleName) => {
-        const role = roles.find(r => r.roleName === roleName);
-        const displayName = role ? role.roleDisplayName : roleName;
+        // 기본 표시명 매핑
+        const defaultNames = {
+            'ROLE_SUPER_ADMIN': '슈퍼관리자',
+            'ROLE_ADMIN': '관리자',
+            'ROLE_USER': '일반사용자'
+        };
 
-        // 역할 매핑이 없을 경우 기본 표시명 사용
-        if (!role) {
-            const defaultNames = {
-                'ROLE_SUPER_ADMIN': '슈퍼관리자',
-                'ROLE_ADMIN': '관리자',
-                'ROLE_USER': '일반사용자'
-            };
-            return defaultNames[roleName] || roleName.replace('ROLE_', '');
+        // roles 배열에서 찾기 시도
+        const role = roles.find(r => r.roleName === roleName);
+
+        if (role) {
+            // API 응답에서 description 필드 사용 (roleDisplayName이 아님)
+            return role.description || role.roleDisplayName || defaultNames[roleName] || roleName.replace('ROLE_', '');
         }
 
-        return displayName;
+        // roles 배열에 없으면 기본 표시명 사용
+        return defaultNames[roleName] || roleName.replace('ROLE_', '');
     };
 
     const formatDate = (dateString) => {
@@ -186,13 +215,27 @@ export default function MemberManagement() {
         });
     };
 
-    const getApprovalStatusBadge = (status) => {
+    const getApprovalStatusBadge = (status, onClick) => {
         if (status === 'Y') {
-            return <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded text-xs font-medium">승인</span>;
+            return (
+                <button
+                    onClick={onClick}
+                    className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 rounded text-xs font-medium transition-colors cursor-pointer"
+                    title="클릭하여 미승인으로 변경"
+                >
+                    승인
+                </button>
+            );
         } else if (status === 'N') {
-            return <span className="px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded text-xs font-medium">미승인</span>;
-        } else if (status === 'W') {
-            return <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded text-xs font-medium">대기</span>;
+            return (
+                <button
+                    onClick={onClick}
+                    className="px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 rounded text-xs font-medium transition-colors cursor-pointer"
+                    title="클릭하여 승인으로 변경"
+                >
+                    미승인
+                </button>
+            );
         }
         return <span className="px-2 py-0.5 bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 rounded text-xs font-medium">{status || '-'}</span>;
     };
@@ -296,7 +339,6 @@ export default function MemberManagement() {
                                     <option value="">전체</option>
                                     <option value="Y">승인</option>
                                     <option value="N">미승인</option>
-                                    <option value="W">대기</option>
                                 </select>
                             </div>
                             <div>
@@ -311,7 +353,7 @@ export default function MemberManagement() {
                                     <option value="">전체</option>
                                     {roles.map(role => (
                                         <option key={role.roleName} value={role.roleName}>
-                                            {role.roleDisplayName}
+                                            {role.description || role.roleDisplayName || role.roleName}
                                         </option>
                                     ))}
                                 </select>
@@ -416,22 +458,13 @@ export default function MemberManagement() {
                                                     </div>
                                                 </td>
                                                 <td className={`px-4 py-3 text-sm ${COLUMN_WIDTHS.approvalStatus}`}>
-                                                    {getApprovalStatusBadge(member.approvalStatus)}
+                                                    {getApprovalStatusBadge(member.approvalStatus, () => handleToggleApproval(member))}
                                                 </td>
                                                 <td className={`px-4 py-3 text-sm text-slate-600 dark:text-slate-400 ${COLUMN_WIDTHS.createdAt}`}>
                                                     {formatDate(member.createdAt)}
                                                 </td>
                                                 <td className={`px-4 py-3 text-sm ${COLUMN_WIDTHS.actions}`}>
                                                     <div className="flex flex-wrap gap-1 items-center">
-                                                        {member.approvalStatus === 'W' && (
-                                                            <button
-                                                                onClick={() => handleApprove(member)}
-                                                                className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400 rounded text-xs font-medium transition-colors"
-                                                                title="승인"
-                                                            >
-                                                                승인
-                                                            </button>
-                                                        )}
                                                         <button
                                                             onClick={() => handleEdit(member)}
                                                             className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:text-blue-400 rounded text-xs font-medium transition-colors"
@@ -463,8 +496,9 @@ export default function MemberManagement() {
 
                             {/* 페이징 */}
                             <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-700">
-                                <div className="flex items-center justify-between">
-                                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    {/* 페이지 정보 */}
+                                    <div className="text-sm text-slate-600 dark:text-slate-400 order-1 sm:order-1">
                                         {totalElements > 0 ? (
                                             <>
                                                 <span className="font-medium text-slate-900 dark:text-white">
@@ -485,7 +519,8 @@ export default function MemberManagement() {
                                         )}
                                     </div>
 
-                                    <div className="flex items-center gap-2">
+                                    {/* 페이지 버튼 */}
+                                    <div className="flex items-center gap-2 order-3 sm:order-2">
                                         <button
                                             onClick={() => handlePageChange(0)}
                                             disabled={pageNumber === 0}
@@ -500,7 +535,7 @@ export default function MemberManagement() {
                                         >
                                             이전
                                         </button>
-                                        <span className="px-4 py-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                        <span className="px-4 py-1 text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                             {pageNumber + 1} / {totalPages || 1}
                                         </span>
                                         <button
@@ -519,8 +554,9 @@ export default function MemberManagement() {
                                         </button>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <label className="text-sm text-slate-600 dark:text-slate-400">
+                                    {/* 페이지 사이즈 선택 */}
+                                    <div className="flex items-center gap-2 order-2 sm:order-3">
+                                        <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                             페이지 크기:
                                         </label>
                                         <select
@@ -529,7 +565,7 @@ export default function MemberManagement() {
                                                 setPageSize(Number(e.target.value));
                                                 setPageNumber(0);
                                             }}
-                                            className="px-3 py-1 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="px-3 py-1 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                         >
                                             <option value={10}>10</option>
                                             <option value={20}>20</option>
@@ -548,6 +584,7 @@ export default function MemberManagement() {
                 open={alertConfig.open}
                 message={alertConfig.message}
                 onClose={handleCloseAlert}
+                onConfirm={alertConfig.onConfirm}
             />
         </>
     );

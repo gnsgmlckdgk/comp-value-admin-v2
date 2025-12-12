@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
+import { useAuth } from '@/context/AuthContext';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import RoleManagementModal from '@/component/layouts/common/popup/RoleManagementModal';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
 
@@ -18,6 +20,7 @@ const COLUMN_WIDTHS = {
 };
 
 export default function MemberManagement() {
+    const { roles: currentUserRoles } = useAuth();
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
@@ -41,6 +44,8 @@ export default function MemberManagement() {
 
     const [showSearchForm, setShowSearchForm] = useState(false);
     const [roles, setRoles] = useState([]);
+    const [roleModalOpen, setRoleModalOpen] = useState(false);
+    const [selectedMember, setSelectedMember] = useState(null);
 
     const openAlert = (message, onConfirm = null) => {
         setAlertConfig({ open: true, message, onConfirm });
@@ -179,9 +184,58 @@ export default function MemberManagement() {
     };
 
     const handleChangeRole = (member) => {
-        // TODO: 권한 변경 모달 열기
-        console.log('권한 변경:', member);
-        openAlert('권한 변경 기능은 준비 중입니다.');
+        // 슈퍼관리자 권한 체크
+        if (!isSuperAdmin()) {
+            openAlert('권한 관리는 슈퍼관리자만 가능합니다.');
+            return;
+        }
+        setSelectedMember(member);
+        setRoleModalOpen(true);
+    };
+
+    const isSuperAdmin = () => {
+        return currentUserRoles && currentUserRoles.includes('ROLE_SUPER_ADMIN');
+    };
+
+    const handleSaveRoles = async (member, addedRoles, removedRoles) => {
+        try {
+            // 권한 삭제 처리
+            for (const roleName of removedRoles) {
+                const role = roles.find(r => r.roleName === roleName);
+                if (role) {
+                    const { error } = await send(`/dart/role/member/${member.id}/role/${role.id}`, {}, 'DELETE');
+                    if (error) {
+                        openAlert(`권한 삭제 실패: ${error}`);
+                        return;
+                    }
+                }
+            }
+
+            // 권한 추가 처리
+            for (const roleName of addedRoles) {
+                const role = roles.find(r => r.roleName === roleName);
+                if (role) {
+                    const { error } = await send(`/dart/role/member/${member.id}/role/${role.id}`, {}, 'POST');
+                    if (error) {
+                        openAlert(`권한 추가 실패: ${error}`);
+                        return;
+                    }
+                }
+            }
+
+            openAlert('권한이 성공적으로 변경되었습니다.');
+            setRoleModalOpen(false);
+            setSelectedMember(null);
+            fetchMembers();
+        } catch (e) {
+            console.error('권한 변경 실패:', e);
+            openAlert('권한 변경 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleCloseRoleModal = () => {
+        setRoleModalOpen(false);
+        setSelectedMember(null);
     };
 
     const getRoleDisplayName = (roleName) => {
@@ -472,13 +526,23 @@ export default function MemberManagement() {
                                                         >
                                                             수정
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleChangeRole(member)}
-                                                            className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 dark:text-purple-400 rounded text-xs font-medium transition-colors"
-                                                            title="권한"
-                                                        >
-                                                            권한
-                                                        </button>
+                                                        {isSuperAdmin() ? (
+                                                            <button
+                                                                onClick={() => handleChangeRole(member)}
+                                                                className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 dark:text-purple-400 rounded text-xs font-medium transition-colors"
+                                                                title="권한"
+                                                            >
+                                                                권한
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                disabled
+                                                                className="px-2 py-1 bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 rounded text-xs font-medium cursor-not-allowed"
+                                                                title="슈퍼관리자만 권한 관리 가능"
+                                                            >
+                                                                권한
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleReject(member)}
                                                             className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 rounded text-xs font-medium transition-colors"
@@ -585,6 +649,14 @@ export default function MemberManagement() {
                 message={alertConfig.message}
                 onClose={handleCloseAlert}
                 onConfirm={alertConfig.onConfirm}
+            />
+
+            <RoleManagementModal
+                open={roleModalOpen}
+                member={selectedMember}
+                allRoles={roles}
+                onClose={handleCloseRoleModal}
+                onSave={handleSaveRoles}
             />
         </>
     );

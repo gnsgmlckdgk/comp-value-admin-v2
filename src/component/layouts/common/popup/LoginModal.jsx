@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
 import Loading from '@/component/common/display/Loading';
+import AlertModal from './AlertModal';
 
 export default function LoginModal({
     show,
@@ -16,6 +17,7 @@ export default function LoginModal({
 }) {
 
     const usernameRef = useRef(null);
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '' });
 
     useEffect(() => {
         if (show && usernameRef.current) {
@@ -108,6 +110,25 @@ export default function LoginModal({
                     />
                 </div>
 
+                {/* 아이디/비밀번호 찾기 링크 */}
+                <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <button
+                        type="button"
+                        onClick={() => setAlertConfig({ open: true, message: '아이디 찾기 기능은 추가 예정입니다.' })}
+                        className="hover:text-sky-600 dark:hover:text-sky-400 hover:underline"
+                    >
+                        아이디 찾기
+                    </button>
+                    <span className="text-slate-300 dark:text-slate-600">|</span>
+                    <button
+                        type="button"
+                        onClick={() => setAlertConfig({ open: true, message: '비밀번호 찾기 기능은 추가 예정입니다.' })}
+                        className="hover:text-sky-600 dark:hover:text-sky-400 hover:underline"
+                    >
+                        비밀번호 찾기
+                    </button>
+                </div>
+
                 {/* 버튼 영역 */}
                 <div className="mt-5 flex items-center justify-between gap-3">
                     <button
@@ -127,6 +148,12 @@ export default function LoginModal({
                     </button>
                 </div>
             </div>
+
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={() => setAlertConfig({ open: false, message: '' })}
+            />
         </div>
     );
 }

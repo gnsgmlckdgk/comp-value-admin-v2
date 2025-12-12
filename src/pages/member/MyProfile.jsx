@@ -58,7 +58,7 @@ export default function MyProfile() {
 
     const getRoleDisplayName = (roleName) => {
         const role = roles.find(r => r.roleName === roleName);
-        return role ? role.roleDisplayName : roleName;
+        return role ? role.description : roleName;
     };
 
     const handleEditProfile = () => {

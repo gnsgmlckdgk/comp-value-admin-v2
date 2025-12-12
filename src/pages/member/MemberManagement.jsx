@@ -23,7 +23,7 @@ export default function MemberManagement() {
     const { roles: currentUserRoles } = useAuth();
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null, onAfterClose: null });
 
     // 페이징 상태
     const [pageNumber, setPageNumber] = useState(0);
@@ -47,12 +47,17 @@ export default function MemberManagement() {
     const [roleModalOpen, setRoleModalOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
 
-    const openAlert = (message, onConfirm = null) => {
-        setAlertConfig({ open: true, message, onConfirm });
+    // 회원 탈퇴 확인 모달 상태
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteTargetMember, setDeleteTargetMember] = useState(null);
+    const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
+
+    const openAlert = (message, onConfirm = null, onAfterClose = null) => {
+        setAlertConfig({ open: true, message, onConfirm, onAfterClose });
     };
 
     const handleCloseAlert = () => {
-        setAlertConfig({ open: false, message: '', onConfirm: null });
+        setAlertConfig({ open: false, message: '', onConfirm: null, onAfterClose: null });
     };
 
     useEffect(() => {
@@ -171,31 +176,45 @@ export default function MemberManagement() {
             return;
         }
 
-        openAlert(
-            `회원 ID: ${member.id}\n사용자명: ${member.username}\n\n위 회원을 강제탈퇴 처리하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
-            async () => {
-                const { data, error } = await send('/dart/member/admin/delete', {
-                    memberId: member.id
-                }, 'POST');
+        // 탈퇴 확인 모달 열기
+        setDeleteTargetMember(member);
+        setDeleteConfirmUsername('');
+        setDeleteModalOpen(true);
+    };
 
-                if (error) {
-                    setTimeout(() => {
-                        openAlert(error);
-                    }, 100);
-                } else if (data?.success) {
-                    // 성공 메시지 표시
-                    setTimeout(() => {
-                        openAlert('회원 탈퇴 처리가 완료되었습니다.');
-                    }, 100);
-                    // 목록 새로고침
-                    fetchMembers();
-                } else {
-                    setTimeout(() => {
-                        openAlert(data?.message || '회원 탈퇴 처리에 실패했습니다.');
-                    }, 100);
-                }
-            }
-        );
+    const handleDeleteConfirm = async () => {
+        // 사용자명 확인
+        if (deleteConfirmUsername !== deleteTargetMember.username) {
+            openAlert('사용자 ID가 일치하지 않습니다.');
+            return;
+        }
+
+        setDeleteModalOpen(false);
+
+        const { data, error } = await send('/dart/member/admin/delete', {
+            memberId: deleteTargetMember.id
+        }, 'POST');
+
+        if (error) {
+            setTimeout(() => {
+                openAlert(error);
+            }, 100);
+        } else if (data?.success) {
+            // 성공 메시지 표시
+            setTimeout(() => {
+                openAlert('회원 탈퇴 처리가 완료되었습니다.', null, fetchMembers);
+            }, 100);
+        } else {
+            setTimeout(() => {
+                openAlert(data?.message || '회원 탈퇴 처리에 실패했습니다.');
+            }, 100);
+        }
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteModalOpen(false);
+        setDeleteTargetMember(null);
+        setDeleteConfirmUsername('');
     };
 
     const handleEdit = (member) => {
@@ -680,6 +699,7 @@ export default function MemberManagement() {
                 message={alertConfig.message}
                 onClose={handleCloseAlert}
                 onConfirm={alertConfig.onConfirm}
+                onAfterClose={alertConfig.onAfterClose}
             />
 
             <RoleManagementModal
@@ -689,6 +709,75 @@ export default function MemberManagement() {
                 onClose={handleCloseRoleModal}
                 onSave={handleSaveRoles}
             />
+
+            {/* 회원 탈퇴 확인 모달 */}
+            {deleteModalOpen && deleteTargetMember && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+                        <h2 className="mb-4 text-lg font-semibold text-red-600 dark:text-red-400">회원 강제탈퇴 확인</h2>
+
+                        <div className="mb-4 rounded-lg bg-slate-50 dark:bg-slate-700/50 p-4">
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600 dark:text-slate-400">회원번호:</span>
+                                    <span className="font-medium">{deleteTargetMember.id}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600 dark:text-slate-400">사용자 ID:</span>
+                                    <span className="font-medium">{deleteTargetMember.username}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600 dark:text-slate-400">닉네임:</span>
+                                    <span className="font-medium">{deleteTargetMember.nickname || '-'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600 dark:text-slate-400">이메일:</span>
+                                    <span className="font-medium">{deleteTargetMember.email || '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 p-3">
+                            <p className="text-sm text-red-600 dark:text-red-400">
+                                ⚠️ 이 작업은 되돌릴 수 없습니다.<br />
+                                회원의 모든 데이터가 영구적으로 삭제됩니다.
+                            </p>
+                        </div>
+
+                        <div className="mb-5">
+                            <label className="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                확인을 위해 사용자 ID를 입력해주세요:
+                            </label>
+                            <Input
+                                value={deleteConfirmUsername}
+                                onChange={e => setDeleteConfirmUsername(e.target.value)}
+                                placeholder={deleteTargetMember.username}
+                                wdfull={true}
+                                onEnter={handleDeleteConfirm}
+                            />
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                입력할 ID: <span className="font-mono font-semibold">{deleteTargetMember.username}</span>
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={handleDeleteCancel}
+                                className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleDeleteConfirm}
+                                disabled={deleteConfirmUsername !== deleteTargetMember.username}
+                                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                탈퇴 처리
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

@@ -72,6 +72,31 @@ export default function SellRecordHistory() {
         fetchFxRate();
     }, []);
 
+    // 선택된 필터값이 유효하지 않으면 자동으로 'all'로 리셋
+    useEffect(() => {
+        // 월 목록 계산
+        const months = selectedSymbol === 'all'
+            ? [...new Set(records.map(r => r.sellDate.substring(0, 7)))]
+            : [...new Set(records.filter(r => r.symbol === selectedSymbol).map(r => r.sellDate.substring(0, 7)))];
+
+        // 현재 선택된 월이 유효하지 않으면 'all'로 리셋
+        if (selectedMonth !== 'all' && !months.includes(selectedMonth)) {
+            setSelectedMonth('all');
+        }
+    }, [selectedSymbol, records, selectedMonth]);
+
+    useEffect(() => {
+        // 티커 목록 계산
+        const symbols = selectedMonth === 'all'
+            ? [...new Set(records.map(r => r.symbol))]
+            : [...new Set(records.filter(r => r.sellDate.startsWith(selectedMonth)).map(r => r.symbol))];
+
+        // 현재 선택된 티커가 유효하지 않으면 'all'로 리셋
+        if (selectedSymbol !== 'all' && !symbols.includes(selectedSymbol)) {
+            setSelectedSymbol('all');
+        }
+    }, [selectedMonth, records, selectedSymbol]);
+
     // 환율 조회
     const fetchFxRate = async () => {
         setFxLoading(true);
@@ -102,11 +127,35 @@ export default function SellRecordHistory() {
         return monthMatch && symbolMatch;
     });
 
-    // 월 목록 생성 (기록된 데이터 기준)
-    const availableMonths = [...new Set(records.map(r => r.sellDate.substring(0, 7)))].sort().reverse();
+    // 월 목록 생성 - 선택된 티커에 따라 동적으로 변경
+    const availableMonths = (() => {
+        if (selectedSymbol === 'all') {
+            // 전체 티커 선택 시: 모든 월 표시
+            return [...new Set(records.map(r => r.sellDate.substring(0, 7)))].sort().reverse();
+        } else {
+            // 특정 티커 선택 시: 해당 티커가 존재하는 월만 표시
+            return [...new Set(
+                records
+                    .filter(r => r.symbol === selectedSymbol)
+                    .map(r => r.sellDate.substring(0, 7))
+            )].sort().reverse();
+        }
+    })();
 
-    // 티커 목록 생성 (기록된 데이터 기준)
-    const availableSymbols = [...new Set(records.map(r => r.symbol))].sort();
+    // 티커 목록 생성 - 선택된 월에 따라 동적으로 변경
+    const availableSymbols = (() => {
+        if (selectedMonth === 'all') {
+            // 전체 기간 선택 시: 모든 티커 표시
+            return [...new Set(records.map(r => r.symbol))].sort();
+        } else {
+            // 특정 월 선택 시: 해당 월에 존재하는 티커만 표시
+            return [...new Set(
+                records
+                    .filter(r => r.sellDate.startsWith(selectedMonth))
+                    .map(r => r.symbol)
+            )].sort();
+        }
+    })();
 
     const sortedRecords = [...filteredRecords].sort((a, b) => {
         const { field, direction } = sortConfig;

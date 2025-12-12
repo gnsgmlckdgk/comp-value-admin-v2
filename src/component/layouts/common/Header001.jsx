@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 import routes from '@/config/routes';
 import { send } from '@/util/ClientUtil';
@@ -9,6 +9,12 @@ import { useTheme } from '@/context/ThemeContext';
 import LoginModal from '@/component/layouts/common/popup/LoginModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
+// 공개 페이지 목록 (PrivateRoutes.jsx와 동일)
+const PUBLIC_ROUTES = [
+    '/',
+    '/member/join'
+];
+
 export default function Header001({ onMenuClick }) {
     const [title] = useState('CompValue');
     const [showLogin, setShowLogin] = useState(false);
@@ -16,6 +22,7 @@ export default function Header001({ onMenuClick }) {
 
     const { isLoggedIn, setIsLoggedIn, userName, setUserName, nickName, setNickName, roles, setRoles } = useAuth();
     const { isDark, toggleTheme } = useTheme();
+    const location = useLocation();
 
     const [loginUsername, setLoginUsername] = useState('');
     const [password, setPassWord] = useState('');
@@ -134,6 +141,15 @@ export default function Header001({ onMenuClick }) {
                 setPassWord('');
                 setShowLogin(false);
                 setDisplayName(nextNick);
+
+                // 로그인 후 공개 페이지(홈 제외)에 있다면 홈으로 이동
+                const currentPath = location.pathname;
+                const isPublicPage = PUBLIC_ROUTES.includes(currentPath);
+                const isHomePage = currentPath === '/';
+
+                if (isPublicPage && !isHomePage) {
+                    navigate('/');
+                }
             }
         } else {
             openAlert(error);

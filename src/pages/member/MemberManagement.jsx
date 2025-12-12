@@ -76,6 +76,7 @@ export default function MemberManagement() {
     };
 
     const fetchMembers = async () => {
+
         setLoading(true);
         try {
             const requestData = {
@@ -92,7 +93,6 @@ export default function MemberManagement() {
                 openAlert(error);
             } else if (data?.success && data?.response) {
                 const response = data.response;
-                console.log('회원 목록:', response.members);
                 setMembers(response.members || []);
                 setTotalElements(response.totalCount || 0);
                 setTotalPages(response.totalPages || 0);
@@ -165,14 +165,35 @@ export default function MemberManagement() {
     };
 
     const handleReject = (member) => {
+        // 슈퍼관리자 권한 체크
+        if (!isSuperAdmin()) {
+            openAlert('회원 탈퇴 처리는 슈퍼관리자만 가능합니다.');
+            return;
+        }
+
         openAlert(
-            `${member.nickname || member.username} 회원을 강제탈퇴 처리하시겠습니까?`,
-            () => {
-                // TODO: 강제탈퇴 API 호출
-                console.log('강제탈퇴:', member);
-                setTimeout(() => {
-                    openAlert('강제탈퇴 기능은 준비 중입니다.');
-                }, 100);
+            `회원 ID: ${member.id}\n사용자명: ${member.username}\n\n위 회원을 강제탈퇴 처리하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
+            async () => {
+                const { data, error } = await send('/dart/member/admin/delete', {
+                    memberId: member.id
+                }, 'POST');
+
+                if (error) {
+                    setTimeout(() => {
+                        openAlert(error);
+                    }, 100);
+                } else if (data?.success) {
+                    // 성공 메시지 표시
+                    setTimeout(() => {
+                        openAlert('회원 탈퇴 처리가 완료되었습니다.');
+                    }, 100);
+                    // 목록 새로고침
+                    fetchMembers();
+                } else {
+                    setTimeout(() => {
+                        openAlert(data?.message || '회원 탈퇴 처리에 실패했습니다.');
+                    }, 100);
+                }
             }
         );
     };
@@ -543,13 +564,23 @@ export default function MemberManagement() {
                                                                 권한
                                                             </button>
                                                         )}
-                                                        <button
-                                                            onClick={() => handleReject(member)}
-                                                            className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 rounded text-xs font-medium transition-colors"
-                                                            title="탈퇴"
-                                                        >
-                                                            탈퇴
-                                                        </button>
+                                                        {isSuperAdmin() ? (
+                                                            <button
+                                                                onClick={() => handleReject(member)}
+                                                                className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 rounded text-xs font-medium transition-colors"
+                                                                title="탈퇴"
+                                                            >
+                                                                탈퇴
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                disabled
+                                                                className="px-2 py-1 bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 rounded text-xs font-medium cursor-not-allowed"
+                                                                title="슈퍼관리자만 회원 탈퇴 가능"
+                                                            >
+                                                                탈퇴
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>

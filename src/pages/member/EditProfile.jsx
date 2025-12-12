@@ -17,6 +17,12 @@ export default function EditProfile() {
         email: '',
         nickname: ''
     });
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
+    const [changingPassword, setChangingPassword] = useState(false);
 
     const openAlert = (message, onConfirm = null, onAfterClose = null) => {
         setAlertConfig({ open: true, message, onConfirm, onAfterClose });
@@ -51,6 +57,78 @@ export default function EditProfile() {
 
     const handleChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handlePasswordChange = (field, value) => {
+        setPasswordData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handlePasswordSubmit = async (e) => {
+        e.preventDefault();
+
+        // 유효성 검사
+        if (!passwordData.currentPassword) {
+            openAlert('현재 비밀번호를 입력해주세요.');
+            return;
+        }
+
+        if (!passwordData.newPassword) {
+            openAlert('새 비밀번호를 입력해주세요.');
+            return;
+        }
+
+        if (passwordData.newPassword.length < 8) {
+            openAlert('새 비밀번호는 8자 이상이어야 합니다.');
+            return;
+        }
+
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            openAlert('새 비밀번호가 일치하지 않습니다.');
+            return;
+        }
+
+        if (passwordData.currentPassword === passwordData.newPassword) {
+            openAlert('새 비밀번호는 현재 비밀번호와 달라야 합니다.');
+            return;
+        }
+
+        // 비밀번호 변경 확인
+        openAlert('비밀번호를 변경하시겠습니까?', async () => {
+            setChangingPassword(true);
+            try {
+                const { data, error } = await send('/dart/member/password', {
+                    currentPassword: passwordData.currentPassword,
+                    newPassword: passwordData.newPassword
+                }, 'POST');
+
+                if (error) {
+                    setTimeout(() => {
+                        openAlert(error);
+                    }, 100);
+                } else if (data?.success) {
+                    // 비밀번호 변경 성공
+                    setPasswordData({
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmPassword: ''
+                    });
+                    setTimeout(() => {
+                        openAlert('비밀번호가 변경되었습니다.');
+                    }, 100);
+                } else {
+                    setTimeout(() => {
+                        openAlert('비밀번호 변경에 실패했습니다.');
+                    }, 100);
+                }
+            } catch (e) {
+                console.error('비밀번호 변경 실패:', e);
+                setTimeout(() => {
+                    openAlert('비밀번호 변경 중 오류가 발생했습니다.');
+                }, 100);
+            } finally {
+                setChangingPassword(false);
+            }
+        });
     };
 
     const handleCancel = () => {
@@ -232,6 +310,99 @@ export default function EditProfile() {
                                 className="flex-1 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {saving ? '저장 중...' : '저장'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {/* 비밀번호 변경 */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mt-6">
+                    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">비밀번호 변경</h2>
+                    </div>
+
+                    <form onSubmit={handlePasswordSubmit} className="p-6 space-y-6">
+                        {/* 현재 비밀번호 */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                현재 비밀번호 <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                value={passwordData.currentPassword}
+                                onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                                placeholder="현재 비밀번호를 입력하세요"
+                                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white transition-colors"
+                                disabled={changingPassword}
+                            />
+                        </div>
+
+                        {/* 새 비밀번호 */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                새 비밀번호 <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                value={passwordData.newPassword}
+                                onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                                placeholder="새 비밀번호를 입력하세요 (최소 8자)"
+                                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white transition-colors"
+                                disabled={changingPassword}
+                            />
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                                비밀번호는 최소 8자 이상이어야 합니다
+                            </p>
+                        </div>
+
+                        {/* 새 비밀번호 확인 */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                새 비밀번호 확인 <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                value={passwordData.confirmPassword}
+                                onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                                placeholder="새 비밀번호를 다시 입력하세요"
+                                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white transition-colors"
+                                disabled={changingPassword}
+                            />
+                        </div>
+
+                        {/* 안내 메시지 */}
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                            <div className="flex gap-3">
+                                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <div className="text-sm text-amber-800 dark:text-amber-300">
+                                    <p className="font-medium mb-1">비밀번호 변경 시 주의사항</p>
+                                    <ul className="list-disc list-inside space-y-1 text-amber-700 dark:text-amber-400">
+                                        <li>안전한 비밀번호를 사용하세요</li>
+                                        <li>영문, 숫자, 특수문자를 조합하는 것을 권장합니다</li>
+                                        <li>다른 사이트와 동일한 비밀번호는 사용하지 마세요</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 버튼 */}
+                        <div className="flex items-center gap-3 pt-4">
+                            <button
+                                type="button"
+                                onClick={() => setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })}
+                                disabled={changingPassword}
+                                className="flex-1 px-6 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                초기화
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={changingPassword}
+                                className="flex-1 px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {changingPassword ? '변경 중...' : '비밀번호 변경'}
                             </button>
                         </div>
                     </form>

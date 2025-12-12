@@ -1,5 +1,5 @@
 // src/context/AuthContext.jsx
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 // 1. Context 생성
 // 전역에서 로그인 상태를 공유하기 위해 AuthContext를 만듬
@@ -8,11 +8,20 @@ const AuthContext = createContext();
 // 2. Provider 컴포넌트 정의
 // 이 컴포넌트로 감싼 하위 컴포넌트들은 로그인 상태에 접근 가능
 export function AuthProvider({ children }) {
-    // 로그인 상태를 관리하는 state
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [userName, setUserName] = useState('');
-    const [nickName, setNickName] = useState('');
-    const [roles, setRoles] = useState([]);
+    // 로그인 상태를 관리하는 state - localStorage에서 초기값 복원
+    const [isLoggedIn, setIsLoggedIn] = useState(() => {
+        return !!localStorage.getItem('userName');
+    });
+    const [userName, setUserName] = useState(() => {
+        return localStorage.getItem('userName') || '';
+    });
+    const [nickName, setNickName] = useState(() => {
+        return localStorage.getItem('nickName') || '';
+    });
+    const [roles, setRoles] = useState(() => {
+        const storedRoles = localStorage.getItem('roles');
+        return storedRoles ? JSON.parse(storedRoles) : [];
+    });
 
     return (
         // value 객체로 로그인 상태와 변경 함수 전달

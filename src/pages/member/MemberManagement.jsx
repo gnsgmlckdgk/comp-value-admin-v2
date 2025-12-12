@@ -52,6 +52,13 @@ export default function MemberManagement() {
     const [deleteTargetMember, setDeleteTargetMember] = useState(null);
     const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
 
+    // 회원 수정 모달 상태
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editTargetMember, setEditTargetMember] = useState(null);
+    const [editEmail, setEditEmail] = useState('');
+    const [editNickname, setEditNickname] = useState('');
+    const [editLoading, setEditLoading] = useState(false);
+
     const openAlert = (message, onConfirm = null, onAfterClose = null) => {
         setAlertConfig({ open: true, message, onConfirm, onAfterClose });
     };
@@ -218,9 +225,47 @@ export default function MemberManagement() {
     };
 
     const handleEdit = (member) => {
-        // TODO: 회원 수정 모달 열기
-        console.log('수정:', member);
-        openAlert('회원정보 수정 기능은 준비 중입니다.');
+        setEditTargetMember(member);
+        setEditEmail(member.email || '');
+        setEditNickname(member.nickname || '');
+        setEditModalOpen(true);
+    };
+
+    const handleEditSave = async () => {
+        if (!editEmail.trim() && !editNickname.trim()) {
+            openAlert('이메일 또는 닉네임 중 하나는 입력해야 합니다.');
+            return;
+        }
+
+        setEditLoading(true);
+        try {
+            const { data, error } = await send('/dart/member/admin/update', {
+                memberId: editTargetMember.id,
+                email: editEmail.trim(),
+                nickname: editNickname.trim()
+            }, 'POST');
+
+            if (error) {
+                openAlert(error);
+            } else if (data?.success) {
+                setEditModalOpen(false);
+                openAlert('회원 정보가 수정되었습니다.', null, fetchMembers);
+            } else {
+                openAlert(data?.message || '회원 정보 수정에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error('회원 정보 수정 실패:', e);
+            openAlert('회원 정보 수정 중 오류가 발생했습니다.');
+        } finally {
+            setEditLoading(false);
+        }
+    };
+
+    const handleEditCancel = () => {
+        setEditModalOpen(false);
+        setEditTargetMember(null);
+        setEditEmail('');
+        setEditNickname('');
     };
 
     const handleChangeRole = (member) => {
@@ -773,6 +818,73 @@ export default function MemberManagement() {
                                 className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 탈퇴 처리
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 회원 정보 수정 모달 */}
+            {editModalOpen && editTargetMember && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+                        <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">회원 정보 수정</h2>
+
+                        <div className="mb-4 rounded-lg bg-slate-50 dark:bg-slate-700/50 p-4">
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600 dark:text-slate-400">회원번호:</span>
+                                    <span className="font-medium">{editTargetMember.id}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600 dark:text-slate-400">사용자 ID:</span>
+                                    <span className="font-medium">{editTargetMember.username}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 mb-5">
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    이메일
+                                </label>
+                                <Input
+                                    type="email"
+                                    value={editEmail}
+                                    onChange={e => setEditEmail(e.target.value)}
+                                    placeholder="이메일을 입력하세요"
+                                    wdfull={true}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    닉네임
+                                </label>
+                                <Input
+                                    value={editNickname}
+                                    onChange={e => setEditNickname(e.target.value)}
+                                    placeholder="닉네임을 입력하세요"
+                                    wdfull={true}
+                                    onEnter={handleEditSave}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={handleEditCancel}
+                                disabled={editLoading}
+                                className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleEditSave}
+                                disabled={editLoading}
+                                className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                {editLoading ? '저장 중...' : '저장'}
                             </button>
                         </div>
                     </div>

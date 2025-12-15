@@ -1,4 +1,4 @@
-import Grid02 from '@/component/grid/Grid02';
+import CustomTable from '@/component/feature/board/CustomTable';
 import PageNation from '@/component/feature/board/pagenation/PageNation';
 
 import { forwardRef } from 'react';
@@ -6,8 +6,8 @@ import { forwardRef } from 'react';
 const List002 = forwardRef(({ columns = [], rowData = [], fetchData, loading = false, moveViewPage, pageNationProps }, ref) => {
 
     return (
-        <div className="rounded-md shadow-sm font-semibold text-gray-600 p-3 dark:text-slate-400">
-            <Grid02 ref={ref} columns={columns} rowData={rowData} loading={loading} moveViewPage={moveViewPage} />
+        <div className="px-2 md:px-4 py-3">
+            <CustomTable ref={ref} columns={columns} rowData={rowData} loading={loading} moveViewPage={moveViewPage} />
             <PageNation
                 currentPage={pageNationProps.currentPage}
                 totalCount={pageNationProps.totalCount}

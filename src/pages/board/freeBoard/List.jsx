@@ -26,63 +26,45 @@ function List() {
     // 페이징
     const [totalCount, setTotalCount] = useState(0);
     const [currentPage, setCurrentPage] = useState(state.currentPage || 1);
-    // const [pageBlock, setPageBlock] = useState(5);
-    // const [pageSize, setPageSize] = useState(20);
 
-    // 그리드
-    const [columns, setColumns] = useState([]);
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '' });
+    const [confirmDeleteConfig, setConfirmDeleteConfig] = useState({ open: false, message: '' });
 
     useEffect(() => {
         if (isLoggedIn) fetchData(currentPage);
     }, []);
 
-    // 반응형 그리드 설정용
-    useEffect(() => {
-        const handleResize = () => {
-            const mobile = window.innerWidth <= 768;
-            setIsMobile(mobile);
-            updateColumns(mobile);
-        };
-
-        window.addEventListener('resize', handleResize);
-        handleResize(); // 초기 실행
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
-    }, []);
-
-    const updateColumns = (mobile) => {
-        const newCols = [
-            {
-                headerCheckboxSelection: true,
-                checkboxSelection: true,
-                headerName: "ID",
-                field: "id",
-                hide: mobile,
-            },
-            {
-                headerName: "제목", field: "title", flex: 3, sortable: false, filter: true,
-                ...(mobile && {
-                    headerCheckboxSelection: true,
-                    checkboxSelection: true,
-                })
-            },
-            { headerName: "작성자", field: "author", flex: 1, sortable: false, filter: true, hide: mobile },
-            {
-                headerName: "작성일자",
-                field: "createdAt",
-                flex: 2,
-                sortable: false,
-                valueFormatter: (params) => new Date(params.value).toLocaleString(),
-                hide: mobile,
-            },
-        ];
-
-        setColumns(newCols);
-    }
+    const columns = [
+        {
+            headerCheckboxSelection: true,
+            checkboxSelection: true,
+            headerName: "번호",
+            field: "id",
+            flex: 1,
+        },
+        {
+            headerName: "제목",
+            field: "title",
+            flex: 3,
+        },
+        {
+            headerName: "작성자",
+            field: "author",
+            flex: 1,
+        },
+        {
+            headerName: "작성일자",
+            field: "createdAt",
+            flex: 2,
+            valueFormatter: (params) => new Date(params.value).toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }),
+        },
+    ];
 
     const pageNationProps = {
         currentPage,
@@ -107,17 +89,26 @@ function List() {
         setAlertConfig({ open: true, message });
     };
 
-    const handleCheckSelected = async () => {
+    const handleCheckSelected = () => {
         if (!gridRef.current || !gridRef.current.api) {
-            console.warn("그리드가 아직 초기화되지 않았습니다.");
+            openAlert('테이블이 아직 초기화되지 않았습니다.');
             return;
         }
         const selectedRows = gridRef.current.api.getSelectedRows();
         if (!selectedRows || selectedRows.length === 0) {
-            openAlert('선택된 행이 없습니다.');
+            openAlert('선택된 항목이 없습니다.');
             return;
         }
 
+        const count = selectedRows.length;
+        setConfirmDeleteConfig({
+            open: true,
+            message: `선택한 ${count}건의 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.`
+        });
+    };
+
+    const executeDelete = async () => {
+        const selectedRows = gridRef.current.api.getSelectedRows();
         const idList = selectedRows.map((row) => row.id);
 
         let successCount = 0;
@@ -130,7 +121,6 @@ function List() {
             if (error) {
                 failCount++;
                 lastErrorMessage = error;
-                // 권한 문제나 기타 오류가 계속 날 수 있으므로, 나머지는 더 이상 시도하지 않고 중단
                 break;
             } else {
                 successCount++;
@@ -142,7 +132,6 @@ function List() {
             openAlert(`${successCount}건의 게시글을 삭제했습니다.${suffix}`);
             fetchData(currentPage);
         } else if (failCount > 0) {
-            // 모두 실패한 경우 → 서버에서 내려준 에러 메시지를 그대로 노출
             openAlert(lastErrorMessage || '게시글 삭제 중 오류가 발생했습니다.');
         }
     };
@@ -279,6 +268,14 @@ function List() {
                 open={alertConfig.open}
                 message={alertConfig.message}
                 onClose={() => setAlertConfig({ open: false, message: '' })}
+            />
+
+            <AlertModal
+                open={confirmDeleteConfig.open}
+                title="삭제 확인"
+                message={confirmDeleteConfig.message}
+                onClose={() => setConfirmDeleteConfig({ open: false, message: '' })}
+                onConfirm={executeDelete}
             />
 
         </>

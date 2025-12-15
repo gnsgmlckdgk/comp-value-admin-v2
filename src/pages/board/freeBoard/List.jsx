@@ -40,22 +40,22 @@ function List() {
             checkboxSelection: true,
             headerName: "번호",
             field: "id",
-            flex: 1,
+            width: "80px",
         },
         {
             headerName: "제목",
             field: "title",
-            flex: 3,
+            flex: 1,
         },
         {
             headerName: "작성자",
             field: "author",
-            flex: 1,
+            width: "200px",
         },
         {
             headerName: "작성일자",
             field: "createdAt",
-            flex: 2,
+            width: "180px",
             valueFormatter: (params) => new Date(params.value).toLocaleString('ko-KR', {
                 year: 'numeric',
                 month: '2-digit',
@@ -191,7 +191,13 @@ function List() {
                 // 기존 구조 호환을 위해 전체를 그대로 두고
                 ...item,
                 // 그리드에서 사용하는 author 컬럼을 백엔드 작성자 필드에 맞춰 매핑
-                author: item.memberNickname ?? item.memberUsername ?? '',
+                // 닉네임(username) 형식으로 표시
+                author: item.memberNickname && item.memberUsername
+                    ? `${item.memberNickname} (${item.memberUsername})`
+                    : item.memberNickname || item.memberUsername || '',
+                // 원본 필드도 유지 (CustomTable에서 사용)
+                memberNickname: item.memberNickname,
+                memberUsername: item.memberUsername,
             }));
 
             setTotalCount(payload.total ?? 0);

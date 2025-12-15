@@ -23,7 +23,7 @@ function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {} }) {
 
 
     return (
-        <div className="mx-auto max-w-4xl px-4 py-8">
+        <div className="mx-auto max-w-7xl px-4 py-8">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 <div className="border-b border-slate-200 px-4 sm:px-6 py-4 dark:border-slate-700">
                     <h2 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-white">게시글 수정</h2>
@@ -35,7 +35,18 @@ function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {} }) {
                         <Input id='title' label='제목' value={title} labelNewLine={true} onChange={(e) => setTitle(e.target.value)} disabled={false} wdfull={true} />
                     </div>
                     <div>
-                        <Input id='author' label='작성자' value={boardData.author} labelNewLine={true} disabled={true} wdfull={true} />
+                        <Input
+                            id='author'
+                            label='작성자'
+                            value={
+                                boardData.memberNickname && boardData.memberUsername
+                                    ? `${boardData.memberNickname} (${boardData.memberUsername})`
+                                    : boardData.author || boardData.memberNickname || boardData.memberUsername || ''
+                            }
+                            labelNewLine={true}
+                            disabled={true}
+                            wdfull={true}
+                        />
                     </div>
                     <div>
                         <label htmlFor="content" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">

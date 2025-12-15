@@ -25,7 +25,7 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
     };
 
     return (
-        <div className="mx-auto max-w-4xl px-4 py-8">
+        <div className="mx-auto max-w-7xl px-4 py-8">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 <div className="border-b border-slate-200 px-4 sm:px-6 py-4 dark:border-slate-700">
                     <h2 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-white">게시글 등록</h2>

@@ -4,7 +4,8 @@ import { Check, Calendar, User } from 'lucide-react';
 const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, moveViewPage }, ref) => {
     const [selectedRows, setSelectedRows] = useState(new Set());
     const [allSelected, setAllSelected] = useState(false);
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    // 1024px 이하에서 카드 뷰로 전환 (태블릿 포함)
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
     useEffect(() => {
         setSelectedRows(new Set());
@@ -13,7 +14,7 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
 
     useEffect(() => {
         const handleResize = () => {
-            setIsMobile(window.innerWidth < 768);
+            setIsMobile(window.innerWidth < 1024);
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
@@ -67,16 +68,19 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                     return (
                         <div
                             key={row.id || rowIndex}
-                            className={`rounded-lg border p-4 transition-all ${
+                            className={`rounded-lg border transition-all ${
                                 isSelected
                                     ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20 dark:border-sky-600'
                                     : 'border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                             }`}
                         >
                             {/* 헤더: 체크박스와 번호 */}
-                            <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-slate-100 dark:border-slate-700">
                                 <button
-                                    onClick={() => handleSelectRow(row.id)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSelectRow(row.id);
+                                    }}
                                     className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
                                         isSelected
                                             ? 'bg-sky-500 border-sky-500 dark:bg-sky-600 dark:border-sky-600'
@@ -88,32 +92,33 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                 <span className="text-xs text-slate-500 dark:text-slate-400">#{row.id}</span>
                             </div>
 
-                            {/* 제목 */}
+                            {/* 콘텐츠 영역 - 전체 클릭 가능 */}
                             <div
                                 onClick={() => handleRowClick(row, 'title')}
-                                className="cursor-pointer mb-3"
+                                className="cursor-pointer p-4 space-y-3"
                             >
+                                {/* 제목 */}
                                 <h3 className="font-medium text-slate-900 dark:text-white line-clamp-2 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
                                     {row.title}
                                 </h3>
-                            </div>
 
-                            {/* 작성자 및 날짜 */}
-                            <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                                <div className="flex items-center gap-1">
-                                    <User size={14} />
-                                    <span>{row.author}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <Calendar size={14} />
-                                    <span className="text-xs">
-                                        {new Date(row.createdAt).toLocaleDateString('ko-KR', {
-                                            month: '2-digit',
-                                            day: '2-digit',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </span>
+                                {/* 작성자 및 날짜 */}
+                                <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-700">
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                        <User size={14} className="flex-shrink-0" />
+                                        <span className="truncate text-xs">{row.author}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                        <Calendar size={14} className="flex-shrink-0" />
+                                        <span className="text-xs whitespace-nowrap">
+                                            {new Date(row.createdAt).toLocaleDateString('ko-KR', {
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -168,20 +173,20 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
             ) : (
                 /* 데스크톱 테이블 뷰 */
                 <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-                    <table className="w-full">
+                    <table className="w-full table-fixed min-w-[800px]">
                         <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                             <tr>
                                 {visibleColumns.map((col, index) => (
                                     <th
                                         key={index}
                                         className="px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider"
-                                        style={{ width: col.flex ? `${col.flex * 10}%` : 'auto' }}
+                                        style={{ width: col.width || (col.flex ? `${col.flex * 100}%` : 'auto') }}
                                     >
                                         {col.checkboxSelection || col.headerCheckboxSelection ? (
-                                            <div className="flex items-center justify-center">
+                                            <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={handleSelectAll}
-                                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
                                                         allSelected
                                                             ? 'bg-sky-500 border-sky-500 dark:bg-sky-600 dark:border-sky-600'
                                                             : 'border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500'
@@ -189,6 +194,7 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                                 >
                                                     {allSelected && <Check size={14} className="text-white" />}
                                                 </button>
+                                                <span>{col.headerName}</span>
                                             </div>
                                         ) : (
                                             col.headerName
@@ -213,10 +219,13 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                             if (col.checkboxSelection) {
                                                 return (
                                                     <td key={colIndex} className="px-4 py-4">
-                                                        <div className="flex items-center justify-center">
+                                                        <div className="flex items-center gap-2">
                                                             <button
-                                                                onClick={() => handleSelectRow(row.id)}
-                                                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelectRow(row.id);
+                                                                }}
+                                                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
                                                                     isSelected
                                                                         ? 'bg-sky-500 border-sky-500 dark:bg-sky-600 dark:border-sky-600'
                                                                         : 'border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500'
@@ -224,6 +233,7 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                                             >
                                                                 {isSelected && <Check size={14} className="text-white" />}
                                                             </button>
+                                                            <span className="text-sm text-slate-600 dark:text-slate-400">{row.id}</span>
                                                         </div>
                                                     </td>
                                                 );
@@ -240,9 +250,13 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                                     className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 cursor-pointer"
                                                     onClick={() => handleRowClick(row, col.checkboxSelection ? 'checkbox' : col.field)}
                                                 >
-                                                    <div className="line-clamp-2">
+                                                    <div className={col.field === 'author' ? 'truncate max-w-xs' : 'line-clamp-2'}>
                                                         {col.field === 'title' ? (
                                                             <span className="font-medium hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                                                                {cellValue}
+                                                            </span>
+                                                        ) : col.field === 'author' ? (
+                                                            <span className="text-sm" title={cellValue}>
                                                                 {cellValue}
                                                             </span>
                                                         ) : (

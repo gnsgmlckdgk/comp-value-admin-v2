@@ -36,7 +36,7 @@ function View001({
     }, [boardData.content]);
 
     return (
-        <div className="mx-auto max-w-5xl px-4 py-8">
+        <div className="mx-auto max-w-7xl px-4 py-8">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 {/* 헤더 */}
                 <div className="border-b border-slate-200 px-4 sm:px-6 py-5 dark:border-slate-700">
@@ -66,20 +66,29 @@ function View001({
                             <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                             </svg>
-                            <span className="font-medium truncate">{boardData.author || boardData.memberNickname || boardData.memberUsername || '-'}</span>
+                            <span
+                                className="font-medium truncate"
+                                title={boardData.memberNickname && boardData.memberUsername
+                                    ? `${boardData.memberNickname} (${boardData.memberUsername})`
+                                    : boardData.author || boardData.memberNickname || boardData.memberUsername || '-'}
+                            >
+                                {boardData.memberNickname && boardData.memberUsername
+                                    ? `${boardData.memberNickname} (${boardData.memberUsername})`
+                                    : boardData.author || boardData.memberNickname || boardData.memberUsername || '-'}
+                            </span>
                         </div>
                         <div className="flex items-center gap-1.5 min-w-0">
                             <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                             </svg>
-                            <span className="truncate">{boardData.createdAt || '-'}</span>
+                            <span className="truncate" title={boardData.createdAt || '-'}>{boardData.createdAt || '-'}</span>
                         </div>
                         {boardData.updatedAt && boardData.updatedAt !== boardData.createdAt && (
                             <div className="flex items-center gap-1.5 text-slate-500 min-w-0 dark:text-slate-500">
                                 <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
                                 </svg>
-                                <span className="text-xs truncate">수정됨 {boardData.updatedAt}</span>
+                                <span className="text-xs truncate" title={`수정됨 ${boardData.updatedAt}`}>수정됨 {boardData.updatedAt}</span>
                             </div>
                         )}
                     </div>

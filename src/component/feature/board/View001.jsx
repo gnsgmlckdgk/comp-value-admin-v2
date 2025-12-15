@@ -1,4 +1,13 @@
 import { useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import Prism from 'prismjs';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-sql';
+import 'prismjs/components/prism-json';
+import 'prismjs/themes/prism-tomorrow.css';
 
 import Button from '@/component/common/button/Button';
 
@@ -20,6 +29,11 @@ function View001({
     },
 }) {
     const { id } = useParams(); // ← URL에서 :id 값 가져옴
+
+    // Prism 하이라이팅 적용
+    useEffect(() => {
+        Prism.highlightAll();
+    }, [boardData.content]);
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8">
@@ -73,10 +87,137 @@ function View001({
 
                 {/* 본문 */}
                 <div className="px-4 sm:px-6 py-8">
-                    <div className="prose prose-slate max-w-none">
-                        <p className="whitespace-pre-line text-slate-700 leading-relaxed break-words dark:text-slate-300">
-                            {boardData.content}
-                        </p>
+                    <style>{`
+                        .tiptap-view-content {
+                            color: #0f172a;
+                        }
+                        .dark .tiptap-view-content {
+                            color: #f1f5f9;
+                        }
+                        .tiptap-view-content h1 {
+                            font-size: 2em;
+                            font-weight: bold;
+                            margin: 0.5em 0;
+                        }
+                        .tiptap-view-content h2 {
+                            font-size: 1.5em;
+                            font-weight: bold;
+                            margin: 0.5em 0;
+                        }
+                        .tiptap-view-content h3 {
+                            font-size: 1.17em;
+                            font-weight: bold;
+                            margin: 0.5em 0;
+                        }
+                        .tiptap-view-content strong {
+                            font-weight: bold;
+                        }
+                        .tiptap-view-content em {
+                            font-style: italic;
+                        }
+                        .tiptap-view-content u {
+                            text-decoration: underline;
+                        }
+                        .tiptap-view-content s {
+                            text-decoration: line-through;
+                        }
+                        .tiptap-view-content ul,
+                        .tiptap-view-content ol {
+                            padding-left: 1.5rem;
+                            margin: 0.5em 0;
+                        }
+                        .tiptap-view-content blockquote {
+                            border-left: 3px solid #cbd5e1;
+                            padding-left: 1rem;
+                            margin: 1rem 0;
+                            color: #64748b;
+                        }
+                        .dark .tiptap-view-content blockquote {
+                            border-left-color: #475569;
+                            color: #94a3b8;
+                        }
+                        .tiptap-view-content code {
+                            background-color: #f1f5f9;
+                            padding: 0.2em 0.4em;
+                            border-radius: 0.25rem;
+                            font-family: 'Courier New', Courier, monospace;
+                            font-size: 0.875em;
+                        }
+                        .dark .tiptap-view-content code {
+                            background-color: #334155;
+                        }
+                        .tiptap-view-content pre {
+                            background-color: #2d2d2d;
+                            color: #f1f5f9;
+                            padding: 1rem;
+                            border-radius: 0.5rem;
+                            overflow-x: auto;
+                            font-family: 'Courier New', Courier, monospace;
+                            margin: 1rem 0;
+                            font-size: 0.875rem;
+                            line-height: 1.5;
+                            white-space: pre-wrap;
+                            word-break: break-word;
+                        }
+                        .dark .tiptap-view-content pre {
+                            background-color: #1e1e1e;
+                        }
+                        .tiptap-view-content pre code {
+                            background: none !important;
+                            padding: 0 !important;
+                            color: inherit;
+                            border-radius: 0;
+                        }
+                        /* Lexical 코드 블록 지원 */
+                        .tiptap-view-content div[data-lexical-decorator="true"] code,
+                        .tiptap-view-content .code-block,
+                        .tiptap-view-content [class*="code"] {
+                            display: block;
+                            background-color: #1e293b;
+                            color: #f1f5f9;
+                            padding: 1rem;
+                            border-radius: 0.5rem;
+                            overflow-x: auto;
+                            font-family: 'Courier New', Courier, monospace;
+                            margin: 1rem 0;
+                            white-space: pre-wrap;
+                            word-break: break-word;
+                        }
+                        .dark .tiptap-view-content div[data-lexical-decorator="true"] code,
+                        .dark .tiptap-view-content .code-block,
+                        .dark .tiptap-view-content [class*="code"] {
+                            background-color: #0f172a;
+                        }
+                        .tiptap-view-content a {
+                            color: #0ea5e9;
+                            text-decoration: underline;
+                        }
+                        .dark .tiptap-view-content a {
+                            color: #38bdf8;
+                        }
+                        .tiptap-view-content img {
+                            max-width: 100%;
+                            height: auto;
+                            border-radius: 0.5rem;
+                        }
+                        .tiptap-view-content p {
+                            margin: 0.5em 0;
+                        }
+                        .tiptap-view-content [style*="text-align: left"] {
+                            text-align: left;
+                        }
+                        .tiptap-view-content [style*="text-align: center"] {
+                            text-align: center;
+                        }
+                        .tiptap-view-content [style*="text-align: right"] {
+                            text-align: right;
+                        }
+                    `}</style>
+                    <div className="prose prose-slate max-w-none dark:prose-invert">
+                        <div
+                            className="tiptap-view-content leading-relaxed break-words"
+                            dangerouslySetInnerHTML={{ __html: boardData.content }}
+                        />
                     </div>
                 </div>
 

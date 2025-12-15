@@ -3,18 +3,22 @@ import { useParams } from 'react-router-dom';
 
 import Button from '@/component/common/button/Button';
 import Input from '@/component/common/input/Input';
-import TextArea from '@/component/common/textarea/TextArea';
+import RichTextEditor from '@/component/common/editor/RichTextEditor';
 
 
 function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {} }) {
 
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const [isLoaded, setIsLoaded] = useState(false);
 
 
     useEffect(() => {
-        setTitle(boardData.title ?? '');
-        setContent(boardData.content ?? '');
+        if (boardData.content !== undefined) {
+            setTitle(boardData.title ?? '');
+            setContent(boardData.content ?? '');
+            setIsLoaded(true);
+        }
     }, [boardData.title, boardData.content]);
 
 
@@ -34,7 +38,16 @@ function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {} }) {
                         <Input id='author' label='작성자' value={boardData.author} labelNewLine={true} disabled={true} wdfull={true} />
                     </div>
                     <div>
-                        <TextArea id='content' label='내용' value={content} labelNewLine={true} onChange={(e) => setContent(e.target.value)} wdfull={true} rows={15} />
+                        <label htmlFor="content" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            내용
+                        </label>
+                        {isLoaded && (
+                            <RichTextEditor
+                                value={content}
+                                onChange={setContent}
+                                height="400px"
+                            />
+                        )}
                     </div>
                     <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
                         <Button children="뒤로가기" variant="outline" onClick={moveViewPage} />

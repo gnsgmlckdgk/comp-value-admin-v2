@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import Button from '@/component/common/button/Button';
 import Input from '@/component/common/input/Input';
-import TextArea from '@/component/common/textarea/TextArea';
+import RichTextEditor from '@/component/common/editor/RichTextEditor';
 
 function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAuthor = '', openAlert = (msg) => alert(msg) }) {
     const [title, setTitle] = useState('');
@@ -13,7 +13,11 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
             openAlert('제목을 입력해 주세요.');
             return;
         }
-        if (!content.trim()) {
+        // HTML 태그를 제거한 텍스트로 검증 (공백만 있는 경우 방지)
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        const textContent = tempDiv.textContent || tempDiv.innerText || '';
+        if (!textContent.trim()) {
             openAlert('내용을 입력해 주세요.');
             return;
         }
@@ -51,14 +55,13 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
                         />
                     </div>
                     <div>
-                        <TextArea
-                            id="content"
-                            label="내용"
-                            labelNewLine={true}
+                        <label htmlFor="content" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            내용
+                        </label>
+                        <RichTextEditor
                             value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            wdfull={true}
-                            rows={15}
+                            onChange={setContent}
+                            height="400px"
                         />
                     </div>
                     <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">

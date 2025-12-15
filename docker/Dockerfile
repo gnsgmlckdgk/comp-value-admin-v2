@@ -4,7 +4,7 @@ WORKDIR /app
 ENV REACT_APP_ENV=prod
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 # RUN npm run build

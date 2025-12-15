@@ -4,6 +4,8 @@ import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from './AlertModal';
+import FindUsernameModal from './FindUsernameModal';
+import FindPasswordModal from './FindPasswordModal';
 
 export default function LoginModal({
     show,
@@ -18,6 +20,8 @@ export default function LoginModal({
 
     const usernameRef = useRef(null);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '' });
+    const [showFindUsername, setShowFindUsername] = useState(false);
+    const [showFindPassword, setShowFindPassword] = useState(false);
 
     useEffect(() => {
         if (show && usernameRef.current) {
@@ -114,7 +118,7 @@ export default function LoginModal({
                 <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                     <button
                         type="button"
-                        onClick={() => setAlertConfig({ open: true, message: '아이디 찾기 기능은 추가 예정입니다.' })}
+                        onClick={() => setShowFindUsername(true)}
                         className="hover:text-sky-600 dark:hover:text-sky-400 hover:underline"
                     >
                         아이디 찾기
@@ -122,7 +126,7 @@ export default function LoginModal({
                     <span className="text-slate-300 dark:text-slate-600">|</span>
                     <button
                         type="button"
-                        onClick={() => setAlertConfig({ open: true, message: '비밀번호 찾기 기능은 추가 예정입니다.' })}
+                        onClick={() => setShowFindPassword(true)}
                         className="hover:text-sky-600 dark:hover:text-sky-400 hover:underline"
                     >
                         비밀번호 찾기
@@ -153,6 +157,16 @@ export default function LoginModal({
                 open={alertConfig.open}
                 message={alertConfig.message}
                 onClose={() => setAlertConfig({ open: false, message: '' })}
+            />
+
+            <FindUsernameModal
+                show={showFindUsername}
+                onClose={() => setShowFindUsername(false)}
+            />
+
+            <FindPasswordModal
+                show={showFindPassword}
+                onClose={() => setShowFindPassword(false)}
             />
         </div>
     );

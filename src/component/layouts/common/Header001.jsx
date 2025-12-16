@@ -15,7 +15,7 @@ const PUBLIC_ROUTES = [
     '/member/join'
 ];
 
-export default function Header001({ onMenuClick }) {
+export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
     const [title] = useState('CompValue');
     const [showLogin, setShowLogin] = useState(false);
     const [displayName, setDisplayName] = useState('');
@@ -188,6 +188,8 @@ export default function Header001({ onMenuClick }) {
                     <button
                         className="mr-2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 md:hidden"
                         onClick={onMenuClick}
+                        onMouseEnter={onMenuHover}
+                        onMouseLeave={onMenuLeave}
                         aria-label="메뉴 열기"
                     >
                         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

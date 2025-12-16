@@ -41,7 +41,7 @@ export function TransactionRow({
             onDoubleClick={handleCellDoubleClick}
             title="더블클릭하여 기업가치 계산 결과 보기"
         >
-            <Td className={`sticky left-0 z-10 bg-white dark:bg-slate-800 dark:text-slate-50 transition-all duration-150`}>{index + 1}</Td>
+            <Td className={`sticky left-0 z-10 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-300 transition-all duration-150`}>{index + 1}</Td>
             <EditableTd
                 tdClassName={`sticky left-12 z-10 bg-white dark:bg-slate-800 transition-all duration-150'}`}
                 row={row}

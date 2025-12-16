@@ -10,11 +10,11 @@ export function GroupTotalRow({ data, fx, onSell, saving }) {
 
     return (
         <tr
-            className={`bg-gradient-to-r from-blue-50 to-indigo-50 font-semibold border-t-0 ${hasNextGroupDivider ? 'border-b-0' : 'border-b-2'
-                } border-slate-400 shadow-sm dark:from-blue-900/30 dark:to-indigo-900/30 dark:border-slate-600`}
+            className={`bg-gradient-to-r from-slate-100 to-slate-200 font-semibold border-t-0 ${hasNextGroupDivider ? 'border-b-0' : 'border-b-2'
+                } border-slate-400 shadow-sm dark:from-slate-700/80 dark:to-slate-600/80 dark:border-slate-600`}
         >
-            <Td className="sticky left-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900" />
-            <Td className="sticky left-12 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 font-bold text-slate-800 dark:from-blue-900 dark:to-indigo-900 dark:text-white">{symbol} 합계</Td>
+            <Td className="sticky left-0 z-10 bg-slate-100 dark:bg-slate-700/80" />
+            <Td className="sticky left-12 z-10 bg-slate-100 font-bold text-slate-800 dark:bg-slate-700/80 dark:text-slate-100">{symbol} 합계</Td>
             <Td />
             <Td />
             <Td>

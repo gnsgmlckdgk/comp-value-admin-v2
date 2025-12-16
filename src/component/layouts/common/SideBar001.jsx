@@ -14,12 +14,15 @@ function useIsMobile(breakpoint = 768) {
 
 const SECTIONS = ['시작하기', '기업분석(국내)', '기업분석(미국)', '거래', '게시판'];
 
-export default function SideBar001({ isSidebarOpen, setSidebarOpen }) {
+export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned, onMouseEnter, onMouseLeave }) {
     const isMobile = useIsMobile();
     const location = useLocation();
 
     const handleLinkClick = () => {
-        if (isMobile && setSidebarOpen) setSidebarOpen(false);
+        if (isMobile && setSidebarOpen) {
+            setSidebarOpen(false);
+            setIsPinned && setIsPinned(false);
+        }
     };
 
     const renderSection = (sectionLabel) => {
@@ -61,6 +64,8 @@ export default function SideBar001({ isSidebarOpen, setSidebarOpen }) {
             className={`${
                 isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
             } fixed inset-y-16 left-0 z-30 w-60 transform border-r border-slate-200 bg-white/95 px-3 py-4 text-sm shadow-lg transition-all duration-200 ease-out md:static md:inset-y-0 md:translate-x-0 md:opacity-100 md:w-64 md:bg-white md:shadow-none dark:bg-slate-900/95 dark:border-slate-700 md:dark:bg-slate-900`}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
         >
             <nav className="scrollbar-always flex h-full flex-col overflow-y-auto pb-6">
                 {SECTIONS.map(renderSection)}

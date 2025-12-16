@@ -26,7 +26,7 @@ const Register = () => {
         if (onConfirm) onConfirm();
     };
 
-    const onRegister = async (title, content) => {
+    const onRegister = async (title, content, notice = false, secret = false) => {
         const sendUrl = `/dart/freeboard/regi`;
         const { data, error } = await send(
             sendUrl,
@@ -34,6 +34,8 @@ const Register = () => {
                 title,
                 author: currentAuthor,
                 content,
+                notice,
+                secret,
             },
             'POST'
         );

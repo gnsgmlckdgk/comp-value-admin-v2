@@ -42,10 +42,10 @@ function Update() {
         }
     };
 
-    const updateData = async (title, content) => {
+    const updateData = async (title, content, notice = false, secret = false) => {
         const sendUrl = `/dart/freeboard/modi`;
 
-        const updateBoardData = { ...boardData, title, content };
+        const updateBoardData = { ...boardData, title, content, notice, secret };
 
         const { data, error } = await send(sendUrl, updateBoardData, 'PUT');
 

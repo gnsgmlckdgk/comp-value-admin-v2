@@ -41,11 +41,31 @@ function List() {
             headerName: "번호",
             field: "id",
             width: "80px",
+            cellRenderer: (params) => {
+                if (params.data.notice) {
+                    return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">공지</span>';
+                }
+                return params.value;
+            },
         },
         {
             headerName: "제목",
             field: "title",
             flex: 1,
+            cellRenderer: (params) => {
+                const isNotice = params.data.notice;
+                const isSecret = params.data.secret;
+                let iconHtml = '';
+
+                if (isNotice) {
+                    iconHtml = '<svg class="w-4 h-4 mr-1 inline-block text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path></svg>';
+                }
+                if (isSecret) {
+                    iconHtml += '<svg class="w-4 h-4 mr-1 inline-block text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>';
+                }
+
+                return iconHtml + (params.value || '');
+            },
         },
         {
             headerName: "작성자",
@@ -184,24 +204,27 @@ function List() {
         if (error === null && data) {
             // 백엔드 응답 형태:
             // 1) 기존: { total, data }
-            // 2) 신규: { success, code, message, response: { total, data } }
+            // 2) 신규: { success, code, message, response: { notices, posts, total } }
             const payload = data.response ?? data;
 
-            const rows = (payload.data ?? []).map((item) => ({
-                // 기존 구조 호환을 위해 전체를 그대로 두고
+            const mapItem = (item) => ({
                 ...item,
-                // 그리드에서 사용하는 author 컬럼을 백엔드 작성자 필드에 맞춰 매핑
-                // 닉네임(username) 형식으로 표시
                 author: item.memberNickname && item.memberUsername
                     ? `${item.memberNickname} (${item.memberUsername})`
                     : item.memberNickname || item.memberUsername || '',
-                // 원본 필드도 유지 (CustomTable에서 사용)
                 memberNickname: item.memberNickname,
                 memberUsername: item.memberUsername,
-            }));
+            });
+
+            // 공지글과 일반글 처리
+            const notices = (payload.notices ?? []).map(mapItem);
+            const posts = (payload.posts ?? payload.data ?? []).map(mapItem);
+
+            // 공지글을 맨 위에 배치
+            const allRows = [...notices, ...posts];
 
             setTotalCount(payload.total ?? 0);
-            setRowData(rows);
+            setRowData(allRows);
         } else {
             setTotalCount(0);
             setRowData([]);

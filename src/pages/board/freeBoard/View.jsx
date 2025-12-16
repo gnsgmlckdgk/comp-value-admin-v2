@@ -50,15 +50,46 @@ function View() {
         const sendUrl = `/dart/freeboard/view/${id}`;
         const { data, error } = await send(sendUrl, {}, 'GET');
         if (error === null && data) {
+            // success가 false인 경우 (비밀글 접근 제한 등)
+            if (data.success === false) {
+                const errorMsg = data.response || data.message || '게시글을 불러올 수 없습니다.';
+                openAlert(errorMsg, moveListPage);
+                setBoardData(undefined);
+                return;
+            }
+
             // 1) 기존: { ...게시글... }
             // 2) 신규: { success, code, message, response: { ...게시글... } }
             const payload = data.response ?? data;
+
+            // 비밀글 체크 - 작성자가 아니면 접근 불가
+            if (payload.secret) {
+                const currentUsername = userName || localStorage.getItem('userName') || '';
+                const currentNickname = nickName || localStorage.getItem('nickName') || '';
+
+                const isOwner =
+                    (payload.memberUsername && payload.memberUsername === currentUsername) ||
+                    (payload.memberNickname && payload.memberNickname === currentNickname);
+
+                if (!isOwner) {
+                    openAlert('🔒 비밀글입니다. 작성자만 확인할 수 있습니다.', moveListPage);
+                    setBoardData(undefined);
+                    return;
+                }
+            }
+
             setBoardData({
                 ...payload,
                 // 뷰에서 일관되게 사용할 표시용 작성자
                 author: payload.memberNickname ?? payload.memberUsername ?? '',
             });
         } else {
+            // 비밀글 접근 오류 처리
+            if (error && error.includes('비밀글')) {
+                openAlert(error, moveListPage);
+            } else {
+                openAlert(error || '게시글을 불러오는 중 오류가 발생했습니다.', moveListPage);
+            }
             setBoardData(undefined);
         }
     };

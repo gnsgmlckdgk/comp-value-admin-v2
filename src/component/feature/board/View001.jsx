@@ -36,10 +36,10 @@ function View001({
     }, [boardData.content]);
 
     return (
-        <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mx-auto max-w-7xl px-1 py-8">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 {/* 헤더 */}
-                <div className="border-b border-slate-200 px-4 sm:px-6 py-5 dark:border-slate-700">
+                <div className="border-b border-slate-200 px-3 sm:px-4 py-5 dark:border-slate-700">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
@@ -95,7 +95,7 @@ function View001({
                 </div>
 
                 {/* 본문 */}
-                <div className="px-4 sm:px-6 py-8">
+                <div className="px-3 sm:px-4 py-8">
                     <style>{`
                         .tiptap-view-content {
                             color: #0f172a;
@@ -231,7 +231,7 @@ function View001({
                 </div>
 
                 {/* 버튼들 */}
-                <div className="border-t border-slate-200 px-4 sm:px-6 py-4 dark:border-slate-700">
+                <div className="border-t border-slate-200 px-3 sm:px-4 py-4 dark:border-slate-700">
                     <div className="flex justify-between items-center gap-2">
                         <div className="flex gap-2">
                             {canEdit && (

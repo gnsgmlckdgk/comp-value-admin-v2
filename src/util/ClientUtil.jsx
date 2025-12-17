@@ -85,6 +85,13 @@ export const send = async (url, params, method = "GET") => {
         } else {
             response = await axios.get(url, { params, withCredentials: true });
         }
+
+        // 백엔드 응답에서 success 필드 체크
+        const responseData = response.data;
+        if (responseData && responseData.success === false) {
+            return { data: null, error: responseData.message || '요청 처리 중 오류가 발생했습니다.' };
+        }
+
         return { data: response.data, error: null };
     } catch (error) {
         return handleError(error);

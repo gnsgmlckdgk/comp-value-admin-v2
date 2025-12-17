@@ -71,7 +71,7 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                             key={row.id || rowIndex}
                             className={`rounded-lg border-2 transition-all ${
                                 isNotice
-                                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-500 shadow-md'
+                                    ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-300 shadow-md'
                                     : isSelected
                                     ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20 dark:border-sky-600'
                                     : 'border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
@@ -234,7 +234,7 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                         key={row.id || rowIndex}
                                         className={`transition-colors ${
                                             isNotice
-                                                ? 'bg-blue-50/50 dark:bg-blue-900/20 border-l-4 border-l-blue-500 dark:border-l-blue-500'
+                                                ? 'bg-blue-50/50 dark:bg-blue-900/20 border-l-4 border-l-blue-600 dark:border-l-blue-300'
                                                 : isSelected
                                                 ? 'bg-sky-50 dark:bg-sky-900/20'
                                                 : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'

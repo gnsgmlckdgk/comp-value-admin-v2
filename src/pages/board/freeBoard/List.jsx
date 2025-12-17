@@ -103,6 +103,7 @@ function List() {
         { name: "작성자", value: "2" },
         { name: "내용", value: "3" },
         { name: "제목, 내용", value: "4" },
+        { name: "아이디", value: "5" },
     ]
 
     const openAlert = (message) => {

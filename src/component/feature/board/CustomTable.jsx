@@ -58,6 +58,7 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
     };
 
     const visibleColumns = columns.filter(col => !col.hide);
+    const hasCheckboxSelection = visibleColumns.some(col => col.checkboxSelection || col.headerCheckboxSelection);
 
     // 모바일 카드 뷰 렌더링
     const renderMobileView = () => {
@@ -79,19 +80,23 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                         >
                             {/* 헤더: 체크박스와 번호 */}
                             <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-slate-100 dark:border-slate-700">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSelectRow(row.id);
-                                    }}
-                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
-                                        isSelected
-                                            ? 'bg-sky-500 border-sky-500 dark:bg-sky-600 dark:border-sky-600'
-                                            : 'border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500'
-                                    }`}
-                                >
-                                    {isSelected && <Check size={14} className="text-white" />}
-                                </button>
+                                {hasCheckboxSelection ? (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSelectRow(row.id);
+                                        }}
+                                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                                            isSelected
+                                                ? 'bg-sky-500 border-sky-500 dark:bg-sky-600 dark:border-sky-600'
+                                                : 'border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500'
+                                        }`}
+                                    >
+                                        {isSelected && <Check size={14} className="text-white" />}
+                                    </button>
+                                ) : (
+                                    <div></div>
+                                )}
                                 {isNotice ? (
                                     <div className="flex items-center gap-1">
                                         <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -163,7 +168,7 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                     )}
                 </span>
                 {/* 모바일에서 전체 선택 버튼 */}
-                {isMobile && rowData.length > 0 && (
+                {isMobile && rowData.length > 0 && hasCheckboxSelection && (
                     <button
                         onClick={handleSelectAll}
                         className="text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 font-medium"

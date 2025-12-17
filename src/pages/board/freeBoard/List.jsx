@@ -6,7 +6,7 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useAuth } from '@/context/AuthContext';
 import { send } from '@/util/ClientUtil';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 function List() {
@@ -34,10 +34,32 @@ function List() {
         if (isLoggedIn) fetchData(currentPage);
     }, []);
 
-    const columns = [
+    // ---- 역할 계산 (ROLE_SUPER_ADMIN / ROLE_ADMIN / ROLE_USER 등) ----
+    let storedRoles = [];
+    try {
+        const raw = localStorage.getItem('roles');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                storedRoles = parsed;
+            }
+        }
+    } catch {
+        storedRoles = [];
+    }
+
+    const effectiveRoles = (roles && roles.length ? roles : storedRoles).map((r) =>
+        (r || '').toString().toUpperCase()
+    );
+
+    const isSuperAdmin = effectiveRoles.some((r) => r.includes('SUPER_ADMIN'));
+    const isAdmin = !isSuperAdmin && effectiveRoles.some((r) => r.includes('ADMIN'));
+    const canDelete = isSuperAdmin || isAdmin;
+
+    const columns = useMemo(() => [
         {
-            headerCheckboxSelection: true,
-            checkboxSelection: true,
+            headerCheckboxSelection: canDelete,
+            checkboxSelection: canDelete,
             headerName: "번호",
             field: "id",
             width: "100px",
@@ -84,7 +106,7 @@ function List() {
                 minute: '2-digit'
             }),
         },
-    ];
+    ], [canDelete]);
 
     const pageNationProps = {
         currentPage,
@@ -233,28 +255,6 @@ function List() {
 
         setLoading(false);
     }
-
-    // ---- 역할 계산 (ROLE_SUPER_ADMIN / ROLE_ADMIN / ROLE_USER 등) ----
-    let storedRoles = [];
-    try {
-        const raw = localStorage.getItem('roles');
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-                storedRoles = parsed;
-            }
-        }
-    } catch {
-        storedRoles = [];
-    }
-
-    const effectiveRoles = (roles && roles.length ? roles : storedRoles).map((r) =>
-        (r || '').toString().toUpperCase()
-    );
-
-    const isSuperAdmin = effectiveRoles.some((r) => r.includes('SUPER_ADMIN'));
-    const isAdmin = !isSuperAdmin && effectiveRoles.some((r) => r.includes('ADMIN'));
-    const canDelete = isSuperAdmin || isAdmin;
 
     return (
         <>

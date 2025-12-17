@@ -65,11 +65,14 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
             <div className="space-y-3">
                 {rowData.map((row, rowIndex) => {
                     const isSelected = selectedRows.has(row.id);
+                    const isNotice = row.notice;
                     return (
                         <div
                             key={row.id || rowIndex}
-                            className={`rounded-lg border transition-all ${
-                                isSelected
+                            className={`rounded-lg border-2 transition-all ${
+                                isNotice
+                                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-500 shadow-md'
+                                    : isSelected
                                     ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20 dark:border-sky-600'
                                     : 'border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                             }`}
@@ -89,7 +92,16 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                 >
                                     {isSelected && <Check size={14} className="text-white" />}
                                 </button>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">#{row.id}</span>
+                                {isNotice ? (
+                                    <div className="flex items-center gap-1">
+                                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
+                                        </svg>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">공지</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">#{row.id}</span>
+                                )}
                             </div>
 
                             {/* 콘텐츠 영역 - 전체 클릭 가능 */}
@@ -98,8 +110,18 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                 className="cursor-pointer p-4 space-y-3"
                             >
                                 {/* 제목 */}
-                                <h3 className="font-medium text-slate-900 dark:text-white line-clamp-2 hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
-                                    {row.title}
+                                <h3 className="font-medium text-slate-900 dark:text-white line-clamp-2 hover:text-sky-600 dark:hover:text-sky-400 transition-colors flex items-start gap-1">
+                                    {isNotice && (
+                                        <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
+                                        </svg>
+                                    )}
+                                    {row.secret && (
+                                        <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path>
+                                        </svg>
+                                    )}
+                                    <span className="flex-1">{row.title}</span>
                                 </h3>
 
                                 {/* 작성자 및 날짜 */}
@@ -206,11 +228,14 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                             {rowData.map((row, rowIndex) => {
                                 const isSelected = selectedRows.has(row.id);
+                                const isNotice = row.notice;
                                 return (
                                     <tr
                                         key={row.id || rowIndex}
                                         className={`transition-colors ${
-                                            isSelected
+                                            isNotice
+                                                ? 'bg-blue-50/50 dark:bg-blue-900/20 border-l-4 border-l-blue-500 dark:border-l-blue-500'
+                                                : isSelected
                                                 ? 'bg-sky-50 dark:bg-sky-900/20'
                                                 : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'
                                         }`}
@@ -240,7 +265,11 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                             }
 
                                             let cellValue = row[col.field];
-                                            if (col.valueFormatter && typeof col.valueFormatter === 'function') {
+                                            let cellHtml = null;
+
+                                            if (col.cellRenderer && typeof col.cellRenderer === 'function') {
+                                                cellHtml = col.cellRenderer({ value: cellValue, data: row });
+                                            } else if (col.valueFormatter && typeof col.valueFormatter === 'function') {
                                                 cellValue = col.valueFormatter({ value: cellValue });
                                             }
 
@@ -250,19 +279,23 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                                     className="px-4 py-4 text-sm text-slate-900 dark:text-slate-100 cursor-pointer"
                                                     onClick={() => handleRowClick(row, col.checkboxSelection ? 'checkbox' : col.field)}
                                                 >
-                                                    <div className={col.field === 'author' ? 'truncate max-w-xs' : 'line-clamp-2'}>
-                                                        {col.field === 'title' ? (
-                                                            <span className="font-medium hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
-                                                                {cellValue}
-                                                            </span>
-                                                        ) : col.field === 'author' ? (
-                                                            <span className="text-sm" title={cellValue}>
-                                                                {cellValue}
-                                                            </span>
-                                                        ) : (
-                                                            cellValue
-                                                        )}
-                                                    </div>
+                                                    {cellHtml ? (
+                                                        <div dangerouslySetInnerHTML={{ __html: cellHtml }} />
+                                                    ) : (
+                                                        <div className={col.field === 'author' ? 'truncate max-w-xs' : 'line-clamp-2'}>
+                                                            {col.field === 'title' ? (
+                                                                <span className="font-medium hover:text-sky-600 dark:hover:text-sky-400 transition-colors">
+                                                                    {cellValue}
+                                                                </span>
+                                                            ) : col.field === 'author' ? (
+                                                                <span className="text-sm" title={cellValue}>
+                                                                    {cellValue}
+                                                                </span>
+                                                            ) : (
+                                                                cellValue
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </td>
                                             );
                                         })}

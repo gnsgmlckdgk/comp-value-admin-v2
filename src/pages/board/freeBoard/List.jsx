@@ -40,10 +40,10 @@ function List() {
             checkboxSelection: true,
             headerName: "번호",
             field: "id",
-            width: "80px",
+            width: "100px",
             cellRenderer: (params) => {
                 if (params.data.notice) {
-                    return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">공지</span>';
+                    return '<div class="flex items-center gap-1"><svg class="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path></svg><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">공지</span></div>';
                 }
                 return params.value;
             },

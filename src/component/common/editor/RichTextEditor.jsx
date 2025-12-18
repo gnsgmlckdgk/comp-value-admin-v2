@@ -517,8 +517,18 @@ function FloatingLinkEditorPlugin() {
     const [linkPosition, setLinkPosition] = useState({ top: 0, left: 0 });
     const inputRef = useRef(null);
     const editorRef = useRef(null);
+    const isEditModeRef = useRef(false);
+
+    useEffect(() => {
+        isEditModeRef.current = isEditMode;
+    }, [isEditMode]);
 
     const updateLinkEditor = useCallback(() => {
+        // 편집 모드일 때는 URL 업데이트하지 않음
+        if (isEditModeRef.current) {
+            return;
+        }
+
         const selection = $getSelection();
         if ($isRangeSelection(selection)) {
             const node = selection.anchor.getNode();
@@ -624,12 +634,14 @@ function FloatingLinkEditorPlugin() {
                         className="flex-1 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                     />
                     <button
+                        type="button"
                         onClick={handleLinkSubmit}
                         className="px-3 py-1 text-sm bg-sky-500 text-white rounded hover:bg-sky-600"
                     >
                         확인
                     </button>
                     <button
+                        type="button"
                         onClick={() => setIsEditMode(false)}
                         className="px-3 py-1 text-sm bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-white rounded hover:bg-slate-300 dark:hover:bg-slate-500"
                     >
@@ -647,12 +659,14 @@ function FloatingLinkEditorPlugin() {
                         {linkUrl}
                     </a>
                     <button
+                        type="button"
                         onClick={() => setIsEditMode(true)}
                         className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-white rounded hover:bg-slate-200 dark:hover:bg-slate-600"
                     >
                         편집
                     </button>
                     <button
+                        type="button"
                         onClick={handleRemoveLink}
                         className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800"
                     >
@@ -1064,7 +1078,45 @@ function ToolbarPlugin() {
     );
 }
 
-export default function RichTextEditor({ value, onChange, placeholder = '내용을 입력하세요...', height = '400px' }) {
+// 컨텐츠 사이즈 체크 플러그인
+function ContentSizePlugin({ onSizeChange }) {
+    const [editor] = useLexicalComposerContext();
+
+    useEffect(() => {
+        return editor.registerUpdateListener(({ editorState }) => {
+            editorState.read(() => {
+                const htmlString = $generateHtmlFromNodes(editor);
+
+                // HTML 문자열의 바이트 크기 계산
+                const contentSize = new Blob([htmlString]).size;
+
+                // 이미지들의 개별 크기 체크
+                const parser = new DOMParser();
+                const dom = parser.parseFromString(htmlString, 'text/html');
+                const images = dom.querySelectorAll('img');
+
+                const imageSizes = Array.from(images).map((img) => {
+                    const src = img.getAttribute('src') || '';
+                    // Base64 이미지 크기 계산
+                    if (src.startsWith('data:')) {
+                        const base64Data = src.split(',')[1] || '';
+                        const imageSize = Math.ceil(base64Data.length * 0.75); // Base64는 원본의 약 133%
+                        return imageSize;
+                    }
+                    return 0;
+                });
+
+                if (onSizeChange) {
+                    onSizeChange({ contentSize, imageSizes });
+                }
+            });
+        });
+    }, [editor, onSizeChange]);
+
+    return null;
+}
+
+export default function RichTextEditor({ value, onChange, placeholder = '내용을 입력하세요...', height = '400px', onSizeChange }) {
     const initialConfig = {
         namespace: 'RichTextEditor',
         theme,
@@ -1207,6 +1259,7 @@ export default function RichTextEditor({ value, onChange, placeholder = '내용�
                 <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                 <CodeBlockExitPlugin />
                 <CodeHighlightPlugin />
+                {onSizeChange && <ContentSizePlugin onSizeChange={onSizeChange} />}
             </LexicalComposer>
         </div>
     );

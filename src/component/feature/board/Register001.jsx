@@ -9,6 +9,21 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
     const [content, setContent] = useState('');
     const [notice, setNotice] = useState(false);
     const [secret, setSecret] = useState(false);
+    const [contentSize, setContentSize] = useState(0);
+    const [imageSizes, setImageSizes] = useState([]);
+
+    const handleSizeChange = ({ contentSize, imageSizes }) => {
+        setContentSize(contentSize);
+        setImageSizes(imageSizes);
+    };
+
+    const formatSize = (bytes) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    };
 
     const handleSubmit = () => {
         if (!title.trim()) {
@@ -23,6 +38,20 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
             openAlert('내용을 입력해 주세요.');
             return;
         }
+
+        // 이미지 개별 크기 체크 (5MB)
+        const oversizedImages = imageSizes.filter(size => size > 5 * 1024 * 1024);
+        if (oversizedImages.length > 0) {
+            openAlert('이미지는 각각 5MB 이하만 첨부 가능합니다.');
+            return;
+        }
+
+        // 전체 컨텐츠 크기 체크 (10MB)
+        if (contentSize > 10 * 1024 * 1024) {
+            openAlert('전체 컨텐츠 크기는 10MB 이하만 가능합니다.');
+            return;
+        }
+
         onRegister(title, content, notice, secret);
     };
 
@@ -96,7 +125,23 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
                             value={content}
                             onChange={setContent}
                             height="400px"
+                            onSizeChange={handleSizeChange}
                         />
+                        <div className="mt-2 flex flex-wrap gap-4 text-sm">
+                            <div className={`${contentSize > 10 * 1024 * 1024 ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-600 dark:text-slate-400'}`}>
+                                전체 크기: {formatSize(contentSize)} / 10 MB
+                            </div>
+                            {imageSizes.length > 0 && (
+                                <div className="text-slate-600 dark:text-slate-400">
+                                    이미지 {imageSizes.length}개
+                                    {imageSizes.some(size => size > 5 * 1024 * 1024) && (
+                                        <span className="ml-2 text-red-600 dark:text-red-400 font-semibold">
+                                            (일부 이미지가 5MB를 초과합니다)
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
                         <Button children="뒤로가기" variant="outline" onClick={moveListPage} />

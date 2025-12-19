@@ -125,7 +125,7 @@ const AbroadCompValue = () => {
 
             setIsLoading(true);
             try {
-                const sendUrl = buildUrl('/dart/main/cal/per_value/abroad/v2', { symbol });
+                const sendUrl = buildUrl('/dart/main/cal/per_value/abroad/v3', { symbol });
                 const { data, error } = await send(sendUrl, {}, 'GET');
 
                 const hasValid = !error && data && data.response && Object.keys(data.response).length > 0;

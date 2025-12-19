@@ -117,7 +117,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
 
             {/* 해석 가이드 오버레이 */}
             {overlays.guide && (
-                <GuideOverlay onClose={() => closeOverlay('guide')} />
+                <GuideOverlay onClose={() => closeOverlay('guide')} data={data} />
             )}
 
             {/* 상세보기 오버레이 */}
@@ -191,10 +191,12 @@ const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpen
         );
     }
 
+    const metrics = useCompanyMetrics(compValueData);
+
     return (
         <div className="p-4 space-y-4">
             <CompanySummary data={compValueData} />
-            <PEGExplanation onOpenGuide={onOpenGuide} />
+            <MetricExplanation onOpenGuide={onOpenGuide} 매출기반평가={metrics.매출기반평가} />
             <RecommendationBanner data={compValueData} />
             <HighlightCards data={compValueData} />
             <DataGrid data={compValueData} onOpenDetail={onOpenDetail} />
@@ -229,18 +231,57 @@ const CompanySummary = ({ data }) => {
  * 지표 배지들
  */
 const MetricBadges = ({ metrics, data }) => {
-    const { per, perAdj, peg, eps, isRecommended } = metrics;
+    const { per, perAdj, peg, eps, isRecommended, psr, 매출기반평가 } = metrics;
+
+    // 데이터에서 플래그 확인 (중첩 객체 포함)
+    const getValDeep = (obj, keys) => {
+        if (!obj || typeof obj !== 'object') return undefined;
+
+        // 먼저 현재 레벨에서 검색
+        for (const key of keys) {
+            if (obj[key] != null) return obj[key];
+        }
+
+        // 상세정보 등 중첩 객체에서 검색
+        const containers = ['상세', '상세정보', 'detail', 'details', 'metric', 'metrics', 'valuation', 'summary', 'data'];
+        for (const container of containers) {
+            if (obj[container] && typeof obj[container] === 'object') {
+                for (const key of keys) {
+                    if (obj[container][key] != null) return obj[container][key];
+                }
+            }
+        }
+
+        return undefined;
+    };
+
+    const 수익가치계산불가 = getValDeep(data, ['수익가치계산불가', 'earningsNotAvailable', 'isEarningsNotAvailable']) === true;
+
+    // PEG 포맷 함수 (999인 경우 N/A 표시)
+    const formatPEG = (value) => {
+        if (value === null) return null;
+        if (value === 999 || Math.abs(value - 999) < 0.01) return 'N/A';
+        return formatNumber(value, 2);
+    };
 
     return (
         <div className="flex gap-2 flex-wrap">
             {per !== null && (
                 <Badge title="Price / Earnings">
-                    PER {formatNumber(per)}
+                    PER {formatNumber(per, 2)}
                 </Badge>
             )}
-            {perAdj !== null && (
+            {매출기반평가 && psr !== null && (
+                <Badge title="Price / Sales Ratio" highlighted={isRecommended}>
+                    PSR {formatNumber(psr, 2)}
+                    {isRecommended && (
+                        <span className="ml-1 text-[11px] text-emerald-600">(투자 권장)</span>
+                    )}
+                </Badge>
+            )}
+            {!매출기반평가 && !수익가치계산불가 && perAdj !== null && (
                 <Badge title="성장률 보정 PER">
-                    성장률 보정 PER {formatNumber(perAdj)}
+                    성장률 보정 PER {formatNumber(perAdj, 2)}
                 </Badge>
             )}
             {peg !== null && (
@@ -248,7 +289,7 @@ const MetricBadges = ({ metrics, data }) => {
                     title="Price / Earnings to Growth (PEG)"
                     highlighted={isRecommended}
                 >
-                    PEG {formatNumber(peg, 2)}
+                    PEG {formatPEG(peg)}
                     {isRecommended && (
                         <span className="ml-1 text-[11px] text-emerald-600">(투자 권장)</span>
                     )}
@@ -256,7 +297,7 @@ const MetricBadges = ({ metrics, data }) => {
             )}
             {eps !== null && (
                 <Badge>
-                    EPS(TTM) {formatNumber(eps)}
+                    EPS(TTM) {formatNumber(eps, 2)}
                 </Badge>
             )}
         </div>
@@ -279,12 +320,15 @@ const Badge = ({ children, title, highlighted = false }) => (
 );
 
 /**
- * PEG 설명 섹션
+ * 지표 설명 섹션 (PEG 또는 PSR)
  */
-const PEGExplanation = ({ onOpenGuide }) => (
+const MetricExplanation = ({ onOpenGuide, 매출기반평가 }) => (
     <div className="mt-1 flex items-center justify-between gap-2">
         <p className="text-[12px] text-slate-500 dark:text-slate-400">
-            💡 PEG = PER ÷ 이익성장률(%) — PEG가 1 이하이면 성장 대비 저평가, 1 이상이면 고평가 가능
+            {매출기반평가
+                ? '💡 PSR = 시가총액 ÷ 매출액 — PSR이 2 이하이면 매출 대비 저평가, 2 이상이면 고평가 가능'
+                : '💡 PEG = PER ÷ 이익성장률(%) — PEG가 1 이하이면 성장 대비 저평가, 1 이상이면 고평가 가능'
+            }
         </p>
         <button
             type="button"
@@ -306,9 +350,13 @@ const RecommendationBanner = ({ data }) => {
 
     if (!metrics.isRecommended) return null;
 
+    const message = metrics.매출기반평가
+        ? '📈 조건 충족: PSR < 2 이고 적정가 > 현재가 — '
+        : '📈 조건 충족: PEG ≤ 1 이고 적정가 > 현재가 — ';
+
     return (
         <div className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-            📈 조건 충족: PEG ≤ 1 이고 적정가 &gt; 현재가 — <span className="font-semibold">투자 권장</span>
+            {message}<span className="font-semibold">투자 권장</span>
         </div>
     );
 };
@@ -439,54 +487,89 @@ const ActionButtons = ({ data, onCopy, onClose, onOpenChart }) => (
 /**
  * 해석 가이드 오버레이
  */
-const GuideOverlay = ({ onClose }) => (
-    <>
-        <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={onClose} />
-        <div
-            className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
-            onClick={(e) => e.stopPropagation()}
-        >
-            <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">
-                <div className="text-sm font-semibold text-slate-800 dark:text-white">📈 해석 요약</div>
-                <button
-                    className="text-xs rounded border px-2 py-1 hover:bg-slate-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                    onClick={onClose}
-                >
-                    닫기 (Esc)
-                </button>
-            </div>
+const GuideOverlay = ({ onClose, data }) => {
+    const metrics = useCompanyMetrics(data);
+    const 매출기반평가 = metrics.매출기반평가;
 
-            <div className="px-4 pt-3 pb-4 text-[12px] text-slate-600 dark:text-slate-400">
-                PEG(↓: 저평가, ↑: 고평가)와 적정가(↑/↓) 조합으로 간단한 해석 매트릭스입니다.
-            </div>
+    return (
+        <>
+            <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={onClose} />
+            <div
+                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">
+                    <div className="text-sm font-semibold text-slate-800 dark:text-white">📈 해석 요약</div>
+                    <button
+                        className="text-xs rounded border px-2 py-1 hover:bg-slate-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        onClick={onClose}
+                    >
+                        닫기 (Esc)
+                    </button>
+                </div>
 
-            <div className="px-4 pb-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <GuideCard
-                        color="emerald"
-                        title="적정가↑ / PEG↓"
-                        description="성장 대비 저평가 (투자유효)"
-                    />
-                    <GuideCard
-                        color="amber"
-                        title="적정가↑ / PEG↑"
-                        description="성장성 반영된 고평가 (관망)"
-                    />
-                    <GuideCard
-                        color="rose"
-                        title="적정가↓ / PEG↑"
-                        description="성장둔화 + 고평가 (주의)"
-                    />
-                    <GuideCard
-                        color="slate"
-                        title="적정가↓ / PEG↓"
-                        description="성장정체지만 밸류 낮음 (저PER 반등 가능)"
-                    />
+                <div className="px-4 pt-3 pb-4 text-[12px] text-slate-600 dark:text-slate-400">
+                    {매출기반평가
+                        ? 'PSR(↓: 저평가, ↑: 고평가)와 적정가(↑/↓) 조합으로 간단한 해석 매트릭스입니다.'
+                        : 'PEG(↓: 저평가, ↑: 고평가)와 적정가(↑/↓) 조합으로 간단한 해석 매트릭스입니다.'
+                    }
+                </div>
+
+                <div className="px-4 pb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {매출기반평가 ? (
+                            <>
+                                <GuideCard
+                                    color="emerald"
+                                    title="적정가↑ / PSR↓"
+                                    description="매출 대비 저평가 (투자유효)"
+                                />
+                                <GuideCard
+                                    color="amber"
+                                    title="적정가↑ / PSR↑"
+                                    description="높은 기대 반영된 고평가 (관망)"
+                                />
+                                <GuideCard
+                                    color="rose"
+                                    title="적정가↓ / PSR↑"
+                                    description="매출둔화 + 고평가 (주의)"
+                                />
+                                <GuideCard
+                                    color="slate"
+                                    title="적정가↓ / PSR↓"
+                                    description="저평가지만 성장성 부족 (신중 검토)"
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <GuideCard
+                                    color="emerald"
+                                    title="적정가↑ / PEG↓"
+                                    description="성장 대비 저평가 (투자유효)"
+                                />
+                                <GuideCard
+                                    color="amber"
+                                    title="적정가↑ / PEG↑"
+                                    description="성장성 반영된 고평가 (관망)"
+                                />
+                                <GuideCard
+                                    color="rose"
+                                    title="적정가↓ / PEG↑"
+                                    description="성장둔화 + 고평가 (주의)"
+                                />
+                                <GuideCard
+                                    color="slate"
+                                    title="적정가↓ / PEG↓"
+                                    description="성장정체지만 밸류 낮음 (저PER 반등 가능)"
+                                />
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
-    </>
-);
+        </>
+    );
+};
 
 /**
  * 가이드 카드
@@ -648,6 +731,7 @@ const useCompanyMetrics = (data) => {
         const per = getValDeep(data, ['per', 'PER', 'pe', 'peRatio', 'perTTM', 'PER(TTM)']);
         const perAdj = getValDeep(data, ['성장률보정PER', 'growthAdjustedPER', 'perGrowthAdjusted']);
         const pegBackend = getValDeep(data, ['PEG', 'peg', 'pegRatio', 'pegTTM', '성장률보정PEG']);
+        const psr = getValDeep(data, ['psr', 'PSR', 'priceToSales', 'psRatio']);
         const eps = getValDeep(data, ['epsTtm', 'epsTTM', 'eps', 'EPS', 'EPS(TTM)']);
 
         const perNum = toNum(per);
@@ -668,17 +752,21 @@ const useCompanyMetrics = (data) => {
         const priceNum = toNum(price);
         const targetNum = toNum(target);
         const perAdjNum = toNum(perAdj);
+        const psrNum = toNum(psr);
+
+        // 매출기반평가 플래그 확인
+        const 매출기반평가 = getValDeep(data, ['매출기반평가', 'revenueBased', 'isRevenueBased']) === true;
 
         // 투자 권장 조건:
-        // 1. PEG가 0 < PEG <= 1 범위에 있어야 함 (음수 제외)
-        // 2. PER이 양수여야 함 (음수 제외)
-        // 3. 성장률보정PER이 있다면 양수여야 함 (음수 제외)
-        // 4. 적정가 > 현재가
-        const isRecommended = Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
-            Number.isFinite(perNum) && perNum > 0 &&
-            (!Number.isFinite(perAdjNum) || perAdjNum > 0) &&
-            !Number.isNaN(priceNum) && !Number.isNaN(targetNum) &&
-            targetNum > priceNum;
+        // 매출기반평가 = true: PSR < 2 AND 적정가 > 현재가
+        // 매출기반평가 = false: PEG <= 1 (양수) AND PER > 0 AND 성장률보정PER > 0 (있는 경우) AND 적정가 > 현재가
+        const isRecommended = 매출기반평가
+            ? (Number.isFinite(psrNum) && psrNum > 0 && psrNum < 2 &&
+               !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum)
+            : (Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
+               Number.isFinite(perNum) && perNum > 0 &&
+               (!Number.isFinite(perAdjNum) || perAdjNum > 0) &&
+               !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum);
 
         return {
             symbol,
@@ -686,8 +774,10 @@ const useCompanyMetrics = (data) => {
             per: Number.isNaN(perNum) ? null : perNum,
             perAdj: Number.isNaN(perAdjNum) ? null : perAdjNum,
             peg: Number.isFinite(pegToShow) ? pegToShow : null,
+            psr: Number.isNaN(psrNum) ? null : psrNum,
             eps: Number.isNaN(toNum(eps)) ? null : toNum(eps),
-            isRecommended
+            isRecommended,
+            매출기반평가
         };
     }, [data]);
 };

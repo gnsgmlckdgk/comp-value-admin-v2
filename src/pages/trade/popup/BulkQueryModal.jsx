@@ -120,7 +120,7 @@ async function defaultBulkFetcher(symbols) {
 
     for (const s of symbols) {
         console.log(s);
-        const sendUrl = `/dart/main/cal/per_value/abroad/v2?symbol=${s}`;
+        const sendUrl = `/dart/main/cal/per_value/abroad/v3?symbol=${s}`;
         const { data, error } = await send(sendUrl, {}, "GET");
 
         if (error == null && data && data.response && Object.keys(data.response).length > 0) {

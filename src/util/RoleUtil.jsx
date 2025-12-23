@@ -75,8 +75,8 @@ export const filterMenuByRole = (menuItems, userRoles) => {
  * 권한별 상수 정의 (필요시 추가)
  */
 export const ROLES = {
+    SUPER_ADMIN: 'ROLE_SUPER_ADMIN',
     ADMIN: 'ROLE_ADMIN',
     USER: 'ROLE_USER',
-    MANAGER: 'ROLE_MANAGER',
     // 필요한 권한을 여기에 추가
 };

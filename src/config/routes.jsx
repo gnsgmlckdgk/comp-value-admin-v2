@@ -10,6 +10,7 @@ import CompValue from '@/pages/trade/CompValue'
 import CompValueCustom from '@/pages/trade/CompValueCustom'
 import TransactionOverview from '@/pages/transaction/TransactionOverview'
 import AbroadCompValue from '@/pages/trade/AbroadCompValue'
+import AbroadCompanyList from '@/pages/trade/AbroadCompanyList'
 import SellRecordHistory from '@/pages/trade/SellRecordHistory'
 import MyProfile from '@/pages/member/MyProfile'
 import EditProfile from '@/pages/member/EditProfile'
@@ -40,6 +41,7 @@ const routes = {
     "CompValueCustom": { section: '기업분석(국내)', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
 
     /* 기업분석(미국) */
+    "AbroadCompanyList": { section: '기업분석(미국)', label: '기업목록', path: '/complist/abroad', element: <AbroadCompanyList /> },
     "AbroadCompValue": { section: '기업분석(미국)', label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
 
     /* 거래 */

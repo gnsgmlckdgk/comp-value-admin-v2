@@ -1,8 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ExcelJS from 'exceljs';
 
 import { send } from '@/util/ClientUtil';
 
+// 분할 조회 설정 (FMP API 분당 300건 제한 대응)
+// 30건씩 조회 후 10초 대기 → 분당 약 180건 속도로 안전하게 처리
+const BATCH_SIZE = 30; // 한 번에 처리할 심볼 수
+const BATCH_DELAY_MS = 10000; // 배치 사이 대기 시간 (10초)
 
 /**
  * 대량조회 모달
@@ -12,10 +16,36 @@ import { send } from '@/util/ClientUtil';
  *  - fetcher?: (symbols: string[]) => Promise<Array<any>>
  *      // 백단 연동 함수(주입 가능). 미주입 시 defaultBulkFetcher 사용
  *  - openAlert?: (msg: string) => void
+ *  - initialSymbols?: string[] // 외부에서 주입할 심볼 배열
  */
-export default function BulkQueryModal({ open, onClose, fetcher, openAlert = (msg) => alert(msg) }) {
+export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols = [] }) {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [progress, setProgress] = useState({ current: 0, total: 0, currentSymbol: '' });
+    const [internalAlert, setInternalAlert] = useState({ open: false, message: '' });
+
+    // 내부 알림 함수 (z-index 문제 해결)
+    const showAlert = (message) => {
+        setInternalAlert({ open: true, message });
+    };
+
+    const closeAlert = () => {
+        setInternalAlert({ open: false, message: '' });
+    };
+
+    // 모달 열릴 때 initialSymbols 세팅
+    useEffect(() => {
+        if (open && initialSymbols.length > 0) {
+            setInput(initialSymbols.join('\n'));
+        }
+    }, [open, initialSymbols]);
+
+    // 모달 닫힐 때 상태 초기화
+    useEffect(() => {
+        if (!open) {
+            setProgress({ current: 0, total: 0, currentSymbol: '' });
+        }
+    }, [open]);
 
     const symbols = useMemo(
         () =>
@@ -29,22 +59,26 @@ export default function BulkQueryModal({ open, onClose, fetcher, openAlert = (ms
     if (!open) return null;
 
     const run = async () => {
-
         if (symbols.length === 0) {
-            openAlert('심볼을 한 줄에 하나씩 입력해주세요.');
+            showAlert('심볼을 한 줄에 하나씩 입력해주세요.');
             return;
         }
         setLoading(true);
+        setProgress({ current: 0, total: symbols.length, currentSymbol: '' });
 
         try {
             const fn = fetcher || defaultBulkFetcher;
-            const items = await fn(symbols); // [{koreanName,englishName,symbol,currentPrice,futurePrice,peg,raw}, ...]
+            const items = await fn(symbols, (current, total, currentSymbol) => {
+                setProgress({ current, total, currentSymbol });
+            });
             await exportToExcel(Array.isArray(items) ? items : []);
+            showAlert(`${items.length}건의 데이터가 엑셀로 저장되었습니다.`);
         } catch (e) {
             console.error(e);
-            openAlert('조회/엑셀 생성 중 오류가 발생했습니다.');
+            showAlert('조회/엑셀 생성 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
+            setProgress({ current: 0, total: 0, currentSymbol: '' });
         }
     };
 
@@ -69,6 +103,11 @@ export default function BulkQueryModal({ open, onClose, fetcher, openAlert = (ms
                     <p className="text-[12px] text-slate-600 dark:text-slate-400">
                         심볼을 <span className="font-medium">한 줄에 하나씩</span> 입력하고 "엑셀로 내보내기"를 누르면,
                         서버 조회 후 결과를 엑셀 파일로 저장합니다.
+                        {symbols.length > BATCH_SIZE && (
+                            <span className="block mt-1 text-amber-600 dark:text-amber-400">
+                                ⚠️ {symbols.length}개 심볼은 30건씩 나누어 {Math.ceil(symbols.length / BATCH_SIZE)}회 조회됩니다. (배치 간 10초 대기)
+                            </span>
+                        )}
                     </p>
 
                     <textarea
@@ -76,14 +115,35 @@ export default function BulkQueryModal({ open, onClose, fetcher, openAlert = (ms
                         onChange={(e) => setInput(e.target.value)}
                         placeholder={'예)\nAAPL\nMSFT\nGOOGL\nNVDA'}
                         className="w-full h-[220px] rounded-md border border-slate-300 bg-slate-50 p-3 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400"
+                        disabled={loading}
                     />
+
+                    {/* 프로그레스 바 */}
+                    {loading && progress.total > 0 && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                                <span>
+                                    진행 중: <span className="font-medium text-slate-800 dark:text-white">{progress.currentSymbol}</span>
+                                </span>
+                                <span>
+                                    {progress.current} / {progress.total} ({Math.round((progress.current / progress.total) * 100)}%)
+                                </span>
+                            </div>
+                            <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden dark:bg-slate-600">
+                                <div
+                                    className="h-full bg-indigo-600 rounded-full transition-all duration-300 ease-out"
+                                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex items-center justify-between gap-2">
                         <div className="text-[12px] text-slate-500 dark:text-slate-400">{symbols.length}개 심볼</div>
                         <div className="flex gap-2">
                             <button
                                 type="button"
-                                className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                                className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={() => setInput('')}
                                 disabled={loading}
                             >
@@ -91,58 +151,121 @@ export default function BulkQueryModal({ open, onClose, fetcher, openAlert = (ms
                             </button>
                             <button
                                 type="button"
-                                className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 disabled:opacity-60"
+                                className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 disabled:opacity-60 flex items-center gap-2"
                                 onClick={run}
                                 disabled={loading}
                             >
+                                {loading && (
+                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                )}
                                 {loading ? '처리 중…' : '엑셀로 내보내기'}
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* 내부 알림 모달 (z-index 문제 해결) */}
+            {internalAlert.open && (
+                <>
+                    <div className="fixed inset-0 z-[90] bg-black/30" onClick={closeAlert} />
+                    <div className="fixed z-[100] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(360px,calc(100vw-32px))] rounded-xl bg-white p-5 shadow-2xl dark:bg-slate-800">
+                        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">알림</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 whitespace-pre-line">{internalAlert.message}</p>
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={closeAlert}
+                                className="px-4 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500"
+                            >
+                                확인
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </>
     );
 }
 
 /**
- * (백단 연동 함수 틀) 심볼 배열을 서버에 보내고 결과를 받도록 구현하세요.
- * 반환 예시 스키마:
- *  [
- *    { englishName, symbol, currentPrice, futurePrice, peg, raw: 원본객체 },
- *    ...
- *  ]
+ * 딜레이 함수
  */
-async function defaultBulkFetcher(symbols) {
-    console.warn('defaultBulkFetcher: 실제 백단 연동을 구현하세요.', symbols);
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * 다건 조회 API를 사용하여 심볼 배열을 서버에 보내고 결과를 받음
+ * API: /dart/main/cal/per_value/abroad/arr/v3?symbol=TSLA,AMZN,MSFT,...
+ * @param {string[]} symbols - 조회할 심볼 배열
+ * @param {Function} onProgress - 진행 상태 콜백 (current, total, currentBatch) => void
+ */
+async function defaultBulkFetcher(symbols, onProgress) {
     const results = [];
+    const total = symbols.length;
 
-    for (const s of symbols) {
-        console.log(s);
-        const sendUrl = `/dart/main/cal/per_value/abroad/v3?symbol=${s}`;
-        const { data, error } = await send(sendUrl, {}, "GET");
+    // 배치로 나누기
+    const batches = [];
+    for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+        batches.push(symbols.slice(i, i + BATCH_SIZE));
+    }
 
-        if (error == null && data && data.response && Object.keys(data.response).length > 0) {
-            const responseData = data.response;
-            console.log("responseData", responseData);
+    let processed = 0;
 
-            const resData = {
-                기업명: responseData.기업명,
-                symbol: s,
-                현재가격: responseData.현재가격,
-                주당가치: responseData.주당가치,
-                peg: responseData.상세정보.peg,
-                json: responseData,
-            };
-            results.push(resData);
+    for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+        const batch = batches[batchIdx];
+        const batchSymbols = batch.join(',');
 
-        } else {
-            const resData = {
-                symbol: s
-            };
-            results.push(resData);
-            console.log(s, '조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
+        if (onProgress) {
+            onProgress(processed, total, `배치 ${batchIdx + 1}/${batches.length} (${batch.length}건)`);
+        }
+
+        try {
+            const sendUrl = `/dart/main/cal/per_value/abroad/arr/v3?symbol=${batchSymbols}`;
+            const { data, error } = await send(sendUrl, {}, "GET");
+
+            if (error == null && data && data.response && Array.isArray(data.response)) {
+                for (let i = 0; i < data.response.length; i++) {
+                    const responseData = data.response[i];
+                    // 심볼은 응답 데이터 또는 요청 순서에서 추출
+                    const symbolValue = responseData.symbol || responseData.티커 || responseData.상세정보?.symbol || batch[i];
+                    const resData = {
+                        기업명: responseData.기업명,
+                        symbol: symbolValue,
+                        현재가격: responseData.현재가격,
+                        주당가치: responseData.주당가치,
+                        peg: responseData.상세정보?.peg,
+                        json: responseData,
+                    };
+                    results.push(resData);
+                }
+                processed += data.response.length;
+            } else {
+                // 배치 전체 실패 시 각 심볼에 대해 에러 기록
+                for (const s of batch) {
+                    results.push({ symbol: s, error: '조회 실패' });
+                }
+                processed += batch.length;
+                console.log(`배치 ${batchIdx + 1} 조회 실패:`, batch);
+            }
+        } catch (e) {
+            // 배치 전체 실패 시 각 심볼에 대해 에러 기록
+            for (const s of batch) {
+                results.push({ symbol: s, error: e.message });
+            }
+            processed += batch.length;
+            console.error(`배치 ${batchIdx + 1} 조회 중 오류 발생:`, e);
+        }
+
+        if (onProgress) {
+            onProgress(processed, total, `배치 ${batchIdx + 1}/${batches.length} 완료`);
+        }
+
+        // 마지막 배치가 아니면 대기
+        if (batchIdx < batches.length - 1) {
+            await delay(BATCH_DELAY_MS);
         }
     }
 
@@ -185,12 +308,12 @@ async function exportToExcel(items) {
 
         // PER 정보 추출 (있는 경우)
         const per = it.json?.상세정보?.per ? toNum(it.json.상세정보.per) :
-                    it.json?.per ? toNum(it.json.per) :
-                    it.json?.PER ? toNum(it.json.PER) : NaN;
+            it.json?.per ? toNum(it.json.per) :
+                it.json?.PER ? toNum(it.json.PER) : NaN;
 
         // 성장률보정PER 정보 추출 (있는 경우)
         const perAdj = it.json?.상세정보?.성장률보정PER ? toNum(it.json.상세정보.성장률보정PER) :
-                       it.json?.성장률보정PER ? toNum(it.json.성장률보정PER) : NaN;
+            it.json?.성장률보정PER ? toNum(it.json.성장률보정PER) : NaN;
 
         // 하이라이트 조건: PEG, PER, 성장률보정PER 중 하나라도 음수이면 제외
         const hasValidMetrics =

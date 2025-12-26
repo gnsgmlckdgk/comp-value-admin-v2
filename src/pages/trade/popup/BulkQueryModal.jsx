@@ -105,7 +105,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
                         서버 조회 후 결과를 엑셀 파일로 저장합니다.
                         {symbols.length > BATCH_SIZE && (
                             <span className="block mt-1 text-amber-600 dark:text-amber-400">
-                                ⚠️ {symbols.length}개 심볼은 30건씩 나누어 {Math.ceil(symbols.length / BATCH_SIZE)}회 조회됩니다. (배치 간 10초 대기)
+                                ⚠️ {symbols.length}개 심볼은 {BATCH_SIZE}건씩 나누어 {Math.ceil(symbols.length / BATCH_SIZE)}회 조회됩니다. (배치 간 10초 대기)
                             </span>
                         )}
                     </p>
@@ -226,9 +226,12 @@ async function defaultBulkFetcher(symbols, onProgress) {
             const sendUrl = `/dart/main/cal/per_value/abroad/arr/v3?symbol=${batchSymbols}`;
             const { data, error } = await send(sendUrl, {}, "GET");
 
-            if (error == null && data && data.response && Array.isArray(data.response)) {
-                for (let i = 0; i < data.response.length; i++) {
-                    const responseData = data.response[i];
+            if (error == null && data && data.response) {
+                // 응답이 배열인지 단일 객체인지 확인
+                const responseList = Array.isArray(data.response) ? data.response : [data.response];
+
+                for (let i = 0; i < responseList.length; i++) {
+                    const responseData = responseList[i];
                     // 심볼은 응답 데이터 또는 요청 순서에서 추출
                     const symbolValue = responseData.symbol || responseData.티커 || responseData.상세정보?.symbol || batch[i];
                     const resData = {
@@ -241,14 +244,14 @@ async function defaultBulkFetcher(symbols, onProgress) {
                     };
                     results.push(resData);
                 }
-                processed += data.response.length;
+                processed += responseList.length;
             } else {
                 // 배치 전체 실패 시 각 심볼에 대해 에러 기록
                 for (const s of batch) {
                     results.push({ symbol: s, error: '조회 실패' });
                 }
                 processed += batch.length;
-                console.log(`배치 ${batchIdx + 1} 조회 실패:`, batch);
+                console.log(`배치 ${batchIdx + 1} 조회 실패:`, batch, { data, error });
             }
         } catch (e) {
             // 배치 전체 실패 시 각 심볼에 대해 에러 기록

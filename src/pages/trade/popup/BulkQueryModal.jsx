@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import ExcelJS from 'exceljs';
 
 import { send } from '@/util/ClientUtil';
@@ -21,8 +21,12 @@ const BATCH_DELAY_MS = 10000; // 배치 사이 대기 시간 (10초)
 export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols = [] }) {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [stopping, setStopping] = useState(false); // 중지 중 상태
     const [progress, setProgress] = useState({ current: 0, total: 0, currentSymbol: '' });
     const [internalAlert, setInternalAlert] = useState({ open: false, message: '' });
+
+    // 중지 플래그
+    const abortRef = useRef(false);
 
     // 내부 알림 함수 (z-index 문제 해결)
     const showAlert = (message) => {
@@ -31,6 +35,12 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
 
     const closeAlert = () => {
         setInternalAlert({ open: false, message: '' });
+    };
+
+    // 중지 핸들러
+    const handleStop = () => {
+        abortRef.current = true;
+        setStopping(true);
     };
 
     // 모달 열릴 때 initialSymbols 세팅
@@ -65,20 +75,34 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
         }
         setLoading(true);
         setProgress({ current: 0, total: symbols.length, currentSymbol: '' });
+        abortRef.current = false; // 중지 플래그 초기화
 
         try {
             const fn = fetcher || defaultBulkFetcher;
             const items = await fn(symbols, (current, total, currentSymbol) => {
                 setProgress({ current, total, currentSymbol });
-            });
-            await exportToExcel(Array.isArray(items) ? items : []);
-            showAlert(`${items.length}건의 데이터가 엑셀로 저장되었습니다.`);
+            }, abortRef); // 중지 플래그 전달
+
+            if (abortRef.current) {
+                // 중지된 경우에도 현재까지 조회된 데이터는 엑셀로 저장
+                if (items.length > 0) {
+                    await exportToExcel(Array.isArray(items) ? items : []);
+                    showAlert(`중지됨: ${items.length}건의 데이터가 엑셀로 저장되었습니다.`);
+                } else {
+                    showAlert('조회가 중지되었습니다.');
+                }
+            } else {
+                await exportToExcel(Array.isArray(items) ? items : []);
+                showAlert(`${items.length}건의 데이터가 엑셀로 저장되었습니다.`);
+            }
         } catch (e) {
             console.error(e);
             showAlert('조회/엑셀 생성 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
+            setStopping(false);
             setProgress({ current: 0, total: 0, currentSymbol: '' });
+            abortRef.current = false;
         }
     };
 
@@ -149,20 +173,39 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
                             >
                                 초기화
                             </button>
-                            <button
-                                type="button"
-                                className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 disabled:opacity-60 flex items-center gap-2"
-                                onClick={run}
-                                disabled={loading}
-                            >
-                                {loading && (
-                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                )}
-                                {loading ? '처리 중…' : '엑셀로 내보내기'}
-                            </button>
+                            {loading ? (
+                                <button
+                                    type="button"
+                                    className={`px-3 py-2 rounded-md text-white text-sm font-medium flex items-center gap-2 ${stopping ? 'bg-amber-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500'}`}
+                                    onClick={handleStop}
+                                    disabled={stopping}
+                                >
+                                    {stopping ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            중지 중...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            중지
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 flex items-center gap-2"
+                                    onClick={run}
+                                >
+                                    엑셀로 내보내기
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -201,8 +244,9 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * API: /dart/main/cal/per_value/abroad/arr/v3?symbol=TSLA,AMZN,MSFT,...
  * @param {string[]} symbols - 조회할 심볼 배열
  * @param {Function} onProgress - 진행 상태 콜백 (current, total, currentBatch) => void
+ * @param {Object} abortRef - 중지 플래그 (abortRef.current === true 이면 중지)
  */
-async function defaultBulkFetcher(symbols, onProgress) {
+async function defaultBulkFetcher(symbols, onProgress, abortRef) {
     const results = [];
     const total = symbols.length;
 
@@ -215,6 +259,11 @@ async function defaultBulkFetcher(symbols, onProgress) {
     let processed = 0;
 
     for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+        // 중지 플래그 체크
+        if (abortRef?.current) {
+            break;
+        }
+
         const batch = batches[batchIdx];
         const batchSymbols = batch.join(',');
 
@@ -265,8 +314,8 @@ async function defaultBulkFetcher(symbols, onProgress) {
             onProgress(processed, total, `배치 ${batchIdx + 1}/${batches.length} 완료`);
         }
 
-        // 마지막 배치가 아니면 대기
-        if (batchIdx < batches.length - 1) {
+        // 마지막 배치가 아니고 중지되지 않았으면 대기
+        if (batchIdx < batches.length - 1 && !abortRef?.current) {
             await delay(BATCH_DELAY_MS);
         }
     }

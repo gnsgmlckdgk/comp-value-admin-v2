@@ -6,6 +6,9 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import BulkQueryModal from '@/pages/trade/popup/BulkQueryModal';
 
+// 로컬스토리지 키
+const SCHEDULE_RUN_KEY = 'lastRecommendedStockScheduleRun';
+
 // 숫자를 천 단위 콤마 포맷으로 변환
 const formatNumberWithComma = (value) => {
     if (value === null || value === '' || value === undefined) return '-';
@@ -216,9 +219,48 @@ const AbroadRecommendedStock = () => {
     const [detailModal, setDetailModal] = useState({ open: false, data: null });
     const [selectedRows, setSelectedRows] = useState(new Set());
     const [showBulkModal, setShowBulkModal] = useState(false);
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [maxCountInput, setMaxCountInput] = useState('');
+    const [lastScheduleRun, setLastScheduleRun] = useState(null);
 
     const inFlight = useRef({ fetch: false, calc: false });
     const dropdownClosingRef = useRef(false);
+
+    // 슈퍼관리자 여부 확인
+    const isSuperAdmin = useMemo(() => {
+        let storedRoles = [];
+        try {
+            const raw = localStorage.getItem('roles');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    storedRoles = parsed;
+                }
+            }
+        } catch {
+            storedRoles = [];
+        }
+        const effectiveRoles = storedRoles.map((r) => (r || '').toString().toUpperCase());
+        return effectiveRoles.some((r) => r.includes('SUPER_ADMIN'));
+    }, []);
+
+    // 로컬스토리지에서 마지막 스케줄 실행 시간 확인 및 1시간 지난 값 삭제
+    useEffect(() => {
+        const storedTime = localStorage.getItem(SCHEDULE_RUN_KEY);
+        if (storedTime) {
+            const runTime = new Date(storedTime);
+            const now = new Date();
+            const hoursDiff = (now - runTime) / (1000 * 60 * 60);
+
+            if (hoursDiff >= 1) {
+                // 1시간 이상 지났으면 삭제
+                localStorage.removeItem(SCHEDULE_RUN_KEY);
+                setLastScheduleRun(null);
+            } else {
+                setLastScheduleRun(runTime);
+            }
+        }
+    }, []);
 
     // 드롭다운용 고유값 계산
     const getUniqueValuesForColumn = useCallback(
@@ -440,6 +482,45 @@ const AbroadRecommendedStock = () => {
         setShowBulkModal(true);
     }, [selectedSymbols]);
 
+    // maxCount 입력값 유효성 검사
+    const isMaxCountValid = useMemo(() => {
+        if (maxCountInput === '') return false;
+        const num = parseInt(maxCountInput, 10);
+        return !isNaN(num) && num >= 0;
+    }, [maxCountInput]);
+
+    // 추천기업 스케줄 실행 (슈퍼관리자 전용)
+    const handleRunSchedule = useCallback(async () => {
+        if (!isMaxCountValid) return;
+
+        const maxCount = parseInt(maxCountInput, 10);
+        setIsLoading(true);
+        setShowScheduleModal(false);
+
+        try {
+            const { data, error } = await send('/dart/schd/recommended-stocks', { maxCount }, 'POST');
+
+            if (error) {
+                if (data?.code === '40301') {
+                    openAlert('접근 권한이 없습니다.');
+                } else {
+                    openAlert(data?.message || '스케줄 실행 중 오류가 발생했습니다.');
+                }
+            } else {
+                // 성공 시 로컬스토리지에 실행 시간 저장
+                const now = new Date();
+                localStorage.setItem(SCHEDULE_RUN_KEY, now.toISOString());
+                setLastScheduleRun(now);
+                openAlert(`추천기업 조회 스케줄이 실행되었습니다.\n(maxCount=${maxCount})`);
+            }
+        } catch (e) {
+            openAlert('요청 처리 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+            setMaxCountInput('');
+        }
+    }, [maxCountInput, isMaxCountValid]);
+
     // 상세정보 모달에서 분석 버튼 클릭
     const handleAnalyze = useCallback(async (symbol) => {
         if (!symbol?.trim()) {
@@ -478,9 +559,31 @@ const AbroadRecommendedStock = () => {
     return (
         <>
             <PageTitle />
-            <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
-                매일 새벽 자동으로 조회된 추천 기업 목록입니다. 행을 클릭하면 상세 정보를 볼 수 있습니다.
-            </p>
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                    매일 새벽 자동으로 조회된 추천 기업 목록입니다. 행을 클릭하면 상세 정보를 볼 수 있습니다.
+                </p>
+                {isSuperAdmin && (
+                    <div className="flex items-center gap-3">
+                        {lastScheduleRun && (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">
+                                마지막 수동 실행: {lastScheduleRun.toLocaleString('ko-KR')}
+                            </span>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setShowScheduleModal(true)}
+                            disabled={isLoading}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            추천기업 조회
+                        </button>
+                    </div>
+                )}
+            </div>
 
             <Loading show={isLoading} />
 
@@ -790,8 +893,62 @@ const AbroadRecommendedStock = () => {
                 open={showBulkModal}
                 onClose={() => setShowBulkModal(false)}
                 initialSymbols={selectedSymbols}
-                openAlert={openAlert}
             />
+
+            {/* 추천기업 조회 스케줄 모달 (슈퍼관리자 전용) */}
+            {showScheduleModal && (
+                <>
+                    <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={() => setShowScheduleModal(false)} />
+                    <div
+                        className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(360px,calc(100vw-32px))] rounded-xl bg-white p-5 shadow-2xl dark:bg-slate-800"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">추천기업 조회 실행</h3>
+                        <div className="mb-4">
+                            <label className="block text-sm text-slate-600 dark:text-slate-300 mb-2">
+                                조회 건수 (maxCount)
+                            </label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={maxCountInput}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    // 숫자만 허용 (빈 문자열도 허용)
+                                    if (val === '' || /^\d+$/.test(val)) {
+                                        setMaxCountInput(val);
+                                    }
+                                }}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                placeholder="숫자를 입력하세요 (0 = 전체 조회)"
+                            />
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                0: 전체 조회 / 그 외: 테스트용 (지정 건수만큼 조회)
+                            </p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowScheduleModal(false);
+                                    setMaxCountInput('');
+                                }}
+                                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleRunSchedule}
+                                disabled={!isMaxCountValid}
+                                className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                실행
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* 커스텀 툴팁 */}
             {tooltip.visible && (

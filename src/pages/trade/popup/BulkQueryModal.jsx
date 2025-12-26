@@ -248,10 +248,9 @@ async function defaultBulkFetcher(symbols, onProgress) {
             } else {
                 // 배치 전체 실패 시 각 심볼에 대해 에러 기록
                 for (const s of batch) {
-                    results.push({ symbol: s, error: '조회 실패' });
+                    results.push({ symbol: s, error: error ? error : '조회 실패' });
                 }
                 processed += batch.length;
-                console.log(`배치 ${batchIdx + 1} 조회 실패:`, batch, { data, error });
             }
         } catch (e) {
             // 배치 전체 실패 시 각 심볼에 대해 에러 기록

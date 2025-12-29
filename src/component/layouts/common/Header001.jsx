@@ -78,6 +78,9 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
             setShowLogin(false);
             setDisplayName('');
 
+            // 세션 스토리지 클리어 (사용자별 데이터 초기화)
+            sessionStorage.clear();
+
             try {
                 openAlert('인증정보가 존재하지 않습니다.', () => {
                     navigate('/', { replace: true, state: { reason: '401' } });
@@ -172,6 +175,9 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
             localStorage.removeItem('userName');
             localStorage.removeItem('nickName');
             localStorage.removeItem('roles');
+
+            // 세션 스토리지 클리어 (사용자별 데이터 초기화)
+            sessionStorage.clear();
 
             navigate('/', { replace: true, state: { reason: 'logout' } });
         } else {

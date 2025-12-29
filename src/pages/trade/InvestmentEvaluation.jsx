@@ -4,6 +4,9 @@ import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
+// 세션 스토리지 키
+const SESSION_STORAGE_KEY = 'investmentEvaluationData';
+
 // 숫자를 천 단위 콤마 포맷으로 변환
 const formatNumberWithComma = (value) => {
     if (value === null || value === '' || value === undefined) return '-';
@@ -105,8 +108,14 @@ const TABLE_COLUMNS = [
         sticky: true,
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-left',
-        render: (value) => (
-            <span className="font-semibold text-slate-900 dark:text-white">{value}</span>
+        render: (value, row, { onMouseEnter, onMouseLeave }) => (
+            <span
+                className="font-semibold text-slate-900 dark:text-white cursor-help"
+                onMouseEnter={(e) => onMouseEnter(e, row?.companyName)}
+                onMouseLeave={onMouseLeave}
+            >
+                {value}
+            </span>
         ),
     },
     {
@@ -216,8 +225,26 @@ const TABLE_COLUMNS = [
  * 투자판단 페이지
  */
 const InvestmentEvaluation = () => {
-    const [symbolInput, setSymbolInput] = useState('');
-    const [resultData, setResultData] = useState([]);
+    // 세션 스토리지에서 초기값 로드
+    const getInitialData = () => {
+        try {
+            const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                return {
+                    symbolInput: parsed.symbolInput || '',
+                    resultData: parsed.resultData || [],
+                };
+            }
+        } catch {
+            // 파싱 실패 시 기본값
+        }
+        return { symbolInput: '', resultData: [] };
+    };
+
+    const initialData = getInitialData();
+    const [symbolInput, setSymbolInput] = useState(initialData.symbolInput);
+    const [resultData, setResultData] = useState(initialData.resultData);
     const [isLoading, setIsLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
     const [sortConfig, setSortConfig] = useState({ key: 'totalScore', direction: 'desc' });
@@ -225,9 +252,55 @@ const InvestmentEvaluation = () => {
     const [openDropdown, setOpenDropdown] = useState(null);
     const [detailModal, setDetailModal] = useState({ open: false, data: null });
     const [fullDetailModal, setFullDetailModal] = useState({ open: false, data: null });
+    const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
+    const [progress, setProgress] = useState({ current: 0, total: 0, status: '', waiting: false, remainingSeconds: 0, removedDuplicates: 0 });
 
     const inFlight = useRef({ fetch: false });
     const dropdownClosingRef = useRef(false);
+    const abortRef = useRef(false);
+
+    // 입력된 티커 정보 계산 (중복 감지 포함)
+    const symbolInfo = useMemo(() => {
+        if (!symbolInput.trim()) {
+            return { total: 0, unique: 0, duplicates: [], duplicateCount: 0 };
+        }
+        const allSymbols = symbolInput
+            .split(/[\n,\s]+/)
+            .map((s) => s.trim().toUpperCase())
+            .filter((s) => s.length > 0);
+
+        const symbolCountMap = {};
+        allSymbols.forEach((s) => {
+            symbolCountMap[s] = (symbolCountMap[s] || 0) + 1;
+        });
+
+        const duplicates = Object.entries(symbolCountMap)
+            .filter(([_, count]) => count > 1)
+            .map(([symbol, count]) => ({ symbol, count }));
+
+        const uniqueSymbols = [...new Set(allSymbols)];
+
+        return {
+            total: allSymbols.length,
+            unique: uniqueSymbols.length,
+            duplicates,
+            duplicateCount: allSymbols.length - uniqueSymbols.length,
+        };
+    }, [symbolInput]);
+
+    // 세션 스토리지에 데이터 저장
+    useEffect(() => {
+        if (resultData.length > 0) {
+            try {
+                sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+                    symbolInput,
+                    resultData,
+                }));
+            } catch {
+                // 저장 실패 무시
+            }
+        }
+    }, [symbolInput, resultData]);
 
     // 드롭다운용 고유값 계산
     const getUniqueValuesForColumn = useCallback(
@@ -294,39 +367,117 @@ const InvestmentEvaluation = () => {
             .filter((s) => s.length > 0);
     };
 
-    // 분석 실행
+    // 배열을 n개씩 청크로 나누기
+    const chunkArray = (arr, size) => {
+        const chunks = [];
+        for (let i = 0; i < arr.length; i += size) {
+            chunks.push(arr.slice(i, i + size));
+        }
+        return chunks;
+    };
+
+    // 대기 함수 (카운트다운 포함)
+    const waitWithCountdown = async (seconds) => {
+        for (let i = seconds; i > 0; i--) {
+            if (abortRef.current) return false;
+            setProgress((prev) => ({ ...prev, waiting: true, remainingSeconds: i }));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+        setProgress((prev) => ({ ...prev, waiting: false, remainingSeconds: 0 }));
+        return true;
+    };
+
+    // 분석 실행 (50개씩 분할)
     const handleAnalyze = useCallback(async () => {
-        const symbols = parseSymbols(symbolInput);
-        if (symbols.length === 0) {
+        const allSymbols = parseSymbols(symbolInput);
+        if (allSymbols.length === 0) {
             openAlert('분석할 티커를 입력해주세요.');
             return;
         }
 
+        // 중복 제거
+        const symbols = [...new Set(allSymbols)];
+        const removedCount = allSymbols.length - symbols.length;
+
         if (inFlight.current.fetch) return;
         inFlight.current.fetch = true;
+        abortRef.current = false;
+
+        const BATCH_SIZE = 50;
+        const WAIT_SECONDS = 15;
+        const chunks = chunkArray(symbols, BATCH_SIZE);
+        const totalChunks = chunks.length;
 
         setIsLoading(true);
-        try {
-            const { data, error } = await send('/dart/main/evaluate/stocks', { symbols }, 'POST');
+        setResultData([]);
+        setProgress({ current: 0, total: totalChunks, status: '', waiting: false, remainingSeconds: 0, removedDuplicates: removedCount });
 
-            if (!error && data && data.response) {
-                const list = Array.isArray(data.response) ? data.response : [];
-                setResultData(list);
-                if (list.length === 0) {
-                    openAlert('분석 결과가 없습니다.');
+        const allResults = [];
+
+        try {
+            for (let i = 0; i < chunks.length; i++) {
+                if (abortRef.current) {
+                    setProgress((prev) => ({ ...prev, status: '중지됨' }));
+                    break;
                 }
-            } else {
-                setResultData([]);
-                openAlert(data?.message || '분석 요청 처리 중 오류가 발생했습니다.');
+
+                const chunk = chunks[i];
+                const startIdx = i * BATCH_SIZE + 1;
+                const endIdx = Math.min((i + 1) * BATCH_SIZE, symbols.length);
+
+                setProgress((prev) => ({
+                    ...prev,
+                    current: i + 1,
+                    status: `${startIdx}~${endIdx}번째 조회 중...`,
+                    waiting: false,
+                }));
+
+                try {
+                    const { data, error } = await send('/dart/main/evaluate/stocks', { symbols: chunk }, 'POST');
+
+                    if (!error && data && data.response) {
+                        const list = Array.isArray(data.response) ? data.response : [];
+                        allResults.push(...list);
+                        setResultData([...allResults]);
+                    }
+                } catch (e) {
+                    // 개별 청크 실패 시 계속 진행
+                }
+
+                // 마지막 청크가 아니고 중지되지 않았으면 대기
+                if (i < chunks.length - 1 && !abortRef.current) {
+                    const shouldContinue = await waitWithCountdown(WAIT_SECONDS);
+                    if (!shouldContinue) {
+                        setProgress((prev) => ({ ...prev, status: '중지됨', waiting: false }));
+                        break;
+                    }
+                }
+            }
+
+            if (!abortRef.current) {
+                setProgress((prev) => ({ ...prev, status: '완료', waiting: false }));
+            }
+
+            if (allResults.length === 0) {
+                openAlert('분석 결과가 없습니다.');
             }
         } catch (e) {
-            setResultData([]);
-            openAlert('요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+            openAlert('요청 처리 중 오류가 발생했습니다.');
         } finally {
             setIsLoading(false);
             inFlight.current.fetch = false;
+            // 2초 후 진행상태 초기화
+            setTimeout(() => {
+                setProgress({ current: 0, total: 0, status: '', waiting: false, remainingSeconds: 0, removedDuplicates: 0 });
+            }, 2000);
         }
     }, [symbolInput]);
+
+    // 분석 중지
+    const handleStopAnalyze = useCallback(() => {
+        abortRef.current = true;
+        setProgress((prev) => ({ ...prev, status: '중지 중...', waiting: false }));
+    }, []);
 
     // 필터링된 데이터
     const filteredData = useMemo(() => {
@@ -393,6 +544,22 @@ const InvestmentEvaluation = () => {
         }));
     }, []);
 
+    // 툴팁 핸들러
+    const handleTooltipEnter = useCallback((e, text) => {
+        if (!text) return;
+        const rect = e.target.getBoundingClientRect();
+        setTooltip({
+            visible: true,
+            text,
+            x: rect.right + 8,
+            y: rect.top + rect.height / 2,
+        });
+    }, []);
+
+    const handleTooltipLeave = useCallback(() => {
+        setTooltip((prev) => ({ ...prev, visible: false }));
+    }, []);
+
     // 행 클릭 -> 상세정보 모달
     const handleRowClick = useCallback((row) => {
         if (dropdownClosingRef.current) return;
@@ -427,42 +594,154 @@ const InvestmentEvaluation = () => {
                             onChange={(e) => setSymbolInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="티커 심볼 입력 (예: AAPL, MSFT, GOOGL)"
-                            rows={3}
+                            rows={6}
                             className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-slate-400 resize-none"
                         />
                         <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                                Ctrl + Enter로 분석 실행
-                            </span>
-                            <button
-                                type="button"
-                                onClick={handleAnalyze}
-                                disabled={isLoading || !symbolInput.trim()}
-                                className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        분석 중...
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                        </svg>
-                                        분석
-                                    </>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                    Ctrl + Enter로 분석 실행
+                                </span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded ${symbolInfo.total > 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                    {symbolInfo.duplicateCount > 0 ? (
+                                        <>
+                                            {symbolInfo.unique}개 (중복 {symbolInfo.duplicateCount}개 제외)
+                                        </>
+                                    ) : (
+                                        <>{symbolInfo.total}개 입력</>
+                                    )}
+                                    {symbolInfo.unique > 50 && (
+                                        <span className="ml-1 text-amber-600 dark:text-amber-400">
+                                            ({Math.ceil(symbolInfo.unique / 50)}회 분할조회)
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isLoading && progress.total > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleStopAnalyze}
+                                        disabled={progress.status === '중지 중...'}
+                                        className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                                            progress.status === '중지 중...'
+                                                ? 'bg-slate-400 text-white cursor-not-allowed'
+                                                : 'bg-red-600 text-white hover:bg-red-700'
+                                        }`}
+                                    >
+                                        {progress.status === '중지 중...' ? (
+                                            <>
+                                                <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                중지 중...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                                중지
+                                            </>
+                                        )}
+                                    </button>
                                 )}
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={handleAnalyze}
+                                    disabled={isLoading || !symbolInput.trim()}
+                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            분석 중...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                            </svg>
+                                            분석
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
+
+                        {/* 중복 심볼 경고 */}
+                        {symbolInfo.duplicates.length > 0 && (
+                            <div className="mt-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
+                                <div className="flex items-start gap-2">
+                                    <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <div className="flex-1">
+                                        <div className="text-xs font-medium text-amber-800 dark:text-amber-200">
+                                            중복 심볼 {symbolInfo.duplicates.length}종 발견 (분석 시 자동 제거됨)
+                                        </div>
+                                        <div className="mt-1 text-xs text-amber-700 dark:text-amber-300 flex flex-wrap gap-1">
+                                            {symbolInfo.duplicates.slice(0, 10).map(({ symbol, count }) => (
+                                                <span key={symbol} className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-200">
+                                                    {symbol} <span className="ml-0.5 text-amber-600 dark:text-amber-400">×{count}</span>
+                                                </span>
+                                            ))}
+                                            {symbolInfo.duplicates.length > 10 && (
+                                                <span className="text-amber-600 dark:text-amber-400">
+                                                    외 {symbolInfo.duplicates.length - 10}개
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 진행 상태 표시 */}
+                        {progress.total > 1 && (
+                            <div className="mt-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                            진행 상황: {progress.current} / {progress.total} 배치
+                                        </span>
+                                        {progress.removedDuplicates > 0 && (
+                                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200">
+                                                중복 {progress.removedDuplicates}개 제거됨
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                                        progress.status === '완료' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200' :
+                                        progress.status === '중지됨' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200' :
+                                        'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
+                                    }`}>
+                                        {progress.waiting ? `대기 중... ${progress.remainingSeconds}초` : progress.status}
+                                    </span>
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-slate-600">
+                                    <div
+                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                        style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                                    ></div>
+                                </div>
+                                {progress.waiting && (
+                                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                        API 제한으로 인해 다음 배치 요청 전 대기 중입니다...
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            <Loading show={isLoading} />
+            {/* 분할 조회 시에는 진행 상태 표시로 대체 */}
+            <Loading show={isLoading && progress.total <= 1} />
 
             {/* 분석 결과 테이블 */}
             {resultData.length > 0 && (
@@ -631,7 +910,11 @@ const InvestmentEvaluation = () => {
                                     >
                                         {TABLE_COLUMNS.map((col) => {
                                             const value = row[col.key];
-                                            const displayValue = col.render ? col.render(value, row) : value ?? '-';
+                                            const tooltipHandlers = {
+                                                onMouseEnter: handleTooltipEnter,
+                                                onMouseLeave: handleTooltipLeave,
+                                            };
+                                            const displayValue = col.render ? col.render(value, row, tooltipHandlers) : value ?? '-';
 
                                             return (
                                                 <td
@@ -668,6 +951,20 @@ const InvestmentEvaluation = () => {
                 data={fullDetailModal.data}
                 onClose={() => setFullDetailModal({ open: false, data: null })}
             />
+
+            {/* 커스텀 툴팁 */}
+            {tooltip.visible && (
+                <div
+                    className="fixed z-[9999] px-2 py-1 text-xs bg-slate-800 text-white rounded shadow-lg whitespace-nowrap pointer-events-none"
+                    style={{
+                        left: tooltip.x,
+                        top: tooltip.y,
+                        transform: 'translateY(-50%)',
+                    }}
+                >
+                    {tooltip.text}
+                </div>
+            )}
         </>
     );
 };

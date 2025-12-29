@@ -13,6 +13,7 @@ import AbroadCompValue from '@/pages/trade/AbroadCompValue'
 import AbroadCompanyList from '@/pages/trade/AbroadCompanyList'
 import AbroadRecommendedStock from '@/pages/trade/AbroadRecommendedStock'
 import SellRecordHistory from '@/pages/trade/SellRecordHistory'
+import InvestmentEvaluation from '@/pages/trade/InvestmentEvaluation'
 import MyProfile from '@/pages/member/MyProfile'
 import EditProfile from '@/pages/member/EditProfile'
 import MemberManagement from '@/pages/member/MemberManagement'
@@ -47,6 +48,7 @@ const routes = {
     "AbroadCompValue": { section: '기업분석(미국)', label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
 
     /* 거래 */
+    "InvestmentEvaluation": { section: '거래', label: '투자판단', path: '/trade/evaluation', element: <InvestmentEvaluation /> },
     "TransactionOverview": { section: '거래', label: '보유종목관리', path: '/transaction/overview', element: <TransactionOverview /> },
     "SellRecordHistory": { section: '거래', label: '매도현황기록', path: '/trade/sellrecord', element: <SellRecordHistory /> },
 

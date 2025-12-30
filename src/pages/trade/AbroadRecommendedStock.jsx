@@ -353,6 +353,13 @@ const AbroadRecommendedStock = () => {
     }, []);
 
     // 필터링된 데이터
+    // 지원 문법:
+    // - 일반 검색: "fin" → fin 포함된 데이터
+    // - 제외 검색: "!fin" → fin 포함된 데이터 제외
+    // - OR 검색: "fin|tech" → fin 또는 tech 포함된 데이터
+    // - AND 검색: "fin&tech" → fin과 tech 모두 포함된 데이터
+    // - 제외 OR 검색: "!fin|tech" → fin 또는 tech 포함된 데이터 제외 (= fin도 제외, tech도 제외)
+    // - 제외 AND 검색: "!fin&tech" → fin도 제외, tech도 제외
     const filteredData = useMemo(() => {
         const activeFilters = Object.entries(columnFilters).filter(([_, value]) => value !== '');
         if (activeFilters.length === 0) return resultData;
@@ -362,8 +369,39 @@ const AbroadRecommendedStock = () => {
                 const cellValue = row[key];
                 if (cellValue == null) return false;
                 const cellStr = String(cellValue).toLowerCase();
-                const filterStr = filterValue.toLowerCase();
-                return cellStr.includes(filterStr);
+
+                // 제외 검색 (!로 시작)
+                const isExclude = filterValue.startsWith('!');
+                const actualFilter = isExclude ? filterValue.slice(1) : filterValue;
+
+                // AND 검색 (&로 구분)
+                if (actualFilter.includes('&')) {
+                    const andTerms = actualFilter.split('&').map(t => t.trim().toLowerCase()).filter(t => t);
+                    if (isExclude) {
+                        // !a&b = a 제외 AND b 제외 (둘 중 하나라도 포함되면 제외)
+                        return andTerms.every(term => !cellStr.includes(term));
+                    } else {
+                        // a&b = a 포함 AND b 포함
+                        return andTerms.every(term => cellStr.includes(term));
+                    }
+                }
+
+                // OR 검색 (|로 구분)
+                if (actualFilter.includes('|')) {
+                    const orTerms = actualFilter.split('|').map(t => t.trim().toLowerCase()).filter(t => t);
+                    if (isExclude) {
+                        // !a|b = a 제외 AND b 제외 (둘 중 하나라도 포함되면 제외)
+                        return orTerms.every(term => !cellStr.includes(term));
+                    } else {
+                        // a|b = a 포함 OR b 포함
+                        return orTerms.some(term => cellStr.includes(term));
+                    }
+                }
+
+                // 일반 검색
+                const filterStr = actualFilter.toLowerCase();
+                const matches = cellStr.includes(filterStr);
+                return isExclude ? !matches : matches;
             });
         });
     }, [resultData, columnFilters]);

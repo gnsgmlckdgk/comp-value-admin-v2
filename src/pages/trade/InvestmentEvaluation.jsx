@@ -3,6 +3,8 @@ import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import CompanyInfoModal from '@/pages/trade/popup/CompanyInfoModal';
+import StockChartModal from '@/pages/trade/popup/StockChartModal';
 
 // 세션 스토리지 키
 const SESSION_STORAGE_KEY = 'investmentEvaluationData';
@@ -205,6 +207,23 @@ const TABLE_COLUMNS = [
         render: (value) =>
             value ? (
                 <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                    {value}
+                </span>
+            ) : (
+                '-'
+            ),
+    },
+    {
+        key: 'country',
+        label: '국가',
+        width: '80px',
+        sortable: true,
+        hasDropdown: true,
+        headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-left',
+        render: (value) =>
+            value ? (
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
                     {value}
                 </span>
             ) : (
@@ -480,6 +499,13 @@ const InvestmentEvaluation = () => {
     }, []);
 
     // 필터링된 데이터
+    // 지원 문법:
+    // - 일반 검색: "fin" → fin 포함된 데이터
+    // - 제외 검색: "!fin" → fin 포함된 데이터 제외
+    // - OR 검색: "fin|tech" → fin 또는 tech 포함된 데이터
+    // - AND 검색: "fin&tech" → fin과 tech 모두 포함된 데이터
+    // - 제외 OR 검색: "!fin|tech" → fin 또는 tech 포함된 데이터 제외 (= fin도 제외, tech도 제외)
+    // - 제외 AND 검색: "!fin&tech" → fin도 제외, tech도 제외
     const filteredData = useMemo(() => {
         const activeFilters = Object.entries(columnFilters).filter(([_, value]) => value !== '');
         if (activeFilters.length === 0) return resultData;
@@ -489,8 +515,39 @@ const InvestmentEvaluation = () => {
                 const cellValue = row[key];
                 if (cellValue == null) return false;
                 const cellStr = String(cellValue).toLowerCase();
-                const filterStr = filterValue.toLowerCase();
-                return cellStr.includes(filterStr);
+
+                // 제외 검색 (!로 시작)
+                const isExclude = filterValue.startsWith('!');
+                const actualFilter = isExclude ? filterValue.slice(1) : filterValue;
+
+                // AND 검색 (&로 구분)
+                if (actualFilter.includes('&')) {
+                    const andTerms = actualFilter.split('&').map(t => t.trim().toLowerCase()).filter(t => t);
+                    if (isExclude) {
+                        // !a&b = a 제외 AND b 제외 (둘 중 하나라도 포함되면 제외)
+                        return andTerms.every(term => !cellStr.includes(term));
+                    } else {
+                        // a&b = a 포함 AND b 포함
+                        return andTerms.every(term => cellStr.includes(term));
+                    }
+                }
+
+                // OR 검색 (|로 구분)
+                if (actualFilter.includes('|')) {
+                    const orTerms = actualFilter.split('|').map(t => t.trim().toLowerCase()).filter(t => t);
+                    if (isExclude) {
+                        // !a|b = a 제외 AND b 제외 (둘 중 하나라도 포함되면 제외)
+                        return orTerms.every(term => !cellStr.includes(term));
+                    } else {
+                        // a|b = a 포함 OR b 포함
+                        return orTerms.some(term => cellStr.includes(term));
+                    }
+                }
+
+                // 일반 검색
+                const filterStr = actualFilter.toLowerCase();
+                const matches = cellStr.includes(filterStr);
+                return isExclude ? !matches : matches;
             });
         });
     }, [resultData, columnFilters]);
@@ -974,6 +1031,8 @@ const InvestmentEvaluation = () => {
  */
 const DetailInfoModal = ({ isOpen, data, onClose, onOpenFullDetail }) => {
     const modalRef = useRef(null);
+    const [companyInfoModal, setCompanyInfoModal] = useState({ open: false, symbol: null });
+    const [chartModal, setChartModal] = useState({ open: false, symbol: null, companyName: null });
 
     // ESC 키 핸들러
     useEffect(() => {
@@ -991,6 +1050,16 @@ const DetailInfoModal = ({ isOpen, data, onClose, onOpenFullDetail }) => {
 
     const stepDetails = data.stepDetails || [];
 
+    // 기업 정보 모달 열기
+    const handleOpenCompanyInfo = () => {
+        setCompanyInfoModal({ open: true, symbol: data.symbol });
+    };
+
+    // 차트 모달 열기
+    const handleOpenChart = () => {
+        setChartModal({ open: true, symbol: data.symbol, companyName: data.companyName });
+    };
+
     return (
         <>
             {/* 배경 오버레이 */}
@@ -1006,9 +1075,16 @@ const DetailInfoModal = ({ isOpen, data, onClose, onOpenFullDetail }) => {
                 <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b bg-white z-10 dark:bg-slate-800 dark:border-slate-700">
                     <div>
                         <h2 className="text-lg font-semibold dark:text-white">투자 판단 상세</h2>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                            {data.symbol} - {data.companyName}
-                        </p>
+                        <button
+                            type="button"
+                            onClick={handleOpenCompanyInfo}
+                            className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 hover:text-blue-600 dark:hover:text-blue-400 hover:underline cursor-pointer transition-colors flex items-center gap-1"
+                        >
+                            <span>{data.symbol} - {data.companyName}</span>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </button>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
@@ -1033,7 +1109,12 @@ const DetailInfoModal = ({ isOpen, data, onClose, onOpenFullDetail }) => {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                         <HighlightCard label="등급" value={data.grade} isGrade />
                         <HighlightCard label="총점" value={`${data.totalScore?.toFixed(1) ?? '-'} / 100`} />
-                        <HighlightCard label="현재가" value={data.currentPrice ? `$${data.currentPrice}` : '-'} />
+                        <HighlightCard
+                            label="현재가"
+                            value={data.currentPrice ? `$${data.currentPrice}` : '-'}
+                            onClick={data.currentPrice ? handleOpenChart : null}
+                            clickable={!!data.currentPrice}
+                        />
                         <HighlightCard label="적정가치" value={data.fairValue ? `$${data.fairValue}` : '-'} />
                     </div>
 
@@ -1069,6 +1150,21 @@ const DetailInfoModal = ({ isOpen, data, onClose, onOpenFullDetail }) => {
                     </div>
                 </div>
             </div>
+
+            {/* 기업 정보 모달 */}
+            <CompanyInfoModal
+                isOpen={companyInfoModal.open}
+                onClose={() => setCompanyInfoModal({ open: false, symbol: null })}
+                symbol={companyInfoModal.symbol}
+            />
+
+            {/* 차트 모달 */}
+            <StockChartModal
+                isOpen={chartModal.open}
+                onClose={() => setChartModal({ open: false, symbol: null, companyName: null })}
+                symbol={chartModal.symbol}
+                companyName={chartModal.companyName}
+            />
         </>
     );
 };
@@ -1273,27 +1369,52 @@ const formatResultDetailValue = (key, value) => {
 /**
  * 하이라이트 카드 컴포넌트
  */
-const HighlightCard = ({ label, value, isGrade }) => (
-    <div className="rounded-lg border bg-white p-3 shadow-sm dark:bg-slate-700 dark:border-slate-600 group relative">
-        <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
-        <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white truncate">
-            {isGrade ? (
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-bold ${getGradeStyle(value)}`}>
-                    {value || '-'}
-                </span>
-            ) : (
-                value
-            )}
-        </div>
-        {/* 툴팁 */}
-        {value && String(value).length > 15 && (
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 max-w-xs whitespace-normal break-all pointer-events-none">
-                {value}
-                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800"></div>
+const HighlightCard = ({ label, value, isGrade, onClick, clickable }) => {
+    const CardWrapper = clickable ? 'button' : 'div';
+    return (
+        <CardWrapper
+            type={clickable ? 'button' : undefined}
+            onClick={clickable ? onClick : undefined}
+            className={`rounded-lg border bg-white p-3 shadow-sm dark:bg-slate-700 dark:border-slate-600 group relative text-left w-full ${
+                clickable
+                    ? 'cursor-pointer hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 transition-colors ring-0 hover:ring-2 hover:ring-blue-200 dark:hover:ring-blue-800'
+                    : ''
+            }`}
+        >
+            <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                {label}
+                {clickable && (
+                    <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3m0 0l3 3m-3-3v8m0-14a9 9 0 110 18 9 9 0 010-18z" />
+                    </svg>
+                )}
             </div>
-        )}
-    </div>
-);
+            <div className={`mt-1 text-base font-semibold text-slate-900 dark:text-white truncate ${clickable ? 'group-hover:text-blue-600 dark:group-hover:text-blue-400' : ''}`}>
+                {isGrade ? (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-bold ${getGradeStyle(value)}`}>
+                        {value || '-'}
+                    </span>
+                ) : (
+                    <span className="flex items-center gap-1">
+                        {value}
+                        {clickable && (
+                            <svg className="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        )}
+                    </span>
+                )}
+            </div>
+            {/* 툴팁 */}
+            {value && String(value).length > 15 && (
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 max-w-xs whitespace-normal break-all pointer-events-none">
+                    {value}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800"></div>
+                </div>
+            )}
+        </CardWrapper>
+    );
+};
 
 /**
  * 정보 카드 컴포넌트

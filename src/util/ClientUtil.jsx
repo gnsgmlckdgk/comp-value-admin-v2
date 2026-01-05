@@ -6,6 +6,22 @@ axios.defaults.withCredentials = true;
 const isDev = import.meta.env.DEV // vite에서는 import.meta.env.DEV로 감지
 const baseURL = isDev ? '' : '' // 개발환경은 proxy 타니까 '', 운영도 상대경로 ''
 
+// ============ API 버전 관리 ============
+export const API_VERSION = {
+    ABROAD_COMP_VALUE_LAST_VER: 'v3',
+    ABROAD_COMP_VALUE: 'v3', // 해외 기업가치 계산 API 버전
+};
+
+// ============ API 엔드포인트 ============
+export const API_ENDPOINTS = {
+    // 해외 기업가치 계산 (단일)
+    ABROAD_COMP_VALUE: (symbol) =>
+        `/dart/main/cal/per_value/abroad/${API_VERSION.ABROAD_COMP_VALUE}?symbol=${encodeURIComponent(symbol)}`,
+    // 해외 기업가치 계산 (배열)
+    ABROAD_COMP_VALUE_ARR: (symbols) =>
+        `/dart/main/cal/per_value/abroad/arr/${API_VERSION.ABROAD_COMP_VALUE}?symbol=${symbols}`,
+};
+
 /**
  * Url에 도메인 세팅
  * 개발은 localhost:port (vite.config.js) / 운영은 상대경로

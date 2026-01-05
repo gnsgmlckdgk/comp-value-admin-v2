@@ -310,8 +310,8 @@ const MetricBadges = ({ metrics, data }) => {
 const Badge = ({ children, title, highlighted = false }) => (
     <span
         className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${highlighted
-                ? 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-900/30'
-                : 'text-slate-700 bg-slate-50 dark:text-slate-300 dark:bg-slate-700 dark:border-slate-600'
+            ? 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-900/30'
+            : 'text-slate-700 bg-slate-50 dark:text-slate-300 dark:bg-slate-700 dark:border-slate-600'
             }`}
         title={title}
     >
@@ -365,12 +365,25 @@ const RecommendationBanner = ({ data }) => {
  * 하이라이트 카드들
  */
 const HighlightCards = ({ data }) => {
-    const { price, target, upside } = usePriceMetrics(data);
+    const { price, target, calculatedTarget, upside } = usePriceMetrics(data);
+
+    // 계산된 주당가치가 적정가와 다를 때만 표시
+    const showCalculatedTarget = (() => {
+        if (calculatedTarget === null) return false;
+        const targetNum = typeof target === 'number' ? target : parseFloat(target);
+        if (isNaN(targetNum)) return true;
+        return Math.abs(calculatedTarget - targetNum) > 0.01;
+    })();
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <MetricCard label="현재가" value={formatUSD(price)} />
-            <MetricCard label="적정가(추정)" value={formatUSD(target)} />
+            <MetricCard
+                label="적정가"
+                value={formatUSD(target)}
+                subValue={showCalculatedTarget ? formatUSD(calculatedTarget) : null}
+                subLabel="계산된 주당가치"
+            />
             <MetricCard
                 label="상승여력"
                 value={upside === null ? '-' : formatPercent(upside)}
@@ -383,10 +396,16 @@ const HighlightCards = ({ data }) => {
 /**
  * 지표 카드
  */
-const MetricCard = ({ label, value, valueClassName = '' }) => (
+const MetricCard = ({ label, value, valueClassName = '', subValue = null, subLabel = '' }) => (
     <div className="rounded-lg border bg-white p-4 shadow-sm dark:bg-slate-700 dark:border-slate-600">
         <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
         <div className={`mt-1 text-lg font-semibold ${valueClassName || 'dark:text-white'}`}>{value}</div>
+        {subValue && (
+            <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <span className="text-slate-500 dark:text-slate-400">{subLabel}: </span>
+                <span className="font-medium text-slate-600 dark:text-slate-300">{subValue}</span>
+            </div>
+        )}
     </div>
 );
 
@@ -762,11 +781,11 @@ const useCompanyMetrics = (data) => {
         // 매출기반평가 = false: PEG <= 1 (양수) AND PER > 0 AND 성장률보정PER > 0 (있는 경우) AND 적정가 > 현재가
         const isRecommended = 매출기반평가
             ? (Number.isFinite(psrNum) && psrNum > 0 && psrNum < 2 &&
-               !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum)
+                !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum)
             : (Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
-               Number.isFinite(perNum) && perNum > 0 &&
-               (!Number.isFinite(perAdjNum) || perAdjNum > 0) &&
-               !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum);
+                Number.isFinite(perNum) && perNum > 0 &&
+                (!Number.isFinite(perAdjNum) || perAdjNum > 0) &&
+                !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum);
 
         return {
             symbol,
@@ -789,9 +808,22 @@ const usePriceMetrics = (data) => {
     return useMemo(() => {
         const getValDeep = (obj, keys) => {
             if (!obj || typeof obj !== 'object') return undefined;
+
+            // 먼저 현재 레벨에서 검색
             for (const key of keys) {
                 if (obj[key] != null) return obj[key];
             }
+
+            // 상세정보 등 중첩 객체에서 검색
+            const containers = ['상세', '상세정보', 'detail', 'details', 'resultDetail', 'metric', 'metrics', 'valuation', 'summary', 'data'];
+            for (const container of containers) {
+                if (obj[container] && typeof obj[container] === 'object') {
+                    for (const key of keys) {
+                        if (obj[container][key] != null) return obj[container][key];
+                    }
+                }
+            }
+
             return undefined;
         };
 
@@ -807,14 +839,21 @@ const usePriceMetrics = (data) => {
 
         const price = getValDeep(data, ['currentPrice', 'price', 'close', '현재가격', '현재가', '종가']);
         const target = getValDeep(data, ['fairValue', 'perValue', 'estimatedValue', 'targetPrice', '적정가', '주당가치', '적정가(추정)']);
+        const calculatedTarget = getValDeep(data, ['계산된주당가치', 'calculatedPerShareValue', 'calculatedFairValue']);
 
         const priceNum = toNum(price);
         const targetNum = toNum(target);
+        const calculatedTargetNum = toNum(calculatedTarget);
         const upside = (!Number.isNaN(priceNum) && !Number.isNaN(targetNum))
             ? (targetNum / priceNum - 1)
             : null;
 
-        return { price, target, upside };
+        return {
+            price,
+            target,
+            calculatedTarget: Number.isNaN(calculatedTargetNum) ? null : calculatedTargetNum,
+            upside
+        };
     }, [data]);
 };
 

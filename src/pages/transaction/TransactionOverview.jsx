@@ -17,7 +17,7 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import SellModal from './components/SellModal';
 import TransactionModal from './components/TransactionModal';
 import PageTitle from '@/component/common/display/PageTitle';
-import { send } from '@/util/ClientUtil';
+import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 
 export default function TransactionOverview() {
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
@@ -100,7 +100,7 @@ export default function TransactionOverview() {
         }
 
         try {
-            const url = `/dart/main/cal/per_value/abroad/v2?symbol=${encodeURIComponent(symbol.trim())}`;
+            const url = API_ENDPOINTS.ABROAD_COMP_VALUE(symbol.trim());
             const { data, error } = await send(url, {}, 'GET');
 
             if (!error && data && data.response && Object.keys(data.response).length > 0) {

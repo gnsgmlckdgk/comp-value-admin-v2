@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { send } from '@/util/ClientUtil';
+import { send, API_VERSION } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
@@ -23,6 +23,7 @@ const FIELD_LABELS = {
     companyName: '기업명',
     currentPrice: '현재가',
     fairValue: '적정가치',
+    calFairValue: '계산된 주당가치',
     priceDifference: '가격차이',
     priceGapPercent: '가격차이율',
     totalScore: '총점',
@@ -83,6 +84,7 @@ const RESULT_DETAIL_LABELS = {
     'per': 'PER',
     'peg': 'PEG',
     'psr': 'PSR',
+    'calFairValue': '계산된 주당가치',
 };
 
 // 등급별 색상
@@ -1086,7 +1088,10 @@ const DetailInfoModal = ({ isOpen, data, onClose, onOpenFullDetail }) => {
                             </svg>
                         </button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400 dark:text-slate-500">
+                            계산 버전: {API_VERSION.ABROAD_COMP_VALUE_LAST_VER}
+                        </span>
                         <button
                             type="button"
                             className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
@@ -1115,7 +1120,22 @@ const DetailInfoModal = ({ isOpen, data, onClose, onOpenFullDetail }) => {
                             onClick={data.currentPrice ? handleOpenChart : null}
                             clickable={!!data.currentPrice}
                         />
-                        <HighlightCard label="적정가치" value={data.fairValue ? `$${data.fairValue}` : '-'} />
+                        <HighlightCard
+                            label="적정가치"
+                            value={data.fairValue ? `$${data.fairValue}` : '-'}
+                            subValue={(() => {
+                                const calculated = data.calFairValue;
+                                if (calculated != null) {
+                                    const calcNum = parseFloat(calculated);
+                                    const fairNum = parseFloat(data.fairValue);
+                                    if (!isNaN(calcNum) && (isNaN(fairNum) || Math.abs(calcNum - fairNum) > 0.01)) {
+                                        return `$${calculated}`;
+                                    }
+                                }
+                                return null;
+                            })()}
+                            subLabel="계산된 주당가치"
+                        />
                     </div>
 
                     {/* 추천 */}
@@ -1210,12 +1230,17 @@ const FullDetailModal = ({ isOpen, data, onClose }) => {
                             {data.symbol} - {data.companyName}
                         </p>
                     </div>
-                    <button
-                        className="text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                        onClick={onClose}
-                    >
-                        닫기 (Esc)
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400 dark:text-slate-500">
+                            계산 버전: {API_VERSION.ABROAD_COMP_VALUE_LAST_VER}
+                        </span>
+                        <button
+                            className="text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                            onClick={onClose}
+                        >
+                            닫기 (Esc)
+                        </button>
+                    </div>
                 </div>
 
                 {/* 콘텐츠 */}
@@ -1233,6 +1258,16 @@ const FullDetailModal = ({ isOpen, data, onClose }) => {
                                     const value = data[key];
                                     const displayValue = value ?? '-';
                                     const valueStr = String(displayValue);
+
+                                    // 적정가치인 경우 계산된주당가치도 함께 표시
+                                    const calculatedValue = key === 'fairValue' ? data.calFairValue : null;
+                                    const showCalculated = (() => {
+                                        if (calculatedValue == null) return false;
+                                        const calcNum = parseFloat(calculatedValue);
+                                        const fairNum = parseFloat(value);
+                                        return !isNaN(calcNum) && (isNaN(fairNum) || Math.abs(calcNum - fairNum) > 0.01);
+                                    })();
+
                                     return (
                                         <div
                                             key={key}
@@ -1241,8 +1276,13 @@ const FullDetailModal = ({ isOpen, data, onClose }) => {
                                             <div className="text-slate-500 whitespace-nowrap dark:text-slate-400">
                                                 {label}
                                             </div>
-                                            <div className="text-right font-medium dark:text-slate-200 truncate max-w-[150px]" title={valueStr}>
-                                                {displayValue}
+                                            <div className="text-right font-medium dark:text-slate-200 max-w-[150px]">
+                                                <div className="truncate" title={valueStr}>{displayValue}</div>
+                                                {showCalculated && (
+                                                    <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                                        계산값: ${calculatedValue}
+                                                    </div>
+                                                )}
                                             </div>
                                             {valueStr.length > 20 && (
                                                 <div className="absolute right-0 bottom-full mb-1 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 max-w-[280px] whitespace-normal break-all pointer-events-none">
@@ -1369,7 +1409,7 @@ const formatResultDetailValue = (key, value) => {
 /**
  * 하이라이트 카드 컴포넌트
  */
-const HighlightCard = ({ label, value, isGrade, onClick, clickable }) => {
+const HighlightCard = ({ label, value, isGrade, onClick, clickable, subValue = null, subLabel = '' }) => {
     const CardWrapper = clickable ? 'button' : 'div';
     return (
         <CardWrapper
@@ -1405,6 +1445,13 @@ const HighlightCard = ({ label, value, isGrade, onClick, clickable }) => {
                     </span>
                 )}
             </div>
+            {/* 서브값 표시 */}
+            {subValue && (
+                <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                    <span className="text-slate-500 dark:text-slate-400">{subLabel}: </span>
+                    <span className="font-medium text-slate-600 dark:text-slate-300">{subValue}</span>
+                </div>
+            )}
             {/* 툴팁 */}
             {value && String(value).length > 15 && (
                 <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 max-w-xs whitespace-normal break-all pointer-events-none">

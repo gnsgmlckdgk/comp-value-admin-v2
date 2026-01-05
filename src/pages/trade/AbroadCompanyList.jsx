@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { send } from '@/util/ClientUtil';
+import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 import { getRolesFromStorage, hasAnyRole } from '@/util/RoleUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
@@ -451,7 +451,7 @@ const AbroadCompanyList = () => {
 
         setIsLoading(true);
         try {
-            const { data, error } = await send(`/dart/main/cal/per_value/abroad/v3?symbol=${symbol}`, {}, 'GET');
+            const { data, error } = await send(API_ENDPOINTS.ABROAD_COMP_VALUE(symbol), {}, 'GET');
 
             const hasValid = !error && data && data.response && Object.keys(data.response).length > 0;
             if (hasValid) {

@@ -5,7 +5,7 @@ import BulkQueryModal from '@/pages/trade/popup/BulkQueryModal';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import PageTitle from '@/component/common/display/PageTitle';
-import { send } from '@/util/ClientUtil';
+import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 
 // ----------------------------------------------
 // 유틸리티: URL 빌더 (중복 제거)
@@ -125,7 +125,7 @@ const AbroadCompValue = () => {
 
             setIsLoading(true);
             try {
-                const sendUrl = buildUrl('/dart/main/cal/per_value/abroad/v3', { symbol });
+                const sendUrl = API_ENDPOINTS.ABROAD_COMP_VALUE(symbol);
                 const { data, error } = await send(sendUrl, {}, 'GET');
 
                 const hasValid = !error && data && data.response && Object.keys(data.response).length > 0;

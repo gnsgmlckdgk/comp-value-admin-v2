@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import ExcelJS from 'exceljs';
 
-import { send } from '@/util/ClientUtil';
+import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 
 // 분할 조회 설정 (FMP API 분당 300건 제한 대응)
 // 30건씩 조회 후 10초 대기 → 분당 약 180건 속도로 안전하게 처리
@@ -241,7 +241,6 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * 다건 조회 API를 사용하여 심볼 배열을 서버에 보내고 결과를 받음
- * API: /dart/main/cal/per_value/abroad/arr/v3?symbol=TSLA,AMZN,MSFT,...
  * @param {string[]} symbols - 조회할 심볼 배열
  * @param {Function} onProgress - 진행 상태 콜백 (current, total, currentBatch) => void
  * @param {Object} abortRef - 중지 플래그 (abortRef.current === true 이면 중지)
@@ -272,7 +271,7 @@ async function defaultBulkFetcher(symbols, onProgress, abortRef) {
         }
 
         try {
-            const sendUrl = `/dart/main/cal/per_value/abroad/arr/v3?symbol=${batchSymbols}`;
+            const sendUrl = API_ENDPOINTS.ABROAD_COMP_VALUE_ARR(batchSymbols);
             const { data, error } = await send(sendUrl, {}, "GET");
 
             if (error == null && data && data.response) {

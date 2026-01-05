@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { send } from '@/util/ClientUtil';
+import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
@@ -572,7 +572,7 @@ const AbroadRecommendedStock = () => {
         setIsLoading(true);
         try {
             const { data, error } = await send(
-                `/dart/main/cal/per_value/abroad/v3?symbol=${symbol}`,
+                API_ENDPOINTS.ABROAD_COMP_VALUE(symbol),
                 {},
                 'GET'
             );

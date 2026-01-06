@@ -34,12 +34,6 @@ function PrivateRoute({ children }) {
     useEffect(() => {
         const myId = ++runIdRef.current;
         const run = async () => {
-            // 이미 로그인 상태면 추가 검사 없이 통과
-            if (isLoggedIn === true) {
-                setHasChecked(true);
-                return;
-            }
-
             setChecking(true);
             try {
                 const { data } = await send('/dart/member/me', {}, 'GET');

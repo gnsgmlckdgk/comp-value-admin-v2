@@ -42,10 +42,11 @@ const getUrl = (url) => {
  */
 const forceClientLogout = () => {
     try {
-        localStorage.setItem('isLoggedIn', 'false');
-        // localStorage.removeItem('userRole');
-        // localStorage.removeItem('userName');
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userName');
         localStorage.removeItem('nickName');
+        localStorage.removeItem('roles');
+        sessionStorage.clear();
         window.dispatchEvent(new CustomEvent('auth:logout', { detail: { reason: '401' } }));
     } catch (e) { /* noop */ }
 };
@@ -107,6 +108,9 @@ export const send = async (url, params, method = "GET") => {
         if (responseData && responseData.success === false) {
             return { data: null, error: responseData.message || '요청 처리 중 오류가 발생했습니다.' };
         }
+
+        // API 호출 성공 시 세션 활동 이벤트 발생 (세션 타이머 리셋)
+        window.dispatchEvent(new CustomEvent('session:activity'));
 
         return { data: response.data, error: null };
     } catch (error) {

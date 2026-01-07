@@ -278,47 +278,47 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
                         </div>
                     </Link>
 
-                    <div className="ml-auto flex items-center gap-2 sm:gap-4 text-sm">
+                    <div className="ml-auto flex items-center gap-1.5 sm:gap-3 text-sm">
                         <button
                             type="button"
                             onClick={toggleTheme}
-                            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                            className="p-1.5 sm:p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                             aria-label="테마 전환"
                         >
                             {isDark ? (
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
                                 </svg>
                             ) : (
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                                 </svg>
                             )}
                         </button>
 
                         {isLoggedIn && displayName && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 sm:gap-2">
                                 {/* 세션 TTL 표시 */}
                                 {sessionTTL != null && (
-                                    <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+                                    <div className={`flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2 py-1 text-xs font-medium ${
                                         sessionTTL <= 300
                                             ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
                                             : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
                                     }`}>
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <span>{formatTTL(sessionTTL)}</span>
+                                        <span className="text-[10px] sm:text-xs">{formatTTL(sessionTTL)}</span>
                                     </div>
                                 )}
                                 <Link
                                     to="/member/myprofile"
-                                    className="flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-slate-700 shadow-sm md:gap-2 md:px-3 md:py-1.5 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+                                    className="flex items-center gap-1 sm:gap-1.5 rounded-full bg-slate-50 px-1.5 sm:px-2 py-1 text-slate-700 shadow-sm md:gap-2 md:px-3 md:py-1.5 dark:bg-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer"
                                 >
                                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-400 text-xs font-semibold text-white md:h-7 md:w-7">
                                         {displayName.charAt(0)}
                                     </div>
-                                    <span className="max-w-[60px] truncate text-xs md:max-w-[120px] md:text-sm">{displayName}<span className="hidden sm:inline"> 님</span></span>
+                                    <span className="hidden sm:inline max-w-[60px] truncate text-xs md:max-w-[120px] md:text-sm">{displayName}<span className="hidden md:inline"> 님</span></span>
                                 </Link>
                             </div>
                         )}
@@ -327,22 +327,26 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
                             <button
                                 type="button"
                                 onClick={logout}
-                                className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-sky-400 hover:text-sky-600 hover:shadow-sm dark:border-slate-600 dark:text-slate-300 dark:hover:border-sky-400"
+                                className="rounded-full border border-slate-300 p-1.5 sm:px-3 sm:py-1.5 text-slate-700 hover:border-sky-400 hover:text-sky-600 hover:shadow-sm dark:border-slate-600 dark:text-slate-300 dark:hover:border-sky-400 transition-colors"
+                                aria-label="로그아웃"
                             >
-                                로그아웃
+                                <span className="hidden sm:inline text-xs font-medium">로그아웃</span>
+                                <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
                             </button>
                         ) : (
                             <>
                                 <button
                                     type="button"
-                                    className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-sky-400 hover:text-sky-600 hover:shadow-sm dark:border-slate-600 dark:text-slate-300 dark:hover:border-sky-400"
+                                    className="hidden sm:inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-sky-400 hover:text-sky-600 hover:shadow-sm dark:border-slate-600 dark:text-slate-300 dark:hover:border-sky-400"
                                     onClick={() => navigate('/member/join')}
                                 >
                                     회원가입
                                 </button>
                                 <button
                                     type="button"
-                                    className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-sky-600 hover:to-indigo-600"
+                                    className="rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-sky-600 hover:to-indigo-600"
                                     onClick={() => {
                                         setLoginUsername('');
                                         setPassWord('');

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import StockChartModal from './StockChartModal';
 import CompanyInfoModal from './CompanyInfoModal';
+import InvestmentDetailModal, { FullDetailModal } from './InvestmentDetailModal';
+import { send } from '@/util/ClientUtil';
 
 /**
  * 기업가치 계산 결과 모달 컴포넌트
@@ -12,8 +14,12 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
         guide: false,
         detail: false,
         chart: false,
-        companyInfo: false
+        companyInfo: false,
+        investmentDetail: false,
+        investmentFullDetail: false
     });
+    const [investmentData, setInvestmentData] = useState(null);
+    const [investmentLoading, setInvestmentLoading] = useState(false);
     const [detailView, setDetailView] = useState({
         title: '',
         data: null
@@ -33,7 +39,11 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
         const handleEscape = (e) => {
             if (e.key !== 'Escape') return;
 
-            if (overlays.companyInfo) {
+            if (overlays.investmentFullDetail) {
+                setOverlays(prev => ({ ...prev, investmentFullDetail: false }));
+            } else if (overlays.investmentDetail) {
+                setOverlays(prev => ({ ...prev, investmentDetail: false }));
+            } else if (overlays.companyInfo) {
                 setOverlays(prev => ({ ...prev, companyInfo: false }));
             } else if (overlays.chart) {
                 setOverlays(prev => ({ ...prev, chart: false }));
@@ -76,6 +86,32 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
         setOverlays(prev => ({ ...prev, companyInfo: true }));
     }, []);
 
+    // 투자 판단 모달 열기 (API 호출)
+    const handleOpenInvestmentDetail = useCallback(async (symbol) => {
+        if (!symbol || investmentLoading) return;
+
+        setInvestmentLoading(true);
+        try {
+            const { data: responseData, error } = await send('/dart/main/evaluate/stocks', { symbols: [symbol] }, 'POST');
+
+            if (!error && responseData && responseData.response && responseData.response.length > 0) {
+                setInvestmentData(responseData.response[0]);
+                setOverlays(prev => ({ ...prev, investmentDetail: true }));
+            } else {
+                setToast('투자 판단 데이터를 불러올 수 없습니다.');
+            }
+        } catch {
+            setToast('투자 판단 데이터 조회 중 오류가 발생했습니다.');
+        } finally {
+            setInvestmentLoading(false);
+        }
+    }, [investmentLoading]);
+
+    // 투자 판단 전체 상세 모달 열기
+    const handleOpenInvestmentFullDetail = useCallback((detailData) => {
+        setOverlays(prev => ({ ...prev, investmentFullDetail: true }));
+    }, []);
+
     if (!isOpen) return null;
 
     // 심볼과 회사명 추출
@@ -112,6 +148,8 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                     onOpenGuide={() => setOverlays(prev => ({ ...prev, guide: true }))}
                     onOpenDetail={openDetailView}
                     onOpenChart={() => setOverlays(prev => ({ ...prev, chart: true }))}
+                    onOpenInvestmentDetail={handleOpenInvestmentDetail}
+                    investmentLoading={investmentLoading}
                 />
             </div>
 
@@ -143,6 +181,23 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                 isOpen={overlays.companyInfo}
                 onClose={() => closeOverlay('companyInfo')}
                 symbol={symbol}
+            />
+
+            {/* 투자 판단 상세 모달 */}
+            <InvestmentDetailModal
+                isOpen={overlays.investmentDetail}
+                data={investmentData}
+                onClose={() => closeOverlay('investmentDetail')}
+                onOpenFullDetail={handleOpenInvestmentFullDetail}
+                zIndex={90}
+            />
+
+            {/* 투자 판단 전체 상세 모달 */}
+            <FullDetailModal
+                isOpen={overlays.investmentFullDetail}
+                data={investmentData}
+                onClose={() => closeOverlay('investmentFullDetail')}
+                zIndex={100}
             />
 
             {/* Toast 알림 */}
@@ -179,7 +234,7 @@ const ModalHeader = ({ onClose, onOpenCompanyInfo, symbol }) => (
 /**
  * 모달 메인 콘텐츠
  */
-const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpenChart }) => {
+const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpenChart, onOpenInvestmentDetail, investmentLoading }) => {
     const compValueData = data || {};
     const hasData = Object.keys(compValueData).length > 0;
 
@@ -205,6 +260,8 @@ const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpen
                 onCopy={onCopy}
                 onClose={onClose}
                 onOpenChart={onOpenChart}
+                onOpenInvestmentDetail={onOpenInvestmentDetail}
+                investmentLoading={investmentLoading}
             />
         </div>
     );
@@ -476,32 +533,75 @@ const renderValue = (value, label, onOpenDetail) => {
 /**
  * 액션 버튼들
  */
-const ActionButtons = ({ data, onCopy, onClose, onOpenChart }) => (
-    <div className="flex justify-between items-center gap-2">
-        <button
-            className="px-3 py-2 rounded-md border text-sm hover:bg-blue-50 transition-colors flex items-center gap-1.5 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-900/30"
-            onClick={onOpenChart}
-            title="주식 가격 및 거래량 차트 보기"
-        >
-            <ChartIcon />
-            차트 보기
-        </button>
-        <div className="flex gap-2">
-            <button
-                className="px-3 py-2 rounded-md border text-sm hover:bg-slate-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                onClick={() => onCopy(data, 'JSON이 클립보드에 복사되었습니다.')}
-            >
-                JSON 복사
-            </button>
-            <button
-                className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors"
-                onClick={onClose}
-            >
-                닫기
-            </button>
+const ActionButtons = ({ data, onCopy, onClose, onOpenChart, onOpenInvestmentDetail, investmentLoading }) => {
+    // 심볼 추출
+    const getValDeep = (obj, keys) => {
+        if (!obj || typeof obj !== 'object') return undefined;
+        for (const key of keys) {
+            if (obj[key] != null) return obj[key];
+        }
+        return undefined;
+    };
+    const symbol = getValDeep(data, ['symbol', 'ticker', 'code', '주식코드', '주식심볼', '기업심볼']);
+
+    const handleInvestmentJudgment = () => {
+        if (symbol) {
+            onOpenInvestmentDetail(symbol);
+        }
+    };
+
+    return (
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
+            <div className="flex gap-2">
+                <button
+                    className="flex-1 sm:flex-none px-3 py-2 rounded-md border text-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-900/30"
+                    onClick={onOpenChart}
+                    title="주식 가격 및 거래량 차트 보기"
+                >
+                    <ChartIcon />
+                    차트 보기
+                </button>
+                {symbol && (
+                    <button
+                        className="flex-1 sm:flex-none px-3 py-2 rounded-md border text-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-1.5 text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleInvestmentJudgment}
+                        disabled={investmentLoading}
+                        title="투자 판단 상세 보기"
+                    >
+                        {investmentLoading ? (
+                            <>
+                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                조회 중...
+                            </>
+                        ) : (
+                            <>
+                                <AnalysisIcon />
+                                투자 판단
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+            <div className="flex gap-2">
+                <button
+                    className="flex-1 sm:flex-none px-3 py-2 rounded-md border text-sm hover:bg-slate-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                    onClick={() => onCopy(data, 'JSON이 클립보드에 복사되었습니다.')}
+                >
+                    JSON 복사
+                </button>
+                <button
+                    className="flex-1 sm:flex-none px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors"
+                    onClick={onClose}
+                >
+                    닫기
+                </button>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 /**
  * 해석 가이드 오버레이
@@ -704,6 +804,16 @@ const InfoIcon = () => (
 const ChartIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
         <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75ZM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 0 1-1.875-1.875V8.625ZM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 0 1 3 19.875v-6.75Z" />
+    </svg>
+);
+
+/**
+ * Analysis 아이콘
+ */
+const AnalysisIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+        <path fillRule="evenodd" d="M2.25 13.5a8.25 8.25 0 0 1 8.25-8.25.75.75 0 0 1 .75.75v6.75H18a.75.75 0 0 1 .75.75 8.25 8.25 0 0 1-16.5 0Z" clipRule="evenodd" />
+        <path fillRule="evenodd" d="M12.75 3a.75.75 0 0 1 .75-.75 8.25 8.25 0 0 1 8.25 8.25.75.75 0 0 1-.75.75h-7.5a.75.75 0 0 1-.75-.75V3Z" clipRule="evenodd" />
     </svg>
 );
 

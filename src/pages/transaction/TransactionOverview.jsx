@@ -215,7 +215,7 @@ export default function TransactionOverview() {
                 />
 
                 <div className="mx-0">
-                    <div className="overflow-x-auto overflow-y-auto bg-white border border-slate-200 rounded-md scrollbar-always max-h-[70vh] dark:bg-slate-800 dark:border-slate-700">
+                    <div className="overflow-x-auto overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-sm scrollbar-always max-h-[70vh] dark:bg-slate-800 dark:border-slate-700">
                         <table className="table-fixed min-w-[1400px] w-full border-collapse">
                             <colgroup>
                                 {COLUMN_WIDTHS.map((w, i) => (
@@ -228,19 +228,17 @@ export default function TransactionOverview() {
                             <tbody className="text-sm whitespace-nowrap">
                                 {rows.length === 0 && !loading && (
                                     <tr>
-                                        <td colSpan={TABLE_HEADERS.length} className="py-12 px-6 text-center">
+                                        <td colSpan={TABLE_HEADERS.length} className="py-16 px-6 text-center bg-slate-50 dark:bg-slate-800/50">
                                             <div className="flex flex-col items-center gap-4">
-                                                <div className="text-slate-400 dark:text-slate-500">
-                                                    <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                                                    <svg className="w-8 h-8 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                     </svg>
                                                 </div>
                                                 <div>
-                                                    <p className="text-lg font-medium text-slate-700 mb-2 dark:text-slate-300">등록된 종목이 없습니다</p>
+                                                    <p className="text-lg font-medium text-slate-700 mb-2 dark:text-slate-200">등록된 종목이 없습니다</p>
                                                     <div className="text-sm text-slate-500 space-y-1 dark:text-slate-400">
-                                                        <p>아래 신규 입력란에서 종목을 추가할 수 있습니다:</p>
-                                                        <p className="text-xs">1. 티커(예: AAPL), 기업명, 매수일, 매수가, 수량 입력</p>
-                                                        <p className="text-xs">2. <span className="font-semibold text-blue-600 dark:text-blue-400">추가</span> 버튼 클릭</p>
+                                                        <p>상단의 <span className="font-semibold text-blue-600 dark:text-blue-400">종목 추가</span> 버튼을 눌러 종목을 추가하세요</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -256,7 +254,7 @@ export default function TransactionOverview() {
                                             return (
                                                 <tr key={`gs-${r.symbol}-${i}`}>
                                                     <td colSpan={TABLE_HEADERS.length} className="p-0">
-                                                        <div className="h-2 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700" />
+                                                        <div className="h-1.5 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800" />
                                                     </td>
                                                 </tr>
                                             );

@@ -4,7 +4,7 @@ import { toNum, fmtUsd, fmtDate } from '../utils/formatters';
  * 기본 테이블 셀 컴포넌트
  */
 export function Td({ children, className = '' }) {
-    return <td className={`px-3 py-3 align-middle ${className}`}>{children}</td>;
+    return <td className={`px-3 py-2.5 align-middle ${className}`}>{children}</td>;
 }
 
 /**
@@ -14,7 +14,7 @@ export function KrwCell({ value }) {
     const v = toNum(value);
     return (
         <Td>
-            <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium dark:text-slate-300">
+            <div className="h-9 flex items-center justify-end text-slate-600 dark:text-slate-300 tabular-nums">
                 {v ? `₩ ${Math.round(v).toLocaleString()}` : ''}
             </div>
         </Td>
@@ -28,7 +28,7 @@ export function UsdCell({ value }) {
     const v = toNum(value);
     return (
         <Td>
-            <div className="px-1 h-9 flex items-center justify-end text-slate-700 font-medium dark:text-slate-300">
+            <div className="h-9 flex items-center justify-end text-slate-700 dark:text-slate-200 tabular-nums">
                 {v ? `$ ${fmtUsd(v)}` : ''}
             </div>
         </Td>
@@ -38,16 +38,20 @@ export function UsdCell({ value }) {
 /**
  * USD + KRW 통합 표시 셀
  */
-export function CombinedPriceCell({ usdValue, fx }) {
+export function CombinedPriceCell({ usdValue, fx, bold = false }) {
     const usd = toNum(usdValue);
     const krw = fx ? Math.round(usd * fx) : 0;
 
     return (
         <Td>
-            <div className="px-1 leading-tight text-right">
-                <div className="text-slate-700 font-medium dark:text-slate-300">{usd ? `$ ${fmtUsd(usd)}` : ''}</div>
+            <div className="leading-tight text-right">
+                <div className={`text-slate-700 dark:text-slate-200 tabular-nums ${bold ? 'font-bold' : 'font-medium'}`}>
+                    {usd ? `$ ${fmtUsd(usd)}` : ''}
+                </div>
                 {usd && fx ? (
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">{`₩ ${krw.toLocaleString()}`}</div>
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+                        {`₩ ${krw.toLocaleString()}`}
+                    </div>
                 ) : null}
             </div>
         </Td>
@@ -64,14 +68,22 @@ export function DiffCell({ buy, cur, fx }) {
     const dKrw = fx ? Math.round(d * fx) : 0;
     const pct = b > 0 ? (d / b) * 100 : 0;
     const pos = d >= 0;
-    const cls = pos ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400';
+    const cls = pos
+        ? 'text-rose-600 dark:text-rose-400'
+        : 'text-blue-600 dark:text-blue-400';
 
     return (
         <Td>
-            <div className="px-1 leading-tight text-center">
-                <div className={`${cls} font-semibold`}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
-                <div className={`${cls} text-[12px] font-medium`}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+            <div className="leading-tight text-center">
+                <div className={`${cls} font-semibold tabular-nums`}>
+                    {(pos ? '+' : '') + '$ ' + fmtUsd(d)}
+                </div>
+                <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+                    {fx ? `₩ ${dKrw.toLocaleString()}` : ''}
+                </div>
+                <div className={`${cls} text-[12px] font-medium tabular-nums`}>
+                    {(pos ? '+' : '') + pct.toFixed(2)}%
+                </div>
             </div>
         </Td>
     );
@@ -90,14 +102,22 @@ export function TotalDiffCell({ buy, cur, qty, fx }) {
     const dKrw = fx ? Math.round(d * fx) : 0;
     const pct = buySum > 0 ? (d / buySum) * 100 : 0;
     const pos = d >= 0;
-    const cls = pos ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400';
+    const cls = pos
+        ? 'text-rose-600 dark:text-rose-400'
+        : 'text-blue-600 dark:text-blue-400';
 
     return (
         <Td>
-            <div className="px-1 leading-tight text-center">
-                <div className={`${cls} font-semibold`}>{(pos ? '+' : '') + '$ ' + fmtUsd(d)}</div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">{fx ? `₩ ${dKrw.toLocaleString()}` : ''}</div>
-                <div className={`${cls} text-[12px] font-medium`}>{(pos ? '+' : '') + pct.toFixed(2)}%</div>
+            <div className="leading-tight text-center">
+                <div className={`${cls} font-semibold tabular-nums`}>
+                    {(pos ? '+' : '') + '$ ' + fmtUsd(d)}
+                </div>
+                <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+                    {fx ? `₩ ${dKrw.toLocaleString()}` : ''}
+                </div>
+                <div className={`${cls} text-[12px] font-medium tabular-nums`}>
+                    {(pos ? '+' : '') + pct.toFixed(2)}%
+                </div>
             </div>
         </Td>
     );
@@ -134,9 +154,13 @@ export function EditableTd({
             if (cur || tgt) {
                 const d = cur - tgt; // 현재가 - 목표가
                 const pos = d >= 0;
-                const cls = pos ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400';
+                const cls = pos
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-blue-600 dark:text-blue-400';
                 subTargetDiff = (
-                    <div className={`${cls} text-[11px]`}>{`(${pos ? '+' : ''}$ ${fmtUsd(d)})`}</div>
+                    <div className={`${cls} text-[11px] tabular-nums`}>
+                        {`(${pos ? '+' : ''}$ ${fmtUsd(d)})`}
+                    </div>
                 );
             }
         }
@@ -156,11 +180,16 @@ export function EditableTd({
         return (
             <Td className={tdClassName}>
                 <div
-                    className={
-                        isTwoLine
-                            ? 'min-h-[40px] flex flex-col justify-center items-start cursor-pointer bg-blue-50/30 hover:bg-blue-100/40 rounded px-1 border border-dashed border-blue-200/50 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:border-blue-800/50'
-                            : 'h-9 flex items-center cursor-pointer bg-blue-50/30 hover:bg-blue-100/40 rounded px-1 border border-dashed border-blue-200/50 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:border-blue-800/50'
-                    }
+                    className={`
+                        ${isTwoLine
+                            ? 'min-h-[40px] flex flex-col justify-center items-start'
+                            : 'h-9 flex items-center'
+                        }
+                        cursor-pointer rounded px-2 py-1
+                        bg-transparent hover:bg-slate-100 dark:hover:bg-slate-700
+                        border border-transparent hover:border-slate-200 dark:hover:border-slate-600
+                        transition-all duration-100
+                    `}
                     onDoubleClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -168,7 +197,13 @@ export function EditableTd({
                     }}
                     title={titleText}
                 >
-                    <div className={isCompanyName ? "truncate w-full dark:text-slate-300" : "dark:text-slate-300"}>{main}</div>
+                    <div className={`
+                        ${isCompanyName ? "truncate w-full" : ""}
+                        ${isMoney ? "tabular-nums" : ""}
+                        text-slate-700 dark:text-slate-200
+                    `}>
+                        {main}
+                    </div>
                     {subTargetDiff}
                 </div>
             </Td>
@@ -190,7 +225,10 @@ export function EditableTd({
                     }
                 }}
                 onBlur={commitEdit}
-                className="w-full h-9 rounded border px-2 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                className="w-full h-9 rounded-md border px-2 text-sm
+                    bg-white border-blue-400 ring-2 ring-blue-100
+                    dark:bg-slate-700 dark:border-blue-500 dark:ring-blue-900/50 dark:text-white
+                    focus:outline-none transition-all"
             />
         </Td>
     );

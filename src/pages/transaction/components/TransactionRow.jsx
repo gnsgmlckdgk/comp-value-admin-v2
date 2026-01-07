@@ -21,6 +21,7 @@ export function TransactionRow({
     isSingleRow = false,
 }) {
     const isHit = toNum(row.targetPrice) > 0 && toNum(row.currentPrice) >= toNum(row.targetPrice);
+    const isEven = index % 2 === 0;
 
     const handleCellDoubleClick = (e) => {
         // EditableTd에서 이미 처리되었으면 무시
@@ -35,15 +36,43 @@ export function TransactionRow({
         }
     };
 
+    // 행 배경색 결정
+    const getRowBg = () => {
+        if (isHit) {
+            return 'bg-amber-50/80 hover:bg-amber-100/80 dark:bg-amber-900/20 dark:hover:bg-amber-900/30';
+        }
+        if (isEven) {
+            return 'bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-750';
+        }
+        return 'bg-slate-50/50 hover:bg-slate-100/50 dark:bg-slate-800/50 dark:hover:bg-slate-750';
+    };
+
+    // sticky 셀 배경색 (행 배경과 동기화)
+    const getStickyBg = () => {
+        if (isHit) {
+            return 'bg-amber-50/80 group-hover:bg-amber-100/80 dark:bg-amber-900/20 dark:group-hover:bg-amber-900/30';
+        }
+        if (isEven) {
+            return 'bg-white group-hover:bg-slate-50 dark:bg-slate-800 dark:group-hover:bg-slate-750';
+        }
+        return 'bg-slate-50/50 group-hover:bg-slate-100/50 dark:bg-slate-800/50 dark:group-hover:bg-slate-750';
+    };
+
     return (
         <tr
-            className={`group border-b ${row.__isGroupEnd ? 'border-b-0' : 'border-slate-300 dark:border-slate-700'} ${isHit ? 'bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/30' : 'bg-white hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700/70'} cursor-pointer transition-all duration-150`}
+            className={`
+                group border-b transition-colors duration-100 cursor-pointer
+                ${row.__isGroupEnd ? 'border-b-0' : 'border-slate-200 dark:border-slate-700'}
+                ${getRowBg()}
+            `}
             onDoubleClick={handleCellDoubleClick}
             title="더블클릭하여 기업가치 계산 결과 보기"
         >
-            <Td className={`sticky left-0 z-10 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-300 transition-all duration-150`}>{index + 1}</Td>
+            <Td className={`sticky left-0 z-10 ${getStickyBg()} text-slate-500 dark:text-slate-400 text-center font-medium`}>
+                {index + 1}
+            </Td>
             <EditableTd
-                tdClassName={`sticky left-12 z-10 bg-white dark:bg-slate-800 transition-all duration-150'}`}
+                tdClassName={`sticky left-12 z-10 ${getStickyBg()}`}
                 row={row}
                 field="symbol"
                 value={row.symbol}
@@ -131,11 +160,16 @@ export function TransactionRow({
                 commitEdit={commitEdit}
             />
             <Td>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 justify-center">
                     {isSingleRow && onSell && (
                         <button
                             onClick={() => onSell(row)}
-                            className="px-2.5 py-1 rounded-md border text-xs hover:bg-blue-50 hover:border-blue-300 cursor-pointer disabled:cursor-not-allowed dark:border-slate-600 dark:text-slate-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-700"
+                            className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-all
+                                bg-blue-50 text-blue-600 border border-blue-200
+                                hover:bg-blue-100 hover:border-blue-300
+                                dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800
+                                dark:hover:bg-blue-900/50 dark:hover:border-blue-700
+                                disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={saving}
                         >
                             매도
@@ -143,7 +177,12 @@ export function TransactionRow({
                     )}
                     <button
                         onClick={() => onRemove(row.id)}
-                        className="px-2.5 py-1 rounded-md border text-xs hover:bg-rose-50 hover:border-rose-300 cursor-pointer disabled:cursor-not-allowed dark:border-slate-600 dark:text-slate-300 dark:hover:bg-rose-900/30 dark:hover:border-rose-700"
+                        className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-all
+                            bg-slate-50 text-slate-600 border border-slate-200
+                            hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300
+                            dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600
+                            dark:hover:bg-rose-900/30 dark:hover:text-rose-400 dark:hover:border-rose-800
+                            disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={saving}
                     >
                         삭제

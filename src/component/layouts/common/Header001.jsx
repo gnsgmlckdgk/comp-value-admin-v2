@@ -300,7 +300,7 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
                             <div className="flex items-center gap-2">
                                 {/* 세션 TTL 표시 */}
                                 {sessionTTL != null && (
-                                    <div className={`hidden sm:flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+                                    <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
                                         sessionTTL <= 300
                                             ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
                                             : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'

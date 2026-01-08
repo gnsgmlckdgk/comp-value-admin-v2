@@ -16,6 +16,7 @@ import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import SellModal from './components/SellModal';
 import TransactionModal from './components/TransactionModal';
+import TransactionDetailModal from './components/TransactionDetailModal';
 import PageTitle from '@/component/common/display/PageTitle';
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 
@@ -55,6 +56,7 @@ export default function TransactionOverview() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [sellModalData, setSellModalData] = useState({ open: false, data: null, targetRows: [] });
     const [transactionModalData, setTransactionModalData] = useState({ open: false, mode: 'add', data: null });
+    const [detailModalData, setDetailModalData] = useState({ open: false, row: null, isGroupRow: false });
 
     // 편집 완료 핸들러
     const commitEdit = async () => {
@@ -92,8 +94,33 @@ export default function TransactionOverview() {
         }
     };
 
-    // 기업가치 계산 조회
-    const handleRowDoubleClick = async (symbol) => {
+    // 행 클릭 시 상세정보 모달 열기
+    const handleRowClick = (row) => {
+        setDetailModalData({ open: true, row, isGroupRow: false });
+    };
+
+    // 상세 모달 닫기
+    const handleCloseDetailModal = () => {
+        setDetailModalData({ open: false, row: null, isGroupRow: false });
+    };
+
+    // 상세 모달에서 필드 수정
+    const handleDetailSave = async (id, updates) => {
+        let success = true;
+        for (const [field, value] of Object.entries(updates)) {
+            const result = await updateTransactionField(id, field, value);
+            if (!result) success = false;
+        }
+        if (success) {
+            // row 데이터 갱신을 위해 모달 닫기
+            setDetailModalData({ open: false, row: null });
+            openAlert('수정되었습니다.');
+        }
+        return success;
+    };
+
+    // 기업가치 분석 (상세 모달에서 호출)
+    const handleAnalyze = async (symbol) => {
         if (!symbol || !symbol.trim()) {
             openAlert('티커 정보가 존재하지 않습니다.');
             return;
@@ -106,6 +133,7 @@ export default function TransactionOverview() {
             if (!error && data && data.response && Object.keys(data.response).length > 0) {
                 setCompValueData(data.response);
                 setShowCompValueModal(true);
+                // 상세 모달은 열어둠 (분석 결과 확인 후 돌아올 수 있게)
             } else {
                 openAlert('조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
             }
@@ -269,6 +297,7 @@ export default function TransactionOverview() {
                                                     fx={fxRate}
                                                     onSell={handleOpenSellModalGroup}
                                                     saving={saving}
+                                                    onRowClick={(rowData) => setDetailModalData({ open: true, row: rowData, isGroupRow: true })}
                                                 />
                                             );
                                         }
@@ -291,7 +320,7 @@ export default function TransactionOverview() {
                                                 commitEdit={commitEdit}
                                                 onRemove={removeTransaction}
                                                 saving={saving}
-                                                onRowDoubleClick={handleRowDoubleClick}
+                                                onRowClick={handleRowClick}
                                                 onSell={handleOpenSellModalSingle}
                                                 isSingleRow={isSingleRow}
                                             />
@@ -342,6 +371,16 @@ export default function TransactionOverview() {
                 data={transactionModalData.data}
                 onClose={() => setTransactionModalData({ open: false, mode: 'add', data: null })}
                 onSave={handleSaveTransaction}
+            />
+
+            <TransactionDetailModal
+                isOpen={detailModalData.open}
+                row={detailModalData.row}
+                fx={fxRate}
+                onClose={handleCloseDetailModal}
+                onSave={handleDetailSave}
+                onAnalyze={handleAnalyze}
+                saving={saving}
             />
         </>
     );

@@ -16,23 +16,29 @@ export function TransactionRow({
     commitEdit,
     onRemove,
     saving,
-    onRowDoubleClick,
+    onRowClick,
     onSell,
     isSingleRow = false,
 }) {
     const isHit = toNum(row.targetPrice) > 0 && toNum(row.currentPrice) >= toNum(row.targetPrice);
     const isEven = index % 2 === 0;
 
-    const handleCellDoubleClick = (e) => {
-        // EditableTd에서 이미 처리되었으면 무시
+    const handleRowDoubleClick = (e) => {
+        // EditableTd에서 이미 처리되었으면 무시 (인라인 편집)
         if (e.defaultPrevented) return;
+
+        // 편집 중이면 무시
+        if (editing) return;
 
         // 더블클릭 이벤트가 버튼에서 발생했으면 무시
         if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
 
-        // 기업가치 조회 호출
-        if (onRowDoubleClick && row.symbol) {
-            onRowDoubleClick(row.symbol);
+        // 인라인 편집 셀의 input에서 발생했으면 무시
+        if (e.target.tagName === 'INPUT' || e.target.closest('input')) return;
+
+        // 상세정보 모달 열기
+        if (onRowClick) {
+            onRowClick(row);
         }
     };
 
@@ -47,15 +53,15 @@ export function TransactionRow({
         return 'bg-slate-50/50 hover:bg-slate-100/50 dark:bg-slate-800/50 dark:hover:bg-slate-750';
     };
 
-    // sticky 셀 배경색 (행 배경과 동기화)
+    // sticky 셀 배경색 (행 배경과 동기화 - 불투명)
     const getStickyBg = () => {
         if (isHit) {
-            return 'bg-amber-50/80 group-hover:bg-amber-100/80 dark:bg-amber-900/20 dark:group-hover:bg-amber-900/30';
+            return 'bg-amber-50 group-hover:bg-amber-100 dark:bg-amber-950 dark:group-hover:bg-amber-900';
         }
         if (isEven) {
-            return 'bg-white group-hover:bg-slate-50 dark:bg-slate-800 dark:group-hover:bg-slate-750';
+            return 'bg-white group-hover:bg-slate-50 dark:bg-slate-800 dark:group-hover:bg-slate-700';
         }
-        return 'bg-slate-50/50 group-hover:bg-slate-100/50 dark:bg-slate-800/50 dark:group-hover:bg-slate-750';
+        return 'bg-slate-50 group-hover:bg-slate-100 dark:bg-slate-800 dark:group-hover:bg-slate-700';
     };
 
     return (
@@ -65,8 +71,8 @@ export function TransactionRow({
                 ${row.__isGroupEnd ? 'border-b-0' : 'border-slate-200 dark:border-slate-700'}
                 ${getRowBg()}
             `}
-            onDoubleClick={handleCellDoubleClick}
-            title="더블클릭하여 기업가치 계산 결과 보기"
+            onDoubleClick={handleRowDoubleClick}
+            title="더블클릭하여 상세정보 보기"
         >
             <Td className={`sticky left-0 z-10 ${getStickyBg()} text-slate-500 dark:text-slate-400 text-center font-medium`}>
                 {index + 1}

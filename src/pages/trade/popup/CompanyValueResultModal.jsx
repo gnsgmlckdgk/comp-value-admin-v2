@@ -128,12 +128,12 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
     return (
         <>
             {/* 배경 오버레이 */}
-            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-40" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-[100]" onClick={onClose} />
 
             {/* 메인 모달 */}
             <div
                 ref={popupRef}
-                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
+                className="fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
                 onClick={(e) => e.stopPropagation()}
             >
                 <ModalHeader
@@ -189,7 +189,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                 data={investmentData}
                 onClose={() => closeOverlay('investmentDetail')}
                 onOpenFullDetail={handleOpenInvestmentFullDetail}
-                zIndex={90}
+                zIndex={130}
             />
 
             {/* 투자 판단 전체 상세 모달 */}
@@ -197,7 +197,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                 isOpen={overlays.investmentFullDetail}
                 data={investmentData}
                 onClose={() => closeOverlay('investmentFullDetail')}
-                zIndex={100}
+                zIndex={140}
             />
 
             {/* Toast 알림 */}
@@ -612,9 +612,9 @@ const GuideOverlay = ({ onClose, data }) => {
 
     return (
         <>
-            <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={onClose} />
+            <div className="fixed inset-0 z-[120] bg-black/50 dark:bg-black/70" onClick={onClose} />
             <div
-                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
+                className="fixed z-[130] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">
@@ -728,9 +728,9 @@ const GuideCard = ({ color, title, description }) => {
  */
 const DetailOverlay = ({ title, data, onClose, onCopy }) => (
     <>
-        <div className="fixed inset-0 z-[75] bg-black/50 dark:bg-black/70" onClick={onClose} />
+        <div className="fixed inset-0 z-[120] bg-black/50 dark:bg-black/70" onClick={onClose} />
         <div
-            className="fixed z-[85] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(900px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
+            className="fixed z-[130] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(900px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
             onClick={(e) => e.stopPropagation()}
         >
             <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">

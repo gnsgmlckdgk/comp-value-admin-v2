@@ -4,8 +4,27 @@ import { toNum, fmtNum, fmtUsd } from '../utils/formatters';
 /**
  * 그룹 합계 행
  */
-export function GroupTotalRow({ data, fx, onSell, saving }) {
+export function GroupTotalRow({ data, fx, onSell, saving, onRowClick }) {
     const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, targetAvgUSD, hasNextGroupDivider, companyName, groupRows } = data;
+
+    // 행 더블클릭 핸들러
+    const handleRowDoubleClick = (e) => {
+        // 버튼 클릭은 무시
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+
+        // 상세정보 모달 열기
+        if (onRowClick) {
+            onRowClick({
+                symbol,
+                companyName,
+                buyPrice: buyAvgUSD,
+                totalQty: qtySum,
+                currentPrice: curUSD,
+                targetPrice: targetAvgUSD,
+                __type: 'groupTotal',
+            });
+        }
+    };
 
     // 가격차 렌더링 헬퍼
     const renderDiff = (d, baseValue) => {
@@ -34,17 +53,21 @@ export function GroupTotalRow({ data, fx, onSell, saving }) {
     return (
         <tr
             className={`
-                font-semibold border-t-0 transition-colors
+                font-semibold border-t-0 transition-colors cursor-pointer
                 ${hasNextGroupDivider ? 'border-b-0' : 'border-b-2 border-slate-300 dark:border-slate-600'}
                 bg-gradient-to-r from-indigo-50 via-slate-50 to-indigo-50
+                hover:from-indigo-100 hover:via-slate-100 hover:to-indigo-100
                 dark:from-indigo-900/20 dark:via-slate-800 dark:to-indigo-900/20
+                dark:hover:from-indigo-900/30 dark:hover:via-slate-700 dark:hover:to-indigo-900/30
             `}
+            onDoubleClick={handleRowDoubleClick}
+            title="더블클릭하여 상세정보 보기"
         >
             {/* No */}
-            <Td className="sticky left-0 z-10 bg-indigo-50 dark:bg-indigo-900/20" />
+            <Td className="sticky left-0 z-10 bg-indigo-50 dark:bg-slate-800" />
 
             {/* 티커 합계 */}
-            <Td className="sticky left-12 z-10 bg-indigo-50 dark:bg-indigo-900/20">
+            <Td className="sticky left-12 z-10 bg-indigo-50 dark:bg-slate-800">
                 <div className="flex items-center gap-1.5">
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-800/50">
                         <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

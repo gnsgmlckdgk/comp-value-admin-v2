@@ -69,7 +69,7 @@ export default function CompanyInfoModal({ isOpen, onClose, symbol }) {
 
     return (
         <div
-            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
             onClick={handleOverlayClick}
         >
             <div className="relative w-full max-w-4xl max-h-[90vh] overflow-auto rounded-lg bg-white shadow-xl dark:bg-slate-800">

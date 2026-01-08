@@ -87,11 +87,11 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
     return (
         <>
             {/* 배경 오버레이 */}
-            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-[90]" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-[120]" onClick={onClose} />
 
             {/* 모달 */}
             <div
-                className="fixed z-[95] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-lg max-h-[85vh] w-[min(1000px,90vw)] overflow-auto dark:bg-slate-800"
+                className="fixed z-[130] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-lg max-h-[85vh] w-[min(1000px,90vw)] overflow-auto dark:bg-slate-800"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}

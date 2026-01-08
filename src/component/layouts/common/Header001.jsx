@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import routes from '@/config/routes';
 import { send } from '@/util/ClientUtil';
 import { useAuth } from '@/context/AuthContext';
+import { useSession } from '@/context/SessionContext';
 import { useTheme } from '@/context/ThemeContext';
 
 import LoginModal from '@/component/layouts/common/popup/LoginModal';
@@ -23,7 +24,8 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
     const [showLogin, setShowLogin] = useState(false);
     const [displayName, setDisplayName] = useState('');
 
-    const { isLoggedIn, setIsLoggedIn, userName, setUserName, nickName, setNickName, roles, setRoles, sessionTTL, startSessionTimer, resetSessionTimer, syncSessionTTL } = useAuth();
+    const { isLoggedIn, setIsLoggedIn, userName, setUserName, nickName, setNickName, roles, setRoles } = useAuth();
+    const { sessionTTL, startSessionTimer, resetSessionTimer, stopSessionTimer, syncSessionTTL } = useSession();
     const { isDark, toggleTheme } = useTheme();
     const location = useLocation();
 
@@ -138,6 +140,7 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
             setPassWord('');
             setShowLogin(false);
             setDisplayName('');
+            stopSessionTimer();
 
             // 세션 스토리지 클리어 (사용자별 데이터 초기화)
             sessionStorage.clear();
@@ -164,7 +167,7 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
             window.removeEventListener('auth:logout', onForceLogout);
             window.removeEventListener('auth:login:open', onOpenLogin);
         };
-    }, [setIsLoggedIn, setNickName, setUserName, setRoles, navigate]);
+    }, [setIsLoggedIn, setNickName, setUserName, setRoles, navigate, stopSessionTimer]);
 
     const login = async () => {
         const sendUrl = `/dart/member/login`;
@@ -236,6 +239,7 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
             setNickName('');
             setRoles([]);
             setPassWord('');
+            stopSessionTimer();
 
             localStorage.removeItem('userName');
             localStorage.removeItem('nickName');

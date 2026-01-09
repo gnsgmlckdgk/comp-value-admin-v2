@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import BulkQueryModal from '@/pages/trade/popup/BulkQueryModal';
+import MultiSelect from '@/component/common/select/MultiSelect';
 
 // 로컬스토리지 키
 const SCHEDULE_RUN_KEY = 'lastRecommendedStockScheduleRun';
@@ -224,9 +226,17 @@ const AbroadRecommendedStock = () => {
     const [lastScheduleRun, setLastScheduleRun] = useState(null);
     const [profiles, setProfiles] = useState([]);
     const [selectedProfile, setSelectedProfile] = useState('');
+    const [showProfileSettingModal, setShowProfileSettingModal] = useState(false);
+    const [allProfiles, setAllProfiles] = useState([]);
+    const [selectedProfileForEdit, setSelectedProfileForEdit] = useState(null);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editFormData, setEditFormData] = useState(null);
 
     const inFlight = useRef({ fetch: false, calc: false });
     const dropdownClosingRef = useRef(false);
+
+    // 필터 옵션 조회 (거래소 등)
+    const { options: filterOptions, loading: filterOptionsLoading } = useFilterOptions();
 
     // 슈퍼관리자 여부 확인
     const isSuperAdmin = useMemo(() => {
@@ -335,7 +345,7 @@ const AbroadRecommendedStock = () => {
         }
     }, [openAlert]);
 
-    // 프로파일 목록 조회
+    // 활성 프로파일 목록 조회
     const fetchProfiles = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -354,6 +364,27 @@ const AbroadRecommendedStock = () => {
             }
         } catch (e) {
             setProfiles([]);
+            openAlert('프로파일 조회 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [openAlert]);
+
+    // 전체 프로파일 목록 조회 (설정 모달용)
+    const fetchAllProfiles = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await send('/dart/recommend/profile', {}, 'GET');
+
+            if (!error && data && data.response) {
+                const list = Array.isArray(data.response) ? data.response : [];
+                setAllProfiles(list);
+            } else {
+                setAllProfiles([]);
+                openAlert('전체 프로파일 목록을 불러오지 못했습니다.');
+            }
+        } catch (e) {
+            setAllProfiles([]);
             openAlert('프로파일 조회 중 오류가 발생했습니다.');
         } finally {
             setIsLoading(false);
@@ -647,8 +678,8 @@ const AbroadRecommendedStock = () => {
                         <button
                             type="button"
                             onClick={() => {
-                                // 설정 기능은 나중에 구현
-                                openAlert('설정 기능은 추후 구현 예정입니다.');
+                                setShowProfileSettingModal(true);
+                                fetchAllProfiles();
                             }}
                             disabled={isLoading}
                             className="px-3 py-1.5 rounded-lg border border-emerald-600 bg-white text-emerald-600 text-xs font-medium hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-800 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-slate-700 flex items-center gap-1.5"
@@ -1063,6 +1094,28 @@ const AbroadRecommendedStock = () => {
                 </>
             )}
 
+            {/* 프로파일 설정 모달 */}
+            <ProfileSettingModal
+                isOpen={showProfileSettingModal}
+                onClose={() => {
+                    setShowProfileSettingModal(false);
+                    setSelectedProfileForEdit(null);
+                    setIsEditMode(false);
+                    setEditFormData(null);
+                }}
+                profiles={allProfiles}
+                onRefresh={() => {
+                    fetchAllProfiles();
+                    fetchProfiles(); // 활성 프로파일 목록도 갱신
+                }}
+                openAlert={openAlert}
+                isLoading={isLoading}
+                setIsLoading={setIsLoading}
+                send={send}
+                filterOptions={filterOptions}
+                filterOptionsLoading={filterOptionsLoading}
+            />
+
             {/* 커스텀 툴팁 */}
             {tooltip.visible && (
                 <div
@@ -1226,6 +1279,573 @@ const HighlightCard = ({ label, value }) => (
     <div className="rounded-lg border bg-white p-3 shadow-sm dark:bg-slate-700 dark:border-slate-600">
         <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
         <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white truncate">{value}</div>
+    </div>
+);
+
+/**
+ * 프로파일 설정 모달 컴포넌트
+ */
+const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, isLoading, setIsLoading, send, filterOptions, filterOptionsLoading }) => {
+    const [selectedProfile, setSelectedProfile] = useState(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [formData, setFormData] = useState(null);
+    const [deleteConfirmConfig, setDeleteConfirmConfig] = useState({ open: false, profileName: '' });
+
+    // 초기 폼 데이터 (등록 시)
+    const getInitialFormData = () => ({
+        profileName: '',
+        profileDesc: '',
+        isActive: 'Y',
+        sortOrder: 1,
+        marketCapMin: '',
+        marketCapMax: '',
+        betaMax: '',
+        volumeMin: '',
+        isEtf: 'N',
+        isFund: 'N',
+        isActivelyTrading: 'Y',
+        exchange: [],
+        screenerLimit: '',
+        peRatioMin: '',
+        peRatioMax: '',
+        pbRatioMax: '',
+        roeMin: '',
+        debtEquityMax: '',
+    });
+
+    // 프로파일 선택 시
+    const handleSelectProfile = (profile) => {
+        setSelectedProfile(profile);
+        // exchange를 배열로 변환 (콤마로 구분된 문자열 -> 배열)
+        const formDataWithArrayExchange = {
+            ...profile,
+            exchange: profile.exchange ? profile.exchange.split(',').map(e => e.trim()) : []
+        };
+        setFormData(formDataWithArrayExchange);
+        setIsCreating(false);
+    };
+
+    // 등록 버튼 클릭
+    const handleCreateNew = () => {
+        setIsCreating(true);
+        setSelectedProfile(null);
+        setFormData(getInitialFormData());
+    };
+
+    // 폼 필드 변경
+    const handleFormChange = (field, value) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+    };
+
+    // 저장 (등록 또는 수정)
+    const handleSave = async () => {
+        if (!formData) return;
+
+        // 필수 필드 검증
+        if (!formData.profileName?.trim()) {
+            openAlert('프로파일명은 필수 입력 항목입니다.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            // exchange 배열을 콤마로 구분된 문자열로 변환
+            const dataToSend = {
+                ...formData,
+                exchange: Array.isArray(formData.exchange) ? formData.exchange.join(',') : formData.exchange
+            };
+
+            const endpoint = isCreating ? '/dart/recommend/profile/regi' : '/dart/recommend/profile/modi';
+            const { data, error } = await send(endpoint, dataToSend, 'POST');
+
+            if (!error) {
+                openAlert(isCreating ? '프로파일이 등록되었습니다.' : '프로파일이 수정되었습니다.');
+                onRefresh();
+                setIsCreating(false);
+                setSelectedProfile(null);
+                setFormData(null);
+            } else {
+                openAlert(data?.message || '처리 중 오류가 발생했습니다.');
+            }
+        } catch (e) {
+            openAlert('요청 처리 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // 삭제 확인 모달 열기
+    const handleDeleteClick = () => {
+        if (!selectedProfile?.id) return;
+        setDeleteConfirmConfig({
+            open: true,
+            profileName: selectedProfile.profileName
+        });
+    };
+
+    // 삭제 실행
+    const handleDeleteConfirm = async () => {
+        if (!selectedProfile?.id) return;
+
+        setDeleteConfirmConfig({ open: false, profileName: '' });
+        setIsLoading(true);
+        try {
+            const { data, error } = await send('/dart/recommend/profile/del', { id: selectedProfile.id }, 'POST');
+
+            if (!error) {
+                openAlert('프로파일이 삭제되었습니다.');
+                onRefresh();
+                setSelectedProfile(null);
+                setFormData(null);
+            } else {
+                openAlert(data?.message || '삭제 중 오류가 발생했습니다.');
+            }
+        } catch (e) {
+            openAlert('요청 처리 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <>
+            {/* 배경 오버레이 */}
+            <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={onClose} />
+
+            {/* 모달 */}
+            <div
+                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(95vw,1200px)] max-h-[90vh] rounded-xl bg-white shadow-2xl dark:bg-slate-800 flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* 헤더 */}
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">프로파일 설정</h2>
+                    <button
+                        onClick={onClose}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* 본문 */}
+                <div className="flex-1 overflow-hidden flex">
+                    {/* 왼쪽: 프로파일 목록 */}
+                    <div className="w-80 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
+                        <div className="p-4">
+                            <button
+                                onClick={handleCreateNew}
+                                disabled={isLoading}
+                                className="w-full px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                            >
+                                + 새 프로파일 등록
+                            </button>
+                            <div className="space-y-2">
+                                {profiles.map((profile) => (
+                                    <button
+                                        key={profile.id}
+                                        onClick={() => handleSelectProfile(profile)}
+                                        className={`w-full px-4 py-3 rounded-lg text-left transition-colors ${selectedProfile?.id === profile.id
+                                                ? 'bg-blue-50 border-2 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400'
+                                                : 'bg-slate-50 border border-slate-200 hover:bg-slate-100 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600'
+                                            }`}
+                                    >
+                                        <div className="font-medium text-slate-900 dark:text-white">{profile.profileName}</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                            {profile.isActive === 'Y' ? '활성' : '비활성'} | 정렬순서: {profile.sortOrder}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 오른쪽: 프로파일 상세/수정 폼 */}
+                    <div className="flex-1 overflow-y-auto p-6">
+                        {formData ? (
+                            <ProfileForm
+                                formData={formData}
+                                onChange={handleFormChange}
+                                isCreating={isCreating}
+                                onSave={handleSave}
+                                onDelete={handleDeleteClick}
+                                onCancel={() => {
+                                    setFormData(null);
+                                    setSelectedProfile(null);
+                                    setIsCreating(false);
+                                }}
+                                isLoading={isLoading}
+                                filterOptions={filterOptions}
+                                filterOptionsLoading={filterOptionsLoading}
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">
+                                프로파일을 선택하거나 새로 등록하세요
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 삭제 확인 모달 */}
+                <AlertModal
+                    open={deleteConfirmConfig.open}
+                    title="삭제 확인"
+                    message={`'${deleteConfirmConfig.profileName}' 프로파일을 삭제하시겠습니까?`}
+                    onClose={() => setDeleteConfirmConfig({ open: false, profileName: '' })}
+                    onConfirm={handleDeleteConfirm}
+                />
+            </div>
+        </>
+    );
+};
+
+/**
+ * 프로파일 입력 폼 컴포넌트
+ */
+const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCancel, isLoading, filterOptions, filterOptionsLoading }) => {
+    return (
+        <div className="space-y-6">
+            {/* 프로파일 기본 정보 */}
+            <section>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    프로파일 기본 정보
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput
+                        label="프로파일명 (profileName)"
+                        value={formData.profileName}
+                        onChange={(v) => onChange('profileName', v)}
+                        placeholder="예: 가치투자형"
+                        required
+                    />
+                    <FormInput
+                        label="프로파일 설명 (profileDesc)"
+                        value={formData.profileDesc}
+                        onChange={(v) => onChange('profileDesc', v)}
+                        placeholder="예: 저평가 가치주 중심"
+                    />
+                    <FormSelect
+                        label="활성여부 (isActive)"
+                        value={formData.isActive}
+                        onChange={(v) => onChange('isActive', v)}
+                        options={[
+                            { value: 'Y', label: 'Y (활성)' },
+                            { value: 'N', label: 'N (비활성)' },
+                        ]}
+                        required
+                    />
+                    <FormInput
+                        label="정렬순서 (sortOrder)"
+                        type="number"
+                        value={formData.sortOrder}
+                        onChange={(v) => onChange('sortOrder', v)}
+                        placeholder="1"
+                        required
+                    />
+                </div>
+            </section>
+
+            {/* Stock Screener 조건 */}
+            <section>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    Stock Screener 조건
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput
+                        label="시가총액 최소 (marketCapMin)"
+                        type="number"
+                        value={formData.marketCapMin}
+                        onChange={(v) => onChange('marketCapMin', v)}
+                        placeholder="1000000000 (10억 USD)"
+                        required
+                    />
+                    <FormInput
+                        label="시가총액 최대 (marketCapMax)"
+                        type="number"
+                        value={formData.marketCapMax}
+                        onChange={(v) => onChange('marketCapMax', v)}
+                        placeholder="100000000000 (1000억 USD)"
+                        required
+                    />
+                    <FormInput
+                        label="베타 최대값 (betaMax)"
+                        type="number"
+                        step="0.01"
+                        value={formData.betaMax}
+                        onChange={(v) => onChange('betaMax', v)}
+                        placeholder="1.5"
+                        required
+                    />
+                    <FormInput
+                        label="거래량 최소 (volumeMin)"
+                        type="number"
+                        value={formData.volumeMin}
+                        onChange={(v) => onChange('volumeMin', v)}
+                        placeholder="100000"
+                        required
+                    />
+                    <FormSelect
+                        label="ETF 포함여부 (isEtf)"
+                        value={formData.isEtf}
+                        onChange={(v) => onChange('isEtf', v)}
+                        options={[
+                            { value: 'Y', label: 'Y (포함)' },
+                            { value: 'N', label: 'N (제외)' },
+                        ]}
+                        required
+                    />
+                    <FormSelect
+                        label="펀드 포함여부 (isFund)"
+                        value={formData.isFund}
+                        onChange={(v) => onChange('isFund', v)}
+                        options={[
+                            { value: 'Y', label: 'Y (포함)' },
+                            { value: 'N', label: 'N (제외)' },
+                        ]}
+                        required
+                    />
+                    <FormSelect
+                        label="활성거래 종목만 (isActivelyTrading)"
+                        value={formData.isActivelyTrading}
+                        onChange={(v) => onChange('isActivelyTrading', v)}
+                        options={[
+                            { value: 'Y', label: 'Y (활성거래만)' },
+                            { value: 'N', label: 'N (전체)' },
+                        ]}
+                        required
+                    />
+                    <FormMultiSelect
+                        label="거래소 (exchange)"
+                        value={formData.exchange || []}
+                        onChange={(v) => onChange('exchange', v)}
+                        options={filterOptions?.exchanges || []}
+                        loading={filterOptionsLoading?.exchanges}
+                        placeholder="거래소 선택"
+                        required
+                    />
+                    <FormInput
+                        label="스크리너 조회 제한 건수 (screenerLimit)"
+                        type="number"
+                        value={formData.screenerLimit}
+                        onChange={(v) => onChange('screenerLimit', v)}
+                        placeholder="10000"
+                        required
+                    />
+                </div>
+            </section>
+
+            {/* 저평가 필터링 조건 */}
+            <section>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    저평가 필터링 조건
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput
+                        label="PER 최소값 (peRatioMin)"
+                        type="number"
+                        step="0.01"
+                        value={formData.peRatioMin}
+                        onChange={(v) => onChange('peRatioMin', v)}
+                        placeholder="5.0"
+                        required
+                    />
+                    <FormInput
+                        label="PER 최대값 (peRatioMax)"
+                        type="number"
+                        step="0.01"
+                        value={formData.peRatioMax}
+                        onChange={(v) => onChange('peRatioMax', v)}
+                        placeholder="15.0"
+                        required
+                    />
+                    <FormInput
+                        label="PBR 최대값 (pbRatioMax)"
+                        type="number"
+                        step="0.01"
+                        value={formData.pbRatioMax}
+                        onChange={(v) => onChange('pbRatioMax', v)}
+                        placeholder="1.5"
+                        required
+                    />
+                    <FormInput
+                        label="ROE 최소값 (roeMin)"
+                        type="number"
+                        step="0.01"
+                        value={formData.roeMin}
+                        onChange={(v) => onChange('roeMin', v)}
+                        placeholder="0.10 (10%)"
+                        required
+                    />
+                    <FormInput
+                        label="부채비율 최대값 (debtEquityMax)"
+                        type="number"
+                        step="0.01"
+                        value={formData.debtEquityMax}
+                        onChange={(v) => onChange('debtEquityMax', v)}
+                        placeholder="1.0"
+                        required
+                    />
+                </div>
+            </section>
+
+            {/* 버튼 */}
+            <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div>
+                    {!isCreating && (
+                        <button
+                            onClick={onDelete}
+                            disabled={isLoading}
+                            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            삭제
+                        </button>
+                    )}
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={onCancel}
+                        disabled={isLoading}
+                        className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                    >
+                        취소
+                    </button>
+                    <button
+                        onClick={onSave}
+                        disabled={isLoading}
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isCreating ? '등록' : '저장'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/**
+ * 폼 입력 컴포넌트
+ */
+const FormInput = ({ label, value, onChange, type = 'text', placeholder, required, step }) => {
+    // 숫자를 한글 단위로 변환
+    const formatNumberToKorean = (num) => {
+        if (!num || isNaN(num)) return '';
+
+        const number = Number(num);
+        const units = [
+            { unit: '조', value: 1000000000000 },
+            { unit: '억', value: 100000000 },
+            { unit: '만', value: 10000 },
+        ];
+
+        const result = [];
+        let remaining = Math.abs(number);
+
+        for (const { unit, value } of units) {
+            const count = Math.floor(remaining / value);
+            if (count > 0) {
+                result.push(`${count.toLocaleString()}${unit}`);
+                remaining = remaining % value;
+            }
+        }
+
+        if (remaining > 0 || result.length === 0) {
+            result.push(remaining.toLocaleString());
+        }
+
+        return result.join(' ') + (number < 0 ? ' (음수)' : '');
+    };
+
+    // type이 number이고 큰 금액 필드인지 확인
+    const isLargeNumberField = type === 'number' && (
+        label.includes('시가총액') ||
+        label.includes('거래량') ||
+        label.includes('screenerLimit')
+    );
+
+    const koreanValue = isLargeNumberField ? formatNumberToKorean(value) : '';
+
+    return (
+        <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
+            <input
+                type={type === 'number' ? 'text' : type}
+                value={value === null || value === undefined ? '' : String(value)}
+                onChange={(e) => {
+                    const val = e.target.value;
+                    if (type === 'number') {
+                        // 빈 문자열이거나 숫자(소수점, 음수 포함)만 허용
+                        if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                            onChange(val === '' ? '' : val);
+                        }
+                    } else {
+                        onChange(val);
+                    }
+                }}
+                onBlur={(e) => {
+                    // blur 시 숫자로 변환
+                    if (type === 'number' && e.target.value !== '') {
+                        const num = parseFloat(e.target.value);
+                        onChange(isNaN(num) ? '' : num);
+                    }
+                }}
+                placeholder={placeholder}
+                step={step}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+            />
+            {koreanValue && (
+                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                    {koreanValue}
+                </p>
+            )}
+        </div>
+    );
+};
+
+/**
+ * 폼 셀렉트 컴포넌트
+ */
+const FormSelect = ({ label, value, onChange, options, required }) => (
+    <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <select
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+        >
+            {options.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                </option>
+            ))}
+        </select>
+    </div>
+);
+
+/**
+ * 폼 멀티셀렉트 컴포넌트
+ */
+const FormMultiSelect = ({ label, value, onChange, options, loading, placeholder, required }) => (
+    <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <MultiSelect
+            value={value || []}
+            onChange={onChange}
+            options={options || []}
+            loading={loading}
+            placeholder={placeholder}
+            searchable={true}
+            showChips={true}
+        />
     </div>
 );
 

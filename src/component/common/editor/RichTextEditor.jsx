@@ -44,6 +44,7 @@ import {
     CLICK_COMMAND,
     COMMAND_PRIORITY_HIGH,
 } from 'lexical';
+import { TabIndentationPlugin } from '@lexical/react/LexicalTabIndentationPlugin';
 import { Resizable } from 're-resizable';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { mergeRegister } from '@lexical/utils';
@@ -458,6 +459,96 @@ function CodeHighlightPlugin() {
 
     useEffect(() => {
         return registerCodeHighlighting(editor);
+    }, [editor]);
+
+    return null;
+}
+
+// Home, End 키 처리 플러그인 (Tab은 TabIndentationPlugin이 처리)
+function KeyboardNavigationPlugin() {
+    const [editor] = useLexicalComposerContext();
+
+    useEffect(() => {
+        const rootElement = editor.getRootElement();
+        if (!rootElement) return;
+
+        const handleKeyDown = (event) => {
+            // Home 키 처리 - 현재 줄(또는 단락)의 시작으로 이동
+            if (event.key === 'Home' && !event.ctrlKey && !event.metaKey) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                editor.update(() => {
+                    const selection = $getSelection();
+                    if ($isRangeSelection(selection)) {
+                        const anchor = selection.anchor;
+                        const anchorNode = anchor.getNode();
+
+                        // 코드 블록 내부인 경우 줄의 시작으로
+                        if ($isCodeNode(anchorNode.getTopLevelElementOrThrow())) {
+                            const textContent = anchorNode.getTextContent();
+                            const currentOffset = anchor.offset;
+                            let lineStart = 0;
+
+                            for (let i = currentOffset - 1; i >= 0; i--) {
+                                if (textContent[i] === '\n') {
+                                    lineStart = i + 1;
+                                    break;
+                                }
+                            }
+                            anchor.offset = lineStart;
+                            selection.focus.set(anchor.key, lineStart, anchor.type);
+                        } else {
+                            // 일반 단락의 경우 노드의 시작으로
+                            anchor.offset = 0;
+                            selection.focus.set(anchor.key, 0, anchor.type);
+                        }
+                    }
+                });
+                return;
+            }
+
+            // End 키 처리 - 현재 줄(또는 단락)의 끝으로 이동
+            if (event.key === 'End' && !event.ctrlKey && !event.metaKey) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                editor.update(() => {
+                    const selection = $getSelection();
+                    if ($isRangeSelection(selection)) {
+                        const anchor = selection.anchor;
+                        const anchorNode = anchor.getNode();
+                        const textContent = anchorNode.getTextContent();
+
+                        // 코드 블록 내부인 경우 줄의 끝으로
+                        if ($isCodeNode(anchorNode.getTopLevelElementOrThrow())) {
+                            const currentOffset = anchor.offset;
+                            let lineEnd = textContent.length;
+
+                            for (let i = currentOffset; i < textContent.length; i++) {
+                                if (textContent[i] === '\n') {
+                                    lineEnd = i;
+                                    break;
+                                }
+                            }
+                            anchor.offset = lineEnd;
+                            selection.focus.set(anchor.key, lineEnd, anchor.type);
+                        } else {
+                            // 일반 단락의 경우 노드의 끝으로
+                            const endOffset = textContent.length;
+                            anchor.offset = endOffset;
+                            selection.focus.set(anchor.key, endOffset, anchor.type);
+                        }
+                    }
+                });
+                return;
+            }
+        };
+
+        rootElement.addEventListener('keydown', handleKeyDown);
+        return () => {
+            rootElement.removeEventListener('keydown', handleKeyDown);
+        };
     }, [editor]);
 
     return null;
@@ -1259,6 +1350,8 @@ export default function RichTextEditor({ value, onChange, placeholder = '내용�
                 <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                 <CodeBlockExitPlugin />
                 <CodeHighlightPlugin />
+                <TabIndentationPlugin />
+                <KeyboardNavigationPlugin />
                 {onSizeChange && <ContentSizePlugin onSizeChange={onSizeChange} />}
             </LexicalComposer>
         </div>

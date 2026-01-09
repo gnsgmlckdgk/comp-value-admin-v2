@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 import { getRolesFromStorage, hasAnyRole } from '@/util/RoleUtil';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
+import MultiSelect from '@/component/common/select/MultiSelect';
 
 // 숫자를 천 단위 콤마 포맷으로 변환
 const formatNumberWithComma = (value) => {
@@ -32,8 +34,8 @@ const FIELD_META = {
         { key: 'isEtf', label: 'ETF 여부', type: 'boolean' },
         { key: 'isFund', label: '펀드 여부', type: 'boolean' },
         { key: 'isActivelyTrading', label: '활발히 거래되는 종목 여부', type: 'boolean' },
-        { key: 'country', label: '국가', type: 'text', placeholder: 'US' },
-        { key: 'exchange', label: '거래소', type: 'text', placeholder: 'NYSE,NASDAQ' },
+        { key: 'country', label: '국가', type: 'multiselect', searchable: true },
+        { key: 'exchange', label: '거래소', type: 'multiselect', searchable: true },
         { key: 'limit', label: '최대 조회 건수', type: 'number', min: 1, max: 5000 },
     ],
     // 상세 조건 필드 (null인 값들)
@@ -44,8 +46,8 @@ const FIELD_META = {
         { key: 'volumeLowerThan', label: '거래량 최대값', type: 'number', formatComma: true },
         { key: 'dividendMoreThan', label: '배당 수익률 최소값', type: 'number', unit: '$', step: '0.01' },
         { key: 'dividendLowerThan', label: '배당 수익률 최대값', type: 'number', unit: '$', step: '0.01' },
-        { key: 'sector', label: '섹터', type: 'text', placeholder: 'Technology' },
-        { key: 'industry', label: '산업군', type: 'text', placeholder: 'Software' },
+        { key: 'sector', label: '섹터', type: 'multiselect', searchable: true },
+        { key: 'industry', label: '산업군', type: 'multiselect', searchable: true },
     ],
 };
 
@@ -64,10 +66,10 @@ const INITIAL_FILTERS = {
     isEtf: false,
     isFund: false,
     isActivelyTrading: true,
-    sector: null,
-    industry: null,
-    country: 'US',
-    exchange: 'NYSE,NASDAQ',
+    sector: [],
+    industry: [],
+    country: ['US'],
+    exchange: ['NYSE', 'NASDAQ'],
     limit: 1500,
 };
 
@@ -207,6 +209,9 @@ const AbroadCompanyList = () => {
     const inFlight = useRef({ calc: false });
     const resultTableRef = useRef(null);
 
+    // 필터 옵션 조회 (국가, 거래소, 섹터, 산업군)
+    const { options: filterOptions, loading: filterOptionsLoading } = useFilterOptions();
+
     // 드롭다운용 고유값 계산 (현재 필터링된 데이터 기준, 자기 자신 필터 제외)
     const getUniqueValuesForColumn = useCallback((targetKey) => {
         const dropdownColumns = TABLE_COLUMNS.filter((col) => col.hasDropdown).map((col) => col.key);
@@ -283,10 +288,15 @@ const AbroadCompanyList = () => {
     const handleSearch = useCallback(async () => {
         setIsLoading(true);
         try {
-            // null이 아닌 값만 전송
+            // null이 아닌 값만 전송, 배열은 콤마로 연결
             const requestData = Object.entries(filters).reduce((acc, [key, value]) => {
                 if (value !== null && value !== '') {
-                    acc[key] = value;
+                    // 배열인 경우 콤마로 구분된 문자열로 변환
+                    if (Array.isArray(value) && value.length > 0) {
+                        acc[key] = value.join(',');
+                    } else if (!Array.isArray(value)) {
+                        acc[key] = value;
+                    }
                 }
                 return acc;
             }, {});
@@ -474,7 +484,11 @@ const AbroadCompanyList = () => {
     const searchSummary = useMemo(() => {
         const allFields = [...FIELD_META.basic, ...FIELD_META.advanced];
         return Object.entries(filters)
-            .filter(([_, value]) => value !== null && value !== '')
+            .filter(([_, value]) => {
+                // 배열인 경우 길이가 0보다 큰지 확인
+                if (Array.isArray(value)) return value.length > 0;
+                return value !== null && value !== '';
+            })
             .map(([key, value]) => {
                 const field = allFields.find((f) => f.key === key);
                 if (!field) return null;
@@ -482,6 +496,9 @@ const AbroadCompanyList = () => {
                 let displayValue = value;
                 if (field.type === 'boolean') {
                     displayValue = value ? '예' : '아니오';
+                } else if (Array.isArray(value)) {
+                    // 배열인 경우 콤마로 연결
+                    displayValue = value.join(', ');
                 } else if (field.type === 'number' && typeof value === 'number') {
                     displayValue = value.toLocaleString();
                 }
@@ -508,6 +525,29 @@ const AbroadCompanyList = () => {
                 {field.unit && <span className="text-blue-600 dark:text-blue-400 ml-1">({field.unit})</span>}
             </span>
         );
+
+        if (field.type === 'multiselect') {
+            // 필드 키에 따라 옵션 키 매핑 (country → countries, exchange → exchanges 등)
+            const optionsKey = field.key === 'country' ? 'countries' :
+                               field.key === 'exchange' ? 'exchanges' :
+                               field.key === 'sector' ? 'sectors' :
+                               field.key === 'industry' ? 'industries' : field.key + 's';
+
+            return (
+                <div key={field.key} className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-200">{labelText}</label>
+                    <MultiSelect
+                        value={value || []}
+                        onChange={(newValue) => handleFilterChange(field.key, newValue)}
+                        options={filterOptions[optionsKey] || []}
+                        loading={filterOptionsLoading[optionsKey]}
+                        placeholder={field.placeholder || `${field.label} 선택`}
+                        searchable={field.searchable}
+                        showChips={true}
+                    />
+                </div>
+            );
+        }
 
         if (field.type === 'boolean') {
             return (

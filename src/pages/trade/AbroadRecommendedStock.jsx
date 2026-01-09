@@ -222,6 +222,8 @@ const AbroadRecommendedStock = () => {
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [maxCountInput, setMaxCountInput] = useState('');
     const [lastScheduleRun, setLastScheduleRun] = useState(null);
+    const [profiles, setProfiles] = useState([]);
+    const [selectedProfile, setSelectedProfile] = useState('');
 
     const inFlight = useRef({ fetch: false, calc: false });
     const dropdownClosingRef = useRef(false);
@@ -292,46 +294,27 @@ const AbroadRecommendedStock = () => {
         [resultData, columnFilters]
     );
 
-    // 드롭다운 외부 클릭 시 닫기
-    useEffect(() => {
-        if (!openDropdown) return;
-        const handleClickOutside = (e) => {
-            if (!e.target.closest('.filter-dropdown-container')) {
-                dropdownClosingRef.current = true;
-                setOpenDropdown(null);
-                setTimeout(() => {
-                    dropdownClosingRef.current = false;
-                }, 100);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [openDropdown]);
-
-    // 초기 데이터 로드
-    useEffect(() => {
-        fetchRecommendedStocks();
+    // Alert 관련 함수
+    const openAlert = useCallback((message, onConfirm) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
     }, []);
 
-    // Alert 관련 함수
-    const openAlert = (message, onConfirm) => {
-        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
-    };
-
-    const handleCloseAlert = () => {
+    const handleCloseAlert = useCallback(() => {
         const { onConfirm } = alertConfig;
         setAlertConfig({ open: false, message: '', onConfirm: null });
         if (onConfirm) onConfirm();
-    };
+    }, [alertConfig]);
 
     // 추천기업 데이터 조회
-    const fetchRecommendedStocks = useCallback(async () => {
+    const fetchRecommendedStocks = useCallback(async (profileName) => {
         if (inFlight.current.fetch) return;
+        if (!profileName) return;
+
         inFlight.current.fetch = true;
 
         setIsLoading(true);
         try {
-            const { data, error } = await send('/dart/main/rem/usstock', {}, 'GET');
+            const { data, error } = await send('/dart/main/rem/usstock', { profileName }, 'POST');
 
             if (!error && data && data.response) {
                 const list = Array.isArray(data.response) ? data.response : [];
@@ -350,7 +333,60 @@ const AbroadRecommendedStock = () => {
             setIsLoading(false);
             inFlight.current.fetch = false;
         }
-    }, []);
+    }, [openAlert]);
+
+    // 프로파일 목록 조회
+    const fetchProfiles = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await send('/dart/recommend/profile/active', {}, 'GET');
+
+            if (!error && data && data.response) {
+                const list = Array.isArray(data.response) ? data.response : [];
+                setProfiles(list);
+                // 첫 번째 프로파일을 기본 선택
+                if (list.length > 0) {
+                    setSelectedProfile(list[0].profileName);
+                }
+            } else {
+                setProfiles([]);
+                openAlert('프로파일 목록을 불러오지 못했습니다.');
+            }
+        } catch (e) {
+            setProfiles([]);
+            openAlert('프로파일 조회 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [openAlert]);
+
+    // 드롭다운 외부 클릭 시 닫기
+    useEffect(() => {
+        if (!openDropdown) return;
+        const handleClickOutside = (e) => {
+            if (!e.target.closest('.filter-dropdown-container')) {
+                dropdownClosingRef.current = true;
+                setOpenDropdown(null);
+                setTimeout(() => {
+                    dropdownClosingRef.current = false;
+                }, 100);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openDropdown]);
+
+    // 초기 데이터 로드
+    useEffect(() => {
+        fetchProfiles();
+    }, [fetchProfiles]);
+
+    // 프로파일 선택이 변경되면 자동으로 데이터 조회
+    useEffect(() => {
+        if (selectedProfile) {
+            fetchRecommendedStocks(selectedProfile);
+        }
+    }, [selectedProfile, fetchRecommendedStocks]);
 
     // 필터링된 데이터
     // 지원 문법:
@@ -602,12 +638,27 @@ const AbroadRecommendedStock = () => {
                     매일 새벽 자동으로 조회된 추천 기업 목록입니다. 행을 클릭하면 상세 정보를 볼 수 있습니다.
                 </p>
                 {isSuperAdmin && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         {lastScheduleRun && (
                             <span className="text-xs text-amber-600 dark:text-amber-400">
                                 마지막 수동 실행: {lastScheduleRun.toLocaleString('ko-KR')}
                             </span>
                         )}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                // 설정 기능은 나중에 구현
+                                openAlert('설정 기능은 추후 구현 예정입니다.');
+                            }}
+                            disabled={isLoading}
+                            className="px-3 py-1.5 rounded-lg border border-emerald-600 bg-white text-emerald-600 text-xs font-medium hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-800 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-slate-700 flex items-center gap-1.5"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            설정
+                        </button>
                         <button
                             type="button"
                             onClick={() => setShowScheduleModal(true)}
@@ -624,6 +675,30 @@ const AbroadRecommendedStock = () => {
             </div>
 
             <Loading show={isLoading} />
+
+            {/* 프로파일 선택 영역 */}
+            <div className="mb-4 flex items-center gap-3">
+                <label htmlFor="profile-select" className="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    프로파일:
+                </label>
+                <select
+                    id="profile-select"
+                    value={selectedProfile}
+                    onChange={(e) => setSelectedProfile(e.target.value)}
+                    disabled={isLoading || profiles.length === 0}
+                    className="max-w-xs px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                >
+                    {profiles.length === 0 ? (
+                        <option value="">프로파일 없음</option>
+                    ) : (
+                        profiles.map((profile) => (
+                            <option key={profile.id} value={profile.profileName}>
+                                {profile.profileName}
+                            </option>
+                        ))
+                    )}
+                </select>
+            </div>
 
             {/* 조회 결과 테이블 */}
             <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700">
@@ -652,8 +727,8 @@ const AbroadRecommendedStock = () => {
                         )}
                         <button
                             type="button"
-                            onClick={fetchRecommendedStocks}
-                            disabled={isLoading}
+                            onClick={() => fetchRecommendedStocks(selectedProfile)}
+                            disabled={isLoading || !selectedProfile}
                             className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
                         >
                             새로고침

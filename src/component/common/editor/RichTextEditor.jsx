@@ -464,7 +464,7 @@ function CodeHighlightPlugin() {
     return null;
 }
 
-// Home, End 키 처리 플러그인 (Tab은 TabIndentationPlugin이 처리)
+// Home, End 키 처리 플러그인 - 현재 줄의 시작/끝으로 이동
 function KeyboardNavigationPlugin() {
     const [editor] = useLexicalComposerContext();
 
@@ -472,8 +472,73 @@ function KeyboardNavigationPlugin() {
         const rootElement = editor.getRootElement();
         if (!rootElement) return;
 
+        // DOM Selection 기반으로 현재 줄의 시작/끝 찾기
+        const getLineStartOffset = (node, offset) => {
+            if (!node || node.nodeType !== Node.TEXT_NODE) return offset;
+
+            const range = document.createRange();
+            const selection = window.getSelection();
+
+            try {
+                // 현재 위치 설정
+                range.setStart(node, offset);
+                range.collapse(true);
+                const currentRect = range.getBoundingClientRect();
+                const currentY = currentRect.top;
+
+                // 줄의 시작점을 찾기 위해 왼쪽으로 이동
+                let testOffset = offset;
+                while (testOffset > 0) {
+                    range.setStart(node, testOffset - 1);
+                    range.collapse(true);
+                    const rect = range.getBoundingClientRect();
+
+                    // Y 좌표가 변경되면 이전 줄로 넘어간 것
+                    if (Math.abs(rect.top - currentY) > 2) {
+                        return testOffset;
+                    }
+                    testOffset--;
+                }
+                return 0;
+            } catch (e) {
+                return offset;
+            }
+        };
+
+        const getLineEndOffset = (node, offset) => {
+            if (!node || node.nodeType !== Node.TEXT_NODE) return offset;
+
+            const range = document.createRange();
+            const textLength = node.textContent.length;
+
+            try {
+                // 현재 위치 설정
+                range.setStart(node, offset);
+                range.collapse(true);
+                const currentRect = range.getBoundingClientRect();
+                const currentY = currentRect.top;
+
+                // 줄의 끝점을 찾기 위해 오른쪽으로 이동
+                let testOffset = offset;
+                while (testOffset < textLength) {
+                    range.setStart(node, testOffset + 1);
+                    range.collapse(true);
+                    const rect = range.getBoundingClientRect();
+
+                    // Y 좌표가 변경되면 다음 줄로 넘어간 것
+                    if (Math.abs(rect.top - currentY) > 2) {
+                        return testOffset;
+                    }
+                    testOffset++;
+                }
+                return textLength;
+            } catch (e) {
+                return offset;
+            }
+        };
+
         const handleKeyDown = (event) => {
-            // Home 키 처리 - 현재 줄(또는 단락)의 시작으로 이동
+            // Home 키 처리 - 현재 줄의 시작으로 이동
             if (event.key === 'Home' && !event.ctrlKey && !event.metaKey) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -484,7 +549,7 @@ function KeyboardNavigationPlugin() {
                         const anchor = selection.anchor;
                         const anchorNode = anchor.getNode();
 
-                        // 코드 블록 내부인 경우 줄의 시작으로
+                        // 코드 블록 내부인 경우 텍스트 기반으로 줄의 시작 찾기
                         if ($isCodeNode(anchorNode.getTopLevelElementOrThrow())) {
                             const textContent = anchorNode.getTextContent();
                             const currentOffset = anchor.offset;
@@ -499,16 +564,23 @@ function KeyboardNavigationPlugin() {
                             anchor.offset = lineStart;
                             selection.focus.set(anchor.key, lineStart, anchor.type);
                         } else {
-                            // 일반 단락의 경우 노드의 시작으로
-                            anchor.offset = 0;
-                            selection.focus.set(anchor.key, 0, anchor.type);
+                            // 일반 텍스트의 경우 DOM 기반으로 현재 줄의 시작 찾기
+                            const domSelection = window.getSelection();
+                            if (domSelection && domSelection.anchorNode) {
+                                const domNode = domSelection.anchorNode;
+                                const domOffset = domSelection.anchorOffset;
+                                const lineStart = getLineStartOffset(domNode, domOffset);
+
+                                anchor.offset = lineStart;
+                                selection.focus.set(anchor.key, lineStart, anchor.type);
+                            }
                         }
                     }
                 });
                 return;
             }
 
-            // End 키 처리 - 현재 줄(또는 단락)의 끝으로 이동
+            // End 키 처리 - 현재 줄의 끝으로 이동
             if (event.key === 'End' && !event.ctrlKey && !event.metaKey) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -520,7 +592,7 @@ function KeyboardNavigationPlugin() {
                         const anchorNode = anchor.getNode();
                         const textContent = anchorNode.getTextContent();
 
-                        // 코드 블록 내부인 경우 줄의 끝으로
+                        // 코드 블록 내부인 경우 텍스트 기반으로 줄의 끝 찾기
                         if ($isCodeNode(anchorNode.getTopLevelElementOrThrow())) {
                             const currentOffset = anchor.offset;
                             let lineEnd = textContent.length;
@@ -534,10 +606,16 @@ function KeyboardNavigationPlugin() {
                             anchor.offset = lineEnd;
                             selection.focus.set(anchor.key, lineEnd, anchor.type);
                         } else {
-                            // 일반 단락의 경우 노드의 끝으로
-                            const endOffset = textContent.length;
-                            anchor.offset = endOffset;
-                            selection.focus.set(anchor.key, endOffset, anchor.type);
+                            // 일반 텍스트의 경우 DOM 기반으로 현재 줄의 끝 찾기
+                            const domSelection = window.getSelection();
+                            if (domSelection && domSelection.anchorNode) {
+                                const domNode = domSelection.anchorNode;
+                                const domOffset = domSelection.anchorOffset;
+                                const lineEnd = getLineEndOffset(domNode, domOffset);
+
+                                anchor.offset = lineEnd;
+                                selection.focus.set(anchor.key, lineEnd, anchor.type);
+                            }
                         }
                     }
                 });

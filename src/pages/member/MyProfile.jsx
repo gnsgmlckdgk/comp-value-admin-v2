@@ -5,6 +5,7 @@ import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
+import RedisManagementModal from '@/pages/member/popup/RedisManagementModal';
 
 export default function MyProfile() {
     const navigate = useNavigate();
@@ -18,6 +19,9 @@ export default function MyProfile() {
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteLoading, setDeleteLoading] = useState(false);
     const deletePasswordRef = useRef(null);
+
+    // Redis 관리 모달 상태
+    const [showRedisModal, setShowRedisModal] = useState(false);
 
     const openAlert = (message, onAfterClose = null) => {
         setAlertConfig({ open: true, message, onAfterClose });
@@ -114,6 +118,10 @@ export default function MyProfile() {
 
     const handleManageMembers = () => {
         navigate('/member/management');
+    };
+
+    const handleOpenRedisManagement = () => {
+        setShowRedisModal(true);
     };
 
     // 슈퍼관리자 또는 관리자인지 확인
@@ -216,6 +224,36 @@ export default function MyProfile() {
                     </div>
                 </div>
 
+                {/* 관리 */}
+                {isAdmin && (
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">관리</h2>
+                        </div>
+                        <div className="p-6 space-y-3">
+                            <button
+                                onClick={handleOpenRedisManagement}
+                                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition-colors group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                                        </svg>
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-medium text-slate-900 dark:text-white">메모리 관리</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">Redis 데이터를 조회, 수정, 삭제합니다</div>
+                                    </div>
+                                </div>
+                                <svg className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* 계정 관리 */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
@@ -292,6 +330,12 @@ export default function MyProfile() {
                 message={alertConfig.message}
                 onClose={() => setAlertConfig({ open: false, message: '', onAfterClose: null })}
                 onAfterClose={alertConfig.onAfterClose}
+            />
+
+            {/* Redis 관리 모달 */}
+            <RedisManagementModal
+                isOpen={showRedisModal}
+                onClose={() => setShowRedisModal(false)}
             />
 
             {/* 회원탈퇴 비밀번호 확인 모달 */}

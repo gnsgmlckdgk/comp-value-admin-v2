@@ -92,7 +92,7 @@ if (error) {
 - `/dart/member/login` - 로그인
 - `/dart/member/logout` - 로그아웃
 - `/dart/main/cal/per_value` - 국내 기업가치 계산
-- `/dart/main/cal/per_value/abroad/v3` - 해외 기업가치 계산
+- `/dart/main/cal/per_value/abroad` - 해외 기업가치 계산
 - `/dart/tranrecord` - 거래 기록 CRUD
 - `/dart/sellrecord/regi` - 매도 기록 등록
 - `/dart/freeboard` - 게시판 CRUD

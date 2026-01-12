@@ -261,7 +261,8 @@ export default function RedisManagementModal({ isOpen, onClose }) {
             } else if (data?.success) {
                 openAlert(editModal.isNew ? '등록되었습니다.' : '저장되었습니다.');
                 setEditModal({ open: false, key: '', value: '', ttl: 0, readOnly: false, isNew: false });
-                if (!editModal.isNew) {
+                // 등록이나 수정 후 검색 키가 있으면 재조회
+                if (searchKey.trim()) {
                     handleSearch();
                 }
             } else {
@@ -287,12 +288,12 @@ export default function RedisManagementModal({ isOpen, onClose }) {
 
             {/* 모달 */}
             <div
-                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 shadow-xl rounded-lg max-h-[90vh] w-[min(1000px,95vw)] overflow-hidden z-50"
+                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 shadow-xl rounded-lg max-h-[90vh] w-[min(1000px,90vw)] overflow-hidden z-50"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">메모리 관리 (Redis)</h2>
+                <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                    <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">메모리 관리 (Redis)</h2>
                     <button
                         onClick={onClose}
                         className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
@@ -304,8 +305,8 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                 </div>
 
                 {/* 검색 영역 */}
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                    <div className="flex gap-3 mb-3">
+                <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3">
                         <select
                             value={searchType}
                             onChange={(e) => setSearchType(e.target.value)}
@@ -331,25 +332,25 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                             {loading ? '조회 중...' : '조회'}
                         </button>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <button
                             onClick={handleOpenNew}
                             disabled={loading}
-                            className="px-4 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                             + 등록
                         </button>
                         <button
                             onClick={handleDeleteMultiple}
                             disabled={loading || selectedKeys.length === 0}
-                            className="px-4 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                             선택 삭제 ({selectedKeys.length})
                         </button>
                         <button
                             onClick={handleDeleteAll}
                             disabled={loading || !searchKey.trim()}
-                            className="px-4 py-1.5 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-1.5 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                             전체 삭제 (패턴)
                         </button>
@@ -357,7 +358,7 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                 </div>
 
                 {/* 결과 영역 */}
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-240px)]">
+                <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-240px)]">
                     {redisData.length === 0 ? (
                         <div className="text-center py-12">
                             <svg className="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -385,7 +386,7 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                             {redisData.map((item, idx) => (
                                 <div
                                     key={idx}
-                                    className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                    className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                                 >
                                     <input
                                         type="checkbox"
@@ -398,22 +399,22 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                                             {item.key}
                                         </p>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                                         <button
                                             onClick={() => handleOpenView(item.key)}
-                                            className="px-3 py-1.5 text-xs rounded-md bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600 transition-colors"
+                                            className="px-2 sm:px-3 py-1.5 text-xs rounded-md bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600 transition-colors whitespace-nowrap"
                                         >
                                             보기
                                         </button>
                                         <button
                                             onClick={() => handleOpenEdit(item.key)}
-                                            className="px-3 py-1.5 text-xs rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 transition-colors"
+                                            className="px-2 sm:px-3 py-1.5 text-xs rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 transition-colors whitespace-nowrap"
                                         >
                                             수정
                                         </button>
                                         <button
                                             onClick={() => handleDeleteSingle(item.key)}
-                                            className="px-3 py-1.5 text-xs rounded-md bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors"
+                                            className="px-2 sm:px-3 py-1.5 text-xs rounded-md bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors whitespace-nowrap"
                                         >
                                             삭제
                                         </button>
@@ -425,7 +426,7 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                 </div>
 
                 {/* 푸터 */}
-                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                <div className="px-4 sm:px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
                     <button
                         onClick={onClose}
                         className="px-5 py-2 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors"
@@ -443,15 +444,15 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                         onClick={() => setEditModal({ open: false, key: '', value: '', ttl: 0, readOnly: false, isNew: false })}
                     />
                     <div
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 shadow-xl rounded-lg w-[min(600px,90vw)] z-[60]"
+                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 shadow-xl rounded-lg w-[min(600px,90vw)] max-h-[90vh] overflow-y-auto z-[60]"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                        <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
                                 {editModal.readOnly ? 'Redis 키 보기' : editModal.isNew ? 'Redis 키 등록' : 'Redis 키 수정'}
                             </h3>
                         </div>
-                        <div className="p-6 space-y-4">
+                        <div className="p-4 sm:p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
                                     키
@@ -482,20 +483,27 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                                         TTL (초) - 0이면 영구 저장
                                     </label>
                                     <input
-                                        type="number"
-                                        min="0"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={editModal.ttl}
-                                        onChange={(e) => setEditModal(prev => ({ ...prev, ttl: parseInt(e.target.value) || 0 }))}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            // 빈 문자열이거나 숫자만 허용
+                                            if (value === '' || /^\d+$/.test(value)) {
+                                                setEditModal(prev => ({ ...prev, ttl: value === '' ? 0 : parseInt(value) }));
+                                            }
+                                        }}
+                                        placeholder="0"
                                         className="w-full px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                     />
                                 </div>
                             )}
                         </div>
-                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+                        <div className="px-4 sm:px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
                             <button
                                 onClick={() => setEditModal({ open: false, key: '', value: '', ttl: 0, readOnly: false, isNew: false })}
                                 disabled={editLoading}
-                                className="px-5 py-2 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                                className="px-4 sm:px-5 py-2 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 text-sm sm:text-base"
                             >
                                 {editModal.readOnly ? '닫기' : '취소'}
                             </button>
@@ -503,7 +511,7 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                                 <button
                                     onClick={handleEditSave}
                                     disabled={editLoading}
-                                    className="px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="px-4 sm:px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {editLoading ? (editModal.isNew ? '등록 중...' : '저장 중...') : (editModal.isNew ? '등록' : '저장')}
                                 </button>

@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { API_VERSION } from '@/util/ClientUtil';
 import CompanyInfoModal from '@/pages/trade/popup/CompanyInfoModal';
 import StockChartModal from '@/pages/trade/popup/StockChartModal';
 
@@ -297,7 +296,7 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                     </div>
                     <div className="flex items-center gap-3">
                         <span className="text-xs text-slate-400 dark:text-slate-500">
-                            계산 버전: {API_VERSION.ABROAD_COMP_VALUE_LAST_VER}
+                            계산 버전: {data.calVersion}
                         </span>
                         {onOpenFullDetail && (
                             <button
@@ -448,7 +447,7 @@ export const FullDetailModal = ({ isOpen, data, onClose, zIndex = 70 }) => {
                     </div>
                     <div className="flex items-center gap-3">
                         <span className="text-xs text-slate-400 dark:text-slate-500">
-                            계산 버전: {API_VERSION.ABROAD_COMP_VALUE_LAST_VER}
+                            계산 버전: {data.calVersion}
                         </span>
                         <button
                             className="text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"

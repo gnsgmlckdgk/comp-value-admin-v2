@@ -5,6 +5,7 @@ import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import InvestmentDetailModal, { FullDetailModal } from '@/pages/trade/popup/InvestmentDetailModal';
+import * as XLSX from 'xlsx';
 
 // 세션 스토리지 키
 const SESSION_STORAGE_KEY = 'investmentEvaluationData';
@@ -556,6 +557,66 @@ const InvestmentEvaluation = () => {
         setTooltip((prev) => ({ ...prev, visible: false }));
     }, []);
 
+    // 엑셀 다운로드
+    const handleExportToExcel = useCallback(() => {
+        if (sortedData.length === 0) {
+            openAlert('다운로드할 데이터가 없습니다.');
+            return;
+        }
+
+        try {
+            // 엑셀 데이터 준비
+            const excelData = sortedData.map((row) => ({
+                '심볼': row.symbol || '',
+                '기업명': row.companyName || '',
+                '등급': row.grade || '',
+                '총점': row.totalScore != null ? row.totalScore.toFixed(1) : '',
+                '현재가': row.currentPrice ? `$${row.currentPrice}` : '',
+                '적정가치': row.fairValue ? `$${row.fairValue}` : '',
+                '가격차이율': row.priceGapPercent || '',
+                '섹터': row.sector || '',
+                '거래소': row.exchange || '',
+                '국가': row.country || '',
+                '추천': row.recommendation || '',
+            }));
+
+            // 워크시트 생성
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+            // 컬럼 너비 설정
+            worksheet['!cols'] = [
+                { wch: 10 },  // 심볼
+                { wch: 30 },  // 기업명
+                { wch: 8 },   // 등급
+                { wch: 10 },  // 총점
+                { wch: 12 },  // 현재가
+                { wch: 12 },  // 적정가치
+                { wch: 12 },  // 가격차이율
+                { wch: 20 },  // 섹터
+                { wch: 10 },  // 거래소
+                { wch: 8 },   // 국가
+                { wch: 50 },  // 추천
+            ];
+
+            // 워크북 생성
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, '투자판단 결과');
+
+            // 파일명 생성 (현재 날짜 포함)
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+            const filename = `투자판단_${dateStr}.xlsx`;
+
+            // 파일 다운로드
+            XLSX.writeFile(workbook, filename);
+
+            openAlert(`엑셀 파일이 다운로드되었습니다.\n파일명: ${filename}\n총 ${sortedData.length}건`);
+        } catch (error) {
+            console.error('Excel export error:', error);
+            openAlert('엑셀 파일 생성 중 오류가 발생했습니다.');
+        }
+    }, [sortedData, openAlert]);
+
     // 행 클릭 -> 상세정보 모달
     const handleRowClick = useCallback((row) => {
         if (dropdownClosingRef.current) return;
@@ -745,6 +806,17 @@ const InvestmentEvaluation = () => {
                     <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <h3 className="text-lg font-semibold text-slate-800 dark:text-white">분석 결과</h3>
                         <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={handleExportToExcel}
+                                disabled={sortedData.length === 0}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                엑셀 다운로드
+                            </button>
                             {Object.values(columnFilters).some((v) => v !== '') && (
                                 <button
                                     type="button"

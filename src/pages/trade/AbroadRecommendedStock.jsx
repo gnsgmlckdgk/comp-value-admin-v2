@@ -1332,6 +1332,58 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         setFormData(getInitialFormData());
     };
 
+    // 프로파일명 중복 확인 및 번호 증가
+    const getUniqueProfileName = (baseName) => {
+        const existingNames = profiles.map(p => p.profileName);
+
+        // 기본 복사 이름 생성
+        let newName = `${baseName}_복사1`;
+        let counter = 1;
+
+        // 중복이 없을 때까지 번호 증가
+        while (existingNames.includes(newName)) {
+            counter++;
+            newName = `${baseName}_복사${counter}`;
+        }
+
+        return newName;
+    };
+
+    // 프로파일 복사 (즉시 저장)
+    const handleCopyProfile = async (profile, e) => {
+        // 이벤트 버블링 방지 (프로파일 선택 이벤트와 분리)
+        e?.stopPropagation();
+
+        if (!profile) return;
+
+        setIsLoading(true);
+        try {
+            // 고유한 프로파일명 생성
+            const newProfileName = getUniqueProfileName(profile.profileName);
+
+            // 복사할 데이터 생성 (id 제외)
+            const copiedData = {
+                ...profile,
+                id: undefined, // 새로 생성되어야 하므로 id 제거
+                profileName: newProfileName,
+            };
+
+            // 서버에 등록 요청
+            const { data, error } = await send('/dart/recommend/profile/regi', copiedData, 'POST');
+
+            if (!error) {
+                openAlert(`프로파일이 복사되었습니다.\n새 프로파일명: ${newProfileName}`);
+                onRefresh(); // 목록 갱신
+            } else {
+                openAlert(data?.message || '복사 중 오류가 발생했습니다.');
+            }
+        } catch (e) {
+            openAlert('요청 처리 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // 폼 필드 변경
     const handleFormChange = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -1446,19 +1498,33 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
                             </button>
                             <div className="space-y-2">
                                 {profiles.map((profile) => (
-                                    <button
+                                    <div
                                         key={profile.id}
-                                        onClick={() => handleSelectProfile(profile)}
-                                        className={`w-full px-4 py-3 rounded-lg text-left transition-colors ${selectedProfile?.id === profile.id
+                                        className={`relative rounded-lg transition-colors ${selectedProfile?.id === profile.id
                                                 ? 'bg-blue-50 border-2 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400'
                                                 : 'bg-slate-50 border border-slate-200 hover:bg-slate-100 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600'
                                             }`}
                                     >
-                                        <div className="font-medium text-slate-900 dark:text-white">{profile.profileName}</div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                            {profile.isActive === 'Y' ? '활성' : '비활성'} | 정렬순서: {profile.sortOrder}
-                                        </div>
-                                    </button>
+                                        <button
+                                            onClick={() => handleSelectProfile(profile)}
+                                            className="w-full px-4 py-3 pr-12 text-left"
+                                        >
+                                            <div className="font-medium text-slate-900 dark:text-white">{profile.profileName}</div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                {profile.isActive === 'Y' ? '활성' : '비활성'} | 정렬순서: {profile.sortOrder}
+                                            </div>
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleCopyProfile(profile, e)}
+                                            disabled={isLoading}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="프로파일 복사"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 ))}
                             </div>
                         </div>

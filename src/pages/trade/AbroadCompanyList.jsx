@@ -23,6 +23,35 @@ const parseFormattedNumber = (value) => {
     return isNaN(num) ? null : num;
 };
 
+// 숫자를 한글 단위로 변환
+const formatNumberToKorean = (num) => {
+    if (!num || isNaN(num)) return '';
+
+    const number = Number(num);
+    const units = [
+        { unit: '조', value: 1000000000000 },
+        { unit: '억', value: 100000000 },
+        { unit: '만', value: 10000 },
+    ];
+
+    const result = [];
+    let remaining = Math.abs(number);
+
+    for (const { unit, value } of units) {
+        const count = Math.floor(remaining / value);
+        if (count > 0) {
+            result.push(`${count.toLocaleString()}${unit}`);
+            remaining = remaining % value;
+        }
+    }
+
+    if (remaining > 0 || result.length === 0) {
+        result.push(remaining.toLocaleString());
+    }
+
+    return result.join(' ') + (number < 0 ? ' (음수)' : '');
+};
+
 // 필드 메타데이터 정의
 const FIELD_META = {
     // 기본 표시 필드 (null이 아닌 값들)
@@ -205,12 +234,35 @@ const AbroadCompanyList = () => {
     const [showValueModal, setShowValueModal] = useState(false);
     const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
     const [openDropdown, setOpenDropdown] = useState(null);
+    const [profiles, setProfiles] = useState([]);
+    const [selectedProfile, setSelectedProfile] = useState('');
 
     const inFlight = useRef({ calc: false });
     const resultTableRef = useRef(null);
 
     // 필터 옵션 조회 (국가, 거래소, 섹터, 산업군)
     const { options: filterOptions, loading: filterOptionsLoading } = useFilterOptions();
+
+    // 활성 프로파일 목록 조회
+    const fetchProfiles = useCallback(async () => {
+        try {
+            const { data, error } = await send('/dart/recommend/profile/active', {}, 'GET');
+
+            if (!error && data && data.response) {
+                const list = Array.isArray(data.response) ? data.response : [];
+                setProfiles(list);
+            } else {
+                setProfiles([]);
+            }
+        } catch (e) {
+            setProfiles([]);
+        }
+    }, []);
+
+    // 컴포넌트 마운트 시 프로파일 목록 조회
+    useEffect(() => {
+        fetchProfiles();
+    }, [fetchProfiles]);
 
     // 드롭다운용 고유값 계산 (현재 필터링된 데이터 기준, 자기 자신 필터 제외)
     const getUniqueValuesForColumn = useCallback((targetKey) => {
@@ -283,6 +335,75 @@ const AbroadCompanyList = () => {
             [key]: value === '' ? null : value,
         }));
     }, []);
+
+    // 프로파일을 검색 조건으로 변환하는 매핑 함수
+    const mapProfileToFilters = useCallback((profile) => {
+        const newFilters = { ...INITIAL_FILTERS };
+
+        // 프로파일 필드명 -> 검색 조건 필드명 매핑
+        // 시가총액
+        if (profile.marketCapMin !== null && profile.marketCapMin !== undefined) {
+            newFilters.marketCapMoreThan = profile.marketCapMin;
+        }
+        if (profile.marketCapMax !== null && profile.marketCapMax !== undefined) {
+            newFilters.marketCapLowerThan = profile.marketCapMax;
+        }
+
+        // 베타
+        if (profile.betaMax !== null && profile.betaMax !== undefined) {
+            newFilters.betaLowerThan = profile.betaMax;
+        }
+
+        // 거래량
+        if (profile.volumeMin !== null && profile.volumeMin !== undefined) {
+            newFilters.volumeMoreThan = profile.volumeMin;
+        }
+
+        // ETF, Fund, 활성거래 여부
+        if (profile.isEtf !== null && profile.isEtf !== undefined) {
+            newFilters.isEtf = profile.isEtf === 'Y';
+        }
+        if (profile.isFund !== null && profile.isFund !== undefined) {
+            newFilters.isFund = profile.isFund === 'Y';
+        }
+        if (profile.isActivelyTrading !== null && profile.isActivelyTrading !== undefined) {
+            newFilters.isActivelyTrading = profile.isActivelyTrading === 'Y';
+        }
+
+        // 거래소 (콤마로 구분된 문자열 -> 배열)
+        if (profile.exchange) {
+            const exchangeArray = typeof profile.exchange === 'string'
+                ? profile.exchange.split(',').map(e => e.trim()).filter(e => e)
+                : (Array.isArray(profile.exchange) ? profile.exchange : []);
+            newFilters.exchange = exchangeArray;
+        }
+
+        // 조회 제한 건수
+        if (profile.screenerLimit !== null && profile.screenerLimit !== undefined) {
+            newFilters.limit = profile.screenerLimit;
+        }
+
+        return newFilters;
+    }, []);
+
+    // 프로파일 선택 핸들러
+    const handleProfileChange = useCallback((profileName) => {
+        setSelectedProfile(profileName);
+
+        if (!profileName) {
+            // 프로파일 미선택 시 초기값으로 리셋
+            setFilters(INITIAL_FILTERS);
+            return;
+        }
+
+        // 선택된 프로파일 찾기
+        const profile = profiles.find(p => p.profileName === profileName);
+        if (profile) {
+            const newFilters = mapProfileToFilters(profile);
+            setFilters(newFilters);
+            openAlert(`'${profileName}' 프로파일의 검색 조건이 적용되었습니다.`);
+        }
+    }, [profiles, mapProfileToFilters]);
 
     // 검색 실행
     const handleSearch = useCallback(async () => {
@@ -570,6 +691,10 @@ const AbroadCompanyList = () => {
 
         // 콤마 포맷 입력 필드
         if (field.type === 'number' && field.formatComma) {
+            // 시가총액이나 거래량 같은 큰 금액 필드인지 확인
+            const isLargeNumberField = field.key.includes('marketCap') || field.key.includes('volume');
+            const koreanValue = isLargeNumberField && value ? formatNumberToKorean(value) : '';
+
             return (
                 <div key={field.key} className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-200">{labelText}</label>
@@ -583,6 +708,11 @@ const AbroadCompanyList = () => {
                         placeholder={field.placeholder}
                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                     />
+                    {koreanValue && (
+                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                            {koreanValue}
+                        </p>
+                    )}
                 </div>
             );
         }
@@ -640,6 +770,31 @@ const AbroadCompanyList = () => {
                             {showAdvanced ? '상세조건 숨기기' : '상세조건 보기'}
                         </button>
                     </div>
+                </div>
+
+                {/* 프로파일 선택 */}
+                <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+                        프로파일에서 불러오기
+                    </label>
+                    <select
+                        value={selectedProfile}
+                        onChange={(e) => handleProfileChange(e.target.value)}
+                        disabled={isLoading || profiles.length === 0}
+                        className="w-full max-w-md px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    >
+                        <option value="">직접 입력 (프로파일 선택 안함)</option>
+                        {profiles.map((profile) => (
+                            <option key={profile.id} value={profile.profileName}>
+                                {profile.profileName}
+                            </option>
+                        ))}
+                    </select>
+                    {selectedProfile && (
+                        <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                            '{selectedProfile}' 프로파일의 조건이 적용되었습니다. 필요 시 수정할 수 있습니다.
+                        </p>
+                    )}
                 </div>
 
                 {/* 기본 필드 */}

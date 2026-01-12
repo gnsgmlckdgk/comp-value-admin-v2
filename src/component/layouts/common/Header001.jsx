@@ -59,17 +59,23 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
         }
     }, [isLoggedIn, syncSessionTTL]);
 
-    // 세션 활동 이벤트 리스너 (API 호출 성공 시 타이머 리셋)
+    // 세션 활동 이벤트 리스너 (API 호출 성공 시 타이머 동기화)
     useEffect(() => {
-        const onSessionActivity = () => {
+        const onSessionActivity = (event) => {
             if (isLoggedIn) {
-                resetSessionTimer();
+                // 이벤트에서 전달받은 sessionTTL 값이 있으면 동기화, 없으면 리셋
+                const ttl = event?.detail?.sessionTTL;
+                if (ttl != null && ttl > 0) {
+                    syncSessionTTL(ttl);
+                } else {
+                    resetSessionTimer();
+                }
             }
         };
 
         window.addEventListener('session:activity', onSessionActivity);
         return () => window.removeEventListener('session:activity', onSessionActivity);
-    }, [isLoggedIn, resetSessionTimer]);
+    }, [isLoggedIn, resetSessionTimer, syncSessionTTL]);
 
     // 주기적 세션 동기화 설정
     useEffect(() => {

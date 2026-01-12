@@ -116,8 +116,12 @@ export const send = async (url, params, method = "GET") => {
             return { data: null, error: responseData.message || '요청 처리 중 오류가 발생했습니다.' };
         }
 
-        // API 호출 성공 시 세션 활동 이벤트 발생 (세션 타이머 리셋)
-        window.dispatchEvent(new CustomEvent('session:activity'));
+        // API 호출 성공 시 세션 활동 이벤트 발생 (세션 타이머 동기화)
+        // 백엔드 응답에서 sessionTTL 추출하여 전달
+        const sessionTTL = responseData?.sessionTTL;
+        window.dispatchEvent(new CustomEvent('session:activity', {
+            detail: { sessionTTL }
+        }));
 
         return { data: response.data, error: null };
     } catch (error) {

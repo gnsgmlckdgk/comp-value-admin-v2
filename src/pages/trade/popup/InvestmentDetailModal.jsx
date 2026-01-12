@@ -385,7 +385,7 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                 isOpen={companyInfoModal.open}
                 onClose={() => setCompanyInfoModal({ open: false, symbol: null })}
                 symbol={companyInfoModal.symbol}
-                zIndex={zIndex + 70}
+                zIndex={zIndex + 100}
             />
 
             {/* 차트 모달 */}
@@ -394,7 +394,7 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                 onClose={() => setChartModal({ open: false, symbol: null, companyName: null })}
                 symbol={chartModal.symbol}
                 companyName={chartModal.companyName}
-                zIndex={zIndex + 70}
+                zIndex={zIndex + 100}
             />
         </>
     );

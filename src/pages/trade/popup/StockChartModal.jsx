@@ -17,7 +17,8 @@ const PERIOD_OPTIONS = [
 /**
  * 주식 가격 및 거래량 차트 모달
  */
-const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
+const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 }) => {
+
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -92,6 +93,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
             {/* 모달 */}
             <div
                 className="fixed z-[130] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-lg max-h-[85vh] w-[min(1000px,90vw)] overflow-auto dark:bg-slate-800"
+                style={{ zIndex: zIndex }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
@@ -112,9 +114,8 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
                                             maximumFractionDigits: 2
                                         })}
                                     </span>
-                                    <div className={`flex items-center gap-1 text-sm font-medium ${
-                                        isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
-                                    }`}>
+                                    <div className={`flex items-center gap-1 text-sm font-medium ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                                        }`}>
                                         <span>{isPositive ? '▲' : '▼'}</span>
                                         <span>{isPositive ? '+' : '-'}{Math.abs(change).toFixed(2)}</span>
                                         <span>({isPositive ? '+' : '-'}{Math.abs(changePercent).toFixed(2)}%)</span>
@@ -320,38 +321,37 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName }) => {
  * 기간 선택 컴포넌트
  */
 const PeriodSelector = ({ period, onChange, disabled }) => {
-  const buttonRefs = useRef({});
+    const buttonRefs = useRef({});
 
-  useEffect(() => {
-    if (buttonRefs.current[period]) {
-      buttonRefs.current[period].scrollIntoView({
-        behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest',
-      });
-    }
-  }, [period]);
+    useEffect(() => {
+        if (buttonRefs.current[period]) {
+            buttonRefs.current[period].scrollIntoView({
+                behavior: 'smooth',
+                inline: 'center',
+                block: 'nearest',
+            });
+        }
+    }, [period]);
 
-  return (
-    <div className="inline-flex whitespace-nowrap gap-1 min-w-0 pl-2 pr-2">
-      {PERIOD_OPTIONS.map(option => (
-        <button
-          key={option.value}
-          ref={el => (buttonRefs.current[option.value] = el)}
-          onClick={() => onChange(option.value)}
-          disabled={disabled}
-          className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${
-            period === option.value
-              ? 'bg-blue-600 text-white dark:bg-blue-500'
-              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-          style={{ minWidth: 48 }}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
+    return (
+        <div className="inline-flex whitespace-nowrap gap-1 min-w-0 pl-2 pr-2">
+            {PERIOD_OPTIONS.map(option => (
+                <button
+                    key={option.value}
+                    ref={el => (buttonRefs.current[option.value] = el)}
+                    onClick={() => onChange(option.value)}
+                    disabled={disabled}
+                    className={`flex-shrink-0 md:px-3 px-2 py-1.5 text-xs font-medium rounded transition-colors ${period === option.value
+                        ? 'bg-blue-600 text-white dark:bg-blue-500'
+                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    style={{ minWidth: 48 }}
+                >
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    );
 };
 
 /**

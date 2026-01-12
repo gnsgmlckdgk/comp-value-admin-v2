@@ -134,11 +134,10 @@ const HighlightCard = ({ label, value, isGrade, onClick, clickable, subValue = n
         <CardWrapper
             type={clickable ? 'button' : undefined}
             onClick={clickable ? onClick : undefined}
-            className={`rounded-lg border bg-white p-3 shadow-sm dark:bg-slate-700 dark:border-slate-600 group relative text-left w-full ${
-                clickable
-                    ? 'cursor-pointer hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 transition-colors ring-0 hover:ring-2 hover:ring-blue-200 dark:hover:ring-blue-800'
-                    : ''
-            }`}
+            className={`rounded-lg border bg-white p-3 shadow-sm dark:bg-slate-700 dark:border-slate-600 group relative text-left w-full ${clickable
+                ? 'cursor-pointer hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 transition-colors ring-0 hover:ring-2 hover:ring-blue-200 dark:hover:ring-blue-800'
+                : ''
+                }`}
         >
             <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 {label}
@@ -234,6 +233,7 @@ const StepDetailCard = ({ step }) => {
  * 투자 판단 상세 모달 컴포넌트
  */
 const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex = 50 }) => {
+
     const modalRef = useRef(null);
     const [companyInfoModal, setCompanyInfoModal] = useState({ open: false, symbol: null });
     const [chartModal, setChartModal] = useState({ open: false, symbol: null, companyName: null });
@@ -385,6 +385,7 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                 isOpen={companyInfoModal.open}
                 onClose={() => setCompanyInfoModal({ open: false, symbol: null })}
                 symbol={companyInfoModal.symbol}
+                zIndex={zIndex + 70}
             />
 
             {/* 차트 모달 */}
@@ -393,6 +394,7 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                 onClose={() => setChartModal({ open: false, symbol: null, companyName: null })}
                 symbol={chartModal.symbol}
                 companyName={chartModal.companyName}
+                zIndex={zIndex + 70}
             />
         </>
     );

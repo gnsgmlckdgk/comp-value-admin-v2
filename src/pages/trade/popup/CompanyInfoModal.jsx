@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
 
-export default function CompanyInfoModal({ isOpen, onClose, symbol }) {
+export default function CompanyInfoModal({ isOpen, onClose, symbol, zIndex = 70 }) {
+
     const [companyInfo, setCompanyInfo] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -15,10 +16,8 @@ export default function CompanyInfoModal({ isOpen, onClose, symbol }) {
         setLoading(true);
         try {
             const url = `/dart/abroad/company/search/profile?symbol=${encodeURIComponent(symbol)}`;
-            console.log('기업정보 요청 URL:', url);
 
             const { data, error } = await send(url, {}, 'GET');
-            console.log('기업정보 응답:', { data, error });
 
             if (error) {
                 console.error('API 에러:', error);
@@ -27,10 +26,8 @@ export default function CompanyInfoModal({ isOpen, onClose, symbol }) {
                 // CommonResponse 형태: response 필드 안에 실제 데이터
                 const responseData = data.response;
                 if (Array.isArray(responseData) && responseData.length > 0) {
-                    console.log('기업정보 설정 (배열):', responseData[0]);
                     setCompanyInfo(responseData[0]);
                 } else if (responseData && typeof responseData === 'object') {
-                    console.log('기업정보 설정 (객체):', responseData);
                     setCompanyInfo(responseData);
                 } else {
                     console.warn('기업정보 데이터 없음:', responseData);
@@ -70,6 +67,7 @@ export default function CompanyInfoModal({ isOpen, onClose, symbol }) {
     return (
         <div
             className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
+            style={{ zIndex }}
             onClick={handleOverlayClick}
         >
             <div className="relative w-full max-w-4xl max-h-[90vh] overflow-auto rounded-lg bg-white shadow-xl dark:bg-slate-800">

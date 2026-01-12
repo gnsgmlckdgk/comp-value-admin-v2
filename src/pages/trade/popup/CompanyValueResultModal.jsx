@@ -181,6 +181,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                 isOpen={overlays.companyInfo}
                 onClose={() => closeOverlay('companyInfo')}
                 symbol={symbol}
+                zIndex={140}
             />
 
             {/* 투자 판단 상세 모달 */}
@@ -189,7 +190,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                 data={investmentData}
                 onClose={() => closeOverlay('investmentDetail')}
                 onOpenFullDetail={handleOpenInvestmentFullDetail}
-                zIndex={130}
+                zIndex={140}
             />
 
             {/* 투자 판단 전체 상세 모달 */}

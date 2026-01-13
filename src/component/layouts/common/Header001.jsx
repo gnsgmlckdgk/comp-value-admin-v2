@@ -199,8 +199,8 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
             } else {
                 const res = data.response || {};
                 const nextUserName = res.username ?? loginUsername;
-                const nextNick = res.nickName ?? nextUserName;
-                const nextRoles = Array.isArray(res.roles) ? res.roles : (res.role ? [res.role] : []);
+                const nextNick = res.nickname ?? nextUserName;
+                const nextRoles = Array.isArray(res.roles) ? res.roles : [];
 
                 localStorage.setItem('userName', nextUserName);
                 localStorage.setItem('nickName', nextNick);
@@ -215,7 +215,7 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
                 setShowLogin(false);
                 setDisplayName(nextNick);
 
-                // 세션 타이머 시작 (서버에서 받은 TTL 또는 기본값)
+                // 세션 타이머 시작 (서버에서 받은 TTL)
                 const initialTTL = res.sessionTTL ?? 1800;
                 startSessionTimer(initialTTL);
 

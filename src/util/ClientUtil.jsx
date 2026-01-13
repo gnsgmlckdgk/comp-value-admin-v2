@@ -104,8 +104,8 @@ export const send = async (url, params, method = "GET") => {
         }
 
         // API 호출 성공 시 세션 활동 이벤트 발생 (세션 타이머 동기화)
-        // 백엔드 응답에서 sessionTTL 추출하여 전달
-        const sessionTTL = responseData?.sessionTTL;
+        // 백엔드 응답에서 sessionTTL 추출하여 전달 (response 내부에 있음)
+        const sessionTTL = responseData?.response?.sessionTTL;
         window.dispatchEvent(new CustomEvent('session:activity', {
             detail: { sessionTTL }
         }));

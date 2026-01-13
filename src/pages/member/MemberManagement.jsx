@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { send } from '@/util/ClientUtil';
 import { useAuth } from '@/context/AuthContext';
 import PageTitle from '@/component/common/display/PageTitle';
@@ -20,6 +21,7 @@ const COLUMN_WIDTHS = {
 };
 
 export default function MemberManagement() {
+    const navigate = useNavigate();
     const { roles: currentUserRoles, userName, setNickName } = useAuth();
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -392,11 +394,22 @@ export default function MemberManagement() {
             <div className="space-y-6 px-4 py-8">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">회원 관리</h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            전체 {totalElements.toLocaleString()}명
-                        </p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
+                            aria-label="뒤로가기"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">회원 관리</h1>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                전체 {totalElements.toLocaleString()}명
+                            </p>
+                        </div>
                     </div>
                     <button
                         onClick={() => setShowSearchForm(!showSearchForm)}

@@ -18,6 +18,7 @@ export default function RedisManagementModal({ isOpen, onClose }) {
     const [editLoading, setEditLoading] = useState(false);
 
     const searchInputRef = useRef(null);
+    const ttlTimerRef = useRef(null);
 
     const openAlert = (message, onConfirm = null) => {
         setAlertConfig({ open: true, message, onConfirm });
@@ -30,6 +31,30 @@ export default function RedisManagementModal({ isOpen, onClose }) {
             }, 100);
         }
     }, [isOpen]);
+
+    // TTL 타이머 (보기 모달에서 TTL이 실시간으로 감소)
+    useEffect(() => {
+        // 보기 모달이 열려있고, TTL이 양수일 때만 타이머 시작
+        if (editModal.open && editModal.readOnly && editModal.ttl > 0) {
+            ttlTimerRef.current = setInterval(() => {
+                setEditModal(prev => {
+                    const newTtl = prev.ttl - 1;
+                    // TTL이 0이 되면 타이머 중지
+                    if (newTtl <= 0) {
+                        clearInterval(ttlTimerRef.current);
+                        return { ...prev, ttl: 0 };
+                    }
+                    return { ...prev, ttl: newTtl };
+                });
+            }, 1000);
+
+            return () => {
+                if (ttlTimerRef.current) {
+                    clearInterval(ttlTimerRef.current);
+                }
+            };
+        }
+    }, [editModal.open, editModal.readOnly, editModal.ttl > 0]);
 
     // 검색 실행
     const handleSearch = async () => {
@@ -207,7 +232,7 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                     return null;
                 }
                 // 응답 메시지에서 값 추출 (문자열 형태로 반환됨)
-                return data.response.message || '';
+                return { value: data.response.message || '', ttl: null };
             }
             return null;
         } catch (e) {
@@ -219,19 +244,64 @@ export default function RedisManagementModal({ isOpen, onClose }) {
         }
     };
 
+    // TTL 조회
+    const fetchKeyTTL = async (key) => {
+        try {
+            const { data, error } = await send('/dart/mgnt/redis', {
+                type: 'TTL',
+                key: key,
+                value: '',
+                ttl: 0
+            }, 'POST');
+
+            if (error) {
+                return null;
+            } else if (data?.success && data?.response) {
+                if (data.response.success === false) {
+                    return null;
+                }
+                // TTL 값 추출
+                const ttlValue = data.response.message;
+                return ttlValue ? parseInt(ttlValue) : null;
+            }
+            return null;
+        } catch (e) {
+            console.error('Redis TTL 조회 실패:', e);
+            return null;
+        }
+    };
+
     // 보기 모달 열기 (읽기 전용)
     const handleOpenView = async (key) => {
-        const value = await fetchKeyValue(key);
-        if (value !== null) {
-            setEditModal({ open: true, key, value, ttl: 0, readOnly: true, isNew: false });
+        const result = await fetchKeyValue(key);
+        if (result !== null) {
+            // TTL 조회
+            const ttl = await fetchKeyTTL(key);
+            setEditModal({
+                open: true,
+                key,
+                value: result.value,
+                ttl: ttl !== null ? ttl : -1,
+                readOnly: true,
+                isNew: false
+            });
         }
     };
 
     // 수정 모달 열기
     const handleOpenEdit = async (key) => {
-        const value = await fetchKeyValue(key);
-        if (value !== null) {
-            setEditModal({ open: true, key, value, ttl: 0, readOnly: false, isNew: false });
+        const result = await fetchKeyValue(key);
+        if (result !== null) {
+            // TTL 조회
+            const ttl = await fetchKeyTTL(key);
+            setEditModal({
+                open: true,
+                key,
+                value: result.value,
+                ttl: ttl !== null ? ttl : 0,
+                readOnly: false,
+                isNew: false
+            });
         }
     };
 
@@ -462,7 +532,11 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                                     value={editModal.key}
                                     onChange={(e) => setEditModal(prev => ({ ...prev, key: e.target.value }))}
                                     readOnly={editModal.readOnly || !editModal.isNew}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white disabled:opacity-60 read-only:opacity-60 read-only:bg-slate-50 dark:read-only:bg-slate-600"
+                                    className={`w-full px-4 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                        editModal.readOnly
+                                            ? 'border-slate-300 bg-slate-50 text-slate-900 dark:bg-slate-600 dark:border-slate-600 dark:text-white'
+                                            : 'border-slate-300 bg-white text-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white'
+                                    } disabled:opacity-60 read-only:opacity-100`}
                                 />
                             </div>
                             <div>
@@ -474,10 +548,49 @@ export default function RedisManagementModal({ isOpen, onClose }) {
                                     onChange={(e) => setEditModal(prev => ({ ...prev, value: e.target.value }))}
                                     readOnly={editModal.readOnly}
                                     rows={10}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono dark:bg-slate-700 dark:border-slate-600 dark:text-white disabled:opacity-60 read-only:opacity-60"
+                                    className={`w-full px-4 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono ${
+                                        editModal.readOnly
+                                            ? 'border-slate-300 bg-slate-50 text-slate-900 dark:bg-slate-600 dark:border-slate-600 dark:text-white'
+                                            : 'border-slate-300 bg-white text-slate-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white'
+                                    } disabled:opacity-60 read-only:opacity-100`}
                                 />
                             </div>
-                            {!editModal.readOnly && (
+                            {editModal.readOnly ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+                                        TTL (Time To Live)
+                                    </label>
+                                    <div className={`w-full px-4 py-2 rounded-lg border text-sm font-medium ${
+                                        editModal.ttl === -1
+                                            ? 'border-green-300 bg-green-50 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-400'
+                                            : editModal.ttl === 0
+                                            ? 'border-red-300 bg-red-50 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-400'
+                                            : editModal.ttl <= 60
+                                            ? 'border-orange-300 bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:border-orange-700 dark:text-orange-400'
+                                            : 'border-slate-300 bg-slate-50 text-slate-900 dark:bg-slate-600 dark:border-slate-600 dark:text-white'
+                                    }`}>
+                                        {editModal.ttl === -1
+                                            ? '🔒 영구 저장'
+                                            : editModal.ttl === -2
+                                            ? '❌ 키가 존재하지 않음'
+                                            : editModal.ttl === 0
+                                            ? '⏰ 만료됨 (0초)'
+                                            : (() => {
+                                                const totalSeconds = editModal.ttl;
+                                                const hours = Math.floor(totalSeconds / 3600);
+                                                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                                                const seconds = totalSeconds % 60;
+
+                                                if (hours > 0) {
+                                                    return `⏱️ ${totalSeconds}초 (${hours}시간 ${minutes}분 ${seconds}초 남음)`;
+                                                } else {
+                                                    return `⏱️ ${totalSeconds}초 (${minutes}분 ${seconds}초 남음)`;
+                                                }
+                                            })()
+                                        }
+                                    </div>
+                                </div>
+                            ) : (
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
                                         TTL (초) - 0이면 영구 저장

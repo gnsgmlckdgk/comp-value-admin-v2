@@ -59,8 +59,22 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
         <div className="mx-auto max-w-7xl px-1 py-8">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 <div className="border-b border-slate-200 px-3 sm:px-4 py-4 dark:border-slate-700">
-                    <h2 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-white">게시글 등록</h2>
-                    <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">새로운 게시글을 작성해주세요</p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={moveListPage}
+                            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
+                            aria-label="뒤로가기"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+                        <div>
+                            <h2 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-white">게시글 등록</h2>
+                            <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">새로운 게시글을 작성해주세요</p>
+                        </div>
+                    </div>
                 </div>
 
                 <form className="p-3 sm:p-4 space-y-6" onSubmit={(e) => e.preventDefault()}>
@@ -144,7 +158,6 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-                        <Button children="뒤로가기" variant="outline" onClick={moveListPage} />
                         <Button children="저장" variant="primary" onClick={handleSubmit} />
                     </div>
                 </form>

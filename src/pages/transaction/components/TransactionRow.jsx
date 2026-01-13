@@ -124,7 +124,19 @@ export function TransactionRow({
                 commitEdit={commitEdit}
                 type="number"
             />
-            <KrwCell value={toNum(row.buyPrice) * (fx || 0)} />
+            <KrwCell value={toNum(row.buyPrice) * (toNum(row.buyExchangeRateAtTrade) || fx || 0)} />
+            <EditableTd
+                row={row}
+                field="buyExchangeRateAtTrade"
+                value={row.buyExchangeRateAtTrade}
+                startEdit={startEdit}
+                editing={editing}
+                setEditing={setEditing}
+                draft={draft}
+                setDraft={setDraft}
+                commitEdit={commitEdit}
+                type="number"
+            />
             <EditableTd
                 row={row}
                 field="totalBuyAmount"
@@ -137,7 +149,7 @@ export function TransactionRow({
                 commitEdit={commitEdit}
                 type="number"
             />
-            <CombinedPriceCell usdValue={toNum(row.totalBuyAmount) * toNum(row.buyPrice)} fx={fx} />
+            <CombinedPriceCell usdValue={toNum(row.totalBuyAmount) * toNum(row.buyPrice)} fx={toNum(row.buyExchangeRateAtTrade) || fx} />
             <CombinedPriceCell usdValue={toNum(row.currentPrice) * toNum(row.totalBuyAmount)} fx={fx} />
             <CombinedPriceCell usdValue={toNum(row.currentPrice)} fx={fx} />
             <EditableTd

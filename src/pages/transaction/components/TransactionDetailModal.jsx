@@ -136,6 +136,7 @@ export default function TransactionDetailModal({
                 totalBuyAmount: row.totalBuyAmount || row.totalQty || '',
                 currentPrice: row.currentPrice || '',
                 targetPrice: row.targetPrice || '',
+                buyExchangeRateAtTrade: row.buyExchangeRateAtTrade || '',
                 rmk: row.rmk || '',
             });
             setIsEditing(false);
@@ -181,6 +182,7 @@ export default function TransactionDetailModal({
         if (String(formData.buyPrice) !== String(row.buyPrice)) updates.buyPrice = formData.buyPrice;
         if (String(formData.totalBuyAmount) !== String(row.totalBuyAmount)) updates.totalBuyAmount = formData.totalBuyAmount;
         if (String(formData.targetPrice) !== String(row.targetPrice)) updates.targetPrice = formData.targetPrice;
+        if (String(formData.buyExchangeRateAtTrade) !== String(row.buyExchangeRateAtTrade)) updates.buyExchangeRateAtTrade = formData.buyExchangeRateAtTrade;
         if (formData.rmk !== row.rmk) updates.rmk = formData.rmk.trim();
 
         if (Object.keys(updates).length === 0) {
@@ -211,7 +213,10 @@ export default function TransactionDetailModal({
     const qty = parseInt(formData.totalBuyAmount) || 0;
     const curPrice = parseFloat(formData.currentPrice) || 0;
     const targetPrice = parseFloat(formData.targetPrice) || 0;
+    const buyExchangeRate = parseFloat(formData.buyExchangeRateAtTrade) || 0;
     const fxRate = fx || 0;
+    // 매수금액 원화 계산: 매수당시환율 우선, 없으면 현재환율
+    const buyPriceRate = buyExchangeRate || fxRate;
 
     const totalBuy = buyPrice * qty;
     const totalCurrent = curPrice * qty;
@@ -284,9 +289,9 @@ export default function TransactionDetailModal({
                                 <div className="font-semibold text-slate-900 dark:text-white">
                                     ${totalBuy.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
-                                {fxRate > 0 && (
+                                {buyPriceRate > 0 && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                                        ₩{(totalBuy * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}
+                                        ₩{(totalBuy * buyPriceRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}
                                     </div>
                                 )}
                             </div>
@@ -315,7 +320,7 @@ export default function TransactionDetailModal({
                         </div>
                     </div>
 
-                    {/* 가격 정보 - 순서: 매수가, 현재가, 목표가, 보유수량 */}
+                    {/* 가격 정보 */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수가</div>
@@ -338,6 +343,12 @@ export default function TransactionDetailModal({
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">보유수량</div>
                             <div className="font-semibold text-slate-900 dark:text-white">{qty}주</div>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 col-span-2">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수당시환율</div>
+                            <div className="font-semibold text-slate-900 dark:text-white">
+                                {buyExchangeRate > 0 ? `₩${buyExchangeRate.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
+                            </div>
                         </div>
                     </div>
 
@@ -413,6 +424,16 @@ export default function TransactionDetailModal({
                                                 className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                             />
                                         </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">매수당시환율 (₩)</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={formData.buyExchangeRateAtTrade}
+                                                onChange={(e) => handleChange('buyExchangeRateAtTrade', e.target.value)}
+                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">비고</label>
@@ -434,6 +455,7 @@ export default function TransactionDetailModal({
                                                     totalBuyAmount: row.totalBuyAmount || '',
                                                     currentPrice: row.currentPrice || '',
                                                     targetPrice: row.targetPrice || '',
+                                                    buyExchangeRateAtTrade: row.buyExchangeRateAtTrade || '',
                                                     rmk: row.rmk || '',
                                                 });
                                                 setIsEditing(false);
@@ -471,8 +493,14 @@ export default function TransactionDetailModal({
                                             <span className="text-slate-900 dark:text-white font-medium">{formData.buyDate || '-'}</span>
                                         </div>
                                         <div className="flex justify-between">
+                                            <span className="text-slate-500 dark:text-slate-400">매수당시환율</span>
+                                            <span className="text-slate-900 dark:text-white font-medium">
+                                                {formData.buyExchangeRateAtTrade ? `₩${parseFloat(formData.buyExchangeRateAtTrade).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between col-span-2">
                                             <span className="text-slate-500 dark:text-slate-400">비고</span>
-                                            <span className="text-slate-900 dark:text-white font-medium truncate max-w-[150px]" title={formData.rmk}>
+                                            <span className="text-slate-900 dark:text-white font-medium truncate max-w-[300px]" title={formData.rmk}>
                                                 {formData.rmk || '-'}
                                             </span>
                                         </div>

@@ -5,7 +5,7 @@ import { toNum, fmtNum, fmtUsd } from '../utils/formatters';
  * 그룹 합계 행
  */
 export function GroupTotalRow({ data, fx, onSell, saving, onRowClick }) {
-    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, targetAvgUSD, hasNextGroupDivider, companyName, groupRows } = data;
+    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, targetAvgUSD, buyExchangeRateAtTrade, hasNextGroupDivider, companyName, groupRows } = data;
 
     // 행 더블클릭 핸들러
     const handleRowDoubleClick = (e) => {
@@ -21,6 +21,7 @@ export function GroupTotalRow({ data, fx, onSell, saving, onRowClick }) {
                 totalQty: qtySum,
                 currentPrice: curUSD,
                 targetPrice: targetAvgUSD,
+                buyExchangeRateAtTrade: buyExchangeRateAtTrade,
                 __type: 'groupTotal',
             });
         }
@@ -95,8 +96,13 @@ export function GroupTotalRow({ data, fx, onSell, saving, onRowClick }) {
             {/* 평균 매수가격 (원화) */}
             <Td>
                 <div className="h-9 flex items-center justify-end text-slate-600 dark:text-slate-300">
-                    {buyAvgUSD && fx ? `₩ ${Math.round(buyAvgUSD * fx).toLocaleString()}` : ''}
+                    {buyAvgUSD && (buyExchangeRateAtTrade || fx) ? `₩ ${Math.round(buyAvgUSD * (buyExchangeRateAtTrade || fx)).toLocaleString()}` : ''}
                 </div>
+            </Td>
+
+            {/* 매수당시환율 평균 */}
+            <Td className="text-center text-slate-700 dark:text-slate-300 text-sm">
+                {buyExchangeRateAtTrade ? `₩${buyExchangeRateAtTrade.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
             </Td>
 
             {/* 수량 합계 */}
@@ -107,7 +113,7 @@ export function GroupTotalRow({ data, fx, onSell, saving, onRowClick }) {
             </Td>
 
             {/* 총매수금액 */}
-            <CombinedPriceCell usdValue={buySumUSD} fx={fx} bold />
+            <CombinedPriceCell usdValue={buySumUSD} fx={buyExchangeRateAtTrade || fx} bold />
 
             {/* 총현재가치 */}
             <CombinedPriceCell usdValue={curSumUSD} fx={fx} bold />
@@ -173,6 +179,7 @@ export function GroupTotalRow({ data, fx, onSell, saving, onRowClick }) {
                                 buyPrice: buyAvgUSD,
                                 totalQty: qtySum,
                                 currentPrice: curUSD,
+                                buyExchangeRateAtTrade: buyExchangeRateAtTrade,
                                 groupRows,
                             })}
                             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all

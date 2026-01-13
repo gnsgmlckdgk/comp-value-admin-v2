@@ -28,8 +28,10 @@ export default function SellModal({
 
     if (!open || !data) return null;
 
-    const { symbol, companyName, buyPrice, totalQty, currentPrice } = data;
+    const { symbol, companyName, buyPrice, totalQty, currentPrice, buyExchangeRateAtTrade } = data;
     const maxQty = totalQty || 0;
+    // 매수가격 원화 계산: 매수당시환율 우선, 없으면 현재환율 사용
+    const buyPriceRate = buyExchangeRateAtTrade || fx;
 
     const handleSubmit = () => {
         const price = parseFloat(sellPrice);
@@ -85,7 +87,7 @@ export default function SellModal({
                             <span className="text-slate-500 dark:text-slate-400">매수가격</span>
                             <p className="font-medium dark:text-white">
                                 $ {fmtUsd(buyPrice)}
-                                {fx && <span className="text-xs text-slate-400 ml-1">(₩{Math.round(buyPrice * fx).toLocaleString()})</span>}
+                                {buyPriceRate && <span className="text-xs text-slate-400 ml-1">(₩{Math.round(buyPrice * buyPriceRate).toLocaleString()})</span>}
                             </p>
                         </div>
                         <div>
@@ -99,6 +101,9 @@ export default function SellModal({
                                 {fx && <span className="text-xs text-slate-400 ml-1">(₩{Math.round(currentPrice * fx).toLocaleString()})</span>}
                             </p>
                         </div>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                        * 매수가격 원화는 매수당시 환율 기준, 현재가격 원화는 현재 환율 기준입니다.
                     </div>
                 </div>
 

@@ -160,6 +160,7 @@ export default function TransactionOverview() {
                 buyPrice: row.buyPrice,
                 totalQty: row.totalBuyAmount,
                 currentPrice: row.currentPrice,
+                buyExchangeRateAtTrade: row.buyExchangeRateAtTrade,
             },
             targetRows: [row],
         });
@@ -175,6 +176,7 @@ export default function TransactionOverview() {
                 buyPrice: groupData.buyPrice,
                 totalQty: groupData.totalQty,
                 currentPrice: groupData.currentPrice,
+                buyExchangeRateAtTrade: groupData.buyExchangeRateAtTrade,
             },
             targetRows: groupData.groupRows || [],
         });
@@ -221,21 +223,29 @@ export default function TransactionOverview() {
         });
 
         // 엑셀 데이터 준비
-        const excelData = sortedData.map((row) => ({
-            '매수일자': row.buyDate || '',
-            '티커': row.symbol || '',
-            '기업명': row.companyName || '',
-            '매수가($)': row.buyPrice?.toFixed(2) || '0.00',
-            '수량': row.totalBuyAmount || 0,
-            '매수금액($)': (row.buyPrice * row.totalBuyAmount)?.toFixed(2) || '0.00',
-            '현재가($)': row.currentPrice?.toFixed(2) || '0.00',
-            '평가금액($)': (row.currentPrice * row.totalBuyAmount)?.toFixed(2) || '0.00',
-            '손익($)': ((row.currentPrice - row.buyPrice) * row.totalBuyAmount)?.toFixed(2) || '0.00',
-            '손익률(%)': (((row.currentPrice - row.buyPrice) / row.buyPrice) * 100)?.toFixed(2) || '0.00',
-            '매수금액(₩)': ((row.buyPrice * row.totalBuyAmount) * fxRate)?.toLocaleString() || '0',
-            '평가금액(₩)': ((row.currentPrice * row.totalBuyAmount) * fxRate)?.toLocaleString() || '0',
-            '손익(₩)': (((row.currentPrice - row.buyPrice) * row.totalBuyAmount) * fxRate)?.toLocaleString() || '0',
-        }));
+        const excelData = sortedData.map((row) => {
+            const buyPriceRate = row.buyExchangeRateAtTrade || fxRate;
+            const buyAmountUSD = row.buyPrice * row.totalBuyAmount;
+            const currentAmountUSD = row.currentPrice * row.totalBuyAmount;
+            const diffUSD = currentAmountUSD - buyAmountUSD;
+
+            return {
+                '매수일자': row.buyDate || '',
+                '티커': row.symbol || '',
+                '기업명': row.companyName || '',
+                '매수가($)': row.buyPrice?.toFixed(2) || '0.00',
+                '매수당시환율': row.buyExchangeRateAtTrade ? row.buyExchangeRateAtTrade.toFixed(2) : '-',
+                '수량': row.totalBuyAmount || 0,
+                '매수금액($)': buyAmountUSD?.toFixed(2) || '0.00',
+                '현재가($)': row.currentPrice?.toFixed(2) || '0.00',
+                '평가금액($)': currentAmountUSD?.toFixed(2) || '0.00',
+                '손익($)': diffUSD?.toFixed(2) || '0.00',
+                '손익률(%)': (((row.currentPrice - row.buyPrice) / row.buyPrice) * 100)?.toFixed(2) || '0.00',
+                '매수금액(₩)': Math.round(buyAmountUSD * buyPriceRate).toLocaleString() || '0',
+                '평가금액(₩)': Math.round(currentAmountUSD * fxRate).toLocaleString() || '0',
+                '손익(₩)': Math.round(diffUSD * fxRate).toLocaleString() || '0',
+            };
+        });
 
         // 전체 합계 행 추가
         const summaryRow = {
@@ -243,15 +253,16 @@ export default function TransactionOverview() {
             '티커': '',
             '기업명': '전체 합계',
             '매수가($)': '',
+            '매수당시환율': '',
             '수량': '',
             '매수금액($)': totals.buySum?.toFixed(2) || '0.00',
             '현재가($)': '',
             '평가금액($)': totals.curSum?.toFixed(2) || '0.00',
             '손익($)': diff?.toFixed(2) || '0.00',
             '손익률(%)': diffPct?.toFixed(2) || '0.00',
-            '매수금액(₩)': (totals.buySum * fxRate)?.toLocaleString() || '0',
-            '평가금액(₩)': (totals.curSum * fxRate)?.toLocaleString() || '0',
-            '손익(₩)': (diff * fxRate)?.toLocaleString() || '0',
+            '매수금액(₩)': Math.round(totals.buySum * fxRate).toLocaleString() || '0',
+            '평가금액(₩)': Math.round(totals.curSum * fxRate).toLocaleString() || '0',
+            '손익(₩)': Math.round(diff * fxRate).toLocaleString() || '0',
         };
 
         // 빈 워크시트 생성
@@ -273,6 +284,7 @@ export default function TransactionOverview() {
             { wch: 10 },  // 티커
             { wch: 25 },  // 기업명
             { wch: 12 },  // 매수가($)
+            { wch: 14 },  // 매수당시환율
             { wch: 10 },  // 수량
             { wch: 15 },  // 매수금액($)
             { wch: 12 },  // 현재가($)
@@ -306,7 +318,7 @@ export default function TransactionOverview() {
     }, [rows, sortConfig]);
 
     // 그룹화된 행 목록
-    const groupedRows = useMemo(() => groupRowsBySymbol(sortedRows), [sortedRows]);
+    const groupedRows = useMemo(() => groupRowsBySymbol(sortedRows, fxRate), [sortedRows, fxRate]);
 
     // 전체 합계 계산
     const totals = useMemo(() => calculateTotals(rows), [rows]);
@@ -327,8 +339,11 @@ export default function TransactionOverview() {
                         </svg>
                         <div className="flex-1">
                             <p className="text-blue-900 font-medium mb-1 dark:text-blue-300">이 페이지는 순수 주가 변동만 계산합니다.</p>
-                            <p className="text-blue-700 text-xs leading-relaxed dark:text-blue-400">
+                            <p className="text-blue-700 text-xs leading-relaxed dark:text-blue-400 mb-1">
                                 증권사 앱과 차이가 날 수 있는 이유: 현재가 갱신 시점 차이, 매매/환전 수수료 미반영, 증권사별 환율 차이
+                            </p>
+                            <p className="text-blue-700 text-xs leading-relaxed dark:text-blue-400">
+                                • 환율 기준: 매수가격(₩), 총매수금액(₩)은 <strong>매수당시 환율</strong> 기준 / 나머지 원화 표시는 <strong>현재 환율</strong> 기준
                             </p>
                         </div>
                     </div>

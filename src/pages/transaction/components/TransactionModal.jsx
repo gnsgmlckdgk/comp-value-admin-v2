@@ -9,6 +9,7 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
         buyPrice: '',
         totalBuyAmount: '',
         targetPrice: '',
+        buyExchangeRateAtTrade: '',
         rmk: '',
     });
     const [saving, setSaving] = useState(false);
@@ -42,6 +43,7 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
                 buyPrice: data.buyPrice || '',
                 totalBuyAmount: data.totalBuyAmount || '',
                 targetPrice: data.targetPrice || '',
+                buyExchangeRateAtTrade: data.buyExchangeRateAtTrade || '',
                 rmk: data.rmk || '',
             });
             setCompanyProfile(null);
@@ -53,11 +55,12 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
                 buyPrice: '',
                 totalBuyAmount: '',
                 targetPrice: '',
+                buyExchangeRateAtTrade: fxRate || '',
                 rmk: '',
             });
             setCompanyProfile(null);
         }
-    }, [mode, data, isOpen]);
+    }, [mode, data, isOpen, fxRate]);
 
     if (!isOpen) return null;
 
@@ -123,6 +126,7 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
             buyPrice: formData.buyPrice,
             totalBuyAmount: formData.totalBuyAmount,
             targetPrice: formData.targetPrice || '',
+            buyExchangeRateAtTrade: formData.buyExchangeRateAtTrade || '',
             rmk: formData.rmk.trim() || '',
         });
         setSaving(false);
@@ -268,6 +272,26 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
                             {fxRate && formData.targetPrice && parseFloat(formData.targetPrice) > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                     (₩{(parseFloat(formData.targetPrice) * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 매수당시환율 */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                매수당시환율 (₩)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={formData.buyExchangeRateAtTrade}
+                                onChange={(e) => handleChange('buyExchangeRateAtTrade', e.target.value)}
+                                placeholder={fxRate ? fxRate.toFixed(2) : '1400.00'}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                            />
+                            {formData.buyExchangeRateAtTrade && parseFloat(formData.buyExchangeRateAtTrade) > 0 && (
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    1 USD = ₩{parseFloat(formData.buyExchangeRateAtTrade).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}
                                 </div>
                             )}
                         </div>

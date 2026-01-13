@@ -63,19 +63,19 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
     useEffect(() => {
         const onSessionActivity = (event) => {
             if (isLoggedIn) {
-                // 이벤트에서 전달받은 sessionTTL 값이 있으면 동기화, 없으면 리셋
+                // 이벤트에서 전달받은 sessionTTL 값이 있으면 동기화
+                // 없으면 타이머를 변경하지 않음 (주기적 동기화가 처리)
                 const ttl = event?.detail?.sessionTTL;
                 if (ttl != null && ttl > 0) {
                     syncSessionTTL(ttl);
-                } else {
-                    resetSessionTimer();
                 }
+                // sessionTTL이 없는 경우 타이머를 리셋하지 않음
             }
         };
 
         window.addEventListener('session:activity', onSessionActivity);
         return () => window.removeEventListener('session:activity', onSessionActivity);
-    }, [isLoggedIn, resetSessionTimer, syncSessionTTL]);
+    }, [isLoggedIn, syncSessionTTL]);
 
     // 주기적 세션 동기화 설정
     useEffect(() => {

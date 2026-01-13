@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { TransactionHeader } from './components/TransactionHeader';
 import { TransactionTableHeader } from './components/TransactionTableHeader';
 import { TransactionRow } from './components/TransactionRow';
 import { GroupTotalRow } from './components/GroupTotalRow';
 import { TransactionSummary } from './components/TransactionSummary';
-import { Td } from './components/TableCells';
 import { useTransactions } from './hooks/useTransactions';
 import { useFxRate } from './hooks/useFxRate';
 import { useEditing } from './hooks/useEditing';
@@ -194,6 +194,109 @@ export default function TransactionOverview() {
         setSellModalData({ open: false, data: null, targetRows: [] });
     };
 
+    // 엑셀 다운로드
+    const handleExcelDownload = () => {
+        if (rows.length === 0) {
+            openAlert('다운로드할 데이터가 없습니다.');
+            return;
+        }
+
+        // 현재 시간
+        const now = new Date();
+        const exportTime = now.toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+
+        // 매수일자 기준 오름차순 정렬
+        const sortedData = [...rows].sort((a, b) => {
+            const dateA = a.buyDate ? new Date(a.buyDate) : new Date(0);
+            const dateB = b.buyDate ? new Date(b.buyDate) : new Date(0);
+            return dateA - dateB;
+        });
+
+        // 엑셀 데이터 준비
+        const excelData = sortedData.map((row) => ({
+            '매수일자': row.buyDate || '',
+            '티커': row.symbol || '',
+            '기업명': row.companyName || '',
+            '매수가($)': row.buyPrice?.toFixed(2) || '0.00',
+            '수량': row.totalBuyAmount || 0,
+            '매수금액($)': (row.buyPrice * row.totalBuyAmount)?.toFixed(2) || '0.00',
+            '현재가($)': row.currentPrice?.toFixed(2) || '0.00',
+            '평가금액($)': (row.currentPrice * row.totalBuyAmount)?.toFixed(2) || '0.00',
+            '손익($)': ((row.currentPrice - row.buyPrice) * row.totalBuyAmount)?.toFixed(2) || '0.00',
+            '손익률(%)': (((row.currentPrice - row.buyPrice) / row.buyPrice) * 100)?.toFixed(2) || '0.00',
+            '매수금액(₩)': ((row.buyPrice * row.totalBuyAmount) * fxRate)?.toLocaleString() || '0',
+            '평가금액(₩)': ((row.currentPrice * row.totalBuyAmount) * fxRate)?.toLocaleString() || '0',
+            '손익(₩)': (((row.currentPrice - row.buyPrice) * row.totalBuyAmount) * fxRate)?.toLocaleString() || '0',
+        }));
+
+        // 전체 합계 행 추가
+        const summaryRow = {
+            '매수일자': '',
+            '티커': '',
+            '기업명': '전체 합계',
+            '매수가($)': '',
+            '수량': '',
+            '매수금액($)': totals.buySum?.toFixed(2) || '0.00',
+            '현재가($)': '',
+            '평가금액($)': totals.curSum?.toFixed(2) || '0.00',
+            '손익($)': diff?.toFixed(2) || '0.00',
+            '손익률(%)': diffPct?.toFixed(2) || '0.00',
+            '매수금액(₩)': (totals.buySum * fxRate)?.toLocaleString() || '0',
+            '평가금액(₩)': (totals.curSum * fxRate)?.toLocaleString() || '0',
+            '손익(₩)': (diff * fxRate)?.toLocaleString() || '0',
+        };
+
+        // 빈 워크시트 생성
+        const worksheet = XLSX.utils.aoa_to_sheet([]);
+
+        // 정보 영역을 상단에 추가 (테이블 바깥 독립 영역)
+        XLSX.utils.sheet_add_aoa(worksheet, [
+            ['내보내기 시간:', exportTime],
+            ['환율 (USD/KRW):', fxRate ? `1 USD = ${Number(fxRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원` : '환율 정보 없음'],
+            [], // 빈 행
+        ], { origin: 'A1' });
+
+        // 데이터 테이블을 4행부터 추가 (헤더 포함)
+        XLSX.utils.sheet_add_json(worksheet, [...excelData, {}, summaryRow], { origin: 'A4' });
+
+        // 열 너비 설정
+        const columnWidths = [
+            { wch: 12 },  // 매수일자
+            { wch: 10 },  // 티커
+            { wch: 25 },  // 기업명
+            { wch: 12 },  // 매수가($)
+            { wch: 10 },  // 수량
+            { wch: 15 },  // 매수금액($)
+            { wch: 12 },  // 현재가($)
+            { wch: 15 },  // 평가금액($)
+            { wch: 15 },  // 손익($)
+            { wch: 12 },  // 손익률(%)
+            { wch: 18 },  // 매수금액(₩)
+            { wch: 18 },  // 평가금액(₩)
+            { wch: 18 },  // 손익(₩)
+        ];
+        worksheet['!cols'] = columnWidths;
+
+        // 워크북 생성
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, '거래내역');
+
+        // 파일 다운로드
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+        const fileName = `거래내역_${dateStr}.xlsx`;
+
+        XLSX.writeFile(workbook, fileName);
+    };
+
     // 정렬된 행 목록
     const sortedRows = useMemo(() => {
         if (sortConfig.column === null) {
@@ -240,6 +343,7 @@ export default function TransactionOverview() {
                     fxRate={fxRate}
                     onRefresh={handleRefreshPrices}
                     onAddClick={handleOpenAddModal}
+                    onExcelDownload={handleExcelDownload}
                 />
 
                 <div className="mx-0">

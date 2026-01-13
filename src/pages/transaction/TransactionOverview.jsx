@@ -234,15 +234,15 @@ export default function TransactionOverview() {
                 '티커': row.symbol || '',
                 '기업명': row.companyName || '',
                 '매수가($)': row.buyPrice?.toFixed(2) || '0.00',
-                '매수당시환율': row.buyExchangeRateAtTrade ? row.buyExchangeRateAtTrade.toFixed(2) : '-',
                 '수량': row.totalBuyAmount || 0,
                 '매수금액($)': buyAmountUSD?.toFixed(2) || '0.00',
+                '매수당시환율': row.buyExchangeRateAtTrade ? row.buyExchangeRateAtTrade.toFixed(2) : '-',
+                '매수금액(₩)': Math.round(buyAmountUSD * buyPriceRate).toLocaleString() || '0',
                 '현재가($)': row.currentPrice?.toFixed(2) || '0.00',
                 '평가금액($)': currentAmountUSD?.toFixed(2) || '0.00',
+                '평가금액(₩)': Math.round(currentAmountUSD * fxRate).toLocaleString() || '0',
                 '손익($)': diffUSD?.toFixed(2) || '0.00',
                 '손익률(%)': (((row.currentPrice - row.buyPrice) / row.buyPrice) * 100)?.toFixed(2) || '0.00',
-                '매수금액(₩)': Math.round(buyAmountUSD * buyPriceRate).toLocaleString() || '0',
-                '평가금액(₩)': Math.round(currentAmountUSD * fxRate).toLocaleString() || '0',
                 '손익(₩)': Math.round(diffUSD * fxRate).toLocaleString() || '0',
             };
         });
@@ -253,15 +253,15 @@ export default function TransactionOverview() {
             '티커': '',
             '기업명': '전체 합계',
             '매수가($)': '',
-            '매수당시환율': '',
             '수량': '',
             '매수금액($)': totals.buySum?.toFixed(2) || '0.00',
+            '매수당시환율': '',
+            '매수금액(₩)': Math.round(totals.buySum * fxRate).toLocaleString() || '0',
             '현재가($)': '',
             '평가금액($)': totals.curSum?.toFixed(2) || '0.00',
+            '평가금액(₩)': Math.round(totals.curSum * fxRate).toLocaleString() || '0',
             '손익($)': diff?.toFixed(2) || '0.00',
             '손익률(%)': diffPct?.toFixed(2) || '0.00',
-            '매수금액(₩)': Math.round(totals.buySum * fxRate).toLocaleString() || '0',
-            '평가금액(₩)': Math.round(totals.curSum * fxRate).toLocaleString() || '0',
             '손익(₩)': Math.round(diff * fxRate).toLocaleString() || '0',
         };
 
@@ -284,15 +284,15 @@ export default function TransactionOverview() {
             { wch: 10 },  // 티커
             { wch: 25 },  // 기업명
             { wch: 12 },  // 매수가($)
-            { wch: 14 },  // 매수당시환율
             { wch: 10 },  // 수량
             { wch: 15 },  // 매수금액($)
+            { wch: 14 },  // 매수당시환율
+            { wch: 18 },  // 매수금액(₩)
             { wch: 12 },  // 현재가($)
             { wch: 15 },  // 평가금액($)
+            { wch: 18 },  // 평가금액(₩)
             { wch: 15 },  // 손익($)
             { wch: 12 },  // 손익률(%)
-            { wch: 18 },  // 매수금액(₩)
-            { wch: 18 },  // 평가금액(₩)
             { wch: 18 },  // 손익(₩)
         ];
         worksheet['!cols'] = columnWidths;

@@ -144,6 +144,7 @@ export function EditableTd({
     if (!isEdit) {
         const isMoney = field.toLowerCase().includes('price');
         const isDate = field === 'buyDate';
+        const isRmk = field === 'rmk';
         const main = isMoney ? `$ ${fmtUsd(value)}` : isDate ? fmtDate(value) : (value ?? '');
 
         // 매도목표가 셀: 현재가와의 차이를 보조 줄에 표시
@@ -169,9 +170,12 @@ export function EditableTd({
         const isCompanyName = field === 'companyName';
         const isSymbol = field === 'symbol';
 
-        // 티커 셀의 경우 기업명을 툴팁으로 표시
+        // 툴팁 텍스트 결정
         let titleText = "더블클릭하여 수정";
-        if (isCompanyName) {
+        if (isRmk && main) {
+            // 비고 필드: 전체 텍스트를 툴팁으로 표시
+            titleText = `${main}\n(더블클릭하여 수정)`;
+        } else if (isCompanyName) {
             titleText = `${main}\n(더블클릭하여 수정)`;
         } else if (isSymbol && row.companyName) {
             titleText = `${row.companyName}\n(더블클릭하여 수정)`;
@@ -198,7 +202,7 @@ export function EditableTd({
                     title={titleText}
                 >
                     <div className={`
-                        ${isCompanyName ? "truncate w-full" : ""}
+                        ${isCompanyName || isRmk ? "truncate w-full" : ""}
                         ${isMoney ? "tabular-nums" : ""}
                         text-slate-700 dark:text-slate-200
                     `}>

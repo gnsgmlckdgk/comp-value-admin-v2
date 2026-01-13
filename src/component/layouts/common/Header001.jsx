@@ -192,41 +192,36 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
         setIsLoading(false);
 
         if (error == null) {
-            const sessionKey = data.response ? data.response.sessionKey : null;
+            // 로그인 성공 처리
+            const res = data.response || {};
+            const nextUserName = res.username ?? loginUsername;
+            const nextNick = res.nickname ?? nextUserName;
+            const nextRoles = Array.isArray(res.roles) ? res.roles : [];
 
-            if (sessionKey == null) {
-                openAlert(data.message || '인증 실패');
-            } else {
-                const res = data.response || {};
-                const nextUserName = res.username ?? loginUsername;
-                const nextNick = res.nickname ?? nextUserName;
-                const nextRoles = Array.isArray(res.roles) ? res.roles : [];
+            localStorage.setItem('userName', nextUserName);
+            localStorage.setItem('nickName', nextNick);
+            localStorage.setItem('roles', JSON.stringify(nextRoles));
 
-                localStorage.setItem('userName', nextUserName);
-                localStorage.setItem('nickName', nextNick);
-                localStorage.setItem('roles', JSON.stringify(nextRoles));
+            setUserName(nextUserName);
+            setNickName(nextNick);
+            setRoles(nextRoles);
+            setIsLoggedIn(true);
+            setLoginUsername('');
+            setPassWord('');
+            setShowLogin(false);
+            setDisplayName(nextNick);
 
-                setUserName(nextUserName);
-                setNickName(nextNick);
-                setRoles(nextRoles);
-                setIsLoggedIn(true);
-                setLoginUsername('');
-                setPassWord('');
-                setShowLogin(false);
-                setDisplayName(nextNick);
+            // 세션 타이머 시작 (서버에서 받은 TTL)
+            const initialTTL = res.sessionTTL ?? 1800;
+            startSessionTimer(initialTTL);
 
-                // 세션 타이머 시작 (서버에서 받은 TTL)
-                const initialTTL = res.sessionTTL ?? 1800;
-                startSessionTimer(initialTTL);
+            // 로그인 후 공개 페이지(홈 제외)에 있다면 홈으로 이동
+            const currentPath = location.pathname;
+            const isPublicPage = PUBLIC_ROUTES.includes(currentPath);
+            const isHomePage = currentPath === '/';
 
-                // 로그인 후 공개 페이지(홈 제외)에 있다면 홈으로 이동
-                const currentPath = location.pathname;
-                const isPublicPage = PUBLIC_ROUTES.includes(currentPath);
-                const isHomePage = currentPath === '/';
-
-                if (isPublicPage && !isHomePage) {
-                    navigate('/');
-                }
+            if (isPublicPage && !isHomePage) {
+                navigate('/');
             }
         } else {
             openAlert(error);

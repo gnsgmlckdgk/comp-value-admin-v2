@@ -8,15 +8,17 @@ import SellRecordDetailModal from './popup/SellRecordDetailModal';
 // 테이블 컬럼 너비 설정
 // Tailwind 유효한 width 값: w-12, w-14, w-16, w-20, w-24, w-28, w-32, w-36, w-40, w-44, w-48 등
 const COLUMN_WIDTHS = {
-    sellDate: 'w-20',      // 매도일
-    symbol: 'w-14',        // 티커
-    companyName: 'w-30',   // 기업명
-    sellPrice: 'w-28',     // 매도가
-    sellQty: 'w-16',       // 수량 (w-15는 유효하지 않음, w-16 사용)
-    sellAmount: 'w-28',    // 매도금액
-    realizedPnl: 'w-28',   // 실현손익
-    rmk: 'w-30',           // 비고
-    manage: 'w-25',        // 관리
+    sellDate: 'w-20',               // 매도일
+    symbol: 'w-14',                 // 티커
+    companyName: 'w-30',            // 기업명
+    sellPrice: 'w-28',              // 매도가
+    sellQty: 'w-16',                // 수량 (w-15는 유효하지 않음, w-16 사용)
+    sellAmount: 'w-28',             // 매도금액
+    realizedPnl: 'w-28',            // 실현손익
+    buyExchangeRateAtTrade: 'w-20', // 매수당시환율
+    sellExchangeRateAtTrade: 'w-20',// 매도당시환율
+    rmk: 'w-30',                    // 비고
+    manage: 'w-25',                 // 관리
 };
 
 export default function SellRecordHistory() {
@@ -241,6 +243,11 @@ export default function SellRecordHistory() {
         totalSellAmount: filteredRecords.reduce((sum, r) => sum + (r.sellPrice * r.sellQty || 0), 0),
     };
 
+    // 평균 매도당시환율 계산 (없는 데이터는 현재환율 사용)
+    const avgSellExchangeRate = filteredRecords.length > 0
+        ? filteredRecords.reduce((sum, r) => sum + (r.sellExchangeRateAtTrade || fxRate || 0), 0) / filteredRecords.length
+        : 0;
+
     return (
         <>
             <PageTitle />
@@ -251,14 +258,22 @@ export default function SellRecordHistory() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                         <div>
                             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">매도 현황 기록</h2>
-                            {fxRate && (
-                                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <div className="space-y-1">
+                                {fxRate && (
+                                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span>현재 환율: 1 USD = ₩{Math.round(fxRate).toLocaleString()}</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                    <span>환율: 1 USD = ₩{Math.round(fxRate).toLocaleString()}</span>
+                                    <span>원화 금액은 매도당시환율 기준으로 계산됩니다 (데이터 없는 경우 현재환율 적용)</span>
                                 </div>
-                            )}
+                            </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <select
@@ -308,9 +323,9 @@ export default function SellRecordHistory() {
                             <div className={`text-xl font-bold ${stats.totalRealizedPnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                                 ${stats.totalRealizedPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
-                            {fxRate && (
+                            {avgSellExchangeRate > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                    (₩{Math.round(stats.totalRealizedPnl * fxRate).toLocaleString()})
+                                    (₩{Math.round(stats.totalRealizedPnl * avgSellExchangeRate).toLocaleString()})
                                 </div>
                             )}
                         </div>
@@ -319,9 +334,9 @@ export default function SellRecordHistory() {
                             <div className="text-xl font-bold text-slate-900 dark:text-white">
                                 ${stats.totalSellAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
-                            {fxRate && (
+                            {avgSellExchangeRate > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                    (₩{Math.round(stats.totalSellAmount * fxRate).toLocaleString()})
+                                    (₩{Math.round(stats.totalSellAmount * avgSellExchangeRate).toLocaleString()})
                                 </div>
                             )}
                         </div>
@@ -354,6 +369,8 @@ export default function SellRecordHistory() {
                                         <SortableHeader field="sellQty" label="수량" sortConfig={sortConfig} onSort={handleSort} width={COLUMN_WIDTHS.sellQty} />
                                         <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.sellAmount}`}>매도금액</th>
                                         <SortableHeader field="realizedPnl" label="실현손익" sortConfig={sortConfig} onSort={handleSort} width={COLUMN_WIDTHS.realizedPnl} />
+                                        <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.buyExchangeRateAtTrade}`}>매수당시환율</th>
+                                        <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.sellExchangeRateAtTrade}`}>매도당시환율</th>
                                         <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.rmk}`}>비고</th>
                                         <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.manage}`}>관리</th>
                                     </tr>
@@ -376,32 +393,47 @@ export default function SellRecordHistory() {
                                             </td>
                                             <td className="px-4 py-3 text-sm text-slate-900 dark:text-white">
                                                 <div>${record.sellPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                                                {fxRate && (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                        (₩{Math.round(record.sellPrice * fxRate).toLocaleString()})
-                                                    </div>
-                                                )}
+                                                {(() => {
+                                                    const sellRate = record.sellExchangeRateAtTrade || fxRate;
+                                                    return sellRate && (
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                            (₩{Math.round(record.sellPrice * sellRate).toLocaleString()})
+                                                        </div>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-slate-900 dark:text-white text-right">
                                                 {record.sellQty.toLocaleString()}
                                             </td>
                                             <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
                                                 <div>${(record.sellPrice * record.sellQty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                                                {fxRate && (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                                                        (₩{Math.round(record.sellPrice * record.sellQty * fxRate).toLocaleString()})
-                                                    </div>
-                                                )}
+                                                {(() => {
+                                                    const sellRate = record.sellExchangeRateAtTrade || fxRate;
+                                                    return sellRate && (
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                                                            (₩{Math.round(record.sellPrice * record.sellQty * sellRate).toLocaleString()})
+                                                        </div>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="px-4 py-3 text-sm">
                                                 <div className={`font-semibold ${record.realizedPnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                                                     {record.realizedPnl >= 0 ? '+' : ''}${record.realizedPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </div>
-                                                {fxRate && (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                                                        ({record.realizedPnl >= 0 ? '+' : ''}₩{Math.round(record.realizedPnl * fxRate).toLocaleString()})
-                                                    </div>
-                                                )}
+                                                {(() => {
+                                                    const sellRate = record.sellExchangeRateAtTrade || fxRate;
+                                                    return sellRate && (
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                                                            ({record.realizedPnl >= 0 ? '+' : ''}₩{Math.round(record.realizedPnl * sellRate).toLocaleString()})
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                                                {record.buyExchangeRateAtTrade ? `₩${record.buyExchangeRateAtTrade.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
+                                                {record.sellExchangeRateAtTrade ? `₩${record.sellExchangeRateAtTrade.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
                                                 {record.rmk || '-'}

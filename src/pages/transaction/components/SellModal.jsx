@@ -15,6 +15,8 @@ export default function SellModal({
 }) {
     const [sellPrice, setSellPrice] = useState('');
     const [sellQty, setSellQty] = useState('');
+    const [buyExchangeRate, setBuyExchangeRate] = useState('');
+    const [sellExchangeRate, setSellExchangeRate] = useState('');
     const [error, setError] = useState('');
 
     // 모달 열릴 때 초기화
@@ -22,9 +24,13 @@ export default function SellModal({
         if (open) {
             setSellPrice(data?.currentPrice || '');
             setSellQty('');
+            // 매수당시환율: 데이터 있으면 사용, 없으면 현재환율
+            setBuyExchangeRate(data?.buyExchangeRateAtTrade || fx || '');
+            // 매도당시환율: 현재환율로 초기 세팅
+            setSellExchangeRate(fx || '');
             setError('');
         }
-    }, [open, data]);
+    }, [open, data, fx]);
 
     if (!open || !data) return null;
 
@@ -36,6 +42,8 @@ export default function SellModal({
     const handleSubmit = () => {
         const price = parseFloat(sellPrice);
         const qty = parseInt(sellQty, 10);
+        const buyRate = parseFloat(buyExchangeRate);
+        const sellRate = parseFloat(sellExchangeRate);
 
         if (!price || price <= 0) {
             setError('매도 가격을 입력해주세요.');
@@ -56,6 +64,8 @@ export default function SellModal({
             companyName,
             sellPrice: price,
             sellQty: qty,
+            buyExchangeRateAtTrade: buyRate || null,
+            sellExchangeRateAtTrade: sellRate || null,
         });
     };
 
@@ -151,6 +161,38 @@ export default function SellModal({
                             ))}
                         </div>
                     </div>
+
+                    {/* 환율 입력 필드 */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                매수당시환율 (₩)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={buyExchangeRate}
+                                onChange={(e) => setBuyExchangeRate(e.target.value)}
+                                placeholder="매수당시환율"
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                disabled={saving}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                매도당시환율 (₩)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={sellExchangeRate}
+                                onChange={(e) => setSellExchangeRate(e.target.value)}
+                                placeholder="매도당시환율"
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                disabled={saving}
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 {/* 예상 실현손익 표시 */}
@@ -160,12 +202,13 @@ export default function SellModal({
                         {(() => {
                             const pnl = (parseFloat(sellPrice) - buyPrice) * parseInt(sellQty || 0, 10);
                             const isPositive = pnl >= 0;
+                            const sellRate = parseFloat(sellExchangeRate) || fx;
                             return (
                                 <p className={`text-lg font-bold ${isPositive ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
                                     {isPositive ? '+' : ''}$ {fmtUsd(pnl)}
-                                    {fx && (
+                                    {sellRate && (
                                         <span className="text-sm font-normal ml-2">
-                                            (₩{Math.round(pnl * fx).toLocaleString()})
+                                            (₩{Math.round(pnl * sellRate).toLocaleString()})
                                         </span>
                                     )}
                                 </p>

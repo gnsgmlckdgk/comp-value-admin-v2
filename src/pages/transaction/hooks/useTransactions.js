@@ -146,11 +146,11 @@ export function useTransactions(openAlert = (msg) => alert(msg), openConfirm = (
 
     /**
      * 매도 처리 (FIFO 방식)
-     * @param {Object} sellData - 매도 정보 { symbol, companyName, sellPrice, sellQty }
+     * @param {Object} sellData - 매도 정보 { symbol, companyName, sellPrice, sellQty, buyExchangeRateAtTrade, sellExchangeRateAtTrade }
      * @param {Array} targetRows - 매도 대상 행들 (매수일자 기준 오래된 순 정렬 필요)
      */
     const processSell = async (sellData, targetRows) => {
-        const { symbol, companyName, sellPrice, sellQty } = sellData;
+        const { symbol, companyName, sellPrice, sellQty, buyExchangeRateAtTrade, sellExchangeRateAtTrade } = sellData;
 
         setSaving(true);
         try {
@@ -177,6 +177,8 @@ export function useTransactions(openAlert = (msg) => alert(msg), openConfirm = (
                 sellPrice,
                 sellQty,
                 realizedPnl: totalPnl,
+                buyExchangeRateAtTrade,
+                sellExchangeRateAtTrade,
             };
 
             await createSellRecord(sellRecord);

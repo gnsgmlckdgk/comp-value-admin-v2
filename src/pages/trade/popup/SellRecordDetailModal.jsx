@@ -34,6 +34,8 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
     if (!isOpen) return null;
 
     const sellAmount = data.sellPrice * data.sellQty;
+    // 매도당시환율 우선, 없으면 현재환율 사용
+    const sellRate = data.sellExchangeRateAtTrade || fxRate;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -88,9 +90,9 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                                 <div className="text-lg font-semibold text-slate-900 dark:text-white">
                                     ${data.sellPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
-                                {fxRate && (
+                                {sellRate && (
                                     <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                        ₩{Math.round(data.sellPrice * fxRate).toLocaleString()}
+                                        ₩{Math.round(data.sellPrice * sellRate).toLocaleString()}
                                     </div>
                                 )}
                             </div>
@@ -107,9 +109,9 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                             <div className="text-xl font-bold text-slate-900 dark:text-white">
                                 ${sellAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
-                            {fxRate && (
+                            {sellRate && (
                                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                    ₩{Math.round(sellAmount * fxRate).toLocaleString()}
+                                    ₩{Math.round(sellAmount * sellRate).toLocaleString()}
                                 </div>
                             )}
                         </div>
@@ -119,11 +121,27 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                             <div className={`text-xl font-bold ${data.realizedPnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {data.realizedPnl >= 0 ? '+' : ''}${data.realizedPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
-                            {fxRate && (
+                            {sellRate && (
                                 <div className={`text-sm mt-1 ${data.realizedPnl >= 0 ? 'text-emerald-600/70 dark:text-emerald-400/70' : 'text-red-600/70 dark:text-red-400/70'}`}>
-                                    {data.realizedPnl >= 0 ? '+' : ''}₩{Math.round(data.realizedPnl * fxRate).toLocaleString()}
+                                    {data.realizedPnl >= 0 ? '+' : ''}₩{Math.round(data.realizedPnl * sellRate).toLocaleString()}
                                 </div>
                             )}
+                        </div>
+
+                        {/* 환율 정보 */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">매수당시환율</label>
+                                <div className="text-lg font-semibold text-slate-900 dark:text-white">
+                                    {data.buyExchangeRateAtTrade ? `₩${data.buyExchangeRateAtTrade.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">매도당시환율</label>
+                                <div className="text-lg font-semibold text-slate-900 dark:text-white">
+                                    {data.sellExchangeRateAtTrade ? `₩${data.sellExchangeRateAtTrade.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
+                                </div>
+                            </div>
                         </div>
 
                         {data.rmk && (

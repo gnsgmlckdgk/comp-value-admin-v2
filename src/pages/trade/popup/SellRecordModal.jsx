@@ -9,6 +9,8 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
         sellPrice: '',
         sellQty: '',
         realizedPnl: '',
+        buyExchangeRateAtTrade: '',
+        sellExchangeRateAtTrade: '',
         rmk: '',
     });
     const [saving, setSaving] = useState(false);
@@ -42,6 +44,8 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                 sellPrice: data.sellPrice || '',
                 sellQty: data.sellQty || '',
                 realizedPnl: data.realizedPnl || '',
+                buyExchangeRateAtTrade: data.buyExchangeRateAtTrade || '',
+                sellExchangeRateAtTrade: data.sellExchangeRateAtTrade || '',
                 rmk: data.rmk || '',
             });
             setCompanyProfile(null);
@@ -57,11 +61,13 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                 sellPrice: '',
                 sellQty: '',
                 realizedPnl: '',
+                buyExchangeRateAtTrade: '',
+                sellExchangeRateAtTrade: fxRate || '',
                 rmk: '',
             });
             setCompanyProfile(null);
         }
-    }, [mode, data, isOpen]);
+    }, [mode, data, isOpen, fxRate]);
 
     // 수정 모드 초기 로드 시 기업정보 조회
     const fetchCompanyProfileForEdit = async (symbol) => {
@@ -145,6 +151,8 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
             sellPrice: parseFloat(formData.sellPrice),
             sellQty: parseInt(formData.sellQty),
             realizedPnl: parseFloat(formData.realizedPnl) || 0,
+            buyExchangeRateAtTrade: formData.buyExchangeRateAtTrade ? parseFloat(formData.buyExchangeRateAtTrade) : null,
+            sellExchangeRateAtTrade: formData.sellExchangeRateAtTrade ? parseFloat(formData.sellExchangeRateAtTrade) : null,
             rmk: formData.rmk.trim() || null,
         });
         setSaving(false);
@@ -292,6 +300,39 @@ export default function SellRecordModal({ isOpen, mode, data, onClose, onSave })
                                     (₩{(parseFloat(formData.realizedPnl) * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* 환율 입력 */}
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* 매수당시환율 */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                매수당시환율 (₩)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={formData.buyExchangeRateAtTrade}
+                                onChange={(e) => handleChange('buyExchangeRateAtTrade', e.target.value)}
+                                placeholder={fxRate ? fxRate.toFixed(2) : '1400.00'}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                            />
+                        </div>
+
+                        {/* 매도당시환율 */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                매도당시환율 (₩)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={formData.sellExchangeRateAtTrade}
+                                onChange={(e) => handleChange('sellExchangeRateAtTrade', e.target.value)}
+                                placeholder={fxRate ? fxRate.toFixed(2) : '1400.00'}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                            />
                         </div>
                     </div>
 

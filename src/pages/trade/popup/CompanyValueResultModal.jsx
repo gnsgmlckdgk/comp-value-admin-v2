@@ -24,6 +24,8 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
         title: '',
         data: null
     });
+    const [predictionData, setPredictionData] = useState(null);
+    const [predictionLoading, setPredictionLoading] = useState(false);
 
     // Toast auto-hide
     useEffect(() => {
@@ -31,6 +33,13 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
         const timer = setTimeout(() => setToast(null), 1800);
         return () => clearTimeout(timer);
     }, [toast]);
+
+    // 모달이 열릴 때 예측 데이터 초기화
+    useEffect(() => {
+        if (!isOpen) {
+            setPredictionData(null);
+        }
+    }, [isOpen]);
 
     // ESC key handler
     useEffect(() => {
@@ -112,6 +121,29 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
         setOverlays(prev => ({ ...prev, investmentFullDetail: true }));
     }, []);
 
+    // AI 예측 데이터 조회
+    const handleFetchPrediction = useCallback(async (symbol) => {
+        if (!symbol || predictionLoading) return;
+
+        setPredictionLoading(true);
+        try {
+            const { data: responseData, error } = await send(`/dart/ml/predict/w?symbol=${encodeURIComponent(symbol)}`, {}, 'GET');
+
+            if (!error && responseData && responseData.response) {
+                setPredictionData(responseData.response);
+                setToast('AI 예측 조회 완료');
+            } else {
+                setToast(responseData?.message || 'AI 예측 조회 실패');
+                setPredictionData(null);
+            }
+        } catch (e) {
+            setToast('AI 예측 조회 중 오류가 발생했습니다.');
+            setPredictionData(null);
+        } finally {
+            setPredictionLoading(false);
+        }
+    }, [predictionLoading]);
+
     if (!isOpen) return null;
 
     // 심볼과 회사명 추출
@@ -133,7 +165,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
             {/* 메인 모달 */}
             <div
                 ref={popupRef}
-                className="fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
+                className="fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[100vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
                 onClick={(e) => e.stopPropagation()}
             >
                 <ModalHeader
@@ -151,6 +183,9 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
                     onOpenInvestmentDetail={handleOpenInvestmentDetail}
                     investmentLoading={investmentLoading}
                     fromInvestmentDetail={fromInvestmentDetail}
+                    predictionData={predictionData}
+                    predictionLoading={predictionLoading}
+                    onFetchPrediction={handleFetchPrediction}
                 />
             </div>
 
@@ -237,7 +272,20 @@ const ModalHeader = ({ onClose, onOpenCompanyInfo, symbol }) => (
 /**
  * 모달 메인 콘텐츠
  */
-const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpenChart, onOpenInvestmentDetail, investmentLoading, fromInvestmentDetail = false }) => {
+const ModalContent = ({
+    data,
+    onCopy,
+    onClose,
+    onOpenGuide,
+    onOpenDetail,
+    onOpenChart,
+    onOpenInvestmentDetail,
+    investmentLoading,
+    fromInvestmentDetail = false,
+    predictionData,
+    predictionLoading,
+    onFetchPrediction
+}) => {
     const compValueData = data || {};
     const hasData = Object.keys(compValueData).length > 0;
 
@@ -257,7 +305,13 @@ const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpen
             <MetricExplanation onOpenGuide={onOpenGuide} 매출기반평가={metrics.매출기반평가} />
             <RecommendationBanner data={compValueData} />
             <HighlightCards data={compValueData} />
-            <DataGrid data={compValueData} onOpenDetail={onOpenDetail} />
+            <AIPredictionSection
+                data={compValueData}
+                predictionData={predictionData}
+                predictionLoading={predictionLoading}
+                onFetchPrediction={onFetchPrediction}
+            />
+            <DataGrid data={compValueData} onOpenDetail={onOpenDetail} predictionData={predictionData} />
             <ActionButtons
                 data={compValueData}
                 onCopy={onCopy}
@@ -423,6 +477,122 @@ const RecommendationBanner = ({ data }) => {
 };
 
 /**
+ * AI 예측 섹션
+ */
+const AIPredictionSection = ({ data, predictionData, predictionLoading, onFetchPrediction }) => {
+    // 심볼 추출
+    const getValDeep = (obj, keys) => {
+        if (!obj || typeof obj !== 'object') return undefined;
+        for (const key of keys) {
+            if (obj[key] != null) return obj[key];
+        }
+        return undefined;
+    };
+
+    // data에서 예측데이터 추출 (백엔드에서 올 수도 있음)
+    const backendPrediction = getValDeep(data, ['예측데이터', 'predictionData', 'prediction']);
+    const displayPrediction = predictionData || backendPrediction;
+
+    const symbol = getValDeep(data, ['symbol', 'ticker', 'code', '주식코드', '주식심볼', '기업심볼']);
+
+    const handlePredict = () => {
+        if (symbol) {
+            onFetchPrediction(symbol);
+        }
+    };
+
+    return (
+        <div className="rounded-lg border bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 dark:border-purple-700 p-4">
+            <div className="flex items-center justify-between mb-3">
+                <div>
+                    <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        AI 예측
+                    </h3>
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">(AI) 1주내 최고가 예상값</p>
+                </div>
+                {!displayPrediction && (
+                    <button
+                        type="button"
+                        onClick={handlePredict}
+                        disabled={predictionLoading || !symbol}
+                        className="px-3 py-1.5 text-xs rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    >
+                        {predictionLoading ? (
+                            <>
+                                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                예측 중...
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                예측하기
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+
+            {displayPrediction ? (
+                <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                        <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
+                            <div className="text-xs text-purple-600 dark:text-purple-300">예측 최고가</div>
+                            <div className="mt-1 text-lg font-semibold text-purple-900 dark:text-white">
+                                {displayPrediction.predictedHigh ? `$${formatNumber(displayPrediction.predictedHigh, 2)}` : '-'}
+                            </div>
+                        </div>
+                        <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
+                            <div className="text-xs text-purple-600 dark:text-purple-300">예측 시점 현재가</div>
+                            <div className="mt-1 text-lg font-semibold text-purple-900 dark:text-white">
+                                {displayPrediction.currentPrice ? `$${formatNumber(displayPrediction.currentPrice, 2)}` : '-'}
+                            </div>
+                        </div>
+                        <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
+                            <div className="text-xs text-purple-600 dark:text-purple-300">상승 여력</div>
+                            <div className="mt-1 text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+                                {displayPrediction.upsidePercent || '-'}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="text-purple-700 dark:text-purple-300">
+                                <span className="font-medium">예측일:</span> {displayPrediction.predictionDate || '-'}
+                            </div>
+                            <div className="text-purple-700 dark:text-purple-300">
+                                <span className="font-medium">소스:</span> {displayPrediction.source === 'database' ? 'DB' : displayPrediction.source === 'realtime' ? '실시간' : displayPrediction.source || '-'}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="text-purple-700 dark:text-purple-300">
+                                <span className="font-medium">대상 기간:</span> {displayPrediction.targetStartDate || '-'} ~ {displayPrediction.targetEndDate || '-'}
+                            </div>
+                            <div className="text-purple-700 dark:text-purple-300">
+                                <span className="font-medium">모델:</span> {displayPrediction.modelVersion || '-'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                !predictionLoading && (
+                    <div className="text-center py-3 text-sm text-purple-600 dark:text-purple-400">
+                        예측하기 버튼을 클릭하여 AI 예측 데이터를 조회하세요
+                    </div>
+                )
+            )}
+        </div>
+    );
+};
+
+/**
  * 하이라이트 카드들
  */
 const HighlightCards = ({ data }) => {
@@ -473,7 +643,7 @@ const MetricCard = ({ label, value, valueClassName = '', subValue = null, subLab
 /**
  * 데이터 그리드
  */
-const DataGrid = ({ data, onOpenDetail }) => (
+const DataGrid = ({ data, onOpenDetail, predictionData }) => (
     <div className="rounded-lg border bg-white p-3 dark:bg-slate-700 dark:border-slate-600">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px]">
             {Object.entries(data).map(([key, value]) => (
@@ -482,6 +652,7 @@ const DataGrid = ({ data, onOpenDetail }) => (
                     label={key}
                     value={value}
                     onOpenDetail={onOpenDetail}
+                    predictionData={predictionData}
                 />
             ))}
         </div>
@@ -491,14 +662,20 @@ const DataGrid = ({ data, onOpenDetail }) => (
 /**
  * 데이터 행
  */
-const DataRow = ({ label, value, onOpenDetail }) => (
-    <div className="flex items-start justify-between gap-3 border-b last:border-b-0 py-1 dark:border-slate-600">
-        <div className="text-slate-500 whitespace-nowrap dark:text-slate-400">{label}</div>
-        <div className="text-right break-all font-medium max-w-[60%] dark:text-slate-200">
-            {renderValue(value, label, onOpenDetail)}
+const DataRow = ({ label, value, onOpenDetail, predictionData }) => {
+    // 예측데이터 필드인 경우 predictionData state 우선 사용
+    const isPredictionField = label === '예측데이터' || label === 'predictionData' || label === 'prediction';
+    const displayValue = isPredictionField && predictionData ? predictionData : value;
+
+    return (
+        <div className="flex items-start justify-between gap-3 border-b last:border-b-0 py-1 dark:border-slate-600">
+            <div className="text-slate-500 whitespace-nowrap dark:text-slate-400">{label}</div>
+            <div className="text-right break-all font-medium max-w-[60%] dark:text-slate-200">
+                {renderValue(displayValue, label, onOpenDetail)}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 /**
  * 값 렌더링

@@ -165,7 +165,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
             {/* 메인 모달 */}
             <div
                 ref={popupRef}
-                className="fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[100vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
+                className="fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
                 onClick={(e) => e.stopPropagation()}
             >
                 <ModalHeader

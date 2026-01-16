@@ -7,6 +7,7 @@ import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import MultiSelect from '@/component/common/select/MultiSelect';
+import * as XLSX from 'xlsx';
 
 // 숫자를 천 단위 콤마 포맷으로 변환
 const formatNumberWithComma = (value) => {
@@ -566,6 +567,66 @@ const AbroadCompanyList = () => {
         setTooltip((prev) => ({ ...prev, visible: false }));
     }, []);
 
+    // 엑셀 다운로드
+    const handleExportToExcel = useCallback(() => {
+        if (sortedData.length === 0) {
+            openAlert('다운로드할 데이터가 없습니다.');
+            return;
+        }
+
+        try {
+            // 엑셀 데이터 준비
+            const excelData = sortedData.map((row) => ({
+                '심볼': row.symbol || '',
+                '기업명': row.companyName || '',
+                '시가총액': row.marketCap || '',
+                '섹터': row.sector || '',
+                '산업군': row.industry || '',
+                '베타': row.beta || '',
+                '주가': row.price ? `$${row.price.toFixed(2)}` : '',
+                '연간배당금': row.lastAnnualDividend ? `$${row.lastAnnualDividend.toFixed(2)}` : '',
+                '거래량': row.volume || '',
+                '거래소': row.exchangeShortName || '',
+                '국가': row.country || '',
+            }));
+
+            // 워크시트 생성
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+            // 컬럼 너비 설정
+            worksheet['!cols'] = [
+                { wch: 12 }, // 심볼
+                { wch: 35 }, // 기업명
+                { wch: 15 }, // 시가총액
+                { wch: 25 }, // 섹터
+                { wch: 25 }, // 산업군
+                { wch: 8 },  // 베타
+                { wch: 12 }, // 주가
+                { wch: 12 }, // 연간배당금
+                { wch: 15 }, // 거래량
+                { wch: 10 }, // 거래소
+                { wch: 10 }, // 국가
+            ];
+
+            // 워크북 생성
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, '해외기업목록');
+
+            // 파일명 생성 (현재 날짜 포함)
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+            const filename = `해외기업목록_${dateStr}.xlsx`;
+
+            // 파일 다운로드
+            XLSX.writeFile(workbook, filename);
+
+            openAlert(`엑셀 파일이 다운로드되었습니다.\n파일명: ${filename}\n총 ${sortedData.length}건`);
+        } catch (error) {
+            console.error('Excel export error:', error);
+            openAlert('엑셀 파일 생성 중 오류가 발생했습니다.');
+        }
+    }, [sortedData, openAlert]);
+
     // 기업가치 계산
     const handleRowClick = useCallback(async (row) => {
         // 드롭다운 닫는 중이면 클릭 무시
@@ -844,9 +905,20 @@ const AbroadCompanyList = () => {
 
             {/* 조회 결과 테이블 */}
             <div ref={resultTableRef} className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700">
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <h3 className="text-lg font-semibold text-slate-800 dark:text-white">조회 결과</h3>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={handleExportToExcel}
+                            disabled={sortedData.length === 0}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            엑셀 다운로드
+                        </button>
                         {Object.values(columnFilters).some((v) => v !== '') && (
                             <button
                                 type="button"

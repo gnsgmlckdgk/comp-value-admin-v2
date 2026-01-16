@@ -7,7 +7,7 @@ import { send } from '@/util/ClientUtil';
 /**
  * 기업가치 계산 결과 모달 컴포넌트
  */
-const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
+const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail = false }) => {
     const popupRef = useRef(null);
     const [toast, setToast] = useState(null);
     const [overlays, setOverlays] = useState({
@@ -150,6 +150,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                     onOpenChart={() => setOverlays(prev => ({ ...prev, chart: true }))}
                     onOpenInvestmentDetail={handleOpenInvestmentDetail}
                     investmentLoading={investmentLoading}
+                    fromInvestmentDetail={fromInvestmentDetail}
                 />
             </div>
 
@@ -191,6 +192,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data }) => {
                 onClose={() => closeOverlay('investmentDetail')}
                 onOpenFullDetail={handleOpenInvestmentFullDetail}
                 zIndex={140}
+                fromCompanyValue={true}
             />
 
             {/* 투자 판단 전체 상세 모달 */}
@@ -235,7 +237,7 @@ const ModalHeader = ({ onClose, onOpenCompanyInfo, symbol }) => (
 /**
  * 모달 메인 콘텐츠
  */
-const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpenChart, onOpenInvestmentDetail, investmentLoading }) => {
+const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpenChart, onOpenInvestmentDetail, investmentLoading, fromInvestmentDetail = false }) => {
     const compValueData = data || {};
     const hasData = Object.keys(compValueData).length > 0;
 
@@ -263,6 +265,7 @@ const ModalContent = ({ data, onCopy, onClose, onOpenGuide, onOpenDetail, onOpen
                 onOpenChart={onOpenChart}
                 onOpenInvestmentDetail={onOpenInvestmentDetail}
                 investmentLoading={investmentLoading}
+                fromInvestmentDetail={fromInvestmentDetail}
             />
         </div>
     );
@@ -534,7 +537,7 @@ const renderValue = (value, label, onOpenDetail) => {
 /**
  * 액션 버튼들
  */
-const ActionButtons = ({ data, onCopy, onClose, onOpenChart, onOpenInvestmentDetail, investmentLoading }) => {
+const ActionButtons = ({ data, onCopy, onClose, onOpenChart, onOpenInvestmentDetail, investmentLoading, fromInvestmentDetail = false }) => {
     // 심볼 추출
     const getValDeep = (obj, keys) => {
         if (!obj || typeof obj !== 'object') return undefined;
@@ -566,8 +569,8 @@ const ActionButtons = ({ data, onCopy, onClose, onOpenChart, onOpenInvestmentDet
                     <button
                         className="flex-1 sm:flex-none px-3 py-2 rounded-md border text-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-1.5 text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleInvestmentJudgment}
-                        disabled={investmentLoading}
-                        title="투자 판단 상세 보기"
+                        disabled={investmentLoading || fromInvestmentDetail}
+                        title={fromInvestmentDetail ? "이미 투자 판단 상세 모달에서 열렸습니다" : "투자 판단 상세 보기"}
                     >
                         {investmentLoading ? (
                             <>

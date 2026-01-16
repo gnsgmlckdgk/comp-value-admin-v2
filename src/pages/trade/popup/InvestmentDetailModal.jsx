@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import CompanyInfoModal from '@/pages/trade/popup/CompanyInfoModal';
 import StockChartModal from '@/pages/trade/popup/StockChartModal';
+import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 
 // 숫자를 천 단위 콤마 포맷으로 변환
 const formatNumberWithComma = (value) => {
@@ -231,11 +234,25 @@ const StepDetailCard = ({ step }) => {
 /**
  * 투자 판단 상세 모달 컴포넌트
  */
-const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex = 50 }) => {
+const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex = 50, fromCompanyValue = false }) => {
 
     const modalRef = useRef(null);
     const [companyInfoModal, setCompanyInfoModal] = useState({ open: false, symbol: null });
     const [chartModal, setChartModal] = useState({ open: false, symbol: null, companyName: null });
+    const [companyValueModal, setCompanyValueModal] = useState({ open: false, data: null });
+    const [companyValueLoading, setCompanyValueLoading] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+
+    // AlertModal 헬퍼 함수
+    const openAlert = (message, onConfirm) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
+    };
+
+    const handleCloseAlert = () => {
+        const { onConfirm } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null });
+        if (onConfirm) onConfirm();
+    };
 
     // ESC 키 핸들러
     useEffect(() => {
@@ -261,6 +278,35 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
     // 차트 모달 열기
     const handleOpenChart = () => {
         setChartModal({ open: true, symbol: data.symbol, companyName: data.companyName });
+    };
+
+    // 기업 분석 모달 열기
+    const handleOpenCompanyValue = async () => {
+
+        const symbol = data && data.symbol ? data.symbol.trim() : '';
+        if (!symbol) {
+            openAlert('심볼 정보가 존재하지 않습니다.');
+            return;
+        }
+
+        if (companyValueLoading) return;
+
+        setCompanyValueLoading(true);
+        try {
+            const sendUrl = API_ENDPOINTS.ABROAD_COMP_VALUE(symbol);
+            const { data: responseData, error } = await send(sendUrl, {}, 'GET');
+
+            const hasValid = !error && responseData && responseData.response && Object.keys(responseData.response).length > 0;
+            if (hasValid) {
+                setCompanyValueModal({ open: true, data: responseData.response });
+            } else {
+                openAlert('조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
+            }
+        } catch (e) {
+            openAlert('요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+        } finally {
+            setCompanyValueLoading(false);
+        }
     };
 
     return (
@@ -298,6 +344,25 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                         <span className="text-xs text-slate-400 dark:text-slate-500">
                             계산 버전: {data.calVersion}
                         </span>
+                        <button
+                            type="button"
+                            className="px-3 py-1.5 text-sm rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            onClick={handleOpenCompanyValue}
+                            disabled={companyValueLoading || fromCompanyValue}
+                            title={fromCompanyValue ? "이미 기업가치 계산 결과 모달에서 열렸습니다" : "기업가치 계산 결과 보기"}
+                        >
+                            {companyValueLoading ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    조회 중...
+                                </>
+                            ) : (
+                                '기업 분석'
+                            )}
+                        </button>
                         {onOpenFullDetail && (
                             <button
                                 type="button"
@@ -394,6 +459,21 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                 symbol={chartModal.symbol}
                 companyName={chartModal.companyName}
                 zIndex={zIndex + 100}
+            />
+
+            {/* 기업가치 계산 결과 모달 */}
+            <CompanyValueResultModal
+                isOpen={companyValueModal.open}
+                onClose={() => setCompanyValueModal({ open: false, data: null })}
+                data={companyValueModal.data}
+                fromInvestmentDetail={true}
+            />
+
+            {/* Alert 모달 */}
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={handleCloseAlert}
             />
         </>
     );

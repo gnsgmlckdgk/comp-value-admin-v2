@@ -1,6 +1,6 @@
 import Button from '@/component/common/button/Button';
 
-export default function AlertModal({ open, title = '알림', message, onClose, onConfirm, onAfterClose }) {
+export default function ConfirmModal({ open, title = '확인', message, onClose, onConfirm }) {
     if (!open) return null;
 
     const handleConfirm = () => {
@@ -8,9 +8,10 @@ export default function AlertModal({ open, title = '알림', message, onClose, o
             onConfirm();
         }
         onClose();
-        if (onAfterClose) {
-            onAfterClose();
-        }
+    };
+
+    const handleCancel = () => {
+        onClose();
     };
 
     return (
@@ -19,6 +20,12 @@ export default function AlertModal({ open, title = '알림', message, onClose, o
                 <h2 className="mb-2 text-base font-semibold text-slate-900 dark:text-white">{title}</h2>
                 <p className="mb-5 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">{message}</p>
                 <div className="flex justify-end gap-2">
+                    <button
+                        onClick={handleCancel}
+                        className="px-4 py-1.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+                    >
+                        취소
+                    </button>
                     <Button
                         children="확인"
                         onClick={handleConfirm}
@@ -29,6 +36,3 @@ export default function AlertModal({ open, title = '알림', message, onClose, o
         </div>
     );
 }
-
-
-

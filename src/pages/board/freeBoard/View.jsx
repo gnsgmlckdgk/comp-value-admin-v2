@@ -4,26 +4,44 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import View001 from '@/component/feature/board/View001';
 import { send } from '@/util/ClientUtil';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import ConfirmModal from '@/component/layouts/common/popup/ConfirmModal';
 import { useAuth } from '@/context/AuthContext';
 
 function View() {
     const [boardData, setBoardData] = useState();
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+    const [confirmConfig, setConfirmConfig] = useState({ open: false, message: '', onConfirm: null });
 
     const { id } = useParams(); // ← URL에서 :id 값 가져옴
     const navigate = useNavigate();
     const location = useLocation();
     const { userName, nickName, roles } = useAuth();
 
+    // AlertModal 제어
     const openAlert = (message, onConfirm) => {
         setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
     };
-
-    const handleCloseAlert = () => {
+    const closeAlert = () => {
         const { onConfirm } = alertConfig;
         setAlertConfig({ open: false, message: '', onConfirm: null });
         if (onConfirm) onConfirm();
     };
+
+    // ConfirmModal 제어
+    const openConfirm = (message, onConfirm) => {
+        setConfirmConfig({ open: true, message, onConfirm: onConfirm || null });
+    };
+    const closeConfirm = () => {
+        setConfirmConfig({ open: false, message: '', onConfirm: null });
+    };
+    const handleConfirm = () => {
+        const { onConfirm } = confirmConfig;
+        if (onConfirm) {
+            onConfirm();
+        }
+        closeConfirm();
+    };
+
 
     const moveListPage = () => {
         navigate(`/freeboard/`, { state: location.state });
@@ -44,6 +62,10 @@ function View() {
             return;
         }
         openAlert(`[${id}] 게시글을 삭제하였습니다.`, moveListPage);
+    };
+
+    const handleDeleteRequest = () => {
+        openConfirm('정말로 삭제하시겠습니까?', onDelete);
     };
 
     const fetchData = async () => {
@@ -137,12 +159,18 @@ function View() {
             <View001
                 onMoveBack={moveListPage}
                 onMoveUpdate={moveUpdatePage}
-                onDelete={onDelete}
+                onDelete={handleDeleteRequest}
                 boardData={boardData}
                 canEdit={canEdit}
                 canDelete={canDelete}
             />
-            <AlertModal open={alertConfig.open} message={alertConfig.message} onClose={handleCloseAlert} />
+            <AlertModal open={alertConfig.open} message={alertConfig.message} onClose={closeAlert} onConfirm={closeAlert} />
+            <ConfirmModal
+                open={confirmConfig.open}
+                message={confirmConfig.message}
+                onClose={closeConfirm}
+                onConfirm={handleConfirm}
+            />
         </>
     );
 }

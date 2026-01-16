@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import ConfirmModal from '@/component/layouts/common/popup/ConfirmModal';
 import SellRecordModal from './popup/SellRecordModal';
 import SellRecordDetailModal from './popup/SellRecordDetailModal';
 
@@ -25,6 +26,7 @@ export default function SellRecordHistory() {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null, onAfterClose: null });
+    const [confirmConfig, setConfirmConfig] = useState({ open: false, message: '', onConfirm: null });
     const [modalConfig, setModalConfig] = useState({ open: false, mode: 'add', data: null });
     const [detailModalConfig, setDetailModalConfig] = useState({ open: false, data: null });
     const [sortConfig, setSortConfig] = useState({ field: 'sellDate', direction: 'desc' });
@@ -46,6 +48,14 @@ export default function SellRecordHistory() {
         const { onAfterClose } = alertConfig;
         setAlertConfig({ open: false, message: '', onConfirm: null, onAfterClose: null });
         if (onAfterClose) onAfterClose();
+    };
+
+    const openConfirm = (message, onConfirm) => {
+        setConfirmConfig({ open: true, message, onConfirm: onConfirm || null });
+    };
+
+    const closeConfirm = () => {
+        setConfirmConfig({ open: false, message: '', onConfirm: null });
     };
 
     // 데이터 조회
@@ -191,7 +201,7 @@ export default function SellRecordHistory() {
 
     // 삭제
     const handleDelete = (id) => {
-        openAlert('정말 삭제하시겠습니까?', async () => {
+        openConfirm('정말 삭제하시겠습니까?', async () => {
             try {
                 const { data, error } = await send('/dart/sellrecord/del', { id }, 'POST');
                 if (error) {
@@ -474,6 +484,14 @@ export default function SellRecordHistory() {
                 message={alertConfig.message}
                 onClose={handleCloseAlert}
                 onConfirm={alertConfig.onConfirm}
+                onAfterClose={alertConfig.onAfterClose}
+            />
+
+            <ConfirmModal
+                open={confirmConfig.open}
+                message={confirmConfig.message}
+                onClose={closeConfirm}
+                onConfirm={confirmConfig.onConfirm}
             />
 
             {modalConfig.open && (

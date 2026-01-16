@@ -2,6 +2,7 @@ import BoardList from '@/component/feature/board/List002';
 import SearchBar from '@/component/feature/board/search/SearchBar002';
 import Button from '@/component/common/button/Button';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import ConfirmModal from '@/component/layouts/common/popup/ConfirmModal';
 
 import { useAuth } from '@/context/AuthContext';
 import { send } from '@/util/ClientUtil';
@@ -28,7 +29,7 @@ function List() {
     const [currentPage, setCurrentPage] = useState(state.currentPage || 1);
 
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '' });
-    const [confirmDeleteConfig, setConfirmDeleteConfig] = useState({ open: false, message: '' });
+    const [confirmConfig, setConfirmConfig] = useState({ open: false, message: '', onConfirm: null });
 
     useEffect(() => {
         if (isLoggedIn) fetchData(currentPage);
@@ -132,6 +133,14 @@ function List() {
         setAlertConfig({ open: true, message });
     };
 
+    const openConfirm = (message, onConfirm) => {
+        setConfirmConfig({ open: true, message, onConfirm });
+    };
+
+    const closeConfirm = () => {
+        setConfirmConfig({ open: false, message: '', onConfirm: null });
+    };
+
     const handleCheckSelected = () => {
         if (!gridRef.current || !gridRef.current.api) {
             openAlert('테이블이 아직 초기화되지 않았습니다.');
@@ -144,10 +153,10 @@ function List() {
         }
 
         const count = selectedRows.length;
-        setConfirmDeleteConfig({
-            open: true,
-            message: `선택한 ${count}건의 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.`
-        });
+        openConfirm(
+            `선택한 ${count}건의 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.`,
+            executeDelete
+        );
     };
 
     const executeDelete = async () => {
@@ -300,12 +309,12 @@ function List() {
                 onClose={() => setAlertConfig({ open: false, message: '' })}
             />
 
-            <AlertModal
-                open={confirmDeleteConfig.open}
+            <ConfirmModal
+                open={confirmConfig.open}
                 title="삭제 확인"
-                message={confirmDeleteConfig.message}
-                onClose={() => setConfirmDeleteConfig({ open: false, message: '' })}
-                onConfirm={executeDelete}
+                message={confirmConfig.message}
+                onClose={closeConfirm}
+                onConfirm={confirmConfig.onConfirm}
             />
 
         </>

@@ -329,9 +329,6 @@ const AbroadRecommendedStock = () => {
             if (!error && data && data.response) {
                 const list = Array.isArray(data.response) ? data.response : [];
                 setResultData(list);
-                if (list.length === 0) {
-                    openAlert('조회 결과가 없습니다.');
-                }
             } else {
                 setResultData([]);
                 openAlert('데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
@@ -1568,7 +1565,6 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         </>
     );
 };
-
 /**
  * 프로파일 입력 폼 컴포넌트
  */

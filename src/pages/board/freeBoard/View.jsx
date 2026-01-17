@@ -8,21 +8,24 @@ import { useAuth } from '@/context/AuthContext';
 
 function View() {
     const [boardData, setBoardData] = useState();
-    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null, onAfterClose: null });
 
     const { id } = useParams(); // ← URL에서 :id 값 가져옴
     const navigate = useNavigate();
     const location = useLocation();
     const { userName, nickName, roles } = useAuth();
 
-    const openAlert = (message, onConfirm) => {
-        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
+
+    const openAlert = (message, onConfirm, onAfterClose) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null, onAfterClose: onAfterClose || null });
     };
 
-    const handleCloseAlert = () => {
-        const { onConfirm } = alertConfig;
-        setAlertConfig({ open: false, message: '', onConfirm: null });
-        if (onConfirm) onConfirm();
+    const closeAlert = () => {
+        const { onAfterClose } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null, onAfterClose: null });
+        if (onAfterClose) {
+            onAfterClose();
+        }
     };
 
     const moveListPage = () => {
@@ -34,7 +37,7 @@ function View() {
         navigate(`/freeboard/modi/${id}`, { state: location.state });
     };
 
-    const onDelete = async () => {
+    const executeDelete = async () => {
         if (!boardData) return;
         const sendUrl = `/dart/freeboard/delete/${id}`;
         const { data, error } = await send(sendUrl, {}, 'DELETE');
@@ -43,7 +46,11 @@ function View() {
             openAlert(error || '게시글 삭제 중 오류가 발생했습니다.');
             return;
         }
-        openAlert(`[${id}] 게시글을 삭제하였습니다.`, moveListPage);
+        openAlert(`[${id}] 게시글을 삭제하였습니다.`, null, moveListPage);
+    };
+
+    const onDelete = () => {
+        openAlert('정말 삭제하시겠습니까?', executeDelete);
     };
 
     const fetchData = async () => {
@@ -142,7 +149,12 @@ function View() {
                 canEdit={canEdit}
                 canDelete={canDelete}
             />
-            <AlertModal open={alertConfig.open} message={alertConfig.message} onClose={handleCloseAlert} />
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={closeAlert}
+                onConfirm={alertConfig.onConfirm}
+            />
         </>
     );
 }

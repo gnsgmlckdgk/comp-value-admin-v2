@@ -2,7 +2,6 @@ import BoardList from '@/component/feature/board/List002';
 import SearchBar from '@/component/feature/board/search/SearchBar002';
 import Button from '@/component/common/button/Button';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
-import ConfirmModal from '@/component/layouts/common/popup/ConfirmModal';
 
 import { useAuth } from '@/context/AuthContext';
 import { send } from '@/util/ClientUtil';
@@ -309,7 +308,7 @@ function List() {
                 onClose={() => setAlertConfig({ open: false, message: '' })}
             />
 
-            <ConfirmModal
+            <AlertModal
                 open={confirmConfig.open}
                 title="삭제 확인"
                 message={confirmConfig.message}

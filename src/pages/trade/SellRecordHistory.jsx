@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
-import ConfirmModal from '@/component/layouts/common/popup/ConfirmModal';
 import SellRecordModal from './popup/SellRecordModal';
 import SellRecordDetailModal from './popup/SellRecordDetailModal';
 
@@ -487,7 +486,7 @@ export default function SellRecordHistory() {
                 onAfterClose={alertConfig.onAfterClose}
             />
 
-            <ConfirmModal
+            <AlertModal
                 open={confirmConfig.open}
                 message={confirmConfig.message}
                 onClose={closeConfirm}

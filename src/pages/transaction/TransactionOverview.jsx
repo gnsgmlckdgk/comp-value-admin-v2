@@ -21,21 +21,20 @@ import PageTitle from '@/component/common/display/PageTitle';
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 
 export default function TransactionOverview() {
-    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null, onAfterClose: null });
     const [sortConfig, setSortConfig] = useState({ column: null, direction: 'asc' });
 
-    const openAlert = (message, onConfirm) => {
-        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
+    const openAlert = (message, onConfirm, onAfterClose) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null, onAfterClose: onAfterClose || null });
     };
 
-    const handleCloseAlert = () => {
-        const { onConfirm } = alertConfig;
-        setAlertConfig({ open: false, message: '', onConfirm: null });
-        if (onConfirm) onConfirm();
+    const closeAlert = () => {
+        const { onAfterClose } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null, onAfterClose: null });
+        if (onAfterClose) {
+            onAfterClose();
+        }
     };
-
-    // confirm은 일단 기본 confirm 사용 (나중에 모달로 변경 가능)
-    const openConfirm = (message) => confirm(message);
 
     const {
         rows,
@@ -47,7 +46,7 @@ export default function TransactionOverview() {
         removeTransaction,
         mergePricesBySymbols,
         processSell,
-    } = useTransactions(openAlert, openConfirm);
+    } = useTransactions(openAlert);
 
     const { fxRate, refreshFxRate } = useFxRate();
     const { editing, setEditing, draft, setDraft, startEdit, cancelEdit } = useEditing();
@@ -57,6 +56,16 @@ export default function TransactionOverview() {
     const [sellModalData, setSellModalData] = useState({ open: false, data: null, targetRows: [] });
     const [transactionModalData, setTransactionModalData] = useState({ open: false, mode: 'add', data: null });
     const [detailModalData, setDetailModalData] = useState({ open: false, row: null, isGroupRow: false });
+
+    // 삭제 확인 후 실행
+    const handleRemoveTransaction = (id) => {
+        openAlert('정말 삭제하시겠습니까?', async () => {
+            const success = await removeTransaction(id);
+            if (success) {
+                openAlert('삭제되었습니다.');
+            }
+        });
+    };
 
     // 편집 완료 핸들러
     const commitEdit = async () => {
@@ -437,7 +446,7 @@ export default function TransactionOverview() {
                                                 setDraft={setDraft}
                                                 startEdit={startEdit}
                                                 commitEdit={commitEdit}
-                                                onRemove={removeTransaction}
+                                                onRemove={handleRemoveTransaction}
                                                 saving={saving}
                                                 onRowClick={handleRowClick}
                                                 onSell={handleOpenSellModalSingle}
@@ -472,7 +481,8 @@ export default function TransactionOverview() {
             <AlertModal
                 open={alertConfig.open}
                 message={alertConfig.message}
-                onClose={handleCloseAlert}
+                onClose={closeAlert}
+                onConfirm={alertConfig.onConfirm}
             />
 
             <SellModal

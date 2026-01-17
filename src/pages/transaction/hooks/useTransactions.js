@@ -14,7 +14,7 @@ import { INITIAL_NEW_ROW } from '../constants';
 /**
  * 거래 목록 관리 커스텀 훅
  */
-export function useTransactions(openAlert = (msg) => alert(msg), openConfirm = (msg) => confirm(msg)) {
+export function useTransactions(openAlert = (msg) => alert(msg)) {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -108,8 +108,6 @@ export function useTransactions(openAlert = (msg) => alert(msg), openConfirm = (
     };
 
     const removeTransaction = async (id) => {
-        if (!openConfirm('삭제하시겠어요?')) return false;
-
         setSaving(true);
         try {
             await deleteTransaction(id);

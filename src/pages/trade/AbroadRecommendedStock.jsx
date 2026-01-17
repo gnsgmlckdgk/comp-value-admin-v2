@@ -1465,12 +1465,12 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
 
             {/* 모달 */}
             <div
-                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(95vw,1200px)] max-h-[90vh] rounded-xl bg-white shadow-2xl dark:bg-slate-800 flex flex-col"
+                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[98vw] md:w-[min(95vw,1200px)] max-h-[95vh] md:max-h-[90vh] rounded-lg md:rounded-xl bg-white shadow-2xl dark:bg-slate-800 flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">프로파일 설정</h2>
+                <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <h2 className="text-lg md:text-xl font-semibold text-slate-900 dark:text-white">프로파일 설정</h2>
                     <button
                         onClick={onClose}
                         className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
@@ -1482,10 +1482,10 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
                 </div>
 
                 {/* 본문 */}
-                <div className="flex-1 overflow-hidden flex">
+                <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                     {/* 왼쪽: 프로파일 목록 */}
-                    <div className="w-80 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
-                        <div className="p-4">
+                    <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 overflow-y-auto max-h-[40vh] md:max-h-none">
+                        <div className="p-3 md:p-4">
                             <button
                                 onClick={handleCreateNew}
                                 disabled={isLoading}
@@ -1528,7 +1528,7 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
                     </div>
 
                     {/* 오른쪽: 프로파일 상세/수정 폼 */}
-                    <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6">
                         {formData ? (
                             <ProfileForm
                                 formData={formData}
@@ -1570,13 +1570,13 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
  */
 const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCancel, isLoading, filterOptions, filterOptionsLoading }) => {
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
             {/* 프로파일 기본 정보 */}
             <section>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                <h3 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white mb-3 md:mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
                     프로파일 기본 정보
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <FormInput
                         label="프로파일명 (profileName)"
                         value={formData.profileName}
@@ -1613,10 +1613,10 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
 
             {/* Stock Screener 조건 */}
             <section>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                <h3 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white mb-3 md:mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
                     Stock Screener 조건
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <FormInput
                         label="시가총액 최소 (marketCapMin)"
                         type="number"
@@ -1702,10 +1702,10 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
 
             {/* 저평가 필터링 조건 */}
             <section>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                <h3 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white mb-3 md:mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
                     저평가 필터링 조건
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <FormInput
                         label="PER 최소값 (peRatioMin)"
                         type="number"

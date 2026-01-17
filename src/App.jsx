@@ -7,6 +7,7 @@ import Layout from '@/component/layouts/Layout001'
 import routes from '@/config/routes'
 import PrivateRoute from '@/config/PrivateRoutes';
 import Loading from '@/component/common/display/Loading';
+import LogStreamPopup from '@/pages/member/LogStreamPopup';
 
 import { send } from '@/util/ClientUtil';
 
@@ -73,6 +74,10 @@ function App() {
   return (
     // 최상위 라우팅 설정: "/" 경로에 Layout 컴포넌트를 기본으로 두고 그 내부에 라우트 렌더링
     <Routes>
+      {/* 레이아웃 없이 렌더링되는 팝업 페이지 */}
+      <Route path="/member/logstream" element={<PrivateRoute children={<LogStreamPopup />} />} />
+
+      {/* 일반 페이지들 (레이아웃 포함) */}
       <Route path="/" element={<Layout />}>
         {renderRoutes(routes)}
       </Route>

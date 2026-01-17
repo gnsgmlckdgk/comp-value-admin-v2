@@ -124,6 +124,20 @@ export default function MyProfile() {
         setShowRedisModal(true);
     };
 
+    const handleOpenLogStream = () => {
+        // 새 브라우저 창으로 로그 스트림 팝업 열기
+        const width = 1000;
+        const height = 700;
+        const left = (window.screen.width - width) / 2;
+        const top = (window.screen.height - height) / 2;
+
+        window.open(
+            '/member/logstream',
+            'LogStreamPopup',
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+    };
+
     // 슈퍼관리자 또는 관리자인지 확인
     const isAdmin = userInfo?.roles?.includes('ROLE_ADMIN') || userInfo?.roles?.includes('ROLE_SUPER_ADMIN');
 
@@ -244,6 +258,26 @@ export default function MyProfile() {
                                     <div className="text-left">
                                         <div className="font-medium text-slate-900 dark:text-white">메모리 관리</div>
                                         <div className="text-xs text-slate-500 dark:text-slate-400">Redis 데이터를 조회, 수정, 삭제합니다</div>
+                                    </div>
+                                </div>
+                                <svg className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+
+                            <button
+                                onClick={handleOpenLogStream}
+                                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition-colors group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-medium text-slate-900 dark:text-white">CompValue App 로그 실시간 추적</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">실시간으로 애플리케이션 로그를 확인합니다</div>
                                     </div>
                                 </div>
                                 <svg className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">

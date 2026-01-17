@@ -6,6 +6,7 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
 import RedisManagementModal from '@/pages/member/popup/RedisManagementModal';
+import MlLogManagementModal from '@/pages/member/popup/MlLogManagementModal';
 
 export default function MyProfile() {
     const navigate = useNavigate();
@@ -22,6 +23,9 @@ export default function MyProfile() {
 
     // Redis 관리 모달 상태
     const [showRedisModal, setShowRedisModal] = useState(false);
+
+    // ML 로그 관리 모달 상태
+    const [showMlLogModal, setShowMlLogModal] = useState(false);
 
     const openAlert = (message, onAfterClose = null) => {
         setAlertConfig({ open: true, message, onAfterClose });
@@ -136,6 +140,10 @@ export default function MyProfile() {
             'LogStreamPopup',
             `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
         );
+    };
+
+    const handleOpenMlLogManagement = () => {
+        setShowMlLogModal(true);
     };
 
     // 슈퍼관리자 또는 관리자인지 확인
@@ -284,6 +292,26 @@ export default function MyProfile() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
                             </button>
+
+                            <button
+                                onClick={handleOpenMlLogManagement}
+                                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition-colors group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        </svg>
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-medium text-slate-900 dark:text-white">주식 예측 프로그램 로그</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">ML 프로그램의 로그를 조회하고 추적합니다</div>
+                                    </div>
+                                </div>
+                                <svg className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 )}
@@ -371,6 +399,11 @@ export default function MyProfile() {
                 isOpen={showRedisModal}
                 onClose={() => setShowRedisModal(false)}
             />
+
+            {/* ML 로그 관리 모달 */}
+            {showMlLogModal && (
+                <MlLogManagementModal onClose={() => setShowMlLogModal(false)} />
+            )}
 
             {/* 회원탈퇴 비밀번호 확인 모달 */}
             {showDeleteModal && (

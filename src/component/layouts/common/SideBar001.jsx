@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import routes from '@/config/routes';
 import { useState, useEffect } from 'react';
+import { getRolesFromStorage, hasAnyRole } from '@/util/RoleUtil';
 
 function useIsMobile(breakpoint = 768) {
     const [isMobile, setIsMobile] = useState(window.innerWidth <= breakpoint);
@@ -12,11 +13,12 @@ function useIsMobile(breakpoint = 768) {
     return isMobile;
 }
 
-const SECTIONS = ['시작하기', '기업분석(국내)', '기업분석(미국)', '거래', '게시판'];
+const SECTIONS = ['시작하기', '기업분석(국내)', '기업분석(미국)', '거래', '게시판', '코인'];
 
 export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned, onMouseEnter, onMouseLeave }) {
     const isMobile = useIsMobile();
     const location = useLocation();
+    const userRoles = getRolesFromStorage();
 
     const handleLinkClick = () => {
         if (isMobile && setSidebarOpen) {
@@ -27,7 +29,17 @@ export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned,
 
     const renderSection = (sectionLabel) => {
         const items = Object.entries(routes).filter(
-            ([, route]) => route.show !== false && route.section === sectionLabel
+            ([, route]) => {
+                // show가 false이면 숨김
+                if (route.show === false) return false;
+                // 섹션이 일치하지 않으면 숨김
+                if (route.section !== sectionLabel) return false;
+                // requiredRoles가 있으면 권한 체크
+                if (route.requiredRoles && route.requiredRoles.length > 0) {
+                    return hasAnyRole(userRoles, route.requiredRoles);
+                }
+                return true;
+            }
         );
         if (!items.length) return null;
 

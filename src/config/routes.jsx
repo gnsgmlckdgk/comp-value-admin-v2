@@ -18,6 +18,7 @@ import MyProfile from '@/pages/member/MyProfile'
 import EditProfile from '@/pages/member/EditProfile'
 import MemberManagement from '@/pages/member/MemberManagement'
 import Join from '@/pages/member/Join'
+import CointradeConfig from '@/pages/cointrade/CointradeConfig'
 
 const routes = {
 
@@ -65,6 +66,15 @@ const routes = {
             { section: '게시판', show: false, label: '게시글상세', path: 'view/:id', element: <FreeBoardView /> },
             { section: '게시판', show: false, label: '게시글수정', path: 'modi/:id', element: <FreeBoardUpdate /> },
         ]
+    },
+
+    /* 코인 */
+    "CointradeConfig": {
+        section: '코인',
+        label: '자동매매 파라미터 설정',
+        path: '/cointrade/config',
+        element: <CointradeConfig />,
+        requiredRoles: ['ROLE_SUPER_ADMIN']
     }
 }
 

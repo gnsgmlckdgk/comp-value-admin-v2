@@ -19,6 +19,7 @@ import EditProfile from '@/pages/member/EditProfile'
 import MemberManagement from '@/pages/member/MemberManagement'
 import Join from '@/pages/member/Join'
 import CointradeConfig from '@/pages/cointrade/CointradeConfig'
+import CointradeCoins from '@/pages/cointrade/CointradeCoins'
 
 const routes = {
 
@@ -74,6 +75,13 @@ const routes = {
         label: '자동매매 파라미터 설정',
         path: '/cointrade/config',
         element: <CointradeConfig />,
+        requiredRoles: ['ROLE_SUPER_ADMIN']
+    },
+    "CointradeCoins": {
+        section: '코인',
+        label: '대상 종목 설정',
+        path: '/cointrade/coins',
+        element: <CointradeCoins />,
         requiredRoles: ['ROLE_SUPER_ADMIN']
     }
 }

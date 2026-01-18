@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import routes from '@/config/routes';
 import { useState, useEffect } from 'react';
-import { getRolesFromStorage, hasAnyRole } from '@/util/RoleUtil';
+import { hasAnyRole } from '@/util/RoleUtil';
+import { useAuth } from '@/context/AuthContext';
 
 function useIsMobile(breakpoint = 768) {
     const [isMobile, setIsMobile] = useState(window.innerWidth <= breakpoint);
@@ -18,7 +19,7 @@ const SECTIONS = ['시작하기', '기업분석(국내)', '기업분석(미국)'
 export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned, onMouseEnter, onMouseLeave }) {
     const isMobile = useIsMobile();
     const location = useLocation();
-    const userRoles = getRolesFromStorage();
+    const { roles: userRoles } = useAuth();
 
     const handleLinkClick = () => {
         if (isMobile && setSidebarOpen) {

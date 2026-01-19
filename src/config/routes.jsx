@@ -20,6 +20,7 @@ import MemberManagement from '@/pages/member/MemberManagement'
 import Join from '@/pages/member/Join'
 import CointradeConfig from '@/pages/cointrade/CointradeConfig'
 import CointradeCoins from '@/pages/cointrade/CointradeCoins'
+import CointradeScheduler from '@/pages/cointrade/CointradeScheduler'
 
 const routes = {
 
@@ -82,6 +83,13 @@ const routes = {
         label: '대상 종목 설정',
         path: '/cointrade/coins',
         element: <CointradeCoins />,
+        requiredRoles: ['ROLE_SUPER_ADMIN']
+    },
+    "CointradeScheduler": {
+        section: '코인',
+        label: '스케줄러 관리',
+        path: '/cointrade/scheduler',
+        element: <CointradeScheduler />,
         requiredRoles: ['ROLE_SUPER_ADMIN']
     }
 }

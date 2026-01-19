@@ -15,6 +15,8 @@ export default function CointradeScheduler() {
         sellSchedulerEnabled: false,
         buyNextRun: null,
         buyCheckHours: 24,
+        sellCheckSeconds: 10,
+        priceMonitorSeconds: 10,
         holdings: [],
         totalInvestment: 0,
         totalValuation: 0,
@@ -44,6 +46,8 @@ export default function CointradeScheduler() {
                     sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
                     buyNextRun: resp.buyNextRun || null,
                     buyCheckHours: resp.buyCheckHours || 24,
+                    sellCheckSeconds: resp.sellCheckSeconds || 10,
+                    priceMonitorSeconds: resp.priceMonitorSeconds || 10,
                     holdings: resp.holdings || [],
                     totalInvestment: resp.totalInvestment || 0,
                     totalValuation: resp.totalValuation || 0,
@@ -152,16 +156,14 @@ export default function CointradeScheduler() {
                         <button
                             onClick={handleBuySchedulerToggle}
                             disabled={loading}
-                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                status.buySchedulerEnabled
-                                    ? 'bg-green-500 focus:ring-green-500'
-                                    : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
-                            } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.buySchedulerEnabled
+                                ? 'bg-green-500 focus:ring-green-500'
+                                : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
+                                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                             <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                                    status.buySchedulerEnabled ? 'translate-x-8' : 'translate-x-1'
-                                }`}
+                                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${status.buySchedulerEnabled ? 'translate-x-8' : 'translate-x-1'
+                                    }`}
                             />
                         </button>
                     </div>
@@ -170,11 +172,10 @@ export default function CointradeScheduler() {
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-slate-600 dark:text-slate-400">상태</span>
                             <span
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                    status.buySchedulerEnabled
-                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                                }`}
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${status.buySchedulerEnabled
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                    }`}
                             >
                                 {status.buySchedulerEnabled ? '실행 중' : '중지'}
                             </span>
@@ -209,16 +210,14 @@ export default function CointradeScheduler() {
                         <button
                             onClick={handleSellSchedulerToggle}
                             disabled={loading}
-                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                status.sellSchedulerEnabled
-                                    ? 'bg-green-500 focus:ring-green-500'
-                                    : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
-                            } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.sellSchedulerEnabled
+                                ? 'bg-green-500 focus:ring-green-500'
+                                : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
+                                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                             <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                                    status.sellSchedulerEnabled ? 'translate-x-8' : 'translate-x-1'
-                                }`}
+                                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${status.sellSchedulerEnabled ? 'translate-x-8' : 'translate-x-1'
+                                    }`}
                             />
                         </button>
                     </div>
@@ -227,23 +226,30 @@ export default function CointradeScheduler() {
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-slate-600 dark:text-slate-400">상태</span>
                             <span
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                    status.sellSchedulerEnabled
-                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                                }`}
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${status.sellSchedulerEnabled
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                    }`}
                             >
                                 {status.sellSchedulerEnabled ? '실행 중' : '중지'}
                             </span>
                         </div>
 
                         {status.sellSchedulerEnabled && (
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">모니터링</span>
-                                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                                    실시간
-                                </span>
-                            </div>
+                            <>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">매도 체결확인 주기</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                        {status.sellCheckSeconds}초마다
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">가격 모니터링 주기</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                        {status.priceMonitorSeconds}초마다
+                                    </span>
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
@@ -292,11 +298,10 @@ export default function CointradeScheduler() {
                     <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                         <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 수익률</div>
                         <div
-                            className={`text-2xl font-bold ${
-                                status.totalProfitRate >= 0
-                                    ? 'text-red-600 dark:text-red-400'
-                                    : 'text-blue-600 dark:text-blue-400'
-                            }`}
+                            className={`text-2xl font-bold ${status.totalProfitRate >= 0
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-blue-600 dark:text-blue-400'
+                                }`}
                         >
                             {status.totalProfitRate >= 0 ? '+' : ''}
                             {status.totalProfitRate.toFixed(2)}%

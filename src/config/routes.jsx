@@ -18,6 +18,7 @@ import MyProfile from '@/pages/member/MyProfile'
 import EditProfile from '@/pages/member/EditProfile'
 import MemberManagement from '@/pages/member/MemberManagement'
 import Join from '@/pages/member/Join'
+import CointradeDashboard from '@/pages/cointrade/CointradeDashboard'
 import CointradeConfig from '@/pages/cointrade/CointradeConfig'
 import CointradeCoins from '@/pages/cointrade/CointradeCoins'
 import CointradeScheduler from '@/pages/cointrade/CointradeScheduler'
@@ -72,6 +73,13 @@ const routes = {
     },
 
     /* 코인 */
+    "CointradeDashboard": {
+        section: '코인',
+        label: '자동매매 대시보드',
+        path: '/cointrade/dashboard',
+        element: <CointradeDashboard />,
+        requiredRoles: ['ROLE_SUPER_ADMIN']
+    },
     "CointradeConfig": {
         section: '코인',
         label: '자동매매 파라미터 설정',

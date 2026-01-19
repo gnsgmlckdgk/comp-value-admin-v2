@@ -14,7 +14,9 @@ export default function CointradeHistory() {
     // 필터
     const [filters, setFilters] = useState({
         startDate: '',
+        startTime: '00:00',
         endDate: '',
+        endTime: '23:59',
         coinCode: 'all',
         tradeType: 'all',    // all, BUY, SELL
         reason: 'all'        // all, SIGNAL, TAKE_PROFIT, STOP_LOSS, EXPIRED
@@ -58,7 +60,9 @@ export default function CointradeHistory() {
         setFilters(prev => ({
             ...prev,
             startDate: thirtyDaysAgo.toISOString().split('T')[0],
-            endDate: today.toISOString().split('T')[0]
+            startTime: '00:00',
+            endDate: today.toISOString().split('T')[0],
+            endTime: '23:59'
         }));
 
         fetchCoinList();
@@ -87,10 +91,14 @@ export default function CointradeHistory() {
 
         setLoading(true);
         try {
+            // 날짜와 시간 조립 (ISO 8601 형식)
+            const startDateTime = `${filters.startDate}T${filters.startTime}:00`;
+            const endDateTime = `${filters.endDate}T${filters.endTime}:59`;
+
             // 쿼리 파라미터 생성
             const params = new URLSearchParams({
-                startDate: filters.startDate,
-                endDate: filters.endDate
+                startDate: startDateTime,
+                endDate: endDateTime
             });
 
             if (filters.coinCode !== 'all') {
@@ -208,6 +216,19 @@ export default function CointradeHistory() {
                         />
                     </div>
 
+                    {/* 시작 시간 */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            시작 시간
+                        </label>
+                        <Input
+                            type="time"
+                            value={filters.startTime}
+                            onChange={(e) => handleFilterChange('startTime', e.target.value)}
+                            className="w-full"
+                        />
+                    </div>
+
                     {/* 종료일 */}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -217,6 +238,19 @@ export default function CointradeHistory() {
                             type="date"
                             value={filters.endDate}
                             onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                            className="w-full"
+                        />
+                    </div>
+
+                    {/* 종료 시간 */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            종료 시간
+                        </label>
+                        <Input
+                            type="time"
+                            value={filters.endTime}
+                            onChange={(e) => handleFilterChange('endTime', e.target.value)}
                             className="w-full"
                         />
                     </div>
@@ -273,17 +307,17 @@ export default function CointradeHistory() {
                             <option value="EXPIRED">만료 (EXPIRED)</option>
                         </select>
                     </div>
+                </div>
 
-                    {/* 검색 버튼 */}
-                    <div className="flex items-end">
-                        <Button
-                            onClick={handleSearch}
-                            disabled={loading}
-                            className="w-full px-6 py-2"
-                        >
-                            {loading ? '조회 중...' : '검색'}
-                        </Button>
-                    </div>
+                {/* 검색 버튼 */}
+                <div className="flex justify-end mt-4">
+                    <Button
+                        onClick={handleSearch}
+                        disabled={loading}
+                        className="px-8 py-2"
+                    >
+                        {loading ? '조회 중...' : '검색'}
+                    </Button>
                 </div>
             </div>
 

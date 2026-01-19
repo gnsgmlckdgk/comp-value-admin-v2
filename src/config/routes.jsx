@@ -21,6 +21,7 @@ import Join from '@/pages/member/Join'
 import CointradeConfig from '@/pages/cointrade/CointradeConfig'
 import CointradeCoins from '@/pages/cointrade/CointradeCoins'
 import CointradeScheduler from '@/pages/cointrade/CointradeScheduler'
+import CointradeHistory from '@/pages/cointrade/CointradeHistory'
 
 const routes = {
 
@@ -90,6 +91,13 @@ const routes = {
         label: '스케줄러 관리',
         path: '/cointrade/scheduler',
         element: <CointradeScheduler />,
+        requiredRoles: ['ROLE_SUPER_ADMIN']
+    },
+    "CointradeHistory": {
+        section: '코인',
+        label: '거래기록 조회',
+        path: '/cointrade/history',
+        element: <CointradeHistory />,
         requiredRoles: ['ROLE_SUPER_ADMIN']
     }
 }

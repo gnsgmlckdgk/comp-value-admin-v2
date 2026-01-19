@@ -23,6 +23,10 @@ export default function CointradeConfig() {
         SELL_CHECK_SECONDS: '',        // B초 (매도 체결 확인)
         PRICE_MONITOR_SECONDS: '',     // D초 (가격 모니터링)
         BUY_CHECK_HOURS: '',           // E시간 (매수 체크 주기)
+        MIN_SURGE_PROBABILITY: '',     // 최소 급등 확률 (0~100)
+        HOLD_GRACE_DAYS: '',           // 보유 유예일 (1~7)
+        SURGE_THRESHOLD: '',           // 급등 기준 (%)
+        MIN_BUY_SCORE: '',             // 최소 매수 점수 (0~100)
     });
 
     // Toast auto-hide
@@ -70,11 +74,20 @@ export default function CointradeConfig() {
         const errors = [];
 
         // 퍼센트 값 검증 (0~100)
-        const percentParams = ['BUY_PROFIT_THRESHOLD', 'TAKE_PROFIT_BUFFER', 'STOP_LOSS_THRESHOLD'];
+        const percentParams = ['BUY_PROFIT_THRESHOLD', 'TAKE_PROFIT_BUFFER', 'STOP_LOSS_THRESHOLD', 'MIN_SURGE_PROBABILITY', 'MIN_BUY_SCORE'];
         percentParams.forEach(key => {
             const value = parseFloat(params[key]);
             if (isNaN(value) || value < 0 || value > 100) {
                 errors.push(`${getParamLabel(key)}는 0~100 사이의 값이어야 합니다.`);
+            }
+        });
+
+        // 1~7일 검증
+        const dayParams = ['HOLD_GRACE_DAYS'];
+        dayParams.forEach(key => {
+            const value = parseFloat(params[key]);
+            if (isNaN(value) || value < 1 || value > 7) {
+                errors.push(`${getParamLabel(key)}는 1~7 사이의 값이어야 합니다.`);
             }
         });
 
@@ -85,7 +98,8 @@ export default function CointradeConfig() {
             'BUY_RETRY_COUNT',
             'SELL_CHECK_SECONDS',
             'PRICE_MONITOR_SECONDS',
-            'BUY_CHECK_HOURS'
+            'BUY_CHECK_HOURS',
+            'SURGE_THRESHOLD'
         ];
         positiveParams.forEach(key => {
             const value = parseFloat(params[key]);
@@ -137,6 +151,10 @@ export default function CointradeConfig() {
             SELL_CHECK_SECONDS: 'B초 (매도 체결 확인)',
             PRICE_MONITOR_SECONDS: 'D초 (가격 모니터링)',
             BUY_CHECK_HOURS: 'E시간 (매수 체크 주기)',
+            MIN_SURGE_PROBABILITY: '최소 급등 확률',
+            HOLD_GRACE_DAYS: '보유 유예일',
+            SURGE_THRESHOLD: '급등 기준',
+            MIN_BUY_SCORE: '최소 매수 점수',
         };
         return labels[key] || key;
     };
@@ -152,6 +170,10 @@ export default function CointradeConfig() {
             SELL_CHECK_SECONDS: '매도 주문 체결 확인 주기',
             PRICE_MONITOR_SECONDS: '가격 모니터링 주기',
             BUY_CHECK_HOURS: '매수 조건 체크 주기 (시간)',
+            MIN_SURGE_PROBABILITY: '급등 확률이 이 값 이상이어야 매수',
+            HOLD_GRACE_DAYS: '급등 예상일 경과 후 추가 보유 기간',
+            SURGE_THRESHOLD: '이 % 이상 상승을 급등으로 판단',
+            MIN_BUY_SCORE: '매수 점수가 이 값 이상이어야 매수',
         };
         return descriptions[key] || '';
     };

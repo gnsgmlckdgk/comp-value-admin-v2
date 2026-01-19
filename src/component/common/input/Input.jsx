@@ -55,12 +55,14 @@ function Input({
 
     return (
         <>
-            <label
-                htmlFor={id}
-                className={`${labelNewLine ? 'block' : 'mr-2'} mb-1 text-sm text-gray-700 dark:text-slate-300`}
-            >
-                {label}
-            </label>
+            {label && (
+                <label
+                    htmlFor={id}
+                    className={`${labelNewLine ? 'block' : 'mr-2'} mb-1 text-sm text-gray-700 dark:text-slate-300`}
+                >
+                    {label}
+                </label>
+            )}
             <input
                 ref={inputRef}
                 id={id}

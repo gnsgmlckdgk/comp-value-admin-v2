@@ -24,6 +24,7 @@ export default function CointradeCoins() {
     // 필터
     const [searchText, setSearchText] = useState('');
     const [marketFilter, setMarketFilter] = useState('ALL'); // ALL, KRW, BTC, USDT
+    const [selectedSearchText, setSelectedSearchText] = useState('');
 
     // Toast auto-hide
     useEffect(() => {
@@ -212,129 +213,218 @@ export default function CointradeCoins() {
 
                     {/* 직접 지정 모드일 때만 종목 선택 UI 표시 */}
                     {targetMode === 'SELECTED' && (
-                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
-                                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                                    종목 선택 ({filteredSelectedCount} / {filteredCoins.length})
-                                </h2>
-                                <div className="flex gap-2">
-                                    <Button onClick={handleSelectAll} className="px-4 py-2 text-sm">
-                                        전체 선택
-                                    </Button>
-                                    <Button onClick={handleDeselectAll} className="px-4 py-2 text-sm">
-                                        전체 해제
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* 필터 */}
-                            <div className="flex flex-col md:flex-row gap-4 mb-6">
-                                {/* 마켓 필터 */}
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setMarketFilter('ALL')}
-                                        className={`px-3 py-1 rounded text-sm ${
-                                            marketFilter === 'ALL'
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                        }`}
-                                    >
-                                        전체
-                                    </button>
-                                    <button
-                                        onClick={() => setMarketFilter('KRW')}
-                                        className={`px-3 py-1 rounded text-sm ${
-                                            marketFilter === 'KRW'
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                        }`}
-                                    >
-                                        KRW
-                                    </button>
-                                    <button
-                                        onClick={() => setMarketFilter('BTC')}
-                                        className={`px-3 py-1 rounded text-sm ${
-                                            marketFilter === 'BTC'
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                        }`}
-                                    >
-                                        BTC
-                                    </button>
-                                    <button
-                                        onClick={() => setMarketFilter('USDT')}
-                                        className={`px-3 py-1 rounded text-sm ${
-                                            marketFilter === 'USDT'
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                        }`}
-                                    >
-                                        USDT
-                                    </button>
-                                </div>
-
-                                {/* 검색 필터 */}
-                                <div className="flex-1">
-                                    <Input
-                                        type="text"
-                                        placeholder="종목코드 또는 종목명 검색..."
-                                        value={searchText}
-                                        onChange={(e) => setSearchText(e.target.value)}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* 종목 목록 */}
-                            <div className="max-h-[600px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-4">
-                                    {filteredCoins.map((coin) => (
-                                        <label
-                                            key={coin.market}
-                                            className="flex items-start gap-3 p-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer border border-slate-200 dark:border-slate-600"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedCoins.has(coin.market)}
-                                                onChange={() => handleCoinToggle(coin.market)}
-                                                className="mt-1 w-4 h-4 flex-shrink-0"
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${getMarketBadgeColor(coin.market)}`}>
-                                                        {coin.market.split('-')[0]}
-                                                    </span>
-                                                    <span className="font-medium text-slate-900 dark:text-slate-100 text-sm truncate">
-                                                        {coin.market}
-                                                    </span>
-                                                </div>
-                                                <div className="text-sm text-slate-600 dark:text-slate-400 truncate">
-                                                    {coin.korean_name}
-                                                </div>
-                                                <div className="text-xs text-slate-500 dark:text-slate-500 truncate">
-                                                    {coin.english_name}
-                                                </div>
-                                                {coin.market_event?.warning && (
-                                                    <div className="text-xs text-red-600 dark:text-red-400 mt-1">
-                                                        ⚠️ 유의종목
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </label>
-                                    ))}
-                                </div>
-
-                                {filteredCoins.length === 0 && (
-                                    <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-                                        검색 결과가 없습니다.
+                        <div className="flex flex-col lg:flex-row gap-6 mb-6">
+                            {/* 왼쪽: 종목 목록 및 필터 */}
+                            <div className="flex-1 min-w-0 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
+                                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                        종목 선택 ({filteredSelectedCount} / {filteredCoins.length})
+                                    </h2>
+                                    <div className="flex gap-2">
+                                        <Button onClick={handleSelectAll} className="px-4 py-2 text-sm">
+                                            전체 선택
+                                        </Button>
+                                        <Button onClick={handleDeselectAll} className="px-4 py-2 text-sm">
+                                            전체 해제
+                                        </Button>
                                     </div>
-                                )}
+                                </div>
+
+                                {/* 필터 */}
+                                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                                    {/* 마켓 필터 */}
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setMarketFilter('ALL')}
+                                            className={`px-3 py-1 rounded text-sm ${
+                                                marketFilter === 'ALL'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                            }`}
+                                        >
+                                            전체
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('KRW')}
+                                            className={`px-3 py-1 rounded text-sm ${
+                                                marketFilter === 'KRW'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                            }`}
+                                        >
+                                            KRW
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('BTC')}
+                                            className={`px-3 py-1 rounded text-sm ${
+                                                marketFilter === 'BTC'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                            }`}
+                                        >
+                                            BTC
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('USDT')}
+                                            className={`px-3 py-1 rounded text-sm ${
+                                                marketFilter === 'USDT'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                            }`}
+                                        >
+                                            USDT
+                                        </button>
+                                    </div>
+
+                                                                    {/* 검색 필터 */}
+                                                                    <div className="flex-1">
+                                                                        <Input
+                                                                            type="text"
+                                                                            placeholder="종목코드 또는 종목명 검색..."
+                                                                            value={searchText}
+                                                                            onChange={(e) => setSearchText(e.target.value)}
+                                                                            wdfull={true}
+                                                                        />
+                                                                    </div>                                </div>
+
+                                {/* 종목 목록 */}
+                                <div className="max-h-[600px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-4">
+                                        {filteredCoins.map((coin) => (
+                                            <label
+                                                key={coin.market}
+                                                className="flex items-start gap-3 p-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedCoins.has(coin.market)}
+                                                    onChange={() => handleCoinToggle(coin.market)}
+                                                    className="mt-1 w-4 h-4 flex-shrink-0"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className={`text-xs px-2 py-0.5 rounded font-medium ${getMarketBadgeColor(coin.market)}`}>
+                                                            {coin.market.split('-')[0]}
+                                                        </span>
+                                                        <span className="font-medium text-slate-900 dark:text-slate-100 text-sm truncate">
+                                                            {coin.market}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-sm text-slate-600 dark:text-slate-400 truncate">
+                                                        {coin.korean_name}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-500 truncate">
+                                                        {coin.english_name}
+                                                    </div>
+                                                    {coin.market_event?.warning && (
+                                                        <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                                            ⚠️ 유의종목
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+
+                                    {filteredCoins.length === 0 && (
+                                        <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                                            검색 결과가 없습니다.
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* 선택된 종목 요약 */}
-                            <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-700 rounded">
-                                <div className="text-sm text-slate-700 dark:text-slate-300">
-                                    <strong>전체 선택된 종목:</strong> {selectedCount}개
+                            {/* 오른쪽: 선택된 종목 사이드바 */}
+                            <div className="w-full lg:w-80 flex-shrink-0">
+                                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4 sticky top-4">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="font-semibold text-slate-800 dark:text-slate-200">
+                                            선택된 종목
+                                            <span className="ml-2 text-sm font-normal text-slate-500">
+                                                ({selectedCoins.size})
+                                            </span>
+                                        </h3>
+                                        {selectedCoins.size > 0 && (
+                                            <button
+                                                onClick={handleDeselectAll}
+                                                className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 underline"
+                                            >
+                                                전체 해제
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* 선택된 종목 검색 */}
+                                    <div className="mb-3">
+                                        <Input
+                                            type="text"
+                                            placeholder="선택된 종목 검색..."
+                                            value={selectedSearchText}
+                                            onChange={(e) => setSelectedSearchText(e.target.value)}
+                                            className="text-sm"
+                                            wdfull={true}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                                        {(() => {
+                                            const filteredSelectedCoins = allCoins
+                                                .filter(c => selectedCoins.has(c.market))
+                                                .filter(c => {
+                                                    if (!selectedSearchText) return true;
+                                                    const search = selectedSearchText.toLowerCase();
+                                                    const marketLower = c.market.toLowerCase();
+                                                    const koreanLower = (c.korean_name || '').toLowerCase();
+                                                    const englishLower = (c.english_name || '').toLowerCase();
+
+                                                    return marketLower.includes(search) ||
+                                                           koreanLower.includes(search) ||
+                                                           englishLower.includes(search);
+                                                });
+
+                                            if (filteredSelectedCoins.length === 0) {
+                                                return (
+                                                    <div className="text-center py-8 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-dashed border-slate-200 dark:border-slate-700">
+                                                        {selectedCoins.size === 0 ? (
+                                                            <>선택된 종목이<br/>없습니다</>
+                                                        ) : (
+                                                            <>검색 결과가<br/>없습니다</>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+
+                                            return filteredSelectedCoins.map(coin => (
+                                                <div
+                                                    key={coin.market}
+                                                    className="group flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+                                                >
+                                                    <div className="min-w-0 flex-1 mr-2">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getMarketBadgeColor(coin.market)}`}>
+                                                                {coin.market.split('-')[0]}
+                                                            </span>
+                                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                                                                {coin.market}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 pl-0.5">
+                                                            {coin.korean_name}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleCoinToggle(coin.market)}
+                                                        className="text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+                                                        title="해제"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
                                 </div>
                             </div>
                         </div>

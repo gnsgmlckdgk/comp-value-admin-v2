@@ -14,7 +14,7 @@ export default function CointradeConfig() {
 
     // 파라미터 상태 (9개만 표시)
     const [params, setParams] = useState({
-        BUY_PROFIT_THRESHOLD: '',     // X% (매수 조건)
+        BUY_PROFIT_THRESHOLD: '',      // X% (매수 조건)
         TAKE_PROFIT_BUFFER: '',        // A% (익절 버퍼)
         STOP_LOSS_THRESHOLD: '',       // C% (손절선)
         BUY_AMOUNT_PER_COIN: '',       // P원 (종목당 매수금액)
@@ -23,7 +23,7 @@ export default function CointradeConfig() {
         SELL_CHECK_SECONDS: '',        // B초 (매도 체결 확인)
         PRICE_MONITOR_SECONDS: '',     // D초 (가격 모니터링)
         BUY_CHECK_HOURS: '',           // E시간 (매수 체크 주기)
-        MIN_SURGE_PROBABILITY: '',     // 최소 급등 확률 (0~100)
+        MIN_SURGE_PROBABILITY: '',     // S% 최소 급등 확률 (0~100)
         HOLD_GRACE_DAYS: '',           // 보유 유예일 (1~7)
         SURGE_THRESHOLD: '',           // 급등 기준 (%)
         MIN_BUY_SCORE: '',             // 최소 매수 점수 (0~100)
@@ -151,8 +151,8 @@ export default function CointradeConfig() {
             SELL_CHECK_SECONDS: 'B초 (매도 체결 확인)',
             PRICE_MONITOR_SECONDS: 'D초 (가격 모니터링)',
             BUY_CHECK_HOURS: 'E시간 (매수 체크 주기)',
-            MIN_SURGE_PROBABILITY: '최소 급등 확률',
-            HOLD_GRACE_DAYS: '보유 유예일',
+            MIN_SURGE_PROBABILITY: 'S% (최소 급등 확률)',
+            HOLD_GRACE_DAYS: 'F일 (보유 유예일)',
             SURGE_THRESHOLD: '급등 기준',
             MIN_BUY_SCORE: '최소 매수 점수',
         };
@@ -188,11 +188,15 @@ export default function CointradeConfig() {
                 </div>
             ) : (
                 <>
-                    {/* 매매 파라미터 설정 섹션 */}
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-6">
-                            매매 파라미터 설정
-                        </h2>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                매매 파라미터 설정
+                            </h2>
+                            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-md text-sm font-medium text-blue-800 dark:text-blue-300">
+                                매수 조건: (수익률 &gt;= X% OR 급등확률 &gt;= S%) AND 점수 &gt;= 최소 매수 점수
+                            </div>
+                        </div>
 
                         <div className="space-y-6">
                             {Object.keys(params).map((key) => (
@@ -214,8 +218,8 @@ export default function CointradeConfig() {
                                             placeholder="0"
                                             step={
                                                 key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
-                                                key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
-                                                '1'
+                                                    key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
+                                                        '1'
                                             }
                                         />
                                     </div>

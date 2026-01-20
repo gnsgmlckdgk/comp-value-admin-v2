@@ -127,18 +127,51 @@ export default function CointradeScheduler() {
     };
 
     // 다음 실행 시간 포맷
+    // const formatNextRun = (nextRun) => {
+    //     if (!nextRun) return '-';
+    //     const date = new Date(nextRun);
+    //     const now = new Date();
+    //     const diff = date - now;
+
+    //     if (diff < 0) return '곧 실행 예정';
+
+    //     const hours = Math.floor(diff / (1000 * 60 * 60));
+    //     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    //     return `${hours}시간 ${minutes}분 후`;
+    // };
+
     const formatNextRun = (nextRun) => {
         if (!nextRun) return '-';
-        const date = new Date(nextRun);
-        const now = new Date();
-        const diff = date - now;
 
-        if (diff < 0) return '곧 실행 예정';
+        // v2.1 변경: 백엔드에서 포맷팅된 메시지(display_message)를 포함한 객체를 반환함
+        if (nextRun.display_message) {
+            return nextRun.display_message;
+        }
 
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        // 기존 로직 (문자열인 경우)
+        if (typeof nextRun === 'string') {
+            const date = new Date(nextRun);
+            const now = new Date(
+                new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })
+            );
+            const diff = date - now;
 
-        return `${hours}시간 ${minutes}분 후`;
+            // 절대 시간 (시:분) 계산
+            const HH = String(date.getHours()).padStart(2, '0');
+            const mm = String(date.getMinutes()).padStart(2, '0');
+            const absoluteTime = `${HH}:${mm}`;
+
+            if (diff < 0) return `곧 실행 예정 (${absoluteTime})`;
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            // 결과: "2시간 15분 후 (18:00)" 형태
+            return `${hours}시간 ${minutes}분 후 (${absoluteTime})`;
+        }
+
+        return '-';
     };
 
     return (

@@ -135,7 +135,7 @@ export default function CointradeLogStreamPopup() {
 
         const fetchLogs = async () => {
             try {
-                const { data, error: apiError } = await send('/datr/api/cointrade/log/logs/stream/latest', { lastLine }, 'GET');
+                const { data, error: apiError } = await send('/dart/api/cointrade/log/logs/stream/latest', { lastLine }, 'GET');
 
                 if (apiError) {
                     setError(apiError);

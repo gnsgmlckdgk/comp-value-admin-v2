@@ -1,4 +1,4 @@
-FROM node:18 AS build
+FROM node:18-slim AS build
 WORKDIR /app
 
 ENV REACT_APP_ENV=prod

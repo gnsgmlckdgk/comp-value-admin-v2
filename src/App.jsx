@@ -9,6 +9,7 @@ import PrivateRoute from '@/config/PrivateRoutes';
 import Loading from '@/component/common/display/Loading';
 import LogStreamPopup from '@/pages/member/LogStreamPopup';
 import MlLogStreamPopup from '@/pages/member/MlLogStreamPopup';
+import CointradeLogStreamPopup from '@/pages/member/CointradeLogStreamPopup';
 
 import { send } from '@/util/ClientUtil';
 
@@ -78,6 +79,7 @@ function App() {
       {/* 레이아웃 없이 렌더링되는 팝업 페이지 */}
       <Route path="/member/logstream" element={<PrivateRoute children={<LogStreamPopup />} />} />
       <Route path="/member/ml-logstream" element={<PrivateRoute children={<MlLogStreamPopup />} />} />
+      <Route path="/member/cointrade-logstream" element={<PrivateRoute children={<CointradeLogStreamPopup />} />} />
 
       {/* 일반 페이지들 (레이아웃 포함) */}
       <Route path="/" element={<Layout />}>

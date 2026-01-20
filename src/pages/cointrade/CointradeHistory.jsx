@@ -117,9 +117,13 @@ export default function CointradeHistory() {
                 setToast('조회 실패: ' + error);
                 setRecords([]);
             } else if (data?.success && data?.response) {
-                setRecords(data.response);
-                calculateSummary(data.response);
-                setCurrentPage(1); // 검색 시 첫 페이지로
+                if (data.response.content.length === 0) {
+                    setToast('조회된 거래기록이 없습니다.');
+                } else {
+                    setRecords(data.response);
+                    calculateSummary(data.response);
+                    setCurrentPage(1); // 검색 시 첫 페이지로
+                }
             }
         } catch (e) {
             console.error('거래기록 조회 실패:', e);
@@ -467,11 +471,10 @@ export default function CointradeHistory() {
 
                                         {/* 유형 */}
                                         <td className="px-4 py-3 text-center">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                record.tradeType === 'BUY'
-                                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                                            }`}>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.tradeType === 'BUY'
+                                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                                }`}>
                                                 {record.tradeType === 'BUY' ? '매수' : '매도'}
                                             </span>
                                         </td>
@@ -563,11 +566,10 @@ export default function CointradeHistory() {
                                     <button
                                         key={page}
                                         onClick={() => handlePageChange(page)}
-                                        className={`px-3 py-1 rounded-md ${
-                                            currentPage === page
-                                                ? 'bg-blue-500 text-white font-medium'
-                                                : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
-                                        }`}
+                                        className={`px-3 py-1 rounded-md ${currentPage === page
+                                            ? 'bg-blue-500 text-white font-medium'
+                                            : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                                            }`}
                                     >
                                         {page}
                                     </button>

@@ -8,6 +8,7 @@ import Button from '@/component/common/button/Button';
 import RedisManagementModal from '@/pages/member/popup/RedisManagementModal';
 import MlLogManagementModal from '@/pages/member/popup/MlLogManagementModal';
 import LogManagementModal from '@/pages/member/popup/LogManagementModal';
+import CointradeLogManagementModal from '@/pages/member/popup/CointradeLogManagementModal';
 
 export default function MyProfile() {
     const navigate = useNavigate();
@@ -30,6 +31,9 @@ export default function MyProfile() {
 
     // ML 로그 관리 모달 상태
     const [showMlLogModal, setShowMlLogModal] = useState(false);
+
+    // 코인 자동매매 로그 관리 모달 상태
+    const [showCointradeLogModal, setShowCointradeLogModal] = useState(false);
 
     const openAlert = (message, onAfterClose = null) => {
         setAlertConfig({ open: true, message, onAfterClose });
@@ -138,6 +142,10 @@ export default function MyProfile() {
 
     const handleOpenMlLogManagement = () => {
         setShowMlLogModal(true);
+    };
+
+    const handleOpenCointradeLogManagement = () => {
+        setShowCointradeLogModal(true);
     };
 
     // 슈퍼관리자 또는 관리자인지 확인
@@ -306,6 +314,26 @@ export default function MyProfile() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
                             </button>
+
+                            <button
+                                onClick={handleOpenCointradeLogManagement}
+                                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition-colors group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-medium text-slate-900 dark:text-white">코인 자동매매 프로그램 로그</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">코인 자동매매 프로그램의 로그를 조회하고 추적합니다</div>
+                                    </div>
+                                </div>
+                                <svg className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 )}
@@ -402,6 +430,11 @@ export default function MyProfile() {
             {/* ML 로그 관리 모달 */}
             {showMlLogModal && (
                 <MlLogManagementModal onClose={() => setShowMlLogModal(false)} />
+            )}
+
+            {/* 코인 자동매매 로그 관리 모달 */}
+            {showCointradeLogModal && (
+                <CointradeLogManagementModal onClose={() => setShowCointradeLogModal(false)} />
             )}
 
             {/* 회원탈퇴 비밀번호 확인 모달 */}

@@ -30,12 +30,12 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
 
-      # (3) 불필요한 캐시 정리
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
+      # (3) 불필요한 캐시 정리 (self-hosted 러너 사용해서 필요없을듯)
+      # - name: Free disk space
+      #   run: |
+      #     sudo rm -rf /usr/share/dotnet
+      #     sudo rm -rf /usr/local/lib/android
+      #     sudo rm -rf /opt/ghc
 
       # (4) Docker Buildx 설정 (멀티 플랫폼 빌드를 위해 필요)
       - name: Set up Docker Buildx
@@ -48,7 +48,7 @@ jobs:
       - name: Build and Push Multi-Arch Image (amd64 + arm64)
         run: |
           docker buildx build \
-            --platform linux/amd64,linux/arm64 \
+            # --platform linux/amd64,linux/arm64 \
             -f docker/Dockerfile \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \

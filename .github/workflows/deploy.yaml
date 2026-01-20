@@ -45,10 +45,10 @@ jobs:
           use: true
 
       # (5) Docker 이미지 빌드 및 푸시 (linux/amd64 + linux/arm64 => self-host-runner와 minikube 환경이 같은 arm64 라 멀티플랫폼설정 빼도 될듯), latest 태그 포함
+      # --platform linux/amd64,linux/arm64 \ (멀티 아키텍처 빌드 필요시 활성화, build \ 밑에 추가)
       - name: Build and Push Multi-Arch Image (amd64 + arm64)
         run: |
           docker buildx build \
-            # --platform linux/amd64,linux/arm64 \
             -f docker/Dockerfile \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \

@@ -7,6 +7,7 @@ import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
 import RedisManagementModal from '@/pages/member/popup/RedisManagementModal';
 import MlLogManagementModal from '@/pages/member/popup/MlLogManagementModal';
+import LogManagementModal from '@/pages/member/popup/LogManagementModal';
 
 export default function MyProfile() {
     const navigate = useNavigate();
@@ -23,6 +24,9 @@ export default function MyProfile() {
 
     // Redis 관리 모달 상태
     const [showRedisModal, setShowRedisModal] = useState(false);
+
+    // App 로그 관리 모달 상태
+    const [showLogModal, setShowLogModal] = useState(false);
 
     // ML 로그 관리 모달 상태
     const [showMlLogModal, setShowMlLogModal] = useState(false);
@@ -128,18 +132,8 @@ export default function MyProfile() {
         setShowRedisModal(true);
     };
 
-    const handleOpenLogStream = () => {
-        // 새 브라우저 창으로 로그 스트림 팝업 열기
-        const width = 1000;
-        const height = 700;
-        const left = (window.screen.width - width) / 2;
-        const top = (window.screen.height - height) / 2;
-
-        window.open(
-            '/member/logstream',
-            'LogStreamPopup',
-            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-        );
+    const handleOpenLogManagement = () => {
+        setShowLogModal(true);
     };
 
     const handleOpenMlLogManagement = () => {
@@ -274,7 +268,7 @@ export default function MyProfile() {
                             </button>
 
                             <button
-                                onClick={handleOpenLogStream}
+                                onClick={handleOpenLogManagement}
                                 className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700 rounded-lg transition-colors group"
                             >
                                 <div className="flex items-center gap-3">
@@ -284,8 +278,8 @@ export default function MyProfile() {
                                         </svg>
                                     </div>
                                     <div className="text-left">
-                                        <div className="font-medium text-slate-900 dark:text-white">CompValue App 로그 실시간 추적</div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-400">실시간으로 애플리케이션 로그를 확인합니다</div>
+                                        <div className="font-medium text-slate-900 dark:text-white">CompValue App 로그</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400">애플리케이션 로그를 조회하고 추적합니다</div>
                                     </div>
                                 </div>
                                 <svg className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -399,6 +393,11 @@ export default function MyProfile() {
                 isOpen={showRedisModal}
                 onClose={() => setShowRedisModal(false)}
             />
+
+            {/* App 로그 관리 모달 */}
+            {showLogModal && (
+                <LogManagementModal onClose={() => setShowLogModal(false)} />
+            )}
 
             {/* ML 로그 관리 모달 */}
             {showMlLogModal && (

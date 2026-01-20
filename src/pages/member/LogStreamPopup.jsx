@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 const MAX_LOGS = 10000; // 최대 로그 개수
 
 /**
- * CompValue App 로그 실시간 추적 팝업 페이지
+ * CompValue App 로그 팝업 페이지
  * - 독립 브라우저 창으로 열림
  * - SSE를 통한 실시간 로그 스트리밍
  * - 검색 기능 (Ctrl+F)
@@ -265,7 +265,7 @@ export default function LogStreamPopup() {
                 <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse"></div>
                     <h1 className="text-base sm:text-lg font-semibold text-white">
-                        CompValue App 로그 실시간 추적
+                        CompValue App 로그
                     </h1>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                         isConnected

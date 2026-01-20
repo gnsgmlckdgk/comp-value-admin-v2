@@ -44,7 +44,7 @@ jobs:
           driver-opts: network=host  # 네트워크 이슈 방지 (e.g., timeout)
           use: true
 
-      # (5) Docker 이미지 빌드 및 푸시 (linux/amd64 + linux/arm64), latest 태그 포함
+      # (5) Docker 이미지 빌드 및 푸시 (linux/amd64 + linux/arm64 => self-host-runner와 minikube 환경이 같은 arm64 라 멀티플랫폼설정 빼도 될듯), latest 태그 포함
       - name: Build and Push Multi-Arch Image (amd64 + arm64)
         run: |
           docker buildx build \

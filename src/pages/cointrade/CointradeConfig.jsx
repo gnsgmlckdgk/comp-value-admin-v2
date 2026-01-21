@@ -197,7 +197,7 @@ export default function CointradeConfig() {
             HOLD_GRACE_DAYS: '보유 유예일 (일반)',
             SURGE_THRESHOLD: '급등 기준',
             MIN_BUY_SCORE: '최소 매수 점수',
-            TARGET_MODE: '대상 모드 (ALL/TARGET)',
+            TARGET_MODE: '대상 모드 (ALL/SELECTED)',
         };
         return labels[key] || key;
     };

@@ -23,6 +23,7 @@ import CointradeConfig from '@/pages/cointrade/CointradeConfig'
 import CointradeCoins from '@/pages/cointrade/CointradeCoins'
 import CointradeScheduler from '@/pages/cointrade/CointradeScheduler'
 import CointradeHistory from '@/pages/cointrade/CointradeHistory'
+import MlModelInfo from '@/pages/cointrade/MlModelInfo'
 
 const routes = {
 
@@ -106,6 +107,13 @@ const routes = {
         label: '거래기록 조회',
         path: '/cointrade/history',
         element: <CointradeHistory />,
+        requiredRoles: ['ROLE_SUPER_ADMIN']
+    },
+    "MlModelInfo": {
+        section: '코인',
+        label: '모델 예측정보 조회',
+        path: '/cointrade/ml-models',
+        element: <MlModelInfo />,
         requiredRoles: ['ROLE_SUPER_ADMIN']
     }
 }

@@ -6,9 +6,7 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
 import RedisManagementModal from '@/pages/member/popup/RedisManagementModal';
-import MlLogManagementModal from '@/pages/member/popup/MlLogManagementModal';
-import LogManagementModal from '@/pages/member/popup/LogManagementModal';
-import CointradeLogManagementModal from '@/pages/member/popup/CointradeLogManagementModal';
+import CommonLogManagementModal from '@/pages/member/popup/CommonLogManagementModal';
 
 export default function MyProfile() {
     const navigate = useNavigate();
@@ -423,19 +421,46 @@ export default function MyProfile() {
             />
 
             {/* App 로그 관리 모달 */}
-            {showLogModal && (
-                <LogManagementModal onClose={() => setShowLogModal(false)} />
-            )}
+            <CommonLogManagementModal
+                isOpen={showLogModal}
+                onClose={() => setShowLogModal(false)}
+                title="CompValue App 로그 관리"
+                apiEndpoints={{
+                    list: '/dart/mgnt/logs',
+                    content: (filename) => `/dart/mgnt/logs/${filename}`
+                }}
+                streamUrl="/member/logstream"
+                windowName="LogStreamPopup"
+                theme="green"
+            />
 
             {/* ML 로그 관리 모달 */}
-            {showMlLogModal && (
-                <MlLogManagementModal onClose={() => setShowMlLogModal(false)} />
-            )}
+            <CommonLogManagementModal
+                isOpen={showMlLogModal}
+                onClose={() => setShowMlLogModal(false)}
+                title="주식 예측 프로그램 로그 관리"
+                apiEndpoints={{
+                    list: '/dart/ml/logs',
+                    content: (filename) => `/dart/ml/logs/${filename}`
+                }}
+                streamUrl="/member/ml-logstream"
+                windowName="ML_Log_Stream"
+                theme="indigo"
+            />
 
             {/* 코인 자동매매 로그 관리 모달 */}
-            {showCointradeLogModal && (
-                <CointradeLogManagementModal onClose={() => setShowCointradeLogModal(false)} />
-            )}
+            <CommonLogManagementModal
+                isOpen={showCointradeLogModal}
+                onClose={() => setShowCointradeLogModal(false)}
+                title="코인 자동매매 프로그램 로그 관리"
+                apiEndpoints={{
+                    list: '/dart/api/cointrade/log/logs',
+                    content: (filename) => `/dart/api/cointrade/log/logs/${filename}`
+                }}
+                streamUrl="/member/cointrade-logstream"
+                windowName="Cointrade_Log_Stream"
+                theme="orange"
+            />
 
             {/* 회원탈퇴 비밀번호 확인 모달 */}
             {showDeleteModal && (

@@ -217,7 +217,7 @@ export default function CointradeConfig() {
             HOLD_GRACE_DAYS: '급등 예상일 경과 후 추가 보유 기간',
             SURGE_THRESHOLD: '이 % 이상 상승을 급등으로 판단',
             MIN_BUY_SCORE: '매수 점수가 이 값 이상이어야 매수',
-            TARGET_MODE: 'ALL: 전체 종목 매매, TARGET: 선택 종목만 매매',
+            TARGET_MODE: 'ALL: 전체 종목 매매, SELECTED: 선택 종목만 매매',
         };
         return descriptions[key] || '';
     };
@@ -299,7 +299,7 @@ export default function CointradeConfig() {
                                                                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                                             >
                                                                 <option value="ALL">ALL (전체)</option>
-                                                                <option value="TARGET">TARGET (선택)</option>
+                                                                <option value="SELECTED">SELECTED (선택)</option>
                                                             </select>
                                                         ) : (
                                                             <Input

@@ -31,7 +31,12 @@ export default function CointradeLogStreamPopup() {
     // 자동 스크롤
     useEffect(() => {
         if (autoScroll && logContainerRef.current && !showSearch) {
-            logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+            // DOM 업데이트 후 스크롤을 위해 약간의 지연 추가
+            setTimeout(() => {
+                if (logContainerRef.current) {
+                    logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+                }
+            }, 50);
         }
     }, [logs, autoScroll, showSearch]);
 
@@ -500,7 +505,7 @@ export default function CointradeLogStreamPopup() {
             {/* 푸터 */}
             <div className="px-4 sm:px-6 py-2 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
                 <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                    <span>Endpoint: GET /datr/api/cointrade/log/logs/stream/latest | Polling: {POLLING_INTERVAL / 1000}s | Ctrl+F: 검색</span>
+                    <span>Endpoint: GET /dart/api/cointrade/log/logs/stream/latest | Polling: {POLLING_INTERVAL / 1000}s | Ctrl+F: 검색</span>
                     <span>Max Logs: {MAX_LOGS.toLocaleString()}</span>
                 </div>
             </div>

@@ -19,11 +19,11 @@
  * // 위험 스타일의 버튼
  * <Button variant="danger">삭제</Button>
  */
-function Button({ children, onClick, type = 'button', variant = 'primary', className = '' }) {
+function Button({ children, onClick, type = 'button', variant = 'primary', className = '', disabled = false }) {
 
     // const baseStyle = 'px-5 py-2.5 rounded-lg shadow-md font-semibold transition-all duration-300 text-sm cursor-pointer'
     // const baseStyle = 'whitespace-nowrap w-fit px-4 py-2 md:px-5 md:py-2.5 rounded-lg shadow-md font-semibold transition-all duration-300 text-sm cursor-pointer';
-    const baseStyle = 'whitespace-nowrap w-fit px-3 py-2 md:px-5 md:py-2.5 text-sm md:text-base rounded-lg shadow-md font-semibold transition-all duration-300 cursor-pointer';
+    const baseStyle = `whitespace-nowrap w-fit px-3 py-2 md:px-5 md:py-2.5 text-sm md:text-base rounded-lg shadow-md font-semibold transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`;
 
     const variants = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700',
@@ -37,7 +37,8 @@ function Button({ children, onClick, type = 'button', variant = 'primary', class
     return (
         <button
             type={type}
-            onClick={typeof onClick === 'function' ? onClick : undefined}
+            onClick={!disabled && typeof onClick === 'function' ? onClick : undefined}
+            disabled={disabled}
             className={`${baseStyle} ${variants[variant]} ${className}`}
         >
             {children}

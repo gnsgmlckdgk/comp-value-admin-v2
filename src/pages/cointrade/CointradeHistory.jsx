@@ -1,17 +1,201 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
 
+// 숫자를 천 단위 콤마 포맷으로 변환
+const formatNumberWithComma = (value) => {
+    if (value === null || value === '' || value === undefined) return '-';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '-';
+    return num.toLocaleString('en-US');
+};
+
+// 날짜 포맷 (YYYY-MM-DD HH:MM:SS)
+const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+};
+
+// 사유 색상
+const getReasonColor = (reason) => {
+    const colors = {
+        'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+        'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+        'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+        'EXPIRED': 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+    };
+    return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
+};
+
+// 사유 라벨
+const getReasonLabel = (reason) => {
+    const labels = {
+        'SIGNAL': '매수',
+        'TAKE_PROFIT': '익절',
+        'STOP_LOSS': '손절',
+        'EXPIRED': '만료'
+    };
+    return labels[reason] || reason;
+};
+
+// 컬럼 너비 정의
+const COL_WIDTHS = {
+    createdAt: '140px',
+    coinCode: '100px',
+    tradeType: '80px',
+    price: '80px',
+    quantity: '130px',
+    totalAmount: '120px',
+    reason: '100px',
+    profitLoss: '120px',
+    profitLossRate: '100px',
+    buyScore: '100px',
+    surgeProbability: '100px',
+};
+
+// 테이블 컬럼 정의
+const TABLE_COLUMNS = [
+    {
+        key: 'createdAt',
+        label: '일시',
+        width: COL_WIDTHS.createdAt,
+        sortable: true,
+        sticky: true, // 고정 열
+        headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
+        render: (value) => formatDateTime(value)
+    },
+    {
+        key: 'coinCode',
+        label: '종목',
+        width: COL_WIDTHS.coinCode,
+        sortable: true,
+        sticky: true, // 고정 열 (두 번째)
+        left: COL_WIDTHS.createdAt, // 첫 번째 열 너비만큼 이동
+        headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-left font-medium text-slate-900 dark:text-slate-100',
+    },
+    {
+        key: 'tradeType',
+        label: '유형',
+        width: COL_WIDTHS.tradeType,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value) => (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${value === 'BUY'
+                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                }`}>
+                {value === 'BUY' ? '매수' : '매도'}
+            </span>
+        )
+    },
+    {
+        key: 'price',
+        label: '가격',
+        width: COL_WIDTHS.price,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
+        render: (value) => `${formatNumberWithComma(value)}원`
+    },
+    {
+        key: 'quantity',
+        label: '수량',
+        width: COL_WIDTHS.quantity,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
+        render: (value) => value ? value.toFixed(8) : '-'
+    },
+    {
+        key: 'totalAmount',
+        label: '금액',
+        width: COL_WIDTHS.totalAmount,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
+        render: (value) => `${formatNumberWithComma(value)}원`
+    },
+    {
+        key: 'reason',
+        label: '사유',
+        width: COL_WIDTHS.reason,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value) => value ? (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(value)}`}>
+                {getReasonLabel(value)}
+            </span>
+        ) : '-'
+    },
+    {
+        key: 'profitLoss',
+        label: '손익',
+        width: COL_WIDTHS.profitLoss,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value) => value != null ? (
+            <span className={value >= 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-blue-600 dark:text-blue-400 font-medium'}>
+                {value >= 0 ? '+' : ''}{formatNumberWithComma(value)}원
+            </span>
+        ) : '-'
+    },
+    {
+        key: 'profitLossRate',
+        label: '손익률',
+        width: COL_WIDTHS.profitLossRate,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value) => value != null ? (
+            <span className={value >= 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-blue-600 dark:text-blue-400 font-medium'}>
+                {value >= 0 ? '+' : ''}{value.toFixed(2)}%
+            </span>
+        ) : '-'
+    },
+    {
+        key: 'buyScore',
+        label: '매수점수',
+        width: COL_WIDTHS.buyScore,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-700 dark:text-slate-300',
+        render: (value) => value != null ? `${value.toFixed(2)}점` : '-'
+    },
+    {
+        key: 'surgeProbability',
+        label: '급등확률',
+        width: COL_WIDTHS.surgeProbability,
+        sortable: true,
+        headerClassName: 'px-4 py-3 pr-8 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-right text-purple-600 dark:text-purple-400 font-medium',
+        render: (value) => value != null ? `${(value * 100).toFixed(0)}%` : '-'
+    }
+];
+
 /**
- * 코인 자동매매 거래기록 조회 페이지 (v2.1)
+ * 코인 자동매매 거래기록 조회 페이지 (v2.2)
+ * - 테이블 디자인 개선 (Sticky Header/Columns, Filter Row)
  */
 export default function CointradeHistory() {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
 
-    // 필터
+    // 검색 필터 (서버 조회용)
     const [filters, setFilters] = useState({
         startDate: '',
         startTime: '00:00',
@@ -22,15 +206,17 @@ export default function CointradeHistory() {
         reason: 'all'        // all, SIGNAL, TAKE_PROFIT, STOP_LOSS, EXPIRED
     });
 
-    // 거래기록 목록
-    const [records, setRecords] = useState([]);
+    // 테이블 내부 필터/정렬
+    const [columnFilters, setColumnFilters] = useState({});
+    const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
-    // 종목 목록
+    // 데이터
+    const [records, setRecords] = useState([]);
     const [coinList, setCoinList] = useState([]);
 
     // 페이지네이션
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(20);
+    const [itemsPerPage, setItemsPerPage] = useState(20);
 
     // 요약 정보
     const [summary, setSummary] = useState({
@@ -119,11 +305,10 @@ export default function CointradeHistory() {
             } else if (data?.success && data?.response) {
                 if (data.response.content.length === 0) {
                     setToast('조회된 거래기록이 없습니다.');
-                } else {
-                    setRecords(data.response);
-                    calculateSummary(data.response);
-                    setCurrentPage(1); // 검색 시 첫 페이지로
                 }
+                setRecords(data.response.content);
+                calculateSummary(data.response.content);
+                setCurrentPage(1); // 검색 시 첫 페이지로
             }
         } catch (e) {
             console.error('거래기록 조회 실패:', e);
@@ -164,36 +349,78 @@ export default function CointradeHistory() {
         setFilters(prev => ({ ...prev, [key]: value }));
     };
 
+    // 테이블 컬럼 필터 변경
+    const handleColumnFilterChange = useCallback((key, value) => {
+        setColumnFilters((prev) => ({
+            ...prev,
+            [key]: value,
+        }));
+        setCurrentPage(1); // 필터 변경 시 첫 페이지로
+    }, []);
+
+    // 필터 초기화
+    const clearColumnFilters = useCallback(() => {
+        setColumnFilters({});
+        setCurrentPage(1);
+    }, []);
+
+    // 정렬 핸들러
+    const handleSort = useCallback((key) => {
+        setSortConfig((prev) => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+        }));
+    }, []);
+
+    // 클라이언트 사이드 필터링 및 정렬 데이터
+    const processedData = useMemo(() => {
+        // 1. 필터링
+        let data = records.filter(row => {
+            return Object.entries(columnFilters).every(([key, filterValue]) => {
+                if (!filterValue) return true;
+                const cellValue = row[key];
+                return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+            });
+        });
+
+        // 2. 정렬
+        if (sortConfig.key) {
+            data.sort((a, b) => {
+                const aVal = a[sortConfig.key];
+                const bVal = b[sortConfig.key];
+
+                if (aVal == null && bVal == null) return 0;
+                if (aVal == null) return 1;
+                if (bVal == null) return -1;
+
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                const aStr = String(aVal).toLowerCase();
+                const bStr = String(bVal).toLowerCase();
+                return sortConfig.direction === 'asc'
+                    ? aStr.localeCompare(bStr)
+                    : bStr.localeCompare(aStr);
+            });
+        }
+
+        return data;
+    }, [records, columnFilters, sortConfig]);
+
     // 페이지네이션
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentRecords = records.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(records.length / itemsPerPage);
+    const currentRecords = processedData.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(processedData.length / itemsPerPage);
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
     };
 
-    // 사유 색상
-    const getReasonColor = (reason) => {
-        const colors = {
-            'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
-            'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-            'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
-            'EXPIRED': 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-        };
-        return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
-    };
-
-    // 사유 라벨
-    const getReasonLabel = (reason) => {
-        const labels = {
-            'SIGNAL': '매수',
-            'TAKE_PROFIT': '익절',
-            'STOP_LOSS': '손절',
-            'EXPIRED': '만료'
-        };
-        return labels[reason] || reason;
+    const handleItemsPerPageChange = (e) => {
+        setItemsPerPage(Number(e.target.value));
+        setCurrentPage(1);
     };
 
     return (
@@ -398,144 +625,157 @@ export default function CointradeHistory() {
 
             {/* 거래기록 테이블 */}
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-slate-700">
+                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">거래 목록</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {/* 건수 선택 */}
+                        <select
+                            value={itemsPerPage}
+                            onChange={handleItemsPerPageChange}
+                            className="px-2 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium focus:outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
+                        >
+                            <option value={10}>10개씩 보기</option>
+                            <option value={20}>20개씩 보기</option>
+                            <option value={50}>50개씩 보기</option>
+                            <option value={100}>100개씩 보기</option>
+                        </select>
+
+                        {Object.values(columnFilters).some((v) => v !== '') && (
+                            <button
+                                type="button"
+                                onClick={clearColumnFilters}
+                                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
+                            >
+                                필터 초기화
+                            </button>
+                        )}
+                        {records.length > 0 && (
+                            <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 font-medium text-sm dark:bg-blue-900 dark:text-blue-200">
+                                {processedData.length !== records.length
+                                    ? `${processedData.length} / ${records.length}건`
+                                    : `${records.length}건`}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[70vh]">
+                    <table
+                        className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
+                        style={{ width: '100%', tableLayout: 'fixed', minWidth: '1200px' }}
+                    >
+                        <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    일시
-                                </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    종목
-                                </th>
-                                <th className="px-4 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    유형
-                                </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    가격
-                                </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    수량
-                                </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    금액
-                                </th>
-                                <th className="px-4 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    사유
-                                </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    손익
-                                </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    손익률
-                                </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    매수점수
-                                </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                    급등확률
-                                </th>
+                                {TABLE_COLUMNS.map((col, index) => (
+                                    <th
+                                        key={col.key}
+                                        className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                        style={{
+                                            width: col.width,
+                                            left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
+                                        }}
+                                        onClick={() => col.sortable && handleSort(col.key)}
+                                    >
+                                        <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
+                                            <span>{col.label}</span>
+                                            {col.sortable && (
+                                                <span className="flex flex-col text-[10px] leading-none opacity-60">
+                                                    <span
+                                                        className={
+                                                            sortConfig.key === col.key && sortConfig.direction === 'asc'
+                                                                ? 'opacity-100 text-yellow-300'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        ▲
+                                                    </span>
+                                                    <span
+                                                        className={
+                                                            sortConfig.key === col.key && sortConfig.direction === 'desc'
+                                                                ? 'opacity-100 text-yellow-300'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        ▼
+                                                    </span>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </th>
+                                ))}
+                            </tr>
+                            {/* 필터 입력 행 */}
+                            <tr className="bg-slate-100 dark:bg-slate-700">
+                                {TABLE_COLUMNS.map((col, index) => (
+                                    <th
+                                        key={`filter-${col.key}`}
+                                        className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                        style={{
+                                            width: col.width,
+                                            left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
+                                        }}
+                                    >
+                                        <input
+                                            type="text"
+                                            value={columnFilters[col.key] || ''}
+                                            onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
+                                            placeholder="..."
+                                            className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+                                        />
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        <tbody className="bg-white divide-y divide-slate-200 dark:bg-slate-800 dark:divide-slate-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="11" className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-                                        조회 중...
+                                    <td colSpan={TABLE_COLUMNS.length} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
+                                        데이터를 불러오는 중입니다...
                                     </td>
                                 </tr>
                             ) : currentRecords.length === 0 ? (
                                 <tr>
-                                    <td colSpan="11" className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-                                        조회된 거래기록이 없습니다.
+                                    <td colSpan={TABLE_COLUMNS.length} className="px-4 py-12 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <svg
+                                                className="w-12 h-12 text-slate-300 dark:text-slate-600"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={1.5}
+                                                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                />
+                                            </svg>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                                조회된 데이터가 없습니다.
+                                            </p>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (
-                                currentRecords.map((record, index) => (
-                                    <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                        {/* 일시 */}
-                                        <td className="px-4 py-3 text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap">
-                                            {new Date(record.createdAt).toLocaleString('ko-KR', {
-                                                year: '2-digit',
-                                                month: '2-digit',
-                                                day: '2-digit',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })}
-                                        </td>
+                                currentRecords.map((row, idx) => (
+                                    <tr key={idx} className="hover:bg-blue-50 transition-colors dark:hover:bg-slate-700">
+                                        {TABLE_COLUMNS.map((col, index) => {
+                                            const value = row[col.key];
+                                            const displayValue = col.render ? col.render(value) : (value ?? '-');
 
-                                        {/* 종목 */}
-                                        <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">
-                                            {record.coinCode}
-                                        </td>
-
-                                        {/* 유형 */}
-                                        <td className="px-4 py-3 text-center">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.tradeType === 'BUY'
-                                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                                                }`}>
-                                                {record.tradeType === 'BUY' ? '매수' : '매도'}
-                                            </span>
-                                        </td>
-
-                                        {/* 가격 */}
-                                        <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-slate-100">
-                                            {record.price.toLocaleString()}원
-                                        </td>
-
-                                        {/* 수량 */}
-                                        <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-slate-100">
-                                            {record.quantity.toFixed(8)}
-                                        </td>
-
-                                        {/* 금액 */}
-                                        <td className="px-4 py-3 text-sm text-right font-medium text-slate-900 dark:text-slate-100">
-                                            {record.totalAmount.toLocaleString()}원
-                                        </td>
-
-                                        {/* 사유 */}
-                                        <td className="px-4 py-3 text-center">
-                                            {record.reason ? (
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(record.reason)}`}>
-                                                    {getReasonLabel(record.reason)}
-                                                </span>
-                                            ) : (
-                                                <span className="text-slate-400 dark:text-slate-500">-</span>
-                                            )}
-                                        </td>
-
-                                        {/* 손익 */}
-                                        <td className="px-4 py-3 text-sm text-right">
-                                            {record.profitLoss != null ? (
-                                                <span className={record.profitLoss >= 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-blue-600 dark:text-blue-400 font-medium'}>
-                                                    {record.profitLoss >= 0 ? '+' : ''}{record.profitLoss.toLocaleString()}원
-                                                </span>
-                                            ) : (
-                                                <span className="text-slate-400 dark:text-slate-500">-</span>
-                                            )}
-                                        </td>
-
-                                        {/* 손익률 */}
-                                        <td className="px-4 py-3 text-sm text-right">
-                                            {record.profitLossRate != null ? (
-                                                <span className={record.profitLossRate >= 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-blue-600 dark:text-blue-400 font-medium'}>
-                                                    {record.profitLossRate >= 0 ? '+' : ''}{record.profitLossRate.toFixed(2)}%
-                                                </span>
-                                            ) : (
-                                                <span className="text-slate-400 dark:text-slate-500">-</span>
-                                            )}
-                                        </td>
-
-                                        {/* 매수점수 (v2.1) */}
-                                        <td className="px-4 py-3 text-sm text-right text-slate-700 dark:text-slate-300">
-                                            {record.buyScore != null ? `${record.buyScore.toFixed(2)}점` : '-'}
-                                        </td>
-
-                                        {/* 급등확률 (v2.1) */}
-                                        <td className="px-4 py-3 text-sm text-right text-purple-600 dark:text-purple-400 font-medium">
-                                            {record.surgeProbability != null ? `${(record.surgeProbability * 100).toFixed(0)}%` : '-'}
-                                        </td>
+                                            return (
+                                                <td
+                                                    key={col.key}
+                                                    className={`${col.cellClassName} ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
+                                                    style={{
+                                                        width: col.width,
+                                                        left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
+                                                    }}
+                                                >
+                                                    {displayValue}
+                                                </td>
+                                            );
+                                        })}
                                     </tr>
                                 ))
                             )}
@@ -549,7 +789,7 @@ export default function CointradeHistory() {
                         <button
                             onClick={() => handlePageChange(currentPage - 1)}
                             disabled={currentPage === 1}
-                            className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600"
+                            className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 text-sm"
                         >
                             이전
                         </button>
@@ -566,8 +806,8 @@ export default function CointradeHistory() {
                                     <button
                                         key={page}
                                         onClick={() => handlePageChange(page)}
-                                        className={`px-3 py-1 rounded-md ${currentPage === page
-                                            ? 'bg-blue-500 text-white font-medium'
+                                        className={`px-3 py-1 rounded-md text-sm ${currentPage === page
+                                            ? 'bg-blue-600 text-white font-medium'
                                             : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
                                             }`}
                                     >
@@ -583,7 +823,7 @@ export default function CointradeHistory() {
                         <button
                             onClick={() => handlePageChange(currentPage + 1)}
                             disabled={currentPage === totalPages}
-                            className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600"
+                            className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 text-sm"
                         >
                             다음
                         </button>

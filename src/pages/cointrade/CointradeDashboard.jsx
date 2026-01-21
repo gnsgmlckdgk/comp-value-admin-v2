@@ -1,10 +1,285 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
 
+// 숫자를 천 단위 콤마 포맷으로 변환
+const formatNumberWithComma = (value) => {
+    if (value === null || value === '' || value === undefined) return '-';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '-';
+    return num.toLocaleString('en-US');
+};
+
+// 날짜 포맷 (YYYY-MM-DD HH:MM:SS)
+const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+};
+
+// 사유 색상
+const getReasonColor = (reason) => {
+    const colors = {
+        'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+        'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+        'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+        'EXPIRED': 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+    };
+    return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
+};
+
+// 사유 라벨
+const getReasonLabel = (reason) => {
+    const labels = {
+        'SIGNAL': '매수',
+        'TAKE_PROFIT': '익절',
+        'STOP_LOSS': '손절',
+        'EXPIRED': '만료'
+    };
+    return labels[reason] || reason;
+};
+
+// D-day 계산
+const calculateDday = (date) => {
+    if (!date) return '-';
+    const targetDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    targetDate.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
+
+    if (diff < 0) return <span className="text-red-600 dark:text-red-400 font-bold">만료</span>;
+    if (diff === 0) return <span className="text-red-600 dark:text-red-400 font-bold">D-Day</span>;
+    if (diff <= 3) return <span className="text-orange-600 dark:text-orange-400 font-medium">D-{diff}</span>;
+    return <span className="text-slate-600 dark:text-slate-400">D-{diff}</span>;
+};
+
+// 컬럼 너비 정의
+const COL_WIDTHS = {
+    createdAt: '160px',
+    coinCode: '100px',
+    tradeType: '80px',
+    reason: '100px',
+    profitLossRate: '140px',
+};
+
+// 테이블 컬럼 정의
+const TABLE_COLUMNS = [
+    {
+        key: 'createdAt',
+        label: '일시',
+        width: COL_WIDTHS.createdAt,
+        sortable: true,
+        sticky: true,
+        headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
+        render: (value) => formatDateTime(value)
+    },
+    {
+        key: 'coinCode',
+        label: '종목',
+        width: COL_WIDTHS.coinCode,
+        sortable: true,
+        sticky: true,
+        left: COL_WIDTHS.createdAt,
+        headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-left font-medium text-slate-900 dark:text-slate-100',
+    },
+    {
+        key: 'tradeType',
+        label: '유형',
+        width: COL_WIDTHS.tradeType,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value) => (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${value === 'BUY'
+                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                }`}>
+                {value === 'BUY' ? '매수' : '매도'}
+            </span>
+        )
+    },
+    {
+        key: 'reason',
+        label: '사유',
+        width: COL_WIDTHS.reason,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value) => value ? (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(value)}`}>
+                {getReasonLabel(value)}
+            </span>
+        ) : '-'
+    },
+    {
+        key: 'profitLossRate',
+        label: '손익률',
+        width: COL_WIDTHS.profitLossRate,
+        sortable: true,
+        headerClassName: 'px-4 py-3 pr-12 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 pr-12 whitespace-nowrap text-right',
+        render: (value) => value != null ? (
+            <span className={value >= 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-blue-600 dark:text-blue-400 font-medium'}>
+                {value >= 0 ? '+' : ''}{value.toFixed(2)}%
+            </span>
+        ) : '-'
+    }
+];
+
+// 보유 종목 컬럼 너비 정의
+const HOLDINGS_COL_WIDTHS = {
+    coinCode: '100px',
+    buyPrice: '120px',
+    currentPrice: '120px',
+    quantity: '120px',
+    valuation: '120px',
+    profitRate: '100px',
+    surgeProbability: '140px',
+    surgeDay: '100px',
+    expireDate: '100px',
+    buyScore: '100px',
+    buyDate: '120px'
+};
+
+// 보유 종목 테이블 컬럼 정의
+const HOLDINGS_TABLE_COLUMNS = [
+    {
+        key: 'coinCode',
+        label: '종목',
+        width: HOLDINGS_COL_WIDTHS.coinCode,
+        sortable: true,
+        sticky: true,
+        headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-left font-medium text-slate-900 dark:text-slate-100',
+    },
+    {
+        key: 'buyPrice',
+        label: '매수가',
+        width: HOLDINGS_COL_WIDTHS.buyPrice,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
+        render: (value) => `${formatNumberWithComma(value)}원`
+    },
+    {
+        key: 'currentPrice',
+        label: '현재가',
+        width: HOLDINGS_COL_WIDTHS.currentPrice,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
+        render: (value) => value ? `${formatNumberWithComma(value)}원` : '-'
+    },
+    {
+        key: 'quantity',
+        label: '수량',
+        width: HOLDINGS_COL_WIDTHS.quantity,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
+        render: (value) => value ? value.toFixed(8) : '-'
+    },
+    {
+        key: 'valuation',
+        label: '평가금액',
+        width: HOLDINGS_COL_WIDTHS.valuation,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
+        render: (value) => `${formatNumberWithComma(value)}원`
+    },
+    {
+        key: 'profitRate',
+        label: '수익률',
+        width: HOLDINGS_COL_WIDTHS.profitRate,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value) => (
+            <span className={`font-bold ${value >= 0
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-blue-600 dark:text-blue-400'
+                }`}>
+                {value >= 0 ? '+' : ''}{value.toFixed(2)}%
+            </span>
+        )
+    },
+    {
+        key: 'surgeProbability',
+        label: '급등확률',
+        width: HOLDINGS_COL_WIDTHS.surgeProbability,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap',
+        render: (value) => (
+            <div className="flex items-center gap-2">
+                <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2 min-w-[60px]">
+                    <div
+                        className="bg-purple-500 dark:bg-purple-400 h-2 rounded-full"
+                        style={{ width: `${(value || 0) * 100}%` }}
+                    />
+                </div>
+                <span className="text-xs font-medium text-purple-600 dark:text-purple-400 w-8 text-right">
+                    {((value || 0) * 100).toFixed(0)}%
+                </span>
+            </div>
+        )
+    },
+    {
+        key: 'surgeDay',
+        label: '급등예상일',
+        width: HOLDINGS_COL_WIDTHS.surgeDay,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center text-slate-900 dark:text-slate-100',
+        render: (value) => value ? `D+${value}` : '-'
+    },
+    {
+        key: 'expireDate',
+        label: '만료일',
+        width: HOLDINGS_COL_WIDTHS.expireDate,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value) => calculateDday(value)
+    },
+    {
+        key: 'buyScore',
+        label: '매수점수',
+        width: HOLDINGS_COL_WIDTHS.buyScore,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-700 dark:text-slate-300',
+        render: (value) => value != null ? `${value.toFixed(2)}점` : '-'
+    },
+    {
+        key: 'buyDate',
+        label: '매수일',
+        width: HOLDINGS_COL_WIDTHS.buyDate,
+        sortable: true,
+        headerClassName: 'px-4 py-3 pr-8 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
+        render: (value) => new Date(value).toLocaleDateString('ko-KR', {
+            month: '2-digit',
+            day: '2-digit'
+        })
+    }
+];
+
 /**
- * 코인 자동매매 대시보드 (v2.1)
+ * 코인 자동매매 대시보드 (v2.2)
+ * - 테이블 디자인 및 기능 개선 (Sticky Header, Sorting, Filtering)
  */
 export default function CointradeDashboard() {
     const [loading, setLoading] = useState(false);
@@ -23,160 +298,274 @@ export default function CointradeDashboard() {
     // 보유 종목
     const [holdings, setHoldings] = useState([]);
 
-    // 최근 거래 내역
-    const [recentTrades, setRecentTrades] = useState([]);
+    // 최근 거래 내역 (전체 데이터)
+    const [allRecentTrades, setAllRecentTrades] = useState([]);
 
-    // 예측 성능 요약
-    const [performance, setPerformance] = useState({
-        takeProfitRate: 0,
-        stopLossRate: 0,
-        expiredRate: 0,
-        avgProfitRate: 0,
-        totalTrades: 0
-    });
-
-    // Toast auto-hide
-    useEffect(() => {
-        if (!toast) return;
-        const timer = setTimeout(() => setToast(null), 3000);
-        return () => clearTimeout(timer);
-    }, [toast]);
-
-    // 데이터 조회
-    const fetchData = useCallback(async () => {
-        try {
-            // 1. 상태 조회
-            const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
-            if (statusResponse.data?.success && statusResponse.data?.response) {
-                const resp = statusResponse.data.response;
-                setStatus({
-                    buySchedulerEnabled: resp.buySchedulerEnabled || false,
-                    sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
-                    totalInvestment: resp.totalInvestment || 0,
-                    totalValuation: resp.totalValuation || 0,
-                    totalProfitRate: resp.totalProfitRate || 0,
-                    holdingsCount: resp.holdings?.length || 0
+        // 테이블 필터/정렬 상태
+        const [columnFilters, setColumnFilters] = useState({});
+        const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+        
+        // 보유 종목 테이블 필터/정렬 상태
+        const [holdingsColumnFilters, setHoldingsColumnFilters] = useState({});
+        const [holdingsSortConfig, setHoldingsSortConfig] = useState({ key: 'profitRate', direction: 'desc' });
+    
+        const [itemsPerPage, setItemsPerPage] = useState(10); // 대시보드이므로 기본 10개
+        const [currentPage, setCurrentPage] = useState(1);
+    
+        // 예측 성능 요약
+        const [performance, setPerformance] = useState({
+            takeProfitRate: 0,
+            stopLossRate: 0,
+            expiredRate: 0,
+            avgProfitRate: 0,
+            totalTrades: 0
+        });
+    
+        // Toast auto-hide
+        useEffect(() => {
+            if (!toast) return;
+            const timer = setTimeout(() => setToast(null), 3000);
+            return () => clearTimeout(timer);
+        }, [toast]);
+    
+            // 데이터 조회
+            const fetchData = useCallback(async () => {
+                setLoading(true);
+                try {
+                    // 1. 상태 조회
+                    const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
+                    if (statusResponse.data?.success && statusResponse.data?.response) {
+                        const resp = statusResponse.data.response;
+                        setStatus({
+                            buySchedulerEnabled: resp.buySchedulerEnabled || false,
+                            sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
+                            totalInvestment: resp.totalInvestment || 0,
+                            totalValuation: resp.totalValuation || 0,
+                            totalProfitRate: resp.totalProfitRate || 0,
+                            holdingsCount: resp.holdings?.length || 0
+                        });
+                    }
+        
+                    // 2. 보유 종목 조회
+                    const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
+                    if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
+                        // 수익률 및 평가금액 계산하여 상태에 저장
+                        const calculatedHoldings = holdingsResponse.data.response.map(holding => {
+                            const profitRate = holding.currentPrice
+                                ? ((holding.currentPrice - holding.buyPrice) / holding.buyPrice * 100)
+                                : 0;
+                            const valuation = holding.currentPrice
+                                ? holding.currentPrice * holding.quantity
+                                : holding.totalAmount;
+                            
+                            return {
+                                ...holding,
+                                profitRate,
+                                valuation
+                            };
+                        });
+                        setHoldings(calculatedHoldings);
+                    }
+        
+                    // 3. 최근 거래 내역 조회 (최근 30일)
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today);
+                    thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+                    // 날짜와 시간 조립 (ISO 8601 형식 - KST 고려)
+                    const formatDateParam = (date) => {
+                        const yyyy = date.getFullYear();
+                        const mm = String(date.getMonth() + 1).padStart(2, '0');
+                        const dd = String(date.getDate()).padStart(2, '0');
+                        return `${yyyy}-${mm}-${dd}`;
+                    }
+        
+                    const startDateStr = formatDateParam(thirtyDaysAgo);
+                    const endDateStr = formatDateParam(today);
+        
+                    const startDateTime = `${startDateStr}T00:00:00`;
+                    const endDateTime = `${endDateStr}T23:59:59`;
+        
+                    const historyResponse = await send(
+                        `/dart/api/cointrade/history?startDate=${startDateTime}&endDate=${endDateTime}`,
+                        {},
+                        'GET'
+                    );
+        
+                    if (historyResponse.data?.success && historyResponse.data?.response) {
+                        const trades = historyResponse.data.response.content || historyResponse.data.response || [];
+                        setAllRecentTrades(trades);
+                        calculatePerformance(trades);
+                    } else {
+                        setAllRecentTrades([]);
+                    }
+                } catch (e) {
+                    console.error('데이터 조회 실패:', e);
+                } finally {
+                    setLoading(false);
+                }
+            }, []);    
+        // 예측 성능 계산
+        const calculatePerformance = (trades) => {
+            const sellTrades = trades.filter(t => t.tradeType === 'SELL');
+            const totalSells = sellTrades.length;
+    
+            if (totalSells === 0) {
+                setPerformance({
+                    takeProfitRate: 0,
+                    stopLossRate: 0,
+                    expiredRate: 0,
+                    avgProfitRate: 0,
+                    totalTrades: 0
+                });
+                return;
+            }
+    
+            const takeProfitCount = sellTrades.filter(t => t.reason === 'TAKE_PROFIT').length;
+            const stopLossCount = sellTrades.filter(t => t.reason === 'STOP_LOSS').length;
+            const expiredCount = sellTrades.filter(t => t.reason === 'EXPIRED').length;
+    
+            const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
+            const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+            const avgProfitRate = totalAmount > 0 ? (totalProfit / totalAmount) * 100 : 0;
+    
+            setPerformance({
+                takeProfitRate: (takeProfitCount / totalSells) * 100,
+                stopLossRate: (stopLossCount / totalSells) * 100,
+                expiredRate: (expiredCount / totalSells) * 100,
+                avgProfitRate,
+                totalTrades: totalSells
+            });
+        };
+    
+        // 보유 종목 데이터 처리 (필터링 -> 정렬)
+        const processedHoldings = useMemo(() => {
+            // 1. 필터링
+            let data = holdings.filter(row => {
+                return Object.entries(holdingsColumnFilters).every(([key, filterValue]) => {
+                    if (!filterValue) return true;
+                    const cellValue = row[key];
+                    return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+                });
+            });
+    
+            // 2. 정렬
+            if (holdingsSortConfig.key) {
+                data.sort((a, b) => {
+                    const aVal = a[holdingsSortConfig.key];
+                    const bVal = b[holdingsSortConfig.key];
+    
+                    if (aVal == null && bVal == null) return 0;
+                    if (aVal == null) return 1;
+                    if (bVal == null) return -1;
+    
+                    if (typeof aVal === 'number' && typeof bVal === 'number') {
+                        return holdingsSortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                    }
+    
+                    const aStr = String(aVal).toLowerCase();
+                    const bStr = String(bVal).toLowerCase();
+                    return holdingsSortConfig.direction === 'asc'
+                        ? aStr.localeCompare(bStr)
+                        : bStr.localeCompare(aStr);
                 });
             }
-
-            // 2. 보유 종목 조회
-            const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
-            if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
-                setHoldings(holdingsResponse.data.response);
-            }
-
-            // 3. 최근 거래 내역 조회 (10건)
-            const today = new Date();
-            const thirtyDaysAgo = new Date(today);
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-
-            // 날짜와 시간 조립 (ISO 8601 형식)
-            const startDateTime = `${thirtyDaysAgo.toISOString().split('T')[0]}T00:00:00`;
-            const endDateTime = `${today.toISOString().split('T')[0]}T23:59:59`;
-
-            const historyResponse = await send(
-                `/dart/api/cointrade/history?startDate=${startDateTime}&endDate=${endDateTime}`,
-                {},
-                'GET'
-            );
-            if (historyResponse.data?.success && historyResponse.data?.response) {
-                const allTrades = historyResponse.data.response;
-                setRecentTrades(allTrades.slice(0, 10)); // 최근 10건
-
-                // 예측 성능 계산
-                calculatePerformance(allTrades);
-            }
-        } catch (e) {
-            console.error('데이터 조회 실패:', e);
-        }
-    }, []);
-
-    // 예측 성능 계산
-    const calculatePerformance = (trades) => {
-        const sellTrades = trades.filter(t => t.tradeType === 'SELL');
-        const totalSells = sellTrades.length;
-
-        if (totalSells === 0) {
-            setPerformance({
-                takeProfitRate: 0,
-                stopLossRate: 0,
-                expiredRate: 0,
-                avgProfitRate: 0,
-                totalTrades: 0
+    
+            return data;
+        }, [holdings, holdingsColumnFilters, holdingsSortConfig]);
+    
+        // 최근 거래 데이터 처리 (필터링 -> 정렬)
+        const processedData = useMemo(() => {
+            // 1. 필터링
+            let data = allRecentTrades.filter(row => {
+                return Object.entries(columnFilters).every(([key, filterValue]) => {
+                    if (!filterValue) return true;
+                    const cellValue = row[key];
+                    return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+                });
             });
-            return;
-        }
-
-        const takeProfitCount = sellTrades.filter(t => t.reason === 'TAKE_PROFIT').length;
-        const stopLossCount = sellTrades.filter(t => t.reason === 'STOP_LOSS').length;
-        const expiredCount = sellTrades.filter(t => t.reason === 'EXPIRED').length;
-
-        const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
-        const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
-        const avgProfitRate = totalAmount > 0 ? (totalProfit / totalAmount) * 100 : 0;
-
-        setPerformance({
-            takeProfitRate: (takeProfitCount / totalSells) * 100,
-            stopLossRate: (stopLossCount / totalSells) * 100,
-            expiredRate: (expiredCount / totalSells) * 100,
-            avgProfitRate,
-            totalTrades: totalSells
-        });
-    };
-
-    // 페이지 로드 시 + 30초마다 자동 새로고침
-    useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 30000); // 30초
-        return () => clearInterval(interval);
-    }, [fetchData]);
-
-    // 수동 새로고침
-    const handleRefresh = () => {
-        setLoading(true);
-        fetchData().finally(() => {
-            setLoading(false);
-            setToast('데이터가 갱신되었습니다.');
-        });
-    };
-
-    // D-day 계산
-    const calculateDday = (date) => {
-        if (!date) return '-';
-        const targetDate = new Date(date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        targetDate.setHours(0, 0, 0, 0);
-        const diff = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
-
-        if (diff < 0) return <span className="text-red-600 dark:text-red-400 font-bold">만료</span>;
-        if (diff === 0) return <span className="text-red-600 dark:text-red-400 font-bold">D-Day</span>;
-        if (diff <= 3) return <span className="text-orange-600 dark:text-orange-400 font-medium">D-{diff}</span>;
-        return <span className="text-slate-600 dark:text-slate-400">D-{diff}</span>;
-    };
-
-    // 사유 색상
-    const getReasonColor = (reason) => {
-        const colors = {
-            'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
-            'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-            'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
-            'EXPIRED': 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+    
+            // 2. 정렬
+            if (sortConfig.key) {
+                data.sort((a, b) => {
+                    const aVal = a[sortConfig.key];
+                    const bVal = b[sortConfig.key];
+    
+                    if (aVal == null && bVal == null) return 0;
+                    if (aVal == null) return 1;
+                    if (bVal == null) return -1;
+    
+                    if (typeof aVal === 'number' && typeof bVal === 'number') {
+                        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                    }
+    
+                    const aStr = String(aVal).toLowerCase();
+                    const bStr = String(bVal).toLowerCase();
+                    return sortConfig.direction === 'asc'
+                        ? aStr.localeCompare(bStr)
+                        : bStr.localeCompare(aStr);
+                });
+            }
+    
+            return data;
+        }, [allRecentTrades, columnFilters, sortConfig]);
+    
+        // 페이지네이션 데이터
+        const indexOfLastItem = currentPage * itemsPerPage;
+        const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+        const currentRecords = processedData.slice(indexOfFirstItem, indexOfLastItem);
+        const totalPages = Math.ceil(processedData.length / itemsPerPage);
+    
+        // 핸들러들
+        const handleColumnFilterChange = useCallback((key, value) => {
+            setColumnFilters((prev) => ({ ...prev, [key]: value }));
+            setCurrentPage(1);
+        }, []);
+    
+        const clearColumnFilters = useCallback(() => {
+            setColumnFilters({});
+            setCurrentPage(1);
+        }, []);
+    
+        const handleSort = useCallback((key) => {
+            setSortConfig((prev) => ({
+                key,
+                direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+            }));
+        }, []);
+    
+        const handleHoldingsColumnFilterChange = useCallback((key, value) => {
+            setHoldingsColumnFilters((prev) => ({ ...prev, [key]: value }));
+        }, []);
+    
+        const handleHoldingsSort = useCallback((key) => {
+            setHoldingsSortConfig((prev) => ({
+                key,
+                direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+            }));
+        }, []);
+    
+        const handlePageChange = (page) => setCurrentPage(page);
+        const handleItemsPerPageChange = (e) => {
+            setItemsPerPage(Number(e.target.value));
+            setCurrentPage(1);
         };
-        return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
-    };
-
-    // 사유 라벨
-    const getReasonLabel = (reason) => {
-        const labels = {
-            'SIGNAL': '매수',
-            'TAKE_PROFIT': '익절',
-            'STOP_LOSS': '손절',
-            'EXPIRED': '만료'
+    
+        // 페이지 로드 시 + 30초마다 자동 새로고침
+        useEffect(() => {
+            fetchData();
+            const interval = setInterval(fetchData, 30000); // 30초
+            return () => clearInterval(interval);
+        }, [fetchData]);
+    
+        // 수동 새로고침
+        const handleRefresh = () => {
+            setLoading(true);
+            fetchData().finally(() => {
+                setLoading(false);
+                setToast('데이터가 갱신되었습니다.');
+            });
         };
-        return labels[reason] || reason;
-    };
-
     return (
         <div className="container mx-auto max-w-7xl p-4">
             <div className="flex items-center justify-between mb-6">
@@ -194,21 +583,19 @@ export default function CointradeDashboard() {
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-600 dark:text-slate-400">매수</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                status.buySchedulerEnabled
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.buySchedulerEnabled
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                }`}>
                                 {status.buySchedulerEnabled ? 'ON' : 'OFF'}
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-600 dark:text-slate-400">매도</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                status.sellSchedulerEnabled
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.sellSchedulerEnabled
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                }`}>
                                 {status.sellSchedulerEnabled ? 'ON' : 'OFF'}
                             </span>
                         </div>
@@ -240,234 +627,395 @@ export default function CointradeDashboard() {
                 </div>
 
                 {/* 총 수익률 */}
-                <div className={`rounded-lg shadow-sm border p-4 ${
-                    status.totalProfitRate >= 0
-                        ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'
-                        : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
-                }`}>
-                    <div className={`text-xs mb-1 ${
-                        status.totalProfitRate >= 0
-                            ? 'text-red-700 dark:text-red-400'
-                            : 'text-blue-700 dark:text-blue-400'
+                <div className={`rounded-lg shadow-sm border p-4 ${status.totalProfitRate >= 0
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'
+                    : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
                     }`}>
+                    <div className={`text-xs mb-1 ${status.totalProfitRate >= 0
+                        ? 'text-red-700 dark:text-red-400'
+                        : 'text-blue-700 dark:text-blue-400'
+                        }`}>
                         총 수익률
                     </div>
-                    <div className={`text-3xl font-bold ${
-                        status.totalProfitRate >= 0
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-blue-600 dark:text-blue-400'
-                    }`}>
+                    <div className={`text-3xl font-bold ${status.totalProfitRate >= 0
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-blue-600 dark:text-blue-400'
+                        }`}>
                         {status.totalProfitRate >= 0 ? '+' : ''}{status.totalProfitRate.toFixed(2)}%
                     </div>
                 </div>
             </div>
 
-            {/* 보유 종목 테이블 */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                        보유 종목 ({holdings.length})
-                    </h2>
-                </div>
+                        {/* 보유 종목 테이블 */}
 
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-slate-700">
-                            <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">종목</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">매수가</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">현재가</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">수량</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">평가금액</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">수익률</th>
-                                <th className="px-4 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">급등확률</th>
-                                <th className="px-4 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">급등예상일</th>
-                                <th className="px-4 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">만료일</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">매수점수</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">매수일</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                            {holdings.length === 0 ? (
-                                <tr>
-                                    <td colSpan="11" className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-                                        보유 종목이 없습니다.
-                                    </td>
-                                </tr>
-                            ) : (
-                                holdings.map((holding, index) => {
-                                    const profitRate = holding.currentPrice
-                                        ? ((holding.currentPrice - holding.buyPrice) / holding.buyPrice * 100)
-                                        : 0;
-                                    const valuation = holding.currentPrice
-                                        ? holding.currentPrice * holding.quantity
-                                        : holding.totalAmount;
+                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
 
-                                    // 만료 임박 여부 (3일 이내)
-                                    const isExpiring = holding.expireDate &&
-                                        (new Date(holding.expireDate) - new Date()) / (1000 * 60 * 60 * 24) <= 3;
+                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
 
-                                    return (
-                                        <tr
-                                            key={index}
-                                            className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
-                                                isExpiring ? 'bg-orange-50 dark:bg-orange-900/10' : ''
-                                            }`}
-                                        >
-                                            {/* 종목 */}
-                                            <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                {holding.coinCode}
-                                            </td>
+                                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
 
-                                            {/* 매수가 */}
-                                            <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-slate-100">
-                                                {holding.buyPrice.toLocaleString()}원
-                                            </td>
+                                    보유 종목 ({holdings.length})
 
-                                            {/* 현재가 */}
-                                            <td className="px-4 py-3 text-sm text-right font-medium text-slate-900 dark:text-slate-100">
-                                                {holding.currentPrice ? `${holding.currentPrice.toLocaleString()}원` : '-'}
-                                            </td>
+                                </h2>
 
-                                            {/* 수량 */}
-                                            <td className="px-4 py-3 text-sm text-right text-slate-900 dark:text-slate-100">
-                                                {holding.quantity.toFixed(8)}
-                                            </td>
+                                {Object.values(holdingsColumnFilters).some((v) => v !== '') && (
 
-                                            {/* 평가금액 */}
-                                            <td className="px-4 py-3 text-sm text-right font-medium text-slate-900 dark:text-slate-100">
-                                                {valuation.toLocaleString()}원
-                                            </td>
+                                    <button
 
-                                            {/* 수익률 */}
-                                            <td className="px-4 py-3 text-sm text-right">
-                                                <span className={`font-bold ${
-                                                    profitRate >= 0
-                                                        ? 'text-red-600 dark:text-red-400'
-                                                        : 'text-blue-600 dark:text-blue-400'
-                                                }`}>
-                                                    {profitRate >= 0 ? '+' : ''}{profitRate.toFixed(2)}%
-                                                </span>
-                                            </td>
+                                        type="button"
 
-                                            {/* 급등확률 (프로그레스바) */}
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                                        <div
-                                                            className="bg-purple-500 dark:bg-purple-400 h-2 rounded-full"
-                                                            style={{ width: `${(holding.surgeProbability || 0) * 100}%` }}
-                                                        />
+                                        onClick={() => setHoldingsColumnFilters({})}
+
+                                        className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
+
+                                    >
+
+                                        필터 초기화
+
+                                    </button>
+
+                                )}
+
+                            </div>
+
+            
+
+                            <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[500px] pr-2">
+
+                                <table
+
+                                    className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
+
+                                    style={{ width: '100%', tableLayout: 'fixed', minWidth: '1200px' }}
+
+                                >
+
+                                    <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
+
+                                        <tr>
+
+                                            {HOLDINGS_TABLE_COLUMNS.map((col, index) => (
+
+                                                <th
+
+                                                    key={col.key}
+
+                                                    className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+
+                                                    style={{
+
+                                                        width: col.width,
+
+                                                        left: col.sticky ? (index === 0 ? 0 : '100px') : undefined // coinCode width is 100px
+
+                                                    }}
+
+                                                    onClick={() => col.sortable && handleHoldingsSort(col.key)}
+
+                                                >
+
+                                                    <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
+
+                                                        <span>{col.label}</span>
+
+                                                        {col.sortable && (
+
+                                                            <span className="flex flex-col text-[10px] leading-none opacity-60">
+
+                                                                <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
+
+                                                                <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
+
+                                                            </span>
+
+                                                        )}
+
                                                     </div>
-                                                    <span className="text-xs font-medium text-purple-600 dark:text-purple-400 w-10 text-right">
-                                                        {((holding.surgeProbability || 0) * 100).toFixed(0)}%
-                                                    </span>
-                                                </div>
-                                            </td>
 
-                                            {/* 급등예상일 */}
-                                            <td className="px-4 py-3 text-sm text-center text-slate-900 dark:text-slate-100">
-                                                {holding.surgeDay ? `D+${holding.surgeDay}` : '-'}
-                                            </td>
+                                                </th>
 
-                                            {/* 만료일 */}
-                                            <td className="px-4 py-3 text-sm text-center">
-                                                {calculateDday(holding.expireDate)}
-                                            </td>
+                                            ))}
 
-                                            {/* 매수점수 */}
-                                            <td className="px-4 py-3 text-sm text-right text-slate-700 dark:text-slate-300">
-                                                {holding.buyScore ? `${holding.buyScore.toFixed(2)}점` : '-'}
-                                            </td>
-
-                                            {/* 매수일 */}
-                                            <td className="px-4 py-3 text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap">
-                                                {new Date(holding.buyDate).toLocaleDateString('ko-KR', {
-                                                    month: '2-digit',
-                                                    day: '2-digit'
-                                                })}
-                                            </td>
                                         </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+
+                                        <tr className="bg-slate-100 dark:bg-slate-700">
+
+                                            {HOLDINGS_TABLE_COLUMNS.map((col, index) => (
+
+                                                <th
+
+                                                    key={`filter-${col.key}`}
+
+                                                    className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+
+                                                    style={{
+
+                                                        width: col.width,
+
+                                                        left: col.sticky ? (index === 0 ? 0 : '100px') : undefined
+
+                                                    }}
+
+                                                >
+
+                                                    <input
+
+                                                        type="text"
+
+                                                        value={holdingsColumnFilters[col.key] || ''}
+
+                                                        onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
+
+                                                        placeholder="..."
+
+                                                        className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+
+                                                    />
+
+                                                </th>
+
+                                            ))}
+
+                                        </tr>
+
+                                    </thead>
+
+                                                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+
+                                                                {loading ? (
+
+                                                                    <tr>
+
+                                                                        <td colSpan={HOLDINGS_TABLE_COLUMNS.length} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
+
+                                                                            조회 중입니다...
+
+                                                                        </td>
+
+                                                                    </tr>
+
+                                                                ) : processedHoldings.length === 0 ? (
+
+                                                                    <tr>
+
+                                                                        <td colSpan={HOLDINGS_TABLE_COLUMNS.length} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
+
+                                                                            보유 종목이 없습니다.
+
+                                                                        </td>
+
+                                                                    </tr>
+
+                                                                ) : (
+
+                                                                    processedHoldings.map((holding, index) => {
+
+                                                // 만료 임박 여부 (3일 이내)
+
+                                                const isExpiring = holding.expireDate &&
+
+                                                    (new Date(holding.expireDate) - new Date()) / (1000 * 60 * 60 * 24) <= 3;
+
+            
+
+                                                return (
+
+                                                    <tr
+
+                                                        key={index}
+
+                                                        className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${isExpiring ? 'bg-orange-50 dark:bg-orange-900/10' : ''
+
+                                                            }`}
+
+                                                    >
+
+                                                        {HOLDINGS_TABLE_COLUMNS.map((col, colIndex) => {
+
+                                                            const value = holding[col.key];
+
+                                                            const displayValue = col.render ? col.render(value) : (value ?? '-');
+
+                                                            return (
+
+                                                                <td
+
+                                                                    key={col.key}
+
+                                                                    className={`${col.cellClassName} ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''} ${isExpiring && col.sticky ? '!bg-orange-50 dark:!bg-slate-800' : ''}`}
+
+                                                                    style={{
+
+                                                                        width: col.width,
+
+                                                                        left: col.sticky ? (colIndex === 0 ? 0 : '100px') : undefined
+
+                                                                    }}
+
+                                                                >
+
+                                                                    {displayValue}
+
+                                                                </td>
+
+                                                            );
+
+                                                        })}
+
+                                                    </tr>
+
+                                                );
+
+                                            })
+
+                                        )}
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+                        </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 최근 거래 내역 */}
+                {/* 최근 거래 내역 테이블 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                            최근 거래 내역 (10건)
-                        </h2>
+                    <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <h3 className="text-lg font-semibold text-slate-800 dark:text-white">최근 거래 내역</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <select
+                                value={itemsPerPage}
+                                onChange={handleItemsPerPageChange}
+                                className="px-2 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium focus:outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
+                            >
+                                <option value={10}>10개씩</option>
+                                <option value={20}>20개씩</option>
+                                <option value={50}>50개씩</option>
+                            </select>
+                            {Object.values(columnFilters).some((v) => v !== '') && (
+                                <button
+                                    type="button"
+                                    onClick={clearColumnFilters}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
+                                >
+                                    필터 초기화
+                                </button>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-slate-50 dark:bg-slate-700">
+                    <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[500px] pr-2">
+                        <table
+                            className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
+                            style={{ width: '100%', tableLayout: 'fixed', minWidth: '680px' }}
+                        >
+                            <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300">일시</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-700 dark:text-slate-300">종목</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-300">유형</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-700 dark:text-slate-300">사유</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-700 dark:text-slate-300">손익률</th>
+                                    {TABLE_COLUMNS.map((col, index) => (
+                                        <th
+                                            key={col.key}
+                                            className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                            style={{
+                                                width: col.width,
+                                                left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
+                                            }}
+                                            onClick={() => col.sortable && handleSort(col.key)}
+                                        >
+                                            <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
+                                                <span>{col.label}</span>
+                                                {col.sortable && (
+                                                    <span className="flex flex-col text-[10px] leading-none opacity-60">
+                                                        <span className={sortConfig.key === col.key && sortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
+                                                        <span className={sortConfig.key === col.key && sortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </th>
+                                    ))}
+                                </tr>
+                                <tr className="bg-slate-100 dark:bg-slate-700">
+                                    {TABLE_COLUMNS.map((col, index) => (
+                                        <th
+                                            key={`filter-${col.key}`}
+                                            className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                            style={{
+                                                width: col.width,
+                                                left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
+                                            }}
+                                        >
+                                            <input
+                                                type="text"
+                                                value={columnFilters[col.key] || ''}
+                                                onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
+                                                placeholder="..."
+                                                className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+                                            />
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                {recentTrades.length === 0 ? (
+                            <tbody className="bg-white divide-y divide-slate-200 dark:bg-slate-800 dark:divide-slate-700">
+                                {loading ? (
                                     <tr>
-                                        <td colSpan="5" className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-                                            최근 거래 내역이 없습니다.
+                                        <td colSpan={TABLE_COLUMNS.length} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
+                                            조회 중입니다...
+                                        </td>
+                                    </tr>
+                                ) : currentRecords.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={TABLE_COLUMNS.length} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
+                                            거래 내역이 없습니다.
                                         </td>
                                     </tr>
                                 ) : (
-                                    recentTrades.map((trade, index) => (
-                                        <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                            <td className="px-4 py-2 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                                {new Date(trade.createdAt).toLocaleString('ko-KR', {
-                                                    month: '2-digit',
-                                                    day: '2-digit',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </td>
-                                            <td className="px-4 py-2 text-xs font-medium text-slate-900 dark:text-slate-100">
-                                                {trade.coinCode}
-                                            </td>
-                                            <td className="px-4 py-2 text-center">
-                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                    trade.tradeType === 'BUY'
-                                                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                                                }`}>
-                                                    {trade.tradeType === 'BUY' ? '매수' : '매도'}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-2 text-center">
-                                                {trade.reason && (
-                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getReasonColor(trade.reason)}`}>
-                                                        {getReasonLabel(trade.reason)}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-2 text-xs text-right">
-                                                {trade.profitLossRate != null ? (
-                                                    <span className={trade.profitLossRate >= 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-blue-600 dark:text-blue-400 font-medium'}>
-                                                        {trade.profitLossRate >= 0 ? '+' : ''}{trade.profitLossRate.toFixed(2)}%
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-slate-400 dark:text-slate-500">-</span>
-                                                )}
-                                            </td>
+                                    currentRecords.map((row, idx) => (
+                                        <tr key={idx} className="hover:bg-blue-50 transition-colors dark:hover:bg-slate-700">
+                                            {TABLE_COLUMNS.map((col, index) => {
+                                                const value = row[col.key];
+                                                const displayValue = col.render ? col.render(value) : (value ?? '-');
+                                                return (
+                                                    <td
+                                                        key={col.key}
+                                                        className={`${col.cellClassName} ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
+                                                        style={{
+                                                            width: col.width,
+                                                            left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
+                                                        }}
+                                                    >
+                                                        {displayValue}
+                                                    </td>
+                                                );
+                                            })}
                                         </tr>
                                     ))
                                 )}
                             </tbody>
                         </table>
                     </div>
+
+                    {/* 페이지네이션 */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 px-4 py-4 border-t border-slate-200 dark:border-slate-700">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 text-sm"
+                            >
+                                이전
+                            </button>
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                                {currentPage} / {totalPages}
+                            </span>
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 text-sm"
+                            >
+                                다음
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* 예측 성능 요약 */}
@@ -534,23 +1082,20 @@ export default function CointradeDashboard() {
                         </div>
 
                         {/* 평균 수익률 */}
-                        <div className={`flex items-center justify-between p-4 rounded-lg ${
-                            performance.avgProfitRate >= 0
-                                ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800'
-                                : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'
-                        }`}>
-                            <span className={`text-sm font-medium ${
-                                performance.avgProfitRate >= 0
-                                    ? 'text-red-700 dark:text-red-400'
-                                    : 'text-blue-700 dark:text-blue-400'
+                        <div className={`flex items-center justify-between p-4 rounded-lg ${performance.avgProfitRate >= 0
+                            ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800'
+                            : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'
                             }`}>
+                            <span className={`text-sm font-medium ${performance.avgProfitRate >= 0
+                                ? 'text-red-700 dark:text-red-400'
+                                : 'text-blue-700 dark:text-blue-400'
+                                }`}>
                                 평균 수익률
                             </span>
-                            <span className={`text-2xl font-bold ${
-                                performance.avgProfitRate >= 0
-                                    ? 'text-red-600 dark:text-red-400'
-                                    : 'text-blue-600 dark:text-blue-400'
-                            }`}>
+                            <span className={`text-2xl font-bold ${performance.avgProfitRate >= 0
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-blue-600 dark:text-blue-400'
+                                }`}>
                                 {performance.avgProfitRate >= 0 ? '+' : ''}{performance.avgProfitRate.toFixed(2)}%
                             </span>
                         </div>

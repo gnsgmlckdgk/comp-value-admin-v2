@@ -126,6 +126,100 @@ export default function CointradeScheduler() {
         setToast('상태가 갱신되었습니다.');
     };
 
+    // 쿨타임 상태 (타임스탬프)
+    const [cooldowns, setCooldowns] = useState({
+        buy: 0,
+        sell: 0,
+        stop: 0
+    });
+    
+    // 남은 시간 상태 (초)
+    const [remainingTimes, setRemainingTimes] = useState({
+        buy: 0,
+        sell: 0,
+        stop: 0
+    });
+
+    // 쿨타임 타이머
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const now = Date.now();
+            setRemainingTimes({
+                buy: Math.max(0, Math.ceil((cooldowns.buy - now) / 1000)),
+                sell: Math.max(0, Math.ceil((cooldowns.sell - now) / 1000)),
+                stop: Math.max(0, Math.ceil((cooldowns.stop - now) / 1000))
+            });
+        }, 100); // 0.1초마다 갱신하여 반응성 향상
+
+        return () => clearInterval(timer);
+    }, [cooldowns]);
+
+    // 매수 프로세스 수동 실행
+    const handleManualBuy = async () => {
+        if (Date.now() < cooldowns.buy) return;
+
+        // 쿨타임 설정 (10초)
+        setCooldowns(prev => ({ ...prev, buy: Date.now() + 10000 }));
+        
+        try {
+            const { data, error } = await send('/dart/api/cointrade/trade/buy/start', {}, 'GET');
+            if (error) {
+                setToast('매수 프로세스 실행 실패: ' + error);
+            } else if (data?.success) {
+                setToast(data.response?.message || '매수 프로세스가 시작되었습니다.');
+            } else {
+                setToast(data?.message || '실행에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error(e);
+            setToast('요청 처리 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 매도 프로세스 수동 실행
+    const handleManualSell = async () => {
+        if (Date.now() < cooldowns.sell) return;
+
+        // 쿨타임 설정 (10초)
+        setCooldowns(prev => ({ ...prev, sell: Date.now() + 10000 }));
+
+        try {
+            const { data, error } = await send('/dart/api/cointrade/trade/sell/start', {}, 'GET');
+            if (error) {
+                setToast('매도 프로세스 실행 실패: ' + error);
+            } else if (data?.success) {
+                setToast(data.response?.message || '매도 프로세스가 시작되었습니다.');
+            } else {
+                setToast(data?.message || '실행에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error(e);
+            setToast('요청 처리 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 프로세스 강제 중단
+    const handleForceStop = async () => {
+        if (Date.now() < cooldowns.stop) return;
+
+        // 쿨타임 설정 (10초)
+        setCooldowns(prev => ({ ...prev, stop: Date.now() + 10000 }));
+
+        try {
+            const { data, error } = await send('/dart/api/cointrade/trade/stop', {}, 'GET');
+            if (error) {
+                setToast('중단 요청 실패: ' + error);
+            } else if (data?.success) {
+                setToast(data.response?.message || '중단 요청이 접수되었습니다.');
+            } else {
+                setToast(data?.message || '요청에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error(e);
+            setToast('요청 처리 중 오류가 발생했습니다.');
+        }
+    };
+
     // 다음 실행 시간 포맷
     // const formatNextRun = (nextRun) => {
     //     if (!nextRun) return '-';
@@ -285,6 +379,52 @@ export default function CointradeScheduler() {
                             </>
                         )}
                     </div>
+                </div>
+            </div>
+
+            {/* 프로세스 수동 제어 (v2.2 추가) */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                    프로세스 수동 제어
+                </h2>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800 rounded-md p-3 mb-4">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
+                        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>
+                            <strong>주의:</strong> 스케줄러 설정과 무관하게 프로세스를 즉시 실행하거나 중단합니다.<br />
+                            매수/매도 프로세스는 시스템 자원을 많이 사용할 수 있으므로 필요한 경우에만 실행해주세요.<br />
+                            강제 중단 시 현재 진행 중인 작업이 완료된 후 종료됩니다.
+                        </span>
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                    <Button 
+                        onClick={handleManualBuy} 
+                        disabled={remainingTimes.buy > 0}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[140px]"
+                    >
+                        {remainingTimes.buy > 0 ? `대기 (${remainingTimes.buy}s)` : '매수 프로세스 실행'}
+                    </Button>
+
+                    <Button 
+                        onClick={handleManualSell} 
+                        disabled={remainingTimes.sell > 0}
+                        className="bg-amber-600 hover:bg-amber-700 text-white min-w-[140px]"
+                    >
+                        {remainingTimes.sell > 0 ? `대기 (${remainingTimes.sell}s)` : '매도 프로세스 실행'}
+                    </Button>
+
+                    <Button 
+                        onClick={handleForceStop} 
+                        disabled={remainingTimes.stop > 0}
+                        variant="danger"
+                        className="min-w-[140px]"
+                    >
+                        {remainingTimes.stop > 0 ? `대기 (${remainingTimes.stop}s)` : '강제 중단'}
+                    </Button>
                 </div>
             </div>
 

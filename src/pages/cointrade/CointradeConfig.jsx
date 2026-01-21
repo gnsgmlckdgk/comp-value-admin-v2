@@ -198,33 +198,49 @@ export default function CointradeConfig() {
                             </div>
                         </div>
 
-                        <div className="space-y-6">
-                            {Object.keys(params).map((key) => (
-                                <div key={key} className="flex flex-col md:flex-row md:items-start gap-3">
-                                    <div className="w-full md:w-2/5">
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                            {getParamLabel(key)}
-                                        </label>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {getParamDescription(key)}
-                                        </p>
-                                    </div>
-                                    <div className="w-full md:w-3/5">
-                                        <Input
-                                            type="number"
-                                            className="w-full"
-                                            value={params[key]}
-                                            onChange={(e) => handleInputChange(key, e.target.value)}
-                                            placeholder="0"
-                                            step={
-                                                key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
-                                                    key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
-                                                        '1'
-                                            }
-                                        />
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
+                                        <th className="p-4 text-sm font-semibold text-slate-600 dark:text-slate-300 w-1/4">항목</th>
+                                        <th className="p-4 text-sm font-semibold text-slate-600 dark:text-slate-300 w-1/2">설명</th>
+                                        <th className="p-4 text-sm font-semibold text-slate-600 dark:text-slate-300 w-1/4">설정값</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {Object.keys(params).map((key) => (
+                                        <tr 
+                                            key={key} 
+                                            className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors duration-150"
+                                        >
+                                            <td className="p-4 align-middle">
+                                                <span className="font-medium text-slate-700 dark:text-slate-200 block">
+                                                    {getParamLabel(key)}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <span className="text-sm text-slate-500 dark:text-slate-400 block">
+                                                    {getParamDescription(key)}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <Input
+                                                    type="number"
+                                                    className="w-full"
+                                                    value={params[key]}
+                                                    onChange={(e) => handleInputChange(key, e.target.value)}
+                                                    placeholder="0"
+                                                    step={
+                                                        key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
+                                                            key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
+                                                                '1'
+                                                    }
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 

@@ -234,18 +234,30 @@ export default function CointradeHistory() {
         return () => clearTimeout(timer);
     }, [toast]);
 
-    // 페이지 로드 시 기본 기간 설정 (최근 30일)
+    // 페이지 로드 시 기본 기간 설정 (시작일: 한달전 00:00, 종료일: 오늘 현재시간)
     useEffect(() => {
         const today = new Date();
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(today.getDate() - 30);
+        const oneMonthAgo = new Date(today);
+        oneMonthAgo.setMonth(today.getMonth() - 1);
+
+        // 로컬 날짜 문자열 (YYYY-MM-DD)
+        const formatDate = (date) => {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+
+        // 로컬 시간 문자열 (HH:mm)
+        const currentTime = today.getHours().toString().padStart(2, '0') + ':' +
+                            today.getMinutes().toString().padStart(2, '0');
 
         setFilters(prev => ({
             ...prev,
-            startDate: thirtyDaysAgo.toISOString().split('T')[0],
+            startDate: formatDate(oneMonthAgo),
             startTime: '00:00',
-            endDate: today.toISOString().split('T')[0],
-            endTime: '23:59'
+            endDate: formatDate(today),
+            endTime: currentTime
         }));
 
         fetchCoinList();

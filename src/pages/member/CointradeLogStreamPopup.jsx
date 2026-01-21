@@ -27,6 +27,7 @@ export default function CointradeLogStreamPopup() {
     const pollingIntervalRef = useRef(null);
     const logContainerRef = useRef(null);
     const searchInputRef = useRef(null);
+    const lastLineRef = useRef(0); // lastLine을 ref로 관리하여 폴링 시 최신값 참조 보장
 
     // 자동 스크롤
     useEffect(() => {
@@ -140,7 +141,8 @@ export default function CointradeLogStreamPopup() {
 
         const fetchLogs = async () => {
             try {
-                const { data, error: apiError } = await send('/dart/api/cointrade/log/logs/stream/latest', { lastLine }, 'GET');
+                const currentLastLine = lastLineRef.current;
+                const { data, error: apiError } = await send('/dart/api/cointrade/log/logs/stream/latest', { lastLine: currentLastLine }, 'GET');
 
                 if (apiError) {
                     setError(apiError);
@@ -148,7 +150,8 @@ export default function CointradeLogStreamPopup() {
                     const content = data.response.content;
                     const endLine = data.response.endLine;
 
-                    if (content && content.trim()) {
+                    // 새로운 내용이 있고, 서버가 반환한 endLine이 현재 lastLine보다 클 때만 처리
+                    if (content && content.trim() && endLine > currentLastLine) {
                         // 새로운 로그 라인 추가
                         const newLines = content.split('\n').filter(line => line.trim());
                         if (newLines.length > 0) {
@@ -171,6 +174,8 @@ export default function CointradeLogStreamPopup() {
                                 return newLogs;
                             });
 
+                            // lastLine 업데이트 (Ref 및 State)
+                            lastLineRef.current = endLine;
                             setLastLine(endLine);
                         }
                     }
@@ -192,7 +197,7 @@ export default function CointradeLogStreamPopup() {
                 clearInterval(pollingIntervalRef.current);
             }
         };
-    }, [isPolling, lastLine]);
+    }, [isPolling]); // lastLine 의존성 제거
 
     const handleStart = () => {
         setIsPolling(true);
@@ -212,6 +217,7 @@ export default function CointradeLogStreamPopup() {
     const handleClearLogs = () => {
         setLogs([]);
         setLastLine(0);
+        lastLineRef.current = 0; // Ref 초기화
         setSearchResults([]);
         setCurrentSearchIndex(-1);
     };

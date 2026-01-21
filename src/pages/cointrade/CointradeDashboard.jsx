@@ -78,7 +78,6 @@ const TABLE_COLUMNS = [
         label: '일시',
         width: COL_WIDTHS.createdAt,
         sortable: true,
-        sticky: true,
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
         render: (value) => formatDateTime(value)
@@ -88,8 +87,6 @@ const TABLE_COLUMNS = [
         label: '종목',
         width: COL_WIDTHS.coinCode,
         sortable: true,
-        sticky: true,
-        left: COL_WIDTHS.createdAt,
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-left font-medium text-slate-900 dark:text-slate-100',
     },
@@ -137,11 +134,20 @@ const TABLE_COLUMNS = [
     }
 ];
 
+// 통화 단위 계산
+const getCurrencyUnit = (coinCode) => {
+    if (!coinCode) return '';
+    const prefix = coinCode.split('-')[0];
+    return prefix === 'KRW' ? '원' : ` ${prefix}`;
+};
+
 // 보유 종목 컬럼 너비 정의
 const HOLDINGS_COL_WIDTHS = {
     coinCode: '100px',
     buyPrice: '120px',
     currentPrice: '120px',
+    predictedLow: '120px',
+    predictedHigh: '120px',
     quantity: '120px',
     valuation: '120px',
     profitRate: '100px',
@@ -170,7 +176,7 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value) => `${formatNumberWithComma(value)}원`
+        render: (value, row) => `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}`
     },
     {
         key: 'currentPrice',
@@ -179,7 +185,25 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
-        render: (value) => value ? `${formatNumberWithComma(value)}원` : '-'
+        render: (value, row) => value ? `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}` : '-'
+    },
+    {
+        key: 'predictedLow',
+        label: '예측저가',
+        width: HOLDINGS_COL_WIDTHS.predictedLow,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
+        render: (value, row) => value ? `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}` : '-'
+    },
+    {
+        key: 'predictedHigh',
+        label: '예측고가',
+        width: HOLDINGS_COL_WIDTHS.predictedHigh,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
+        render: (value, row) => value ? `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}` : '-'
     },
     {
         key: 'quantity',
@@ -197,7 +221,7 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
-        render: (value) => `${formatNumberWithComma(value)}원`
+        render: (value, row) => `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}`
     },
     {
         key: 'profitRate',
@@ -834,7 +858,7 @@ export default function CointradeDashboard() {
 
                                                             const value = holding[col.key];
 
-                                                            const displayValue = col.render ? col.render(value) : (value ?? '-');
+                                                                                                                        const displayValue = col.render ? col.render(value, holding) : (value ?? '-');
 
                                                             return (
 
@@ -973,7 +997,7 @@ export default function CointradeDashboard() {
                                         <tr key={idx} className="hover:bg-blue-50 transition-colors dark:hover:bg-slate-700">
                                             {TABLE_COLUMNS.map((col, index) => {
                                                 const value = row[col.key];
-                                                const displayValue = col.render ? col.render(value) : (value ?? '-');
+                                                const displayValue = col.render ? col.render(value, row) : (value ?? '-');
                                                 return (
                                                     <td
                                                         key={col.key}

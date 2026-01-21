@@ -70,7 +70,6 @@ const TABLE_COLUMNS = [
         label: '일시',
         width: COL_WIDTHS.createdAt,
         sortable: true,
-        sticky: true, // 고정 열
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
         render: (value) => formatDateTime(value)
@@ -80,8 +79,6 @@ const TABLE_COLUMNS = [
         label: '종목',
         width: COL_WIDTHS.coinCode,
         sortable: true,
-        sticky: true, // 고정 열 (두 번째)
-        left: COL_WIDTHS.createdAt, // 첫 번째 열 너비만큼 이동
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-left font-medium text-slate-900 dark:text-slate-100',
     },

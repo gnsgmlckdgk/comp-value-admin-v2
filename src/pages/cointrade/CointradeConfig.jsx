@@ -3,6 +3,8 @@ import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
+import SellCriteriaModal from '@/pages/cointrade/popup/SellCriteriaModal';
+import BuyCriteriaModal from '@/pages/cointrade/popup/BuyCriteriaModal';
 
 /**
  * 코인 자동매매 파라미터 설정 페이지
@@ -11,6 +13,8 @@ export default function CointradeConfig() {
     const [loading, setLoading] = useState(false);
     const [saveLoading, setSaveLoading] = useState(false);
     const [toast, setToast] = useState(null);
+    const [isSellCriteriaModalOpen, setIsSellCriteriaModalOpen] = useState(false);
+    const [isBuyCriteriaModalOpen, setIsBuyCriteriaModalOpen] = useState(false);
 
     // 파라미터 상태
     const [params, setParams] = useState({
@@ -42,8 +46,7 @@ export default function CointradeConfig() {
                 'BUY_WAIT_SECONDS',
                 'BUY_RETRY_COUNT',
                 'BUY_CHECK_HOURS',
-                'TARGET_MODE',
-                'SURGE_THRESHOLD'
+                'TARGET_MODE'
             ]
         },
         SELL: {
@@ -53,7 +56,8 @@ export default function CointradeConfig() {
                 'STOP_LOSS_THRESHOLD',
                 'SELL_CHECK_SECONDS',
                 'HOLD_GRACE_DAYS',
-                'PRICE_MONITOR_SECONDS'
+                'PRICE_MONITOR_SECONDS',
+                'SURGE_THRESHOLD'
             ]
         }
     };
@@ -233,9 +237,6 @@ export default function CointradeConfig() {
                                 매매 파라미터 설정
                             </h2>
                             <div className="flex flex-col gap-2">
-                                <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-md text-sm font-medium text-blue-800 dark:text-blue-300">
-                                    매수 조건: (수익률 &gt;= X% OR 급등확률 &gt;= S%) AND 점수 &gt;= 최소 매수 점수
-                                </div>
                                 <div className="flex items-center gap-2 justify-end">
                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                                         즉시 반영
@@ -259,9 +260,33 @@ export default function CointradeConfig() {
                                 {Object.entries(PARAM_GROUPS).map(([groupKey, group]) => (
                                     <Fragment key={groupKey}>
                                         {/* 그룹 헤더 */}
-                                        <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 text-sm font-bold text-blue-600 dark:text-blue-400 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                                            <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
-                                            {group.label}
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 text-sm font-bold text-blue-600 dark:text-blue-400 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
+                                                {group.label}
+                                            </div>
+                                            {groupKey === 'BUY' && (
+                                                <button
+                                                    onClick={() => setIsBuyCriteriaModalOpen(true)}
+                                                    className="text-xs font-medium text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-300 underline underline-offset-2 flex items-center gap-1 transition-colors"
+                                                >
+                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    매수 기준 설명
+                                                </button>
+                                            )}
+                                            {groupKey === 'SELL' && (
+                                                <button
+                                                    onClick={() => setIsSellCriteriaModalOpen(true)}
+                                                    className="text-xs font-medium text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-300 underline underline-offset-2 flex items-center gap-1 transition-colors"
+                                                >
+                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    매도 기준 설명
+                                                </button>
+                                            )}
                                         </div>
 
                                         {group.keys.map((key) => (
@@ -271,7 +296,7 @@ export default function CointradeConfig() {
                                             >
                                                 {/* 항목명 & 즉시반영 배지 */}
                                                 <div className="md:col-span-3 flex flex-col justify-center gap-1">
-                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
                                                         <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm md:text-base">
                                                             {getParamLabel(key)}
                                                         </span>
@@ -281,6 +306,9 @@ export default function CointradeConfig() {
                                                             </span>
                                                         )}
                                                     </div>
+                                                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-tight">
+                                                        {key}
+                                                    </span>
                                                 </div>
 
                                                 {/* 설명 - 모바일에서는 항목명 아래, 데스크톱에서는 중앙 */}
@@ -345,6 +373,18 @@ export default function CointradeConfig() {
                     </div>
                 </div>
             )}
+
+            {/* 매도 기준 설명 모달 */}
+            <SellCriteriaModal 
+                isOpen={isSellCriteriaModalOpen} 
+                onClose={() => setIsSellCriteriaModalOpen(false)} 
+            />
+
+            {/* 매수 기준 설명 모달 */}
+            <BuyCriteriaModal 
+                isOpen={isBuyCriteriaModalOpen} 
+                onClose={() => setIsBuyCriteriaModalOpen(false)} 
+            />
         </div>
     );
 }

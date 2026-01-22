@@ -42,7 +42,8 @@ export default function CointradeConfig() {
                 'BUY_WAIT_SECONDS',
                 'BUY_RETRY_COUNT',
                 'BUY_CHECK_HOURS',
-                'TARGET_MODE'
+                'TARGET_MODE',
+                'SURGE_THRESHOLD'
             ]
         },
         SELL: {
@@ -51,13 +52,7 @@ export default function CointradeConfig() {
                 'TAKE_PROFIT_BUFFER',
                 'STOP_LOSS_THRESHOLD',
                 'SELL_CHECK_SECONDS',
-                'HOLD_GRACE_DAYS'
-            ]
-        },
-        ETC: {
-            label: '기타',
-            keys: [
-                'SURGE_THRESHOLD',
+                'HOLD_GRACE_DAYS',
                 'PRICE_MONITOR_SECONDS'
             ]
         }

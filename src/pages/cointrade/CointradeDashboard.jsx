@@ -141,13 +141,31 @@ const getCurrencyUnit = (coinCode) => {
     return prefix === 'KRW' ? '원' : ` ${prefix}`;
 };
 
+// 가격 표시 컴포넌트 (정수부 볼드 처리)
+const renderFormattedPrice = (value, unit) => {
+    if (value === null || value === '' || value === undefined) return '-';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '-';
+
+    const str = num.toLocaleString('en-US');
+    const parts = str.split('.');
+
+    return (
+        <span>
+            <span className="font-bold">{parts[0]}</span>
+            {parts.length > 1 && `.${parts[1]}`}
+            {unit}
+        </span>
+    );
+};
+
 // 보유 종목 컬럼 너비 정의
 const HOLDINGS_COL_WIDTHS = {
     coinCode: '100px',
     buyPrice: '120px',
     currentPrice: '120px',
     predictedLow: '120px',
-    predictedHigh: '120px',
+    predictedHigh: '160px', // 너비 조정
     quantity: '120px',
     valuation: '120px',
     profitRate: '100px',
@@ -176,7 +194,7 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value, row) => `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}`
+        render: (value, row) => renderFormattedPrice(value, getCurrencyUnit(row.coinCode))
     },
     {
         key: 'currentPrice',
@@ -185,7 +203,20 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
-        render: (value, row) => value ? `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}` : '-'
+        render: (value, row) => {
+            if (!value) return '-';
+            const rate = (row.buyPrice && row.buyPrice > 0) 
+                ? ((value - row.buyPrice) / row.buyPrice) * 100 
+                : 0;
+            return (
+                <div className="flex flex-col items-end">
+                    {renderFormattedPrice(value, getCurrencyUnit(row.coinCode))}
+                    <span className={`text-xs ${rate >= 0 ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`}>
+                        ({rate >= 0 ? '+' : ''}{rate.toFixed(2)}%)
+                    </span>
+                </div>
+            );
+        }
     },
     {
         key: 'predictedLow',
@@ -194,7 +225,7 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value, row) => value ? `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}` : '-'
+        render: (value, row) => renderFormattedPrice(value, getCurrencyUnit(row.coinCode))
     },
     {
         key: 'predictedHigh',
@@ -203,7 +234,20 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value, row) => value ? `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}` : '-'
+        render: (value, row) => {
+            if (!value) return '-';
+            const rate = (row.buyPrice && row.buyPrice > 0) 
+                ? ((value - row.buyPrice) / row.buyPrice) * 100 
+                : 0;
+            return (
+                <div className="flex flex-col items-end">
+                    {renderFormattedPrice(value, getCurrencyUnit(row.coinCode))}
+                    <span className={`text-xs ${rate >= 0 ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`}>
+                        ({rate >= 0 ? '+' : ''}{rate.toFixed(2)}%)
+                    </span>
+                </div>
+            );
+        }
     },
     {
         key: 'quantity',
@@ -221,7 +265,7 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
-        render: (value, row) => `${formatNumberWithComma(value)}${getCurrencyUnit(row.coinCode)}`
+        render: (value, row) => renderFormattedPrice(value, getCurrencyUnit(row.coinCode))
     },
     {
         key: 'profitRate',
@@ -352,83 +396,131 @@ export default function CointradeDashboard() {
             return () => clearTimeout(timer);
         }, [toast]);
     
-            // 데이터 조회
-            const fetchData = useCallback(async () => {
-                setLoading(true);
-                try {
-                    // 1. 상태 조회
-                    const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
-                    if (statusResponse.data?.success && statusResponse.data?.response) {
-                        const resp = statusResponse.data.response;
-                        setStatus({
-                            buySchedulerEnabled: resp.buySchedulerEnabled || false,
-                            sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
-                            totalInvestment: resp.totalInvestment || 0,
-                            totalValuation: resp.totalValuation || 0,
-                            totalProfitRate: resp.totalProfitRate || 0,
-                            holdingsCount: resp.holdings?.length || 0
-                        });
-                    }
-        
-                    // 2. 보유 종목 조회
-                    const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
-                    if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
-                        // 수익률 및 평가금액 계산하여 상태에 저장
-                        const calculatedHoldings = holdingsResponse.data.response.map(holding => {
-                            const profitRate = holding.currentPrice
-                                ? ((holding.currentPrice - holding.buyPrice) / holding.buyPrice * 100)
-                                : 0;
-                            const valuation = holding.currentPrice
-                                ? holding.currentPrice * holding.quantity
-                                : holding.totalAmount;
-                            
-                            return {
-                                ...holding,
-                                profitRate,
-                                valuation
-                            };
-                        });
-                        setHoldings(calculatedHoldings);
-                    }
-        
-                    // 3. 최근 거래 내역 조회 (최근 30일)
-                    const today = new Date();
-                    const thirtyDaysAgo = new Date(today);
-                    thirtyDaysAgo.setDate(today.getDate() - 30);
-        
-                    // 날짜와 시간 조립 (ISO 8601 형식 - KST 고려)
-                    const formatDateParam = (date) => {
-                        const yyyy = date.getFullYear();
-                        const mm = String(date.getMonth() + 1).padStart(2, '0');
-                        const dd = String(date.getDate()).padStart(2, '0');
-                        return `${yyyy}-${mm}-${dd}`;
-                    }
-        
-                    const startDateStr = formatDateParam(thirtyDaysAgo);
-                    const endDateStr = formatDateParam(today);
-        
-                    const startDateTime = `${startDateStr}T00:00:00`;
-                    const endDateTime = `${endDateStr}T23:59:59`;
-        
-                    const historyResponse = await send(
-                        `/dart/api/cointrade/history?startDate=${startDateTime}&endDate=${endDateTime}`,
-                        {},
-                        'GET'
-                    );
-        
-                    if (historyResponse.data?.success && historyResponse.data?.response) {
-                        const trades = historyResponse.data.response.content || historyResponse.data.response || [];
-                        setAllRecentTrades(trades);
-                        calculatePerformance(trades);
-                    } else {
-                        setAllRecentTrades([]);
-                    }
-                } catch (e) {
-                    console.error('데이터 조회 실패:', e);
-                } finally {
-                    setLoading(false);
+        // 데이터 조회
+        const fetchData = useCallback(async (isBackground = false) => {
+            if (!isBackground) setLoading(true);
+            try {
+                // 1. 상태 조회
+                const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
+                if (statusResponse.data?.success && statusResponse.data?.response) {
+                    const resp = statusResponse.data.response;
+                    setStatus({
+                        buySchedulerEnabled: resp.buySchedulerEnabled || false,
+                        sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
+                        totalInvestment: resp.totalInvestment || 0,
+                        totalValuation: resp.totalValuation || 0,
+                        totalProfitRate: resp.totalProfitRate || 0,
+                        holdingsCount: resp.holdings?.length || 0
+                    });
                 }
-            }, []);    
+    
+            // 2. 보유 종목 조회
+            const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
+            if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
+                let initialHoldings = holdingsResponse.data.response;
+
+                // 보유 종목이 있는 경우 현재가 조회 (업비트 API)
+                if (initialHoldings.length > 0) {
+                    try {
+                        const marketCodes = initialHoldings.map(h => h.coinCode).join(',');
+                        const tickerResponse = await send(`/dart/api/upbit/v1/ticker?markets=${marketCodes}`, {}, 'GET');
+
+                        if (tickerResponse.data?.success && tickerResponse.data?.response) {
+                            const tickerMap = {};
+                            tickerResponse.data.response.forEach(ticker => {
+                                tickerMap[ticker.market] = ticker.trade_price;
+                            });
+
+                            // 현재가 업데이트
+                            initialHoldings = initialHoldings.map(holding => {
+                                const currentPrice = tickerMap[holding.coinCode] || holding.currentPrice; // API 값이 없으면 기존 값 사용
+                                return {
+                                    ...holding,
+                                    currentPrice
+                                };
+                            });
+                        }
+                    } catch (tickerError) {
+                        console.error('현재가 조회 실패:', tickerError);
+                        // 실패해도 기존 holding 데이터로 계속 진행
+                    }
+                }
+
+                // 수익률 및 평가금액 계산하여 상태에 저장
+                let newTotalInvestment = 0;
+                let newTotalValuation = 0;
+
+                const calculatedHoldings = initialHoldings.map(holding => {
+                    const profitRate = holding.currentPrice
+                        ? ((holding.currentPrice - holding.buyPrice) / holding.buyPrice * 100)
+                        : 0;
+                    const valuation = holding.currentPrice
+                        ? holding.currentPrice * holding.quantity
+                        : holding.totalAmount;
+                    
+                    newTotalInvestment += (holding.totalAmount || 0);
+                    newTotalValuation += valuation;
+
+                    return {
+                        ...holding,
+                        profitRate,
+                        valuation
+                    };
+                });
+                setHoldings(calculatedHoldings);
+
+                // 상단 카드 상태 업데이트 (실시간 평가금액 반영)
+                const newTotalProfitRate = newTotalInvestment > 0 
+                    ? ((newTotalValuation - newTotalInvestment) / newTotalInvestment) * 100 
+                    : 0;
+
+                setStatus(prev => ({
+                    ...prev,
+                    totalInvestment: newTotalInvestment,
+                    totalValuation: newTotalValuation,
+                    totalProfitRate: newTotalProfitRate,
+                    holdingsCount: calculatedHoldings.length
+                }));
+            }
+    
+                // 3. 최근 거래 내역 조회 (최근 30일)
+                const today = new Date();
+                const thirtyDaysAgo = new Date(today);
+                thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+                // 날짜와 시간 조립 (ISO 8601 형식 - KST 고려)
+                const formatDateParam = (date) => {
+                    const yyyy = date.getFullYear();
+                    const mm = String(date.getMonth() + 1).padStart(2, '0');
+                    const dd = String(date.getDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                }
+    
+                const startDateStr = formatDateParam(thirtyDaysAgo);
+                const endDateStr = formatDateParam(today);
+    
+                const startDateTime = `${startDateStr}T00:00:00`;
+                const endDateTime = `${endDateStr}T23:59:59`;
+    
+                const historyResponse = await send(
+                    `/dart/api/cointrade/history?startDate=${startDateTime}&endDate=${endDateTime}`,
+                    {},
+                    'GET'
+                );
+    
+                if (historyResponse.data?.success && historyResponse.data?.response) {
+                    const trades = historyResponse.data.response.content || historyResponse.data.response || [];
+                    setAllRecentTrades(trades);
+                    calculatePerformance(trades);
+                } else {
+                    setAllRecentTrades([]);
+                }
+            } catch (e) {
+                console.error('데이터 조회 실패:', e);
+            } finally {
+                if (!isBackground) setLoading(false);
+            }
+        }, []);    
         // 예측 성능 계산
         const calculatePerformance = (trades) => {
             const sellTrades = trades.filter(t => t.tradeType === 'SELL');
@@ -576,20 +668,17 @@ export default function CointradeDashboard() {
         };
     
         // 페이지 로드 시 + 30초마다 자동 새로고침
-        useEffect(() => {
-            fetchData();
-            const interval = setInterval(fetchData, 30000); // 30초
-            return () => clearInterval(interval);
-        }, [fetchData]);
-    
-        // 수동 새로고침
-        const handleRefresh = () => {
-            setLoading(true);
-            fetchData().finally(() => {
-                setLoading(false);
-                setToast('데이터가 갱신되었습니다.');
-            });
-        };
+    useEffect(() => {
+        fetchData(false); // 초기 로딩은 loading 표시
+        const interval = setInterval(() => fetchData(true), 30000); // 30초마다 백그라운드 갱신
+        return () => clearInterval(interval);
+    }, [fetchData]);
+
+    // 수동 새로고침
+    const handleRefresh = () => {
+        fetchData(false); // 수동 갱신은 loading 표시
+        setToast('데이터가 갱신되었습니다.');
+    };
     return (
         <div className="container mx-auto max-w-7xl p-4">
             <div className="flex items-center justify-between mb-6">
@@ -637,16 +726,16 @@ export default function CointradeDashboard() {
                 {/* 총 투자금액 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 투자금액</div>
-                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                        {(status.totalInvestment / 10000).toFixed(0)}만원
+                    <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
+                        {renderFormattedPrice((status.totalInvestment / 10000).toFixed(2), '만원')}
                     </div>
                 </div>
 
                 {/* 총 평가금액 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 평가금액</div>
-                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                        {(status.totalValuation / 10000).toFixed(0)}만원
+                    <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
+                        {renderFormattedPrice((status.totalValuation / 10000).toFixed(2), '만원')}
                     </div>
                 </div>
 

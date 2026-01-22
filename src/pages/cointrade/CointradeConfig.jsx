@@ -252,76 +252,80 @@ export default function CointradeConfig() {
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
-                                        <th className="p-4 text-sm font-semibold text-slate-600 dark:text-slate-300 w-1/4">항목</th>
-                                        <th className="p-4 text-sm font-semibold text-slate-600 dark:text-slate-300 w-1/2">설명</th>
-                                        <th className="p-4 text-sm font-semibold text-slate-600 dark:text-slate-300 w-1/4">설정값</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {Object.entries(PARAM_GROUPS).map(([groupKey, group]) => (
-                                        <Fragment key={groupKey}>
-                                            <tr className="bg-slate-50 dark:bg-slate-800/50">
-                                                <td colSpan="3" className="px-4 py-2 text-sm font-bold text-blue-600 dark:text-blue-400 border-b border-slate-200 dark:border-slate-700">
-                                                    {group.label}
-                                                </td>
-                                            </tr>
-                                            {group.keys.map((key) => (
-                                                <tr
-                                                    key={key}
-                                                    className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors duration-150"
-                                                >
-                                                    <td className="p-4 align-middle">
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className="font-medium text-slate-700 dark:text-slate-200">
-                                                                {getParamLabel(key)}
-                                                            </span>
-                                                            {IMMEDIATE_PARAMS.includes(key) && (
-                                                                <span className="inline-flex items-center w-fit px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                                                    즉시 반영
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-4 align-middle">
-                                                        <span className="text-sm text-slate-500 dark:text-slate-400 block">
-                                                            {getParamDescription(key)}
+                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                            {/* 헤더 - 데스크톱 전용 */}
+                            <div className="hidden md:grid md:grid-cols-12 bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600 font-semibold text-sm text-slate-600 dark:text-slate-300">
+                                <div className="p-4 md:col-span-3 text-center">항목</div>
+                                <div className="p-4 md:col-span-6 text-center">설명</div>
+                                <div className="p-4 md:col-span-3 text-center">설정값</div>
+                            </div>
+
+                            <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                                {Object.entries(PARAM_GROUPS).map(([groupKey, group]) => (
+                                    <Fragment key={groupKey}>
+                                        {/* 그룹 헤더 */}
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 text-sm font-bold text-blue-600 dark:text-blue-400 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
+                                            <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
+                                            {group.label}
+                                        </div>
+
+                                        {group.keys.map((key) => (
+                                            <div
+                                                key={key}
+                                                className="grid grid-cols-1 md:grid-cols-12 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors duration-150 p-4 gap-3 md:gap-0"
+                                            >
+                                                {/* 항목명 & 즉시반영 배지 */}
+                                                <div className="md:col-span-3 flex flex-col justify-center gap-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm md:text-base">
+                                                            {getParamLabel(key)}
                                                         </span>
-                                                    </td>
-                                                    <td className="p-4 align-middle">
-                                                        {key === 'TARGET_MODE' ? (
-                                                            <select
-                                                                value={params[key]}
-                                                                onChange={(e) => handleInputChange(key, e.target.value)}
-                                                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                            >
-                                                                <option value="ALL">ALL (전체)</option>
-                                                                <option value="SELECTED">SELECTED (선택)</option>
-                                                            </select>
-                                                        ) : (
-                                                            <Input
-                                                                type="number"
-                                                                className="w-full"
-                                                                value={params[key]}
-                                                                onChange={(e) => handleInputChange(key, e.target.value)}
-                                                                placeholder="0"
-                                                                step={
-                                                                    key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
-                                                                        key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
-                                                                            '1'
-                                                                }
-                                                            />
+                                                        {IMMEDIATE_PARAMS.includes(key) && (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 whitespace-nowrap">
+                                                                즉시 반영
+                                                            </span>
                                                         )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </Fragment>
-                                    ))}
-                                </tbody>
-                            </table>
+                                                    </div>
+                                                </div>
+
+                                                {/* 설명 - 모바일에서는 항목명 아래, 데스크톱에서는 중앙 */}
+                                                <div className="md:col-span-6 flex items-center md:px-4">
+                                                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                                                        {getParamDescription(key)}
+                                                    </span>
+                                                </div>
+
+                                                {/* 입력 필드 */}
+                                                <div className="md:col-span-3 flex items-center">
+                                                    {key === 'TARGET_MODE' ? (
+                                                        <select
+                                                            value={params[key]}
+                                                            onChange={(e) => handleInputChange(key, e.target.value)}
+                                                            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                        >
+                                                            <option value="ALL">ALL (전체)</option>
+                                                            <option value="SELECTED">SELECTED (선택)</option>
+                                                        </select>
+                                                    ) : (
+                                                        <Input
+                                                            type="number"
+                                                            className="w-full h-10 md:h-9"
+                                                            value={params[key]}
+                                                            onChange={(e) => handleInputChange(key, e.target.value)}
+                                                            placeholder="0"
+                                                            step={
+                                                                key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
+                                                                    key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
+                                                                        '1'
+                                                            }
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </Fragment>
+                                ))}
+                            </div>
                         </div>
                     </div>
 

@@ -84,6 +84,14 @@ export default function CointradeScheduler() {
                 setToast('매수 스케줄러 설정 실패: ' + error);
             } else if (data?.success) {
                 setToast(`매수 스케줄러가 ${newValue ? '활성화' : '비활성화'} 되었습니다.`);
+                
+                // 스케줄러 재로딩 호출
+                try {
+                    await send('/dart/api/cointrade/scheduler/reload', {}, 'POST');
+                } catch (reloadError) {
+                    console.error('스케줄러 재로딩 실패:', reloadError);
+                }
+
                 await fetchStatus(); // 상태 갱신
             }
         } catch (e) {
@@ -110,6 +118,14 @@ export default function CointradeScheduler() {
                 setToast('매도 스케줄러 설정 실패: ' + error);
             } else if (data?.success) {
                 setToast(`매도 스케줄러가 ${newValue ? '활성화' : '비활성화'} 되었습니다.`);
+
+                // 스케줄러 재로딩 호출
+                try {
+                    await send('/dart/api/cointrade/scheduler/reload', {}, 'POST');
+                } catch (reloadError) {
+                    console.error('스케줄러 재로딩 실패:', reloadError);
+                }
+
                 await fetchStatus(); // 상태 갱신
             }
         } catch (e) {

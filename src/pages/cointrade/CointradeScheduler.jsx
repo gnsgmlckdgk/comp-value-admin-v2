@@ -3,6 +3,14 @@ import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
 
+// 숫자를 천 단위 콤마 포맷으로 변환
+const formatNumberWithComma = (value) => {
+    if (value === null || value === '' || value === undefined) return '-';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '-';
+    return num.toLocaleString('en-US');
+};
+
 /**
  * 코인 자동매매 스케줄러 관리 페이지
  * v2.1 - 만료 임박, 급등 확률 정보 포함
@@ -35,27 +43,121 @@ export default function CointradeScheduler() {
     // 상태 조회 함수
     const fetchStatus = useCallback(async () => {
         try {
-            const { data, error } = await send('/dart/api/cointrade/status', {}, 'GET');
-
-            if (error) {
-                console.error('상태 조회 실패:', error);
-            } else if (data?.success && data?.response) {
-                const resp = data.response;
-                setStatus({
-                    buySchedulerEnabled: resp.buySchedulerEnabled || false,
-                    sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
-                    buyNextRun: resp.buyNextRun || null,
-                    buyCheckHours: resp.buyCheckHours || 24,
-                    sellCheckSeconds: resp.sellCheckSeconds || 10,
-                    priceMonitorSeconds: resp.priceMonitorSeconds || 10,
-                    holdings: resp.holdings || [],
-                    totalInvestment: resp.totalInvestment || 0,
-                    totalValuation: resp.totalValuation || 0,
-                    totalProfitRate: resp.totalProfitRate || 0,
-                    expiringCount: resp.expiringCount || 0,
-                    avgSurgeProbability: resp.avgSurgeProbability || 0
-                });
+            // 1. 스케줄러 상태 조회
+            const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
+            let schedulerStatus = {};
+            
+            if (statusResponse.data?.success && statusResponse.data?.response) {
+                schedulerStatus = statusResponse.data.response;
             }
+
+            // 2. 보유 종목 조회 (별도 API 호출)
+            const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
+            let holdings = [];
+            
+            if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
+                holdings = holdingsResponse.data.response;
+            }
+
+            // 초기값 설정
+            let totalInvestment = 0;
+            let totalValuation = 0;
+            let totalProfitRate = 0;
+
+            // 3. 보유 종목이 있는 경우 현재가 조회하여 평가금액 갱신
+            let expiringCount = 0;
+            let totalSurgeProb = 0;
+            let surgeCount = 0;
+            const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
+            const now = new Date();
+
+            if (holdings.length > 0) {
+                try {
+                    const marketCodes = holdings.map(h => h.coinCode).join(',');
+                    const tickerResponse = await send(`/dart/api/upbit/v1/ticker?markets=${marketCodes}`, {}, 'GET');
+
+                    if (tickerResponse.data?.success && tickerResponse.data?.response) {
+                        const tickerMap = {};
+                        tickerResponse.data.response.forEach(ticker => {
+                            tickerMap[ticker.market] = ticker.trade_price;
+                        });
+
+                        // 재계산
+                        holdings = holdings.map(holding => {
+                            const currentPrice = tickerMap[holding.coinCode] || holding.currentPrice;
+                            const valuation = currentPrice ? currentPrice * holding.quantity : (holding.totalAmount || 0);
+                            
+                            totalInvestment += (holding.totalAmount || 0);
+                            totalValuation += valuation;
+
+                            // 만료 임박 계산 (클라이언트 사이드)
+                            if (holding.expireDate) {
+                                const expireDate = new Date(holding.expireDate);
+                                const diffDays = Math.ceil((expireDate.setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
+                                if (diffDays <= 3 && diffDays >= 0) {
+                                    expiringCount++;
+                                }
+                            }
+
+                            // 급등 확률 합계 계산
+                            if (holding.surgeProbability !== undefined && holding.surgeProbability !== null) {
+                                totalSurgeProb += holding.surgeProbability;
+                                surgeCount++;
+                            }
+
+                            return { ...holding, currentPrice };
+                        });
+
+                        totalProfitRate = totalInvestment > 0 
+                            ? ((totalValuation - totalInvestment) / totalInvestment) * 100 
+                            : 0;
+                    } else {
+                        // 티커 조회 실패 시 기존 데이터로 계산
+                        holdings.forEach(holding => {
+                            totalInvestment += (holding.totalAmount || 0);
+                            const valuation = holding.currentPrice ? holding.currentPrice * holding.quantity : (holding.totalAmount || 0);
+                            totalValuation += valuation;
+
+                            // 만료 임박 계산
+                            if (holding.expireDate) {
+                                const expireDate = new Date(holding.expireDate);
+                                const diffDays = Math.ceil((expireDate.setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
+                                if (diffDays <= 3 && diffDays >= 0) {
+                                    expiringCount++;
+                                }
+                            }
+
+                            // 급등 확률 합계 계산
+                            if (holding.surgeProbability !== undefined && holding.surgeProbability !== null) {
+                                totalSurgeProb += holding.surgeProbability;
+                                surgeCount++;
+                            }
+                        });
+                    }
+                } catch (tickerError) {
+                    console.error('현재가 조회 실패:', tickerError);
+                }
+            }
+
+            // 평균 급등 확률 계산
+            const calculatedAvgSurgeProb = surgeCount > 0 ? totalSurgeProb / surgeCount : 0;
+
+            // 상태 업데이트
+            setStatus({
+                buySchedulerEnabled: schedulerStatus.buySchedulerEnabled || false,
+                sellSchedulerEnabled: schedulerStatus.sellSchedulerEnabled || false,
+                buyNextRun: schedulerStatus.buyNextRun || null,
+                buyCheckHours: schedulerStatus.buyCheckHours || 24,
+                sellCheckSeconds: schedulerStatus.sellCheckSeconds || 10,
+                priceMonitorSeconds: schedulerStatus.priceMonitorSeconds || 10,
+                holdings: holdings,
+                totalInvestment: totalInvestment,
+                totalValuation: totalValuation,
+                totalProfitRate: totalProfitRate,
+                expiringCount: expiringCount,
+                avgSurgeProbability: calculatedAvgSurgeProb // 클라이언트 계산 값 사용
+            });
+
         } catch (e) {
             console.error('상태 조회 오류:', e);
         }
@@ -471,7 +573,7 @@ export default function CointradeScheduler() {
                     <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                         <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 투자금액</div>
                         <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                            {(status.totalInvestment / 10000).toFixed(0)}만원
+                            {formatNumberWithComma(Math.floor(status.totalInvestment))}원
                         </div>
                     </div>
 
@@ -479,7 +581,7 @@ export default function CointradeScheduler() {
                     <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                         <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 평가금액</div>
                         <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                            {(status.totalValuation / 10000).toFixed(0)}만원
+                            {formatNumberWithComma(Math.floor(status.totalValuation))}원
                         </div>
                     </div>
 

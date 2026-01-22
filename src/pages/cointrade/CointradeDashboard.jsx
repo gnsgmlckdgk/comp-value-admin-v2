@@ -727,7 +727,7 @@ export default function CointradeDashboard() {
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 투자금액</div>
                     <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
-                        {renderFormattedPrice((status.totalInvestment / 10000).toFixed(2), '만원')}
+                        {renderFormattedPrice(Math.floor(status.totalInvestment), '원')}
                     </div>
                 </div>
 
@@ -735,7 +735,7 @@ export default function CointradeDashboard() {
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 평가금액</div>
                     <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
-                        {renderFormattedPrice((status.totalValuation / 10000).toFixed(2), '만원')}
+                        {renderFormattedPrice(Math.floor(status.totalValuation), '원')}
                     </div>
                 </div>
 

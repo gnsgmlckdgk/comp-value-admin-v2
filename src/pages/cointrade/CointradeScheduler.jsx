@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
@@ -257,6 +257,118 @@ export default function CointradeScheduler() {
         sell: 0,
         stop: 0
     });
+
+    // 매수 프로세스 상태 모니터링
+    const [buyProcessStatus, setBuyProcessStatus] = useState({
+        status: 'idle',
+        percent: 0,
+        message: '',
+        last_updated: '',
+        logs: []
+    });
+    const [buyProcessLogs, setBuyProcessLogs] = useState([]);
+    const buyLogContainerRef = useRef(null);
+    const buyLastServerLogsRef = useRef([]);
+
+    // 매도 프로세스 상태 모니터링
+    const [sellProcessStatus, setSellProcessStatus] = useState({
+        status: 'idle',
+        percent: 0,
+        message: '',
+        last_updated: '',
+        logs: []
+    });
+    const [sellProcessLogs, setSellProcessLogs] = useState([]);
+    const sellLogContainerRef = useRef(null);
+    const sellLastServerLogsRef = useRef([]);
+
+    // 로그 자동 스크롤
+    useEffect(() => {
+        if (buyLogContainerRef.current) {
+            buyLogContainerRef.current.scrollTop = buyLogContainerRef.current.scrollHeight;
+        }
+    }, [buyProcessLogs]);
+
+    useEffect(() => {
+        if (sellLogContainerRef.current) {
+            sellLogContainerRef.current.scrollTop = sellLogContainerRef.current.scrollHeight;
+        }
+    }, [sellProcessLogs]);
+
+    // 프로세스 상태 폴링 (1초 간격)
+    useEffect(() => {
+        const fetchProcessStatus = async (mode) => {
+            try {
+                const { data } = await send(`/dart/api/cointrade/log/process/status?mode=${mode}`, {}, 'GET');
+                if (data?.success && data?.response) {
+                    const resp = data.response;
+                    const serverLogs = resp.logs || [];
+                    
+                    const setStatus = mode === 'buy' ? setBuyProcessStatus : setSellProcessStatus;
+                    const setLogs = mode === 'buy' ? setBuyProcessLogs : setSellProcessLogs;
+                    const lastServerLogsRef = mode === 'buy' ? buyLastServerLogsRef : sellLastServerLogsRef;
+                    const currentLogs = mode === 'buy' ? buyProcessLogs : sellProcessLogs;
+
+                    // 상태 업데이트
+                    setStatus(resp);
+
+                    // 초기화 로직
+                    if (resp.percent === 0 || resp.message?.includes('스케줄러 초기화 완료')) {
+                         if (currentLogs.length > 0 && resp.percent === 0) {
+                            setLogs([]);
+                            lastServerLogsRef.current = [];
+                        }
+                    }
+
+                    // 로그 처리 (Append 로직)
+                    const prevLogs = lastServerLogsRef.current;
+                    let newLogsToAdd = [];
+
+                    if (serverLogs.length > prevLogs.length) {
+                        const isExtension = prevLogs.every((log, idx) => log === serverLogs[idx]);
+                        if (isExtension) {
+                            newLogsToAdd = serverLogs.slice(prevLogs.length);
+                        } else {
+                             newLogsToAdd = serverLogs;
+                        }
+                    } else if (serverLogs.length < prevLogs.length) {
+                        newLogsToAdd = serverLogs;
+                    } else {
+                        // 길이 같음: 마지막 내용 다르면 추가 (버퍼 롤링 등)
+                         const lastNew = serverLogs[serverLogs.length - 1];
+                         const lastOld = prevLogs[prevLogs.length - 1];
+                         if (lastNew !== lastOld && lastNew) {
+                             newLogsToAdd = [lastNew];
+                         }
+                    }
+
+                    if (newLogsToAdd.length > 0) {
+                        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+                        const formattedLogs = newLogsToAdd.map(msg => ({
+                            time: timeStr,
+                            message: msg
+                        }));
+                        
+                        setLogs(prev => {
+                            const combined = [...prev, ...formattedLogs];
+                            return combined.slice(-1000); 
+                        });
+                    }
+
+                    lastServerLogsRef.current = serverLogs;
+                }
+            } catch (e) {
+                console.error(`${mode} 프로세스 상태 조회 실패:`, e);
+            }
+        };
+
+        const interval = setInterval(() => {
+            fetchProcessStatus('buy');
+            fetchProcessStatus('sell');
+        }, 1000);
+        
+        return () => clearInterval(interval);
+    }, [buyProcessLogs.length, sellProcessLogs.length]);
 
     // 쿨타임 타이머
     useEffect(() => {
@@ -543,6 +655,137 @@ export default function CointradeScheduler() {
                     >
                         {remainingTimes.stop > 0 ? `대기 (${remainingTimes.stop}s)` : '강제 중단'}
                     </Button>
+                </div>
+            </div>
+
+            {/* 프로세스 진행도 (매수/매도 분리) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* 매수 프로세스 진행도 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                            매수 프로세스 진행도
+                        </h2>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${
+                            buyProcessStatus.status === 'running' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 animate-pulse' :
+                            buyProcessStatus.status === 'finished' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                            'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                        }`}>
+                            {buyProcessStatus.status}
+                        </span>
+                    </div>
+
+                    <div className={`space-y-4 ${buyProcessStatus.status === 'idle' ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+                        {/* 프로그레스 바 */}
+                        <div className="relative pt-1">
+                            <div className="flex mb-2 items-center justify-between">
+                                <div>
+                                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200 dark:bg-blue-900 dark:text-blue-200">
+                                        Progress
+                                    </span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-xs font-semibold inline-block text-blue-600 dark:text-blue-400">
+                                        {buyProcessStatus.percent.toFixed(1)}%
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200 dark:bg-blue-900/50">
+                                <div 
+                                    style={{ width: `${buyProcessStatus.percent}%` }} 
+                                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500 ease-out"
+                                ></div>
+                            </div>
+                        </div>
+
+                        {/* 로그 창 */}
+                        <div className="relative">
+                            <div className="absolute top-2 right-4 text-[10px] text-slate-500 font-mono z-10">
+                                {buyProcessLogs.length.toLocaleString()} / 1,000 lines
+                            </div>
+                            <div 
+                                ref={buyLogContainerRef}
+                                className="bg-slate-900 text-slate-300 rounded-md p-4 h-48 overflow-y-auto font-mono text-xs border border-slate-700 shadow-inner"
+                            >
+                                {buyProcessLogs.length === 0 ? (
+                                    <div className="text-slate-500 text-center mt-16 italic">대기 중...</div>
+                                ) : (
+                                    buyProcessLogs.map((log, index) => (
+                                        <div key={index} className="mb-1 last:mb-0 hover:bg-slate-800/50 px-1 rounded whitespace-pre-wrap break-all">
+                                            <span className="text-slate-500 mr-2">[{log.time}]</span>
+                                            <span className={log.message.includes('완료') || log.message.includes('성공') ? 'text-green-400' : 'text-slate-200'}>
+                                                {log.message}
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 매도 프로세스 진행도 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                            매도 프로세스 진행도
+                        </h2>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${
+                            sellProcessStatus.status === 'running' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 animate-pulse' :
+                            sellProcessStatus.status === 'finished' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                            'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                        }`}>
+                            {sellProcessStatus.status}
+                        </span>
+                    </div>
+
+                    <div className={`space-y-4 ${sellProcessStatus.status === 'idle' ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+                        {/* 프로그레스 바 */}
+                        <div className="relative pt-1">
+                            <div className="flex mb-2 items-center justify-between">
+                                <div>
+                                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-orange-600 bg-orange-200 dark:bg-orange-900 dark:text-orange-200">
+                                        Progress
+                                    </span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-xs font-semibold inline-block text-orange-600 dark:text-orange-400">
+                                        {sellProcessStatus.percent.toFixed(1)}%
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-orange-200 dark:bg-orange-900/50">
+                                <div 
+                                    style={{ width: `${sellProcessStatus.percent}%` }} 
+                                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-orange-500 transition-all duration-500 ease-out"
+                                ></div>
+                            </div>
+                        </div>
+
+                        {/* 로그 창 */}
+                        <div className="relative">
+                            <div className="absolute top-2 right-4 text-[10px] text-slate-500 font-mono z-10">
+                                {sellProcessLogs.length.toLocaleString()} / 1,000 lines
+                            </div>
+                            <div 
+                                ref={sellLogContainerRef}
+                                className="bg-slate-900 text-slate-300 rounded-md p-4 h-48 overflow-y-auto font-mono text-xs border border-slate-700 shadow-inner"
+                            >
+                                {sellProcessLogs.length === 0 ? (
+                                    <div className="text-slate-500 text-center mt-16 italic">대기 중...</div>
+                                ) : (
+                                    sellProcessLogs.map((log, index) => (
+                                        <div key={index} className="mb-1 last:mb-0 hover:bg-slate-800/50 px-1 rounded whitespace-pre-wrap break-all">
+                                            <span className="text-slate-500 mr-2">[{log.time}]</span>
+                                            <span className={log.message.includes('완료') || log.message.includes('성공') ? 'text-green-400' : 'text-slate-200'}>
+                                                {log.message}
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

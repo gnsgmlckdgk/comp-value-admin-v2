@@ -581,7 +581,7 @@ export default function CointradeHistory() {
                         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                             <div className="text-xs text-blue-700 dark:text-blue-400 mb-1">매수 금액</div>
                             <div className="text-lg font-bold text-blue-800 dark:text-blue-300">
-                                {(summary.buyAmount / 10000).toFixed(0)}만원
+                                {formatNumberWithComma(Math.floor(summary.buyAmount))}원
                             </div>
                         </div>
 
@@ -597,7 +597,7 @@ export default function CointradeHistory() {
                         <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매도 금액</div>
                             <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                                {(summary.sellAmount / 10000).toFixed(0)}만원
+                                {formatNumberWithComma(Math.floor(summary.sellAmount))}원
                             </div>
                         </div>
 
@@ -605,7 +605,7 @@ export default function CointradeHistory() {
                         <div className={`p-4 rounded-lg ${summary.totalProfit >= 0 ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'}`}>
                             <div className={`text-xs mb-1 ${summary.totalProfit >= 0 ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>실현 손익</div>
                             <div className={`text-lg font-bold ${summary.totalProfit >= 0 ? 'text-red-800 dark:text-red-300' : 'text-blue-800 dark:text-blue-300'}`}>
-                                {summary.totalProfit >= 0 ? '+' : ''}{(summary.totalProfit / 10000).toFixed(1)}만원
+                                {summary.totalProfit >= 0 ? '+' : ''}{formatNumberWithComma(Math.floor(summary.totalProfit))}원
                             </div>
                         </div>
 

@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react';
-import { send } from '@/util/ClientUtil';
+import { send, API_ENDPOINTS } from '@/util/ClientUtil';
+import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
 export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose }) {
     const [companyProfile, setCompanyProfile] = useState(null);
     const [profileLoading, setProfileLoading] = useState(false);
+    
+    // 기업 분석 모달 관련 상태
+    const [companyValueModal, setCompanyValueModal] = useState({ open: false, data: null });
+    const [companyValueLoading, setCompanyValueLoading] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
 
     useEffect(() => {
         if (isOpen && data?.symbol) {
@@ -30,6 +37,46 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
             setProfileLoading(false);
         }
     };
+    
+    // AlertModal 헬퍼 함수
+    const openAlert = (message, onConfirm) => {
+        setAlertConfig({ open: true, message, onConfirm: onConfirm || null });
+    };
+
+    const handleCloseAlert = () => {
+        const { onConfirm } = alertConfig;
+        setAlertConfig({ open: false, message: '', onConfirm: null });
+        if (onConfirm) onConfirm();
+    };
+
+    // 기업 분석 모달 열기
+    const handleOpenCompanyValue = async () => {
+
+        const symbol = data && data.symbol ? data.symbol.trim() : '';
+        if (!symbol) {
+            openAlert('심볼 정보가 존재하지 않습니다.');
+            return;
+        }
+
+        if (companyValueLoading) return;
+
+        setCompanyValueLoading(true);
+        try {
+            const sendUrl = API_ENDPOINTS.ABROAD_COMP_VALUE(symbol);
+            const { data: responseData, error } = await send(sendUrl, {}, 'GET');
+
+            const hasValid = !error && responseData && responseData.response && Object.keys(responseData.response).length > 0;
+            if (hasValid) {
+                setCompanyValueModal({ open: true, data: responseData.response });
+            } else {
+                openAlert('조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
+            }
+        } catch (e) {
+            openAlert('요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+        } finally {
+            setCompanyValueLoading(false);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -38,7 +85,8 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
     const sellRate = data.sellExchangeRateAtTrade || fxRate;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 {/* 헤더 */}
                 <div className="sticky top-0 bg-gradient-to-r from-sky-500 to-indigo-500 px-6 py-4 flex items-center justify-between">
@@ -48,14 +96,35 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                         </svg>
                         매도 기록 상세보기
                     </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors"
-                    >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            className="px-3 py-1.5 text-sm rounded-lg bg-white/20 text-white font-medium hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            onClick={handleOpenCompanyValue}
+                            disabled={companyValueLoading}
+                            title="기업가치 계산 결과 보기"
+                        >
+                            {companyValueLoading ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    조회 중...
+                                </>
+                            ) : (
+                                '기업 분석'
+                            )}
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="p-6 space-y-6">
@@ -230,5 +299,20 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                 </div>
             </div>
         </div>
+            {/* 기업가치 계산 결과 모달 */}
+            <CompanyValueResultModal
+                isOpen={companyValueModal.open}
+                onClose={() => setCompanyValueModal({ open: false, data: null })}
+                data={companyValueModal.data}
+                fromInvestmentDetail={false}
+            />
+
+            {/* Alert 모달 */}
+            <AlertModal
+                open={alertConfig.open}
+                message={alertConfig.message}
+                onClose={handleCloseAlert}
+            />
+        </>
     );
 }

@@ -167,6 +167,10 @@ export default function MlModelInfo() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
+    // 모델 재학습 관련 상태
+    const [lastTrainRun, setLastTrainRun] = useState(null);
+    const TRAIN_RUN_KEY = 'lastMlModelTrainRun';
+
     // Toast auto-hide
     useEffect(() => {
         if (!toast) return;
@@ -177,6 +181,22 @@ export default function MlModelInfo() {
     // 초기 데이터 조회
     useEffect(() => {
         fetchData();
+
+        // 로컬스토리지에서 마지막 수동 학습 시간 확인 및 1시간 지난 값 삭제
+        const storedTime = localStorage.getItem(TRAIN_RUN_KEY);
+        if (storedTime) {
+            const runTime = new Date(storedTime);
+            const now = new Date();
+            const hoursDiff = (now - runTime) / (1000 * 60 * 60);
+
+            if (hoursDiff >= 1) {
+                // 1시간 이상 지났으면 삭제
+                localStorage.removeItem(TRAIN_RUN_KEY);
+                setLastTrainRun(null);
+            } else {
+                setLastTrainRun(runTime);
+            }
+        }
     }, []);
 
     const fetchData = async () => {
@@ -196,6 +216,27 @@ export default function MlModelInfo() {
             setDataList([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // 모델 재학습(수동) 요청
+    const handleManualTrain = async () => {
+        try {
+            const { data, error } = await send('/dart/api/cointrade/trade/model/train', {}, 'GET');
+            
+            if (error) {
+                setToast('모델 재학습 요청 실패: ' + error);
+            } else if (data?.success) {
+                setToast('모델 재학습이 실행되었습니다.');
+                const now = new Date();
+                setLastTrainRun(now);
+                localStorage.setItem(TRAIN_RUN_KEY, now.toISOString());
+            } else {
+                setToast(data?.message || '모델 재학습 요청 실패');
+            }
+        } catch (e) {
+            console.error('모델 재학습 요청 오류:', e);
+            setToast('요청 중 오류가 발생했습니다.');
         }
     };
 
@@ -501,6 +542,18 @@ export default function MlModelInfo() {
                     </div>
                    
                     <div className="flex items-center gap-2 flex-wrap">
+                        {lastTrainRun && (
+                            <span className="text-xs text-amber-600 dark:text-amber-400 mr-2">
+                                마지막 실행: {formatDateTime(lastTrainRun)}
+                            </span>
+                        )}
+                        <button
+                            onClick={handleManualTrain}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors mr-2"
+                        >
+                            모델 재학습(수동)
+                        </button>
+
                         <select
                             value={itemsPerPage}
                             onChange={handleItemsPerPageChange}

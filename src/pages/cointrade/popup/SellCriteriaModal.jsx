@@ -29,7 +29,7 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
             onClick={handleBackdropClick}
         >
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg md:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -68,43 +68,42 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
                         </div>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 italic">목표: "크게 먹자"</p>
 
-                        <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-600">
-                                    <tr>
-                                        <th className="px-4 py-3 text-center w-24">현재 수익률</th>
-                                        <th className="px-4 py-3 text-center w-28">만료일 여부</th>
-                                        <th className="px-4 py-3 text-center w-24">결정</th>
-                                        <th className="px-4 py-3">설명</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    <tr className="bg-green-50/50 dark:bg-green-900/10">
-                                        <td className="px-4 py-3 text-center font-bold text-red-600 dark:text-red-400">32%</td>
-                                        <td className="px-4 py-3 text-center text-slate-500">상관없음</td>
-                                        <td className="px-4 py-3 text-center font-bold text-green-600 dark:text-green-400">익절 매도</td>
-                                        <td className="px-4 py-3">예측가(30%) 초과 달성. (가장 먼저 체크됨)</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="px-4 py-3 text-center font-medium">25%</td>
-                                        <td className="px-4 py-3 text-center text-orange-600 font-medium">지남</td>
-                                        <td className="px-4 py-3 text-center font-bold text-blue-600 dark:text-blue-400">보유 유보</td>
-                                        <td className="px-4 py-3">목표가(30%) 미달이지만, 급등 기준(<code>SURGE_THRESHOLD</code>, 20%)을 넘겨 상승세 인정.</td>
-                                    </tr>
-                                    <tr className="bg-slate-50/50 dark:bg-slate-800/50">
-                                        <td className="px-4 py-3 text-center">15%</td>
-                                        <td className="px-4 py-3 text-center text-orange-600 font-medium">지남</td>
-                                        <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">만료 매도</td>
-                                        <td className="px-4 py-3">목표가 실패, 급등 기준 미달. "예측 실패"로 간주.</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="px-4 py-3 text-center">15%</td>
-                                        <td className="px-4 py-3 text-center text-slate-500">안 지남</td>
-                                        <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">보유 유지</td>
-                                        <td className="px-4 py-3">아직 기회가 남았으므로 목표가(30%) 대기.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
+                            {/* Header */}
+                            <div className="hidden md:grid md:grid-cols-12 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-600">
+                                <div className="md:col-span-2 px-4 py-3 text-center">현재 수익률</div>
+                                <div className="md:col-span-2 px-4 py-3 text-center">만료일 여부</div>
+                                <div className="md:col-span-2 px-4 py-3 text-center">결정</div>
+                                <div className="md:col-span-6 px-4 py-3">설명</div>
+                            </div>
+
+                            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                                {/* Rows */}
+                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-50/50 dark:bg-green-900/10 md:border-b md:border-slate-100 md:dark:border-slate-700">
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-red-600 dark:text-red-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>32%</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>상관없음</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>익절 매도</div>
+                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>예측가(30%) 초과 달성. (가장 먼저 체크됨)</div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 md:border-b md:border-slate-100 md:dark:border-slate-700">
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>25%</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-orange-600 font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>지남</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-blue-600 dark:text-blue-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>보유 유보</div>
+                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가(30%) 미달이지만, 급등 기준(<code>SURGE_THRESHOLD</code>, 20%)을 넘겨 상승세 인정.</div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-slate-50/50 dark:bg-slate-800/50 md:border-b md:border-slate-100 md:dark:border-slate-700">
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>15%</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-orange-600 font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>지남</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium text-slate-600 dark:text-slate-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>만료 매도</div>
+                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가 실패, 급등 기준 미달. "예측 실패"로 간주.</div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0">
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>15%</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>안 지남</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium text-slate-600 dark:text-slate-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>보유 유지</div>
+                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>아직 기회가 남았으므로 목표가(30%) 대기.</div>
+                                </div>
+                            </div>
                         </div>
                     </section>
 
@@ -118,44 +117,42 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
                         </div>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 italic">목표: "소박하게 먹자"</p>
 
-                        <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-600">
-                                    <tr>
-                                        <th className="px-4 py-3 text-center w-24">현재 수익률</th>
-                                        <th className="px-4 py-3 text-center w-28">만료일 여부</th>
-                                        <th className="px-4 py-3 text-center w-24">결정</th>
-                                        <th className="px-4 py-3">설명</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    <tr className="bg-green-50/50 dark:bg-green-900/10">
-                                        <td className="px-4 py-3 text-center font-bold text-red-600 dark:text-red-400">25%</td>
-                                        <td className="px-4 py-3 text-center text-slate-500">상관없음</td>
-                                        <td className="px-4 py-3 text-center font-bold text-green-600 dark:text-green-400">익절 매도</td>
-                                        <td className="px-4 py-3">목표가(10%)를 넘었으므로 진작에 매도됨.</td>
-                                    </tr>
-                                    <tr className="bg-green-50/50 dark:bg-green-900/10">
-                                        <td className="px-4 py-3 text-center font-bold text-red-600 dark:text-red-400">15%</td>
-                                        <td className="px-4 py-3 text-center text-slate-500">상관없음</td>
-                                        <td className="px-4 py-3 text-center font-bold text-green-600 dark:text-green-400">익절 매도</td>
-                                        <td className="px-4 py-3">이미 목표가(10%)를 초과 달성함. 급등 기준과 무관하게 수익 확정.</td>
-                                    </tr>
+                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
+                            {/* Header */}
+                            <div className="hidden md:grid md:grid-cols-12 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-600">
+                                <div className="md:col-span-2 px-4 py-3 text-center">현재 수익률</div>
+                                <div className="md:col-span-2 px-4 py-3 text-center">만료일 여부</div>
+                                <div className="md:col-span-2 px-4 py-3 text-center">결정</div>
+                                <div className="md:col-span-6 px-4 py-3">설명</div>
+                            </div>
 
-                                    <tr className="bg-slate-50/50 dark:bg-slate-800/50">
-                                        <td className="px-4 py-3 text-center">5%</td>
-                                        <td className="px-4 py-3 text-center text-orange-600 font-medium">지남</td>
-                                        <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">만료 매도</td>
-                                        <td className="px-4 py-3">목표가(10%) 실패, 급등 기준(<code>SURGE_THRESHOLD</code>, 20%) 미달.</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="px-4 py-3 text-center">5%</td>
-                                        <td className="px-4 py-3 text-center text-slate-500">안 지남</td>
-                                        <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">보유 유지</td>
-                                        <td className="px-4 py-3">목표가(10%) 도달 대기.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                                {/* Rows */}
+                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-50/50 dark:bg-green-900/10 md:border-b md:border-slate-100 md:dark:border-slate-700">
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-red-600 dark:text-red-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>25%</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>상관없음</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>익절 매도</div>
+                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가(10%)를 넘었으므로 진작에 매도됨.</div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-50/50 dark:bg-green-900/10 md:border-b md:border-slate-100 md:dark:border-slate-700">
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-red-600 dark:text-red-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>15%</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>상관없음</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>익절 매도</div>
+                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>이미 목표가(10%)를 초과 달성함. 급등 기준과 무관하게 수익 확정.</div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-slate-50/50 dark:bg-slate-800/50 md:border-b md:border-slate-100 md:dark:border-slate-700">
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>5%</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-orange-600 font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>지남</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium text-slate-600 dark:text-slate-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>만료 매도</div>
+                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가(10%) 실패, 급등 기준(<code>SURGE_THRESHOLD</code>, 20%) 미달.</div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0">
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>5%</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>안 지남</div>
+                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium text-slate-600 dark:text-slate-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>보유 유지</div>
+                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가(10%) 도달 대기.</div>
+                                </div>
+                            </div>
                         </div>
                     </section>
 

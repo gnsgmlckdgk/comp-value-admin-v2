@@ -193,7 +193,7 @@ export default function CointradeConfig() {
             PRICE_MONITOR_SECONDS: 'D초 (가격 모니터링)',
             BUY_CHECK_HOURS: 'E시간 (매수 체크 주기)',
             MIN_SURGE_PROBABILITY: 'S% (최소 급등 확률)',
-            HOLD_GRACE_DAYS: '보유 유예일 (일반)',
+            HOLD_GRACE_DAYS: '급등 예상일 후 보유기간(만료일)',
             SURGE_THRESHOLD: '급등 기준',
             MIN_BUY_SCORE: '최소 매수 점수',
             TARGET_MODE: '대상 모드 (ALL/SELECTED)',
@@ -375,15 +375,15 @@ export default function CointradeConfig() {
             )}
 
             {/* 매도 기준 설명 모달 */}
-            <SellCriteriaModal 
-                isOpen={isSellCriteriaModalOpen} 
-                onClose={() => setIsSellCriteriaModalOpen(false)} 
+            <SellCriteriaModal
+                isOpen={isSellCriteriaModalOpen}
+                onClose={() => setIsSellCriteriaModalOpen(false)}
             />
 
             {/* 매수 기준 설명 모달 */}
-            <BuyCriteriaModal 
-                isOpen={isBuyCriteriaModalOpen} 
-                onClose={() => setIsBuyCriteriaModalOpen(false)} 
+            <BuyCriteriaModal
+                isOpen={isBuyCriteriaModalOpen}
+                onClose={() => setIsBuyCriteriaModalOpen(false)}
             />
         </div>
     );

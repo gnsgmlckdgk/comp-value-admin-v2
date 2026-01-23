@@ -152,9 +152,26 @@ const renderFormattedPrice = (value, unit) => {
 
     return (
         <span>
-            <span className="font-bold">{parts[0]}</span>
-            {parts.length > 1 && `.${parts[1]}`}
-            {unit}
+            <span className="font-extrabold" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)' }}>{parts[0]}</span>
+            <span className="font-normal opacity-70">{parts.length > 1 && `.${parts[1]}`}</span>
+            <span className="font-normal">{unit}</span>
+        </span>
+    );
+};
+
+// 소수점 숫자 볼드 처리 (수량 등)
+const renderFormattedNumber = (value, decimals = 8) => {
+    if (value === null || value === '' || value === undefined) return '-';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '-';
+
+    const str = num.toFixed(decimals);
+    const parts = str.split('.');
+
+    return (
+        <span>
+            <span className="font-extrabold" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)' }}>{parts[0]}</span>
+            <span className="font-normal opacity-70">{parts.length > 1 && `.${parts[1]}`}</span>
         </span>
     );
 };
@@ -368,6 +385,10 @@ export default function CointradeDashboard() {
 
     // 최근 거래 내역 (전체 데이터)
     const [allRecentTrades, setAllRecentTrades] = useState([]);
+
+    // 상세보기 모달 상태
+    const [selectedHolding, setSelectedHolding] = useState(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
         // 테이블 필터/정렬 상태
         const [columnFilters, setColumnFilters] = useState({});
@@ -666,6 +687,17 @@ export default function CointradeDashboard() {
             setItemsPerPage(Number(e.target.value));
             setCurrentPage(1);
         };
+
+        // 보유 종목 상세보기 모달 핸들러
+        const handleRowDoubleClick = (holding) => {
+            setSelectedHolding(holding);
+            setIsDetailModalOpen(true);
+        };
+
+        const handleCloseDetailModal = () => {
+            setIsDetailModalOpen(false);
+            setSelectedHolding(null);
+        };
     
         // 페이지 로드 시 + 30초마다 자동 새로고침
     useEffect(() => {
@@ -679,6 +711,314 @@ export default function CointradeDashboard() {
         fetchData(false); // 수동 갱신은 loading 표시
         setToast('데이터가 갱신되었습니다.');
     };
+
+    // ESC 키로 모달 닫기
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isDetailModalOpen) handleCloseDetailModal();
+        };
+        if (isDetailModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        }
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isDetailModalOpen]);
+
+    // 상세보기 모달 컴포넌트
+    const DetailModal = () => {
+        if (!isDetailModalOpen || !selectedHolding) return null;
+
+        const handleBackdropClick = (e) => {
+            if (e.target === e.currentTarget) handleCloseDetailModal();
+        };
+
+        const profitLoss = selectedHolding.currentPrice
+            ? (selectedHolding.currentPrice - selectedHolding.buyPrice) * selectedHolding.quantity
+            : 0;
+
+        return (
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                onClick={handleBackdropClick}
+            >
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto flex flex-col">
+                    {/* 헤더 */}
+                    <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+                                {selectedHolding.coinCode}
+                            </h3>
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${selectedHolding.profitRate >= 0
+                                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                }`}>
+                                {selectedHolding.profitRate >= 0 ? '+' : ''}{selectedHolding.profitRate.toFixed(2)}%
+                            </span>
+                        </div>
+                        <button
+                            onClick={handleCloseDetailModal}
+                            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                        >
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* 콘텐츠 */}
+                    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                        {/* 가격 비교 그래프 */}
+                        <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-800/50 rounded-lg p-4 sm:p-6 border border-slate-200 dark:border-slate-700">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">가격 비교</h4>
+
+                            {/* 그래프 */}
+                            <div className="space-y-3">
+                                {(() => {
+                                    const buyPrice = selectedHolding.buyPrice || 0;
+                                    const currentPrice = selectedHolding.currentPrice || buyPrice;
+                                    const predictedHigh = selectedHolding.predictedHigh || buyPrice;
+                                    const predictedLow = selectedHolding.predictedLow || buyPrice;
+
+                                    // 범위 계산 (예측저가부터 예측고가까지)
+                                    const minPrice = Math.min(predictedLow, buyPrice, currentPrice) * 0.95;
+                                    const maxPrice = Math.max(predictedHigh, buyPrice, currentPrice) * 1.05;
+                                    const range = maxPrice - minPrice;
+
+                                    // 각 가격의 위치 계산 (%)
+                                    const buyPricePos = ((buyPrice - minPrice) / range) * 100;
+                                    const currentPricePos = ((currentPrice - minPrice) / range) * 100;
+                                    const predictedHighPos = ((predictedHigh - minPrice) / range) * 100;
+                                    const predictedLowPos = ((predictedLow - minPrice) / range) * 100;
+
+                                    return (
+                                        <>
+                                            {/* 범위 바 */}
+                                            <div className="relative h-12 sm:h-16 bg-white dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">
+                                                {/* 예측 범위 (저가~고가) */}
+                                                <div
+                                                    className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-200/40 via-purple-200/40 to-green-200/40 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-green-900/30"
+                                                    style={{
+                                                        left: `${predictedLowPos}%`,
+                                                        right: `${100 - predictedHighPos}%`
+                                                    }}
+                                                />
+
+                                                {/* 예측저가 마커 */}
+                                                <div
+                                                    className="absolute top-0 bottom-0 w-1 bg-blue-400 dark:bg-blue-500"
+                                                    style={{ left: `${predictedLowPos}%` }}
+                                                    title="예측저가"
+                                                />
+
+                                                {/* 매수가 마커 */}
+                                                <div
+                                                    className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center"
+                                                    style={{ left: `${buyPricePos}%`, transform: 'translate(-50%, -50%)' }}
+                                                >
+                                                    <div className="w-0.5 h-full bg-slate-600 dark:bg-slate-400 absolute" style={{ height: '100%' }} />
+                                                    <div className="relative z-10 w-3 h-3 rounded-full bg-slate-600 dark:bg-slate-400 border-2 border-white dark:border-slate-800" />
+                                                </div>
+
+                                                {/* 현재가 마커 */}
+                                                <div
+                                                    className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center"
+                                                    style={{ left: `${currentPricePos}%`, transform: 'translate(-50%, -50%)' }}
+                                                >
+                                                    <div className={`w-1 h-full absolute ${selectedHolding.profitRate >= 0 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ height: '100%' }} />
+                                                    <div className={`relative z-10 w-4 h-4 rounded-full ${selectedHolding.profitRate >= 0 ? 'bg-red-500' : 'bg-blue-500'} border-2 border-white dark:border-slate-800 shadow-lg`} />
+                                                </div>
+
+                                                {/* 예측고가 마커 */}
+                                                <div
+                                                    className="absolute top-0 bottom-0 w-1 bg-green-500 dark:bg-green-400"
+                                                    style={{ left: `${predictedHighPos}%` }}
+                                                    title="예측고가"
+                                                />
+                                            </div>
+
+                                            {/* 범례 */}
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full bg-slate-600 dark:bg-slate-400" />
+                                                    <span className="text-slate-600 dark:text-slate-400">매수가</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-3 h-3 rounded-full ${selectedHolding.profitRate >= 0 ? 'bg-red-500' : 'bg-blue-500'}`} />
+                                                    <span className={selectedHolding.profitRate >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>현재가</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-0.5 bg-blue-400 dark:bg-blue-500" />
+                                                    <span className="text-blue-600 dark:text-blue-400">예측저가</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-0.5 bg-green-500 dark:bg-green-400" />
+                                                    <span className="text-green-600 dark:text-green-400">예측고가</span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        </div>
+
+                        {/* 가격 정보 그리드 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                            {/* 매수가 */}
+                            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수가</div>
+                                <div className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-200">
+                                    {renderFormattedPrice(selectedHolding.buyPrice, getCurrencyUnit(selectedHolding.coinCode))}
+                                </div>
+                            </div>
+
+                            {/* 현재가 */}
+                            <div className={`rounded-lg p-3 sm:p-4 ${selectedHolding.profitRate >= 0
+                                ? 'bg-red-50 dark:bg-red-900/20'
+                                : 'bg-blue-50 dark:bg-blue-900/20'
+                                }`}>
+                                <div className={`text-xs mb-1 ${selectedHolding.profitRate >= 0
+                                    ? 'text-red-700 dark:text-red-400'
+                                    : 'text-blue-700 dark:text-blue-400'
+                                    }`}>
+                                    현재가
+                                </div>
+                                <div className={`text-lg sm:text-xl font-bold ${selectedHolding.profitRate >= 0
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : 'text-blue-600 dark:text-blue-400'
+                                    }`}>
+                                    {renderFormattedPrice(selectedHolding.currentPrice, getCurrencyUnit(selectedHolding.coinCode))}
+                                </div>
+                            </div>
+
+                            {/* 예측저가 */}
+                            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">예측저가</div>
+                                <div className="text-base sm:text-lg font-medium text-slate-800 dark:text-slate-200">
+                                    {renderFormattedPrice(selectedHolding.predictedLow, getCurrencyUnit(selectedHolding.coinCode))}
+                                </div>
+                            </div>
+
+                            {/* 예측고가 */}
+                            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-green-700 dark:text-green-400 mb-1">예측고가</div>
+                                <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">
+                                    {renderFormattedPrice(selectedHolding.predictedHigh, getCurrencyUnit(selectedHolding.coinCode))}
+                                </div>
+                                {selectedHolding.predictedHigh && selectedHolding.buyPrice && (
+                                    <div className="text-xs text-green-600 dark:text-green-400 mt-1 font-bold">
+                                        +{(((selectedHolding.predictedHigh - selectedHolding.buyPrice) / selectedHolding.buyPrice) * 100).toFixed(2)}%
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 수량 및 평가 정보 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                            {/* 수량 */}
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">보유 수량</div>
+                                <div className="text-base sm:text-lg text-slate-800 dark:text-slate-200">
+                                    {selectedHolding.quantity ? renderFormattedNumber(selectedHolding.quantity, 8) : '-'}
+                                </div>
+                            </div>
+
+                            {/* 평가금액 */}
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">평가금액</div>
+                                <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
+                                    {renderFormattedPrice(selectedHolding.valuation, getCurrencyUnit(selectedHolding.coinCode))}
+                                </div>
+                            </div>
+
+                            {/* 손익금액 */}
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">손익금액</div>
+                                <div className={`text-base sm:text-lg font-bold ${profitLoss >= 0
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : 'text-blue-600 dark:text-blue-400'
+                                    }`}>
+                                    {profitLoss >= 0 ? '+' : ''}{renderFormattedPrice(profitLoss, getCurrencyUnit(selectedHolding.coinCode))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 급등 정보 및 기타 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                            {/* 급등확률 */}
+                            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-purple-700 dark:text-purple-400 mb-2">급등 확률</div>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                                        <div
+                                            className="bg-purple-500 dark:bg-purple-400 h-2 rounded-full"
+                                            style={{ width: `${(selectedHolding.surgeProbability || 0) * 100}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                                        {((selectedHolding.surgeProbability || 0) * 100).toFixed(0)}%
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 급등예상일 */}
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">급등예상일</div>
+                                <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
+                                    {selectedHolding.surgeDay ? `D+${selectedHolding.surgeDay}` : '-'}
+                                </div>
+                            </div>
+
+                            {/* 매수점수 */}
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수점수</div>
+                                <div className="text-base sm:text-lg text-slate-800 dark:text-slate-200">
+                                    {selectedHolding.buyScore != null ? `${selectedHolding.buyScore.toFixed(2)}점` : '-'}
+                                </div>
+                            </div>
+
+                            {/* 만료일 */}
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">만료일</div>
+                                <div className="text-base sm:text-lg font-bold">
+                                    {calculateDday(selectedHolding.expireDate)}
+                                </div>
+                                {selectedHolding.expireDate && (
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                        {new Date(selectedHolding.expireDate).toLocaleDateString('ko-KR')}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 차트 영역 (추후 구현) */}
+                        <div className="bg-slate-50 dark:bg-slate-700/30 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 sm:p-8">
+                            <div className="flex flex-col items-center justify-center text-center space-y-2 min-h-[200px] sm:min-h-[300px]">
+                                <svg className="w-12 h-12 sm:w-16 sm:h-16 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                <div className="text-slate-500 dark:text-slate-400">
+                                    <p className="text-sm sm:text-base font-medium">차트 영역</p>
+                                    <p className="text-xs sm:text-sm mt-1">추후 가격 차트가 표시됩니다</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 매수일 정보 */}
+                        <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수일시</div>
+                            <div className="text-sm sm:text-base text-slate-800 dark:text-slate-200">
+                                {formatDateTime(selectedHolding.buyDate)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="container mx-auto max-w-7xl p-4">
             <div className="flex items-center justify-between mb-6">
@@ -937,7 +1277,9 @@ export default function CointradeDashboard() {
 
                                                         key={index}
 
-                                                        className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${isExpiring ? 'bg-orange-50 dark:bg-orange-900/10' : ''
+                                                        onDoubleClick={() => handleRowDoubleClick(holding)}
+
+                                                        className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 ${isExpiring ? 'bg-orange-50 dark:bg-orange-900/10' : ''
 
                                                             }`}
 
@@ -1229,6 +1571,9 @@ export default function CointradeDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* 상세보기 모달 */}
+            <DetailModal />
         </div>
     );
 }

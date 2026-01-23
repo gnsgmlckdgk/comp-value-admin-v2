@@ -12,6 +12,41 @@ const formatNumberWithComma = (value) => {
     return num.toLocaleString('en-US');
 };
 
+// 가격 표시 컴포넌트 (정수부 볼드 + 그림자 처리)
+const renderFormattedPrice = (value, unit = '원') => {
+    if (value === null || value === '' || value === undefined) return '-';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '-';
+
+    const str = num.toLocaleString('en-US');
+    const parts = str.split('.');
+
+    return (
+        <span>
+            <span className="font-extrabold" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)' }}>{parts[0]}</span>
+            <span className="font-normal opacity-70">{parts.length > 1 && `.${parts[1]}`}</span>
+            <span className="font-normal">{unit}</span>
+        </span>
+    );
+};
+
+// 소수점 숫자 볼드 처리 (수량 등)
+const renderFormattedNumber = (value, decimals = 8) => {
+    if (value === null || value === '' || value === undefined) return '-';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '-';
+
+    const str = num.toFixed(decimals);
+    const parts = str.split('.');
+
+    return (
+        <span>
+            <span className="font-extrabold" style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)' }}>{parts[0]}</span>
+            <span className="font-normal opacity-70">{parts.length > 1 && `.${parts[1]}`}</span>
+        </span>
+    );
+};
+
 // 날짜 포맷 (YYYY-MM-DD HH:MM:SS)
 const formatDateTime = (dateStr) => {
     if (!dateStr) return '-';
@@ -191,6 +226,10 @@ const TABLE_COLUMNS = [
 export default function CointradeHistory() {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
+
+    // 상세보기 모달 상태
+    const [selectedRecord, setSelectedRecord] = useState(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     // 검색 필터 (서버 조회용)
     const [filters, setFilters] = useState({
@@ -430,6 +469,373 @@ export default function CointradeHistory() {
     const handleItemsPerPageChange = (e) => {
         setItemsPerPage(Number(e.target.value));
         setCurrentPage(1);
+    };
+
+    // 상세보기 모달 핸들러
+    const handleRowDoubleClick = (record) => {
+        setSelectedRecord(record);
+        setIsDetailModalOpen(true);
+    };
+
+    const handleCloseDetailModal = () => {
+        setIsDetailModalOpen(false);
+        setSelectedRecord(null);
+    };
+
+    // ESC 키로 모달 닫기
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isDetailModalOpen) handleCloseDetailModal();
+        };
+        if (isDetailModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        }
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isDetailModalOpen]);
+
+    // 상세보기 모달 컴포넌트
+    const DetailModal = () => {
+        if (!isDetailModalOpen || !selectedRecord) return null;
+
+        const handleBackdropClick = (e) => {
+            if (e.target === e.currentTarget) handleCloseDetailModal();
+        };
+
+        const isBuy = selectedRecord.tradeType === 'BUY';
+
+        return (
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                onClick={handleBackdropClick}
+            >
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto flex flex-col">
+                    {/* 헤더 */}
+                    <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+                                {selectedRecord.coinCode}
+                            </h3>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${isBuy
+                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                }`}>
+                                {isBuy ? '매수' : '매도'}
+                            </span>
+                            {!isBuy && selectedRecord.reason && (
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(selectedRecord.reason)}`}>
+                                    {getReasonLabel(selectedRecord.reason)}
+                                </span>
+                            )}
+                        </div>
+                        <button
+                            onClick={handleCloseDetailModal}
+                            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                        >
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* 콘텐츠 */}
+                    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                        {/* 기본 정보 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                            {/* 거래일시 */}
+                            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">거래일시</div>
+                                <div className="text-sm sm:text-base text-slate-800 dark:text-slate-200">
+                                    {formatDateTime(selectedRecord.createdAt)}
+                                </div>
+                            </div>
+
+                            {/* 거래유형 */}
+                            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">거래유형</div>
+                                <div className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
+                                    {isBuy ? '매수 (BUY)' : '매도 (SELL)'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 가격 및 수량 정보 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                            {/* 거래 가격 */}
+                            <div className={`rounded-lg p-3 sm:p-4 ${isBuy
+                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'
+                                : 'bg-slate-50 dark:bg-slate-700/50'
+                                }`}>
+                                <div className={`text-xs mb-1 ${isBuy
+                                    ? 'text-blue-700 dark:text-blue-400'
+                                    : 'text-slate-500 dark:text-slate-400'
+                                    }`}>
+                                    {isBuy ? '매수가격' : '매도가격'}
+                                </div>
+                                <div className={`text-base sm:text-lg ${isBuy
+                                    ? 'text-blue-800 dark:text-blue-300'
+                                    : 'text-slate-800 dark:text-slate-200'
+                                    }`}>
+                                    {renderFormattedPrice(selectedRecord.price, '원')}
+                                </div>
+                            </div>
+
+                            {/* 수량 */}
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수량</div>
+                                <div className="text-base sm:text-lg text-slate-800 dark:text-slate-200">
+                                    {selectedRecord.quantity ? renderFormattedNumber(selectedRecord.quantity, 8) : '-'}
+                                </div>
+                            </div>
+
+                            {/* 총 금액 */}
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 금액</div>
+                                <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
+                                    {renderFormattedPrice(selectedRecord.totalAmount, '원')}
+                                </div>
+                            </div>
+
+                            {/* 매도시 원 매수가 표시 */}
+                            {!isBuy && selectedRecord.buyPrice != null && (
+                                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">원 매수가</div>
+                                    <div className="text-base sm:text-lg text-slate-800 dark:text-slate-200">
+                                        {renderFormattedPrice(selectedRecord.buyPrice, '원')}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 매도의 경우 손익 정보 */}
+                        {!isBuy && selectedRecord.profitLoss != null && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                {/* 손익금액 */}
+                                <div className={`rounded-lg p-4 sm:p-5 ${selectedRecord.profitLoss >= 0
+                                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800'
+                                    : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'
+                                    }`}>
+                                    <div className={`text-xs mb-1 ${selectedRecord.profitLoss >= 0
+                                        ? 'text-red-700 dark:text-red-400'
+                                        : 'text-blue-700 dark:text-blue-400'
+                                        }`}>
+                                        손익금액
+                                    </div>
+                                    <div className={`text-xl sm:text-2xl font-bold ${selectedRecord.profitLoss >= 0
+                                        ? 'text-red-600 dark:text-red-400'
+                                        : 'text-blue-600 dark:text-blue-400'
+                                        }`}>
+                                        {selectedRecord.profitLoss >= 0 ? '+' : ''}{renderFormattedPrice(selectedRecord.profitLoss, '원')}
+                                    </div>
+                                </div>
+
+                                {/* 손익률 */}
+                                <div className={`rounded-lg p-4 sm:p-5 ${selectedRecord.profitLossRate >= 0
+                                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800'
+                                    : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'
+                                    }`}>
+                                    <div className={`text-xs mb-1 ${selectedRecord.profitLossRate >= 0
+                                        ? 'text-red-700 dark:text-red-400'
+                                        : 'text-blue-700 dark:text-blue-400'
+                                        }`}>
+                                        손익률
+                                    </div>
+                                    <div className={`text-xl sm:text-2xl font-bold ${selectedRecord.profitLossRate >= 0
+                                        ? 'text-red-600 dark:text-red-400'
+                                        : 'text-blue-600 dark:text-blue-400'
+                                        }`}>
+                                        {selectedRecord.profitLossRate >= 0 ? '+' : ''}{selectedRecord.profitLossRate.toFixed(2)}%
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* AI 예측 정보 (매수/매도 모두) */}
+                        <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-800/50 rounded-lg p-4 sm:p-5 border border-slate-200 dark:border-slate-700">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">AI 예측 정보</h4>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                {/* 매수점수 */}
+                                {selectedRecord.buyScore != null && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수점수</div>
+                                        <div className="text-base sm:text-lg text-slate-800 dark:text-slate-200">
+                                            {selectedRecord.buyScore.toFixed(2)}점
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 급등확률 */}
+                                {selectedRecord.surgeProbability != null && (
+                                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+                                        <div className="text-xs text-purple-700 dark:text-purple-400 mb-2">급등 확률</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                                                <div
+                                                    className="bg-purple-500 dark:bg-purple-400 h-2 rounded-full"
+                                                    style={{ width: `${(selectedRecord.surgeProbability || 0) * 100}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-sm text-purple-600 dark:text-purple-400">
+                                                {((selectedRecord.surgeProbability || 0) * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 예측저가 */}
+                                {selectedRecord.predictedLow != null && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">예측저가</div>
+                                        <div className="text-base text-slate-800 dark:text-slate-200">
+                                            {renderFormattedPrice(selectedRecord.predictedLow, '원')}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 예측고가 */}
+                                {selectedRecord.predictedHigh != null && (
+                                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                                        <div className="text-xs text-green-700 dark:text-green-400 mb-1">예측고가</div>
+                                        <div className="text-base text-green-700 dark:text-green-400 font-bold">
+                                            {renderFormattedPrice(selectedRecord.predictedHigh, '원')}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 급등예상일 */}
+                                {selectedRecord.surgeDay != null && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">급등예상일</div>
+                                        <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
+                                            D+{selectedRecord.surgeDay}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 만료일 */}
+                                {selectedRecord.expireDate && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">만료일</div>
+                                        <div className="text-sm text-slate-800 dark:text-slate-200">
+                                            {new Date(selectedRecord.expireDate).toLocaleDateString('ko-KR')}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 매수일 (매도시) */}
+                                {!isBuy && selectedRecord.buyDate && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수일시</div>
+                                        <div className="text-sm text-slate-800 dark:text-slate-200">
+                                            {formatDateTime(selectedRecord.buyDate)}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 보유기간 (매도시) */}
+                                {!isBuy && selectedRecord.buyDate && selectedRecord.createdAt && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">보유기간</div>
+                                        <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
+                                            {(() => {
+                                                const buyTime = new Date(selectedRecord.buyDate).getTime();
+                                                const sellTime = new Date(selectedRecord.createdAt).getTime();
+                                                const diffDays = Math.floor((sellTime - buyTime) / (1000 * 60 * 60 * 24));
+                                                const diffHours = Math.floor(((sellTime - buyTime) % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                                return `${diffDays}일 ${diffHours}시간`;
+                                            })()}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 기타 정보 */}
+                        <div className="bg-slate-50 dark:bg-slate-700/30 rounded-lg p-4 sm:p-5 border border-slate-200 dark:border-slate-700">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">기타 정보</h4>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* 거래 ID */}
+                                {selectedRecord.id && (
+                                    <div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">거래 ID</div>
+                                        <div className="text-sm text-slate-800 dark:text-slate-200 font-mono">
+                                            {selectedRecord.id}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* UUID */}
+                                {selectedRecord.uuid && (
+                                    <div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">UUID</div>
+                                        <div className="text-xs text-slate-800 dark:text-slate-200 font-mono break-all">
+                                            {selectedRecord.uuid}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 주문 ID */}
+                                {selectedRecord.orderId && (
+                                    <div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">주문 ID</div>
+                                        <div className="text-xs text-slate-800 dark:text-slate-200 font-mono break-all">
+                                            {selectedRecord.orderId}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 수수료 */}
+                                {selectedRecord.fee != null && (
+                                    <div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수수료</div>
+                                        <div className="text-sm text-slate-800 dark:text-slate-200">
+                                            {renderFormattedPrice(selectedRecord.fee, '원')}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 메모 */}
+                                {selectedRecord.note && (
+                                    <div className="sm:col-span-2">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">메모</div>
+                                        <div className="text-sm text-slate-800 dark:text-slate-200">
+                                            {selectedRecord.note}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 에러 메시지 */}
+                                {selectedRecord.errorMessage && (
+                                    <div className="sm:col-span-2">
+                                        <div className="text-xs text-red-600 dark:text-red-400 mb-1">에러 메시지</div>
+                                        <div className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                                            {selectedRecord.errorMessage}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 전체 데이터 (개발용) */}
+                        <details className="bg-slate-100 dark:bg-slate-700/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <summary className="px-4 py-3 cursor-pointer text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium">
+                                전체 데이터 보기 (디버깅용)
+                            </summary>
+                            <div className="px-4 pb-4 pt-2">
+                                <pre className="text-xs bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-600 overflow-x-auto">
+                                    {JSON.stringify(selectedRecord, null, 2)}
+                                </pre>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -767,7 +1173,11 @@ export default function CointradeHistory() {
                                 </tr>
                             ) : (
                                 currentRecords.map((row, idx) => (
-                                    <tr key={idx} className="hover:bg-blue-50 transition-colors dark:hover:bg-slate-700">
+                                    <tr
+                                        key={idx}
+                                        onDoubleClick={() => handleRowDoubleClick(row)}
+                                        className="cursor-pointer hover:bg-blue-50 transition-colors dark:hover:bg-slate-700"
+                                    >
                                         {TABLE_COLUMNS.map((col, index) => {
                                             const value = row[col.key];
                                             const displayValue = col.render ? col.render(value) : (value ?? '-');
@@ -848,6 +1258,9 @@ export default function CointradeHistory() {
                     </div>
                 </div>
             )}
+
+            {/* 상세보기 모달 */}
+            <DetailModal />
         </div>
     );
 }

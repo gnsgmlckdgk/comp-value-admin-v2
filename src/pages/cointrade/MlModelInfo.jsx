@@ -155,6 +155,10 @@ export default function MlModelInfo() {
     const [toast, setToast] = useState(null);
     const [dataList, setDataList] = useState([]);
 
+    // 상세보기 모달 상태
+    const [selectedModel, setSelectedModel] = useState(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
     // 테이블 필터/정렬 상태
     const [columnFilters, setColumnFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ key: 'coinCode', direction: 'asc' });
@@ -257,6 +261,223 @@ export default function MlModelInfo() {
     const handleItemsPerPageChange = (e) => {
         setItemsPerPage(Number(e.target.value));
         setCurrentPage(1);
+    };
+
+    // 상세보기 모달 핸들러
+    const handleRowDoubleClick = (model) => {
+        setSelectedModel(model);
+        setIsDetailModalOpen(true);
+    };
+
+    const handleCloseDetailModal = () => {
+        setIsDetailModalOpen(false);
+        setSelectedModel(null);
+    };
+
+    // ESC 키로 모달 닫기
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isDetailModalOpen) handleCloseDetailModal();
+        };
+        if (isDetailModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        }
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isDetailModalOpen]);
+
+    // 상세보기 모달 컴포넌트
+    const DetailModal = () => {
+        if (!isDetailModalOpen || !selectedModel) return null;
+
+        const handleBackdropClick = (e) => {
+            if (e.target === e.currentTarget) handleCloseDetailModal();
+        };
+
+        return (
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                onClick={handleBackdropClick}
+            >
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto flex flex-col">
+                    {/* 헤더 */}
+                    <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+                                모델 상세정보
+                            </h3>
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                                ID: {selectedModel.id}
+                            </span>
+                        </div>
+                        <button
+                            onClick={handleCloseDetailModal}
+                            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                        >
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* 콘텐츠 */}
+                    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                        {/* 기본 정보 */}
+                        <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-800/50 rounded-lg p-4 sm:p-5 border border-slate-200 dark:border-slate-700">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">기본 정보</h4>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* 종목 코드 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">종목 코드</div>
+                                    <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
+                                        {selectedModel.coinCode}
+                                    </div>
+                                </div>
+
+                                {/* 학습일시 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">학습일시</div>
+                                    <div className="text-sm text-slate-800 dark:text-slate-200">
+                                        {formatDateTime(selectedModel.trainedAt)}
+                                    </div>
+                                </div>
+
+                                {/* 모델 경로 */}
+                                <div className="sm:col-span-2 bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">모델 경로</div>
+                                    <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-mono break-all bg-slate-50 dark:bg-slate-900/50 p-2 rounded">
+                                        {selectedModel.modelPath}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 학습 데이터 기간 */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 sm:p-5 border border-blue-100 dark:border-blue-800">
+                            <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3">학습 데이터 기간</h4>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* 시작일 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">시작일</div>
+                                    <div className="text-base sm:text-lg font-bold text-blue-700 dark:text-blue-300">
+                                        {formatDate(selectedModel.trainDataStart)}
+                                    </div>
+                                </div>
+
+                                {/* 종료일 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">종료일</div>
+                                    <div className="text-base sm:text-lg font-bold text-blue-700 dark:text-blue-300">
+                                        {formatDate(selectedModel.trainDataEnd)}
+                                    </div>
+                                </div>
+
+                                {/* 학습 기간 */}
+                                {selectedModel.trainDataStart && selectedModel.trainDataEnd && (
+                                    <div className="sm:col-span-2 bg-white dark:bg-slate-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                        <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">총 학습 기간</div>
+                                        <div className="text-sm text-blue-700 dark:text-blue-300">
+                                            {(() => {
+                                                const start = new Date(selectedModel.trainDataStart);
+                                                const end = new Date(selectedModel.trainDataEnd);
+                                                const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                                                return `${diffDays}일`;
+                                            })()}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 모델 성능 지표 */}
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-4 sm:p-5 border border-purple-200 dark:border-purple-700">
+                            <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3">모델 성능 지표 (MSE & Accuracy)</h4>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                {/* MSE 고가 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">MSE (고가)</div>
+                                    <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
+                                        {selectedModel.mseHigh != null ? selectedModel.mseHigh.toFixed(8) : '-'}
+                                    </div>
+                                </div>
+
+                                {/* MSE 저가 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">MSE (저가)</div>
+                                    <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
+                                        {selectedModel.mseLow != null ? selectedModel.mseLow.toFixed(8) : '-'}
+                                    </div>
+                                </div>
+
+                                {/* MSE 급등확률 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">MSE (급등확률)</div>
+                                    <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
+                                        {selectedModel.mseSurgeProb != null ? selectedModel.mseSurgeProb.toFixed(8) : '-'}
+                                    </div>
+                                </div>
+
+                                {/* 급등 정확도 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">급등 정확도</div>
+                                    <div className="text-base sm:text-lg font-bold text-purple-700 dark:text-purple-300">
+                                        {selectedModel.accuracySurgeDay != null ? `${(selectedModel.accuracySurgeDay * 100).toFixed(2)}%` : '-'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* MSE 설명 */}
+                            <div className="mt-3 p-3 bg-purple-50/50 dark:bg-purple-900/10 rounded border border-purple-100 dark:border-purple-800">
+                                <p className="text-xs text-purple-700 dark:text-purple-300">
+                                    <strong>MSE (Mean Squared Error):</strong> 평균 제곱 오차로, 값이 낮을수록 모델 예측 성능이 우수합니다.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* 생성/수정 정보 */}
+                        <div className="bg-slate-50 dark:bg-slate-700/30 rounded-lg p-4 sm:p-5 border border-slate-200 dark:border-slate-700">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">시스템 정보</h4>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* 생성일시 */}
+                                <div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">생성일시</div>
+                                    <div className="text-sm text-slate-800 dark:text-slate-200">
+                                        {formatDateTime(selectedModel.createdAt)}
+                                    </div>
+                                </div>
+
+                                {/* 수정일시 */}
+                                <div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수정일시</div>
+                                    <div className="text-sm text-slate-800 dark:text-slate-200">
+                                        {formatDateTime(selectedModel.updatedAt)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 전체 데이터 (개발용) */}
+                        <details className="bg-slate-100 dark:bg-slate-700/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <summary className="px-4 py-3 cursor-pointer text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium">
+                                전체 데이터 보기 (디버깅용)
+                            </summary>
+                            <div className="px-4 pb-4 pt-2">
+                                <pre className="text-xs bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-600 overflow-x-auto">
+                                    {JSON.stringify(selectedModel, null, 2)}
+                                </pre>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -368,7 +589,11 @@ export default function MlModelInfo() {
                                 </tr>
                             ) : (
                                 currentRecords.map((row) => (
-                                    <tr key={row.id} className="hover:bg-blue-50 transition-colors dark:hover:bg-slate-700">
+                                    <tr
+                                        key={row.id}
+                                        onDoubleClick={() => handleRowDoubleClick(row)}
+                                        className="cursor-pointer hover:bg-blue-50 transition-colors dark:hover:bg-slate-700"
+                                    >
                                         {TABLE_COLUMNS.map((col) => (
                                             <td
                                                 key={`${row.id}-${col.key}`}
@@ -434,6 +659,9 @@ export default function MlModelInfo() {
                     {toast}
                 </div>
             )}
+
+            {/* 상세보기 모달 */}
+            <DetailModal />
         </div>
     );
 }

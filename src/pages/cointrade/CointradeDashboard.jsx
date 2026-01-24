@@ -31,8 +31,11 @@ const getReasonColor = (reason) => {
     const colors = {
         'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
         'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+        '7DAY_PROFIT': 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
         'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
-        'EXPIRED': 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+        'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
+        'PARTIAL_7DAY_PROFIT': 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
+        'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
     };
     return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
 };
@@ -42,8 +45,11 @@ const getReasonLabel = (reason) => {
     const labels = {
         'SIGNAL': '매수',
         'TAKE_PROFIT': '익절',
+        '7DAY_PROFIT': '기간수익',
         'STOP_LOSS': '손절',
-        'EXPIRED': '만료'
+        'PARTIAL_TAKE_PROFIT': '부분익절',
+        'PARTIAL_7DAY_PROFIT': '부분기간',
+        'PARTIAL_STOP_LOSS': '부분손절'
     };
     return labels[reason] || reason;
 };
@@ -308,7 +314,7 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-red-600 dark:text-red-400 font-medium',
-        render: (value) => value != null ? `${value.toFixed(1)}%` : '-'
+        render: (value) => value != null ? `${(value * 100).toFixed(1)}%` : '-'
     },
     {
         key: 'downProbability',
@@ -317,7 +323,7 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-blue-600 dark:text-blue-400 font-medium',
-        render: (value) => value != null ? `${value.toFixed(1)}%` : '-'
+        render: (value) => value != null ? `${(value * 100).toFixed(1)}%` : '-'
     },
     {
         key: 'expectedReturn',
@@ -565,9 +571,9 @@ export default function CointradeDashboard() {
                 return;
             }
     
-            const takeProfitCount = sellTrades.filter(t => t.reason === 'TAKE_PROFIT').length;
-            const stopLossCount = sellTrades.filter(t => t.reason === 'STOP_LOSS').length;
-            const expiredCount = sellTrades.filter(t => t.reason === 'EXPIRED').length;
+            const takeProfitCount = sellTrades.filter(t => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(t.reason)).length;
+            const stopLossCount = sellTrades.filter(t => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(t.reason)).length;
+            const expiredCount = sellTrades.filter(t => ['EXPIRED', '7DAY_PROFIT', 'PARTIAL_7DAY_PROFIT'].includes(t.reason)).length;
     
             const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
             const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
@@ -1512,11 +1518,11 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                                 <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                                     <div
                                         className="bg-red-500 dark:bg-red-400 h-2 rounded-full"
-                                        style={{ width: `${selectedHolding.upProbability || 0}%` }}
+                                        style={{ width: `${(selectedHolding.upProbability || 0) * 100}%` }}
                                     />
                                 </div>
                                 <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                                    {(selectedHolding.upProbability || 0).toFixed(1)}%
+                                    {((selectedHolding.upProbability || 0) * 100).toFixed(1)}%
                                 </span>
                             </div>
                         </div>
@@ -1528,11 +1534,11 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                                 <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                                     <div
                                         className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full"
-                                        style={{ width: `${selectedHolding.downProbability || 0}%` }}
+                                        style={{ width: `${(selectedHolding.downProbability || 0) * 100}%` }}
                                     />
                                 </div>
                                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                                    {(selectedHolding.downProbability || 0).toFixed(1)}%
+                                    {((selectedHolding.downProbability || 0) * 100).toFixed(1)}%
                                 </span>
                             </div>
                         </div>

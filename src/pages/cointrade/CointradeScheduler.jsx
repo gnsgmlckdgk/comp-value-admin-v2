@@ -147,6 +147,23 @@ export default function CointradeScheduler() {
         return () => clearInterval(interval);
     }, [fetchStatus]);
 
+    // 로그 복사
+    const handleCopyLogs = async (logs) => {
+        if (!logs || logs.length === 0) {
+            setToast('복사할 로그가 없습니다.');
+            return;
+        }
+        
+        try {
+            const logText = logs.map(log => `[${log.time}] ${log.message}`).join('\n');
+            await navigator.clipboard.writeText(logText);
+            setToast('로그가 클립보드에 복사되었습니다.');
+        } catch (err) {
+            console.error('로그 복사 실패:', err);
+            setToast('로그 복사에 실패했습니다.');
+        }
+    };
+
     // 매수 스케줄러 토글
     const handleBuySchedulerToggle = async () => {
         const newValue = !status.buySchedulerEnabled;
@@ -677,8 +694,19 @@ export default function CointradeScheduler() {
 
                         {/* 로그 창 */}
                         <div className="relative">
-                            <div className="absolute top-2 right-4 text-[10px] text-slate-500 font-mono z-10">
-                                {buyProcessLogs.length.toLocaleString()} / 1,000 lines
+                            <div className="absolute top-2 right-4 flex items-center gap-2 z-10">
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                    {buyProcessLogs.length.toLocaleString()} / 1,000 lines
+                                </span>
+                                <button
+                                    onClick={() => handleCopyLogs(buyProcessLogs)}
+                                    className="text-slate-500 hover:text-slate-300 transition-colors"
+                                    title="로그 복사"
+                                >
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
                             </div>
                             <div 
                                 ref={buyLogContainerRef}
@@ -741,8 +769,19 @@ export default function CointradeScheduler() {
 
                         {/* 로그 창 */}
                         <div className="relative">
-                            <div className="absolute top-2 right-4 text-[10px] text-slate-500 font-mono z-10">
-                                {sellProcessLogs.length.toLocaleString()} / 1,000 lines
+                            <div className="absolute top-2 right-4 flex items-center gap-2 z-10">
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                    {sellProcessLogs.length.toLocaleString()} / 1,000 lines
+                                </span>
+                                <button
+                                    onClick={() => handleCopyLogs(sellProcessLogs)}
+                                    className="text-slate-500 hover:text-slate-300 transition-colors"
+                                    title="로그 복사"
+                                >
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
                             </div>
                             <div 
                                 ref={sellLogContainerRef}
@@ -823,7 +862,7 @@ export default function CointradeScheduler() {
                     <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
                         <div className="text-xs text-red-700 dark:text-red-400 mb-1">평균 상승 확률</div>
                         <div className="text-2xl font-bold text-red-800 dark:text-red-300">
-                            {status.avgUpProbability ? status.avgUpProbability.toFixed(1) : '0.0'}%
+                            {status.avgUpProbability ? (status.avgUpProbability * 100).toFixed(1) : '0.0'}%
                         </div>
                     </div>
                 </div>

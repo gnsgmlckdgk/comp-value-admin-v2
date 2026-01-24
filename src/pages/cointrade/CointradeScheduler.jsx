@@ -29,8 +29,7 @@ export default function CointradeScheduler() {
         totalInvestment: 0,
         totalValuation: 0,
         totalProfitRate: 0,
-        expiringCount: 0,
-        avgSurgeProbability: 0
+        avgUpProbability: 0
     });
 
     // Toast auto-hide
@@ -65,11 +64,8 @@ export default function CointradeScheduler() {
             let totalProfitRate = 0;
 
             // 3. 보유 종목이 있는 경우 현재가 조회하여 평가금액 갱신
-            let expiringCount = 0;
-            let totalSurgeProb = 0;
-            let surgeCount = 0;
-            const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
-            const now = new Date();
+            let totalUpProb = 0;
+            let probCount = 0;
 
             if (holdings.length > 0) {
                 try {
@@ -90,19 +86,10 @@ export default function CointradeScheduler() {
                             totalInvestment += (holding.totalAmount || 0);
                             totalValuation += valuation;
 
-                            // 만료 임박 계산 (클라이언트 사이드)
-                            if (holding.expireDate) {
-                                const expireDate = new Date(holding.expireDate);
-                                const diffDays = Math.ceil((expireDate.setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
-                                if (diffDays <= 3 && diffDays >= 0) {
-                                    expiringCount++;
-                                }
-                            }
-
-                            // 급등 확률 합계 계산
-                            if (holding.surgeProbability !== undefined && holding.surgeProbability !== null) {
-                                totalSurgeProb += holding.surgeProbability;
-                                surgeCount++;
+                            // 상승 확률 합계 계산
+                            if (holding.upProbability !== undefined && holding.upProbability !== null) {
+                                totalUpProb += holding.upProbability;
+                                probCount++;
                             }
 
                             return { ...holding, currentPrice };
@@ -118,19 +105,10 @@ export default function CointradeScheduler() {
                             const valuation = holding.currentPrice ? holding.currentPrice * holding.quantity : (holding.totalAmount || 0);
                             totalValuation += valuation;
 
-                            // 만료 임박 계산
-                            if (holding.expireDate) {
-                                const expireDate = new Date(holding.expireDate);
-                                const diffDays = Math.ceil((expireDate.setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
-                                if (diffDays <= 3 && diffDays >= 0) {
-                                    expiringCount++;
-                                }
-                            }
-
-                            // 급등 확률 합계 계산
-                            if (holding.surgeProbability !== undefined && holding.surgeProbability !== null) {
-                                totalSurgeProb += holding.surgeProbability;
-                                surgeCount++;
+                            // 상승 확률 합계 계산
+                            if (holding.upProbability !== undefined && holding.upProbability !== null) {
+                                totalUpProb += holding.upProbability;
+                                probCount++;
                             }
                         });
                     }
@@ -139,8 +117,8 @@ export default function CointradeScheduler() {
                 }
             }
 
-            // 평균 급등 확률 계산
-            const calculatedAvgSurgeProb = surgeCount > 0 ? totalSurgeProb / surgeCount : 0;
+            // 평균 상승 확률 계산
+            const calculatedAvgUpProb = probCount > 0 ? totalUpProb / probCount : 0;
 
             // 상태 업데이트
             setStatus({
@@ -154,8 +132,7 @@ export default function CointradeScheduler() {
                 totalInvestment: totalInvestment,
                 totalValuation: totalValuation,
                 totalProfitRate: totalProfitRate,
-                expiringCount: expiringCount,
-                avgSurgeProbability: calculatedAvgSurgeProb // 클라이언트 계산 값 사용
+                avgUpProbability: calculatedAvgUpProb
             });
 
         } catch (e) {
@@ -842,19 +819,11 @@ export default function CointradeScheduler() {
                         </div>
                     </div>
 
-                    {/* 만료 임박 (v2.1) */}
-                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-800">
-                        <div className="text-xs text-orange-700 dark:text-orange-400 mb-1">만료 임박 (3일내)</div>
-                        <div className="text-2xl font-bold text-orange-800 dark:text-orange-300">
-                            {status.expiringCount}
-                        </div>
-                    </div>
-
-                    {/* 평균 급등 확률 (v2.1) */}
-                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-                        <div className="text-xs text-purple-700 dark:text-purple-400 mb-1">평균 급등 확률</div>
-                        <div className="text-2xl font-bold text-purple-800 dark:text-purple-300">
-                            {(status.avgSurgeProbability * 100).toFixed(0)}%
+                    {/* 평균 상승 확률 */}
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
+                        <div className="text-xs text-red-700 dark:text-red-400 mb-1">평균 상승 확률</div>
+                        <div className="text-2xl font-bold text-red-800 dark:text-red-300">
+                            {status.avgUpProbability ? status.avgUpProbability.toFixed(1) : '0.0'}%
                         </div>
                     </div>
                 </div>

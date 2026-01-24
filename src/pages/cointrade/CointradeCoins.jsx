@@ -51,9 +51,19 @@ export default function CointradeCoins() {
             const configResponse = await send('/dart/api/cointrade/config', {}, 'GET');
             if (configResponse.data?.success && configResponse.data?.response) {
                 const configList = configResponse.data.response;
-                const targetModeConfig = configList.find(c => c.paramName === 'TARGET_MODE');
-                if (targetModeConfig) {
-                    setTargetMode(targetModeConfig.paramValue);
+
+                let foundMode = null;
+                configList.forEach(c => {
+                    // 서버 응답 키 변경 대응 (configKey 우선, paramName 호환)
+                    const key = c.configKey || c.paramName;
+                    if (key && key.trim() === 'TARGET_MODE') {
+                        const val = c.configValue || c.paramValue;
+                        if (val) foundMode = val;
+                    }
+                });
+
+                if (foundMode) {
+                    setTargetMode(foundMode.trim());
                 }
             }
 
@@ -78,8 +88,8 @@ export default function CointradeCoins() {
         try {
             // 1. TARGET_MODE 저장
             const configUpdateList = [{
-                paramName: 'TARGET_MODE',
-                paramValue: targetMode
+                configKey: 'TARGET_MODE',
+                configValue: targetMode
             }];
 
             const configResult = await send('/dart/api/cointrade/config', configUpdateList, 'PUT');
@@ -185,13 +195,14 @@ export default function CointradeCoins() {
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
                             종목 선택 모드
                         </h2>
+                        {console.log('Rendered with targetMode:', targetMode)}
                         <div className="flex gap-6">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                     type="radio"
                                     name="targetMode"
                                     value="ALL"
-                                    checked={targetMode === 'ALL'}
+                                    checked={targetMode?.toUpperCase() === 'ALL'}
                                     onChange={(e) => setTargetMode(e.target.value)}
                                     className="w-4 h-4"
                                 />
@@ -202,7 +213,7 @@ export default function CointradeCoins() {
                                     type="radio"
                                     name="targetMode"
                                     value="SELECTED"
-                                    checked={targetMode === 'SELECTED'}
+                                    checked={targetMode?.toUpperCase() === 'SELECTED'}
                                     onChange={(e) => setTargetMode(e.target.value)}
                                     className="w-4 h-4"
                                 />
@@ -236,56 +247,52 @@ export default function CointradeCoins() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => setMarketFilter('ALL')}
-                                            className={`px-3 py-1 rounded text-sm ${
-                                                marketFilter === 'ALL'
+                                            className={`px-3 py-1 rounded text-sm ${marketFilter === 'ALL'
                                                     ? 'bg-blue-600 text-white'
                                                     : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                            }`}
+                                                }`}
                                         >
                                             전체
                                         </button>
                                         <button
                                             onClick={() => setMarketFilter('KRW')}
-                                            className={`px-3 py-1 rounded text-sm ${
-                                                marketFilter === 'KRW'
+                                            className={`px-3 py-1 rounded text-sm ${marketFilter === 'KRW'
                                                     ? 'bg-blue-600 text-white'
                                                     : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                            }`}
+                                                }`}
                                         >
                                             KRW
                                         </button>
                                         <button
                                             onClick={() => setMarketFilter('BTC')}
-                                            className={`px-3 py-1 rounded text-sm ${
-                                                marketFilter === 'BTC'
+                                            className={`px-3 py-1 rounded text-sm ${marketFilter === 'BTC'
                                                     ? 'bg-blue-600 text-white'
                                                     : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                            }`}
+                                                }`}
                                         >
                                             BTC
                                         </button>
                                         <button
                                             onClick={() => setMarketFilter('USDT')}
-                                            className={`px-3 py-1 rounded text-sm ${
-                                                marketFilter === 'USDT'
+                                            className={`px-3 py-1 rounded text-sm ${marketFilter === 'USDT'
                                                     ? 'bg-blue-600 text-white'
                                                     : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
-                                            }`}
+                                                }`}
                                         >
                                             USDT
                                         </button>
                                     </div>
 
-                                                                    {/* 검색 필터 */}
-                                                                    <div className="flex-1">
-                                                                        <Input
-                                                                            type="text"
-                                                                            placeholder="종목코드 또는 종목명 검색..."
-                                                                            value={searchText}
-                                                                            onChange={(e) => setSearchText(e.target.value)}
-                                                                            wdfull={true}
-                                                                        />
-                                                                    </div>                                </div>
+                                    {/* 검색 필터 */}
+                                    <div className="flex-1">
+                                        <Input
+                                            type="text"
+                                            placeholder="종목코드 또는 종목명 검색..."
+                                            value={searchText}
+                                            onChange={(e) => setSearchText(e.target.value)}
+                                            wdfull={true}
+                                        />
+                                    </div>                                </div>
 
                                 {/* 종목 목록 */}
                                 <div className="max-h-[600px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded">
@@ -378,17 +385,17 @@ export default function CointradeCoins() {
                                                     const englishLower = (c.english_name || '').toLowerCase();
 
                                                     return marketLower.includes(search) ||
-                                                           koreanLower.includes(search) ||
-                                                           englishLower.includes(search);
+                                                        koreanLower.includes(search) ||
+                                                        englishLower.includes(search);
                                                 });
 
                                             if (filteredSelectedCoins.length === 0) {
                                                 return (
                                                     <div className="text-center py-8 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-dashed border-slate-200 dark:border-slate-700">
                                                         {selectedCoins.size === 0 ? (
-                                                            <>선택된 종목이<br/>없습니다</>
+                                                            <>선택된 종목이<br />없습니다</>
                                                         ) : (
-                                                            <>검색 결과가<br/>없습니다</>
+                                                            <>검색 결과가<br />없습니다</>
                                                         )}
                                                     </div>
                                                 );

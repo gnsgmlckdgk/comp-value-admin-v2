@@ -16,10 +16,14 @@ export default function CointradeConfig() {
     const [isSellCriteriaModalOpen, setIsSellCriteriaModalOpen] = useState(false);
     const [isBuyCriteriaModalOpen, setIsBuyCriteriaModalOpen] = useState(false);
 
+    // 기대 수익률 계산기 상태
+    const [calcHigh, setCalcHigh] = useState('');
+    const [calcLow, setCalcLow] = useState('');
+
     // 파라미터 상태
     const [params, setParams] = useState({
-        BUY_PROFIT_THRESHOLD: '',      // X% (매수 조건)
-        TAKE_PROFIT_BUFFER: '',        // A% (익절 버퍼)
+        BUY_PROFIT_THRESHOLD: '',      // X% (매수 조건 - 레거시 호환 유지 or 제거 확인 필요, 지침상 유지)
+        TAKE_PROFIT_BUFFER: '',        // 익절 버퍼 %
         STOP_LOSS_THRESHOLD: '',       // C% (손절선)
         BUY_AMOUNT_PER_COIN: '',       // P원 (종목당 매수금액)
         BUY_WAIT_SECONDS: '',          // Y초 (매수 체결 대기)
@@ -27,11 +31,10 @@ export default function CointradeConfig() {
         SELL_CHECK_SECONDS: '',        // B초 (매도 체결 확인)
         PRICE_MONITOR_SECONDS: '',     // D초 (가격 모니터링)
         BUY_CHECK_HOURS: '',           // E시간 (매수 체크 주기)
-        MIN_SURGE_PROBABILITY: '',     // S% 최소 급등 확률 (0~100)
-        HOLD_GRACE_DAYS: '',           // 보유 유예일 (1~7)
-        SURGE_THRESHOLD: '',           // 급등 기준 (%)
-        MIN_BUY_SCORE: '',             // 최소 매수 점수 (0~100)
         TARGET_MODE: 'ALL',            // ALL 또는 SELECTED 모드
+        MIN_UP_PROBABILITY: '',        // 최소 상승 확률 %
+        MIN_PROFIT_RATE: '',           // 최소 익절률 %
+        MAX_PROFIT_RATE: '',           // 최대 익절률 %
     });
 
     // 파라미터 그룹 정의
@@ -40,9 +43,8 @@ export default function CointradeConfig() {
             label: '매수 관련',
             keys: [
                 'BUY_AMOUNT_PER_COIN',
+                'MIN_UP_PROBABILITY',
                 'BUY_PROFIT_THRESHOLD',
-                'MIN_SURGE_PROBABILITY',
-                'MIN_BUY_SCORE',
                 'BUY_WAIT_SECONDS',
                 'BUY_RETRY_COUNT',
                 'BUY_CHECK_HOURS',
@@ -52,12 +54,12 @@ export default function CointradeConfig() {
         SELL: {
             label: '매도 관련',
             keys: [
+                'MIN_PROFIT_RATE',
+                'MAX_PROFIT_RATE',
                 'TAKE_PROFIT_BUFFER',
                 'STOP_LOSS_THRESHOLD',
                 'SELL_CHECK_SECONDS',
-                'HOLD_GRACE_DAYS',
                 'PRICE_MONITOR_SECONDS',
-                'SURGE_THRESHOLD'
             ]
         }
     };
@@ -65,15 +67,15 @@ export default function CointradeConfig() {
     // 즉시 반영되는 파라미터 목록
     const IMMEDIATE_PARAMS = [
         'BUY_AMOUNT_PER_COIN',
+        'MIN_UP_PROBABILITY',
         'BUY_PROFIT_THRESHOLD',
-        'MIN_SURGE_PROBABILITY',
-        'MIN_BUY_SCORE',
         'BUY_WAIT_SECONDS',
         'BUY_RETRY_COUNT',
         'TARGET_MODE',
         'TAKE_PROFIT_BUFFER',
         'STOP_LOSS_THRESHOLD',
-        'SURGE_THRESHOLD',
+        'MIN_PROFIT_RATE',
+        'MAX_PROFIT_RATE',
         'SELL_CHECK_SECONDS'
     ];
 
@@ -100,10 +102,14 @@ export default function CointradeConfig() {
                 const configList = data.response;
                 const configMap = {};
 
-                // API 응답을 객체로 변환
+                // API 응답을 객체로 변환 (paramName -> configKey, paramValue -> configValue)
                 configList.forEach(config => {
-                    if (params.hasOwnProperty(config.paramName)) {
-                        configMap[config.paramName] = config.paramValue;
+                    // 서버 응답 키 변경 대응
+                    const key = config.configKey || config.paramName;
+                    const value = config.configValue || config.paramValue;
+
+                    if (params.hasOwnProperty(key)) {
+                        configMap[key] = value;
                     }
                 });
 
@@ -122,7 +128,14 @@ export default function CointradeConfig() {
         const errors = [];
 
         // 퍼센트 값 검증 (0~100)
-        const percentParams = ['BUY_PROFIT_THRESHOLD', 'TAKE_PROFIT_BUFFER', 'STOP_LOSS_THRESHOLD', 'MIN_SURGE_PROBABILITY', 'MIN_BUY_SCORE'];
+        const percentParams = [
+            'TAKE_PROFIT_BUFFER',
+            'STOP_LOSS_THRESHOLD',
+            'MIN_UP_PROBABILITY',
+            'MIN_PROFIT_RATE',
+            'MAX_PROFIT_RATE',
+            'BUY_PROFIT_THRESHOLD'
+        ];
         percentParams.forEach(key => {
             const value = parseFloat(params[key]);
             if (isNaN(value) || value < 0 || value > 100) {
@@ -138,8 +151,6 @@ export default function CointradeConfig() {
             'SELL_CHECK_SECONDS',
             'PRICE_MONITOR_SECONDS',
             'BUY_CHECK_HOURS',
-            'SURGE_THRESHOLD',
-            'HOLD_GRACE_DAYS'
         ];
         numericParams.forEach(key => {
             if (key === 'TARGET_MODE') return;
@@ -156,10 +167,10 @@ export default function CointradeConfig() {
 
         setSaveLoading(true);
         try {
-            // API 요청 형식으로 변환
-            const configList = Object.entries(params).map(([paramName, paramValue]) => ({
-                paramName,
-                paramValue: paramValue?.toString() || ''
+            // API 요청 형식으로 변환 (configKey, configValue)
+            const configList = Object.entries(params).map(([key, value]) => ({
+                configKey: key,
+                configValue: value?.toString() || ''
             }));
 
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
@@ -183,19 +194,18 @@ export default function CointradeConfig() {
 
     const getParamLabel = (key) => {
         const labels = {
-            BUY_PROFIT_THRESHOLD: 'X% (매수 조건)',
-            TAKE_PROFIT_BUFFER: 'A% (익절 버퍼)',
-            STOP_LOSS_THRESHOLD: 'C% (손절선)',
-            BUY_AMOUNT_PER_COIN: 'P원 (종목당 매수금액)',
-            BUY_WAIT_SECONDS: 'Y초 (매수 체결 대기)',
-            BUY_RETRY_COUNT: 'Z회 (매수 재시도)',
-            SELL_CHECK_SECONDS: 'B초 (매도 체결 확인)',
-            PRICE_MONITOR_SECONDS: 'D초 (가격 모니터링)',
-            BUY_CHECK_HOURS: 'E시간 (매수 체크 주기)',
-            MIN_SURGE_PROBABILITY: 'S% (최소 급등 확률)',
-            HOLD_GRACE_DAYS: '급등 예상일 후 보유기간(만료일)',
-            SURGE_THRESHOLD: '급등 기준',
-            MIN_BUY_SCORE: '최소 매수 점수',
+            BUY_PROFIT_THRESHOLD: '매수 조건 (기대 수익률 %)',
+            TAKE_PROFIT_BUFFER: '익절 버퍼 (%)',
+            STOP_LOSS_THRESHOLD: '손절선 (%)',
+            BUY_AMOUNT_PER_COIN: '종목당 매수금액 (원)',
+            BUY_WAIT_SECONDS: '매수 체결 대기 (초)',
+            BUY_RETRY_COUNT: '매수 재시도 (회)',
+            SELL_CHECK_SECONDS: '매도 체결 확인 (초)',
+            PRICE_MONITOR_SECONDS: '가격 모니터링 주기 (초)',
+            BUY_CHECK_HOURS: '매수 체크 주기 (시간)',
+            MIN_UP_PROBABILITY: '최소 상승 확률 (%)',
+            MIN_PROFIT_RATE: '최소 익절률 (%)',
+            MAX_PROFIT_RATE: '최대 익절률 (%)',
             TARGET_MODE: '대상 모드 (ALL/SELECTED)',
         };
         return labels[key] || key;
@@ -203,19 +213,18 @@ export default function CointradeConfig() {
 
     const getParamDescription = (key) => {
         const descriptions = {
-            BUY_PROFIT_THRESHOLD: '예측 수익률이 X% 이상일 때 매수',
-            TAKE_PROFIT_BUFFER: '예측 고점 대비 A% 하락 시 익절',
-            STOP_LOSS_THRESHOLD: '매수가 대비 C% 하락 시 손절',
+            BUY_PROFIT_THRESHOLD: '예측 수익률이 이 값 이상일 때 매수',
+            TAKE_PROFIT_BUFFER: '예측 최고가보다 얼마나 일찍 팔까요? (추천: 3~5%)',
+            STOP_LOSS_THRESHOLD: '내가 견딜 수 있는 최대 손실은 몇 %인가요? (추천: 5~10%)',
             BUY_AMOUNT_PER_COIN: '한 종목당 투자할 금액 (KRW)',
             BUY_WAIT_SECONDS: '매수 주문 후 체결 대기 시간',
             BUY_RETRY_COUNT: '매수 실패 시 재시도 횟수',
             SELL_CHECK_SECONDS: '매도 주문 체결 확인 주기',
             PRICE_MONITOR_SECONDS: '가격 모니터링 주기',
             BUY_CHECK_HOURS: '매수 조건 체크 주기 (시간)',
-            MIN_SURGE_PROBABILITY: '급등 확률이 이 값 이상이어야 매수',
-            HOLD_GRACE_DAYS: '급등 예상일 경과 후 추가 보유 기간',
-            SURGE_THRESHOLD: '이 % 이상 상승을 급등으로 판단',
-            MIN_BUY_SCORE: '매수 점수가 이 값 이상이어야 매수',
+            MIN_UP_PROBABILITY: '상승 확률이 이 값 이상이어야 매수',
+            MIN_PROFIT_RATE: '7일이나 기다렸는데 이 정도 수익이면 충분합니다. (추천: 5%)',
+            MAX_PROFIT_RATE: 'AI가 폭등을 예측해도 이 정도 수익이면 만족하고 나옵니다. (추천: 30%)',
             TARGET_MODE: 'ALL: 전체 종목 매매, SELECTED: 선택 종목만 매매',
         };
         return descriptions[key] || '';
@@ -290,60 +299,106 @@ export default function CointradeConfig() {
                                         </div>
 
                                         {group.keys.map((key) => (
-                                            <div
-                                                key={key}
-                                                className="grid grid-cols-1 md:grid-cols-12 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors duration-150 p-4 gap-3 md:gap-0"
-                                            >
-                                                {/* 항목명 & 즉시반영 배지 */}
-                                                <div className="md:col-span-3 flex flex-col justify-center gap-1">
-                                                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                                                        <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm md:text-base">
-                                                            {getParamLabel(key)}
-                                                        </span>
-                                                        {IMMEDIATE_PARAMS.includes(key) && (
-                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 whitespace-nowrap">
-                                                                즉시 반영
+                                            <div key={key} className="group/row">
+                                                <div
+                                                    className="grid grid-cols-1 md:grid-cols-12 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors duration-150 p-4 gap-3 md:gap-0"
+                                                >
+                                                    {/* 항목명 & 즉시반영 배지 */}
+                                                    <div className="md:col-span-3 flex flex-col justify-center gap-1">
+                                                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                                            <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm md:text-base">
+                                                                {getParamLabel(key)}
                                                             </span>
+                                                            {IMMEDIATE_PARAMS.includes(key) && (
+                                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 whitespace-nowrap">
+                                                                    즉시 반영
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-tight">
+                                                            {key}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* 설명 */}
+                                                    <div className="md:col-span-6 flex items-center md:px-4">
+                                                        <div className="text-sm text-slate-500 dark:text-slate-400 w-full">
+                                                            {key === 'BUY_PROFIT_THRESHOLD' ? (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span>{getParamDescription(key)}</span>
+                                                                    {/* 요약 버전 툴팁 (인라인 표시) */}
+                                                                    <div className="text-xs bg-slate-100 dark:bg-slate-700 p-2 rounded border border-slate-200 dark:border-slate-600 mt-1">
+                                                                        <strong className="text-slate-700 dark:text-slate-300 block mb-0.5">💡 기대 수익률이란?</strong>
+                                                                        단순 목표 수익률이 아니라, <span className="text-blue-600 dark:text-blue-400">상승 잠재력(High)</span>과 <span className="text-red-600 dark:text-red-400">하락 위험(Low)</span>을 평균 낸 값입니다.
+                                                                        리스크까지 고려했기 때문에, 이 값이 높을수록 '안전하게 오를 확률이 높은 종목'입니다.
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                getParamDescription(key)
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 입력 필드 */}
+                                                    <div className="md:col-span-3 flex items-center">
+                                                        {key === 'TARGET_MODE' ? (
+                                                            <select
+                                                                value={params[key]}
+                                                                onChange={(e) => handleInputChange(key, e.target.value)}
+                                                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            >
+                                                                <option value="ALL">ALL (전체)</option>
+                                                                <option value="SELECTED">SELECTED (선택)</option>
+                                                            </select>
+                                                        ) : (
+                                                            <Input
+                                                                type="number"
+                                                                className="w-full h-10 md:h-9"
+                                                                value={params[key]}
+                                                                onChange={(e) => handleInputChange(key, e.target.value)}
+                                                                placeholder="0"
+                                                                step={
+                                                                    key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
+                                                                        key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
+                                                                            '1'
+                                                                }
+                                                            />
                                                         )}
                                                     </div>
-                                                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-tight">
-                                                        {key}
-                                                    </span>
                                                 </div>
 
-                                                {/* 설명 - 모바일에서는 항목명 아래, 데스크톱에서는 중앙 */}
-                                                <div className="md:col-span-6 flex items-center md:px-4">
-                                                    <span className="text-sm text-slate-500 dark:text-slate-400">
-                                                        {getParamDescription(key)}
-                                                    </span>
-                                                </div>
-
-                                                {/* 입력 필드 */}
-                                                <div className="md:col-span-3 flex items-center">
-                                                    {key === 'TARGET_MODE' ? (
-                                                        <select
-                                                            value={params[key]}
-                                                            onChange={(e) => handleInputChange(key, e.target.value)}
-                                                            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                        >
-                                                            <option value="ALL">ALL (전체)</option>
-                                                            <option value="SELECTED">SELECTED (선택)</option>
-                                                        </select>
-                                                    ) : (
-                                                        <Input
-                                                            type="number"
-                                                            className="w-full h-10 md:h-9"
-                                                            value={params[key]}
-                                                            onChange={(e) => handleInputChange(key, e.target.value)}
-                                                            placeholder="0"
-                                                            step={
-                                                                key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
-                                                                    key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
-                                                                        '1'
-                                                            }
-                                                        />
-                                                    )}
-                                                </div>
+                                                {/* 기대 수익률 계산기 (BUY_PROFIT_THRESHOLD 일 때만 표시) */}
+                                                {key === 'BUY_PROFIT_THRESHOLD' && (
+                                                    <div className="bg-slate-50 dark:bg-slate-900/30 border-t border-dashed border-slate-200 dark:border-slate-700 p-3 mx-4 mb-2 rounded-b-lg">
+                                                        <div className="flex flex-col sm:flex-row items-center gap-4 text-sm">
+                                                            <span className="font-bold text-slate-600 dark:text-slate-400 whitespace-nowrap">🧮 간편 계산기</span>
+                                                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="예상 최고가(%)"
+                                                                    className="w-full sm:w-24 px-2 py-1 border rounded text-xs"
+                                                                    value={calcHigh}
+                                                                    onChange={(e) => setCalcHigh(e.target.value)}
+                                                                />
+                                                                <span className="text-slate-400">-</span>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="예상 하락률(%)"
+                                                                    className="w-full sm:w-24 px-2 py-1 border rounded text-xs"
+                                                                    value={calcLow}
+                                                                    onChange={(e) => setCalcLow(e.target.value)}
+                                                                />
+                                                                <span className="text-slate-400">/ 2 =</span>
+                                                                <span className="font-bold text-blue-600 dark:text-blue-400 ml-1">
+                                                                    {calcHigh && calcLow ? ((parseFloat(calcHigh) - parseFloat(calcLow)) / 2).toFixed(2) : '?'}%
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 ml-auto hidden sm:block">
+                                                                * 하락률은 양수로 입력 (예: 10% 하락 예상 시 10 입력)
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </Fragment>

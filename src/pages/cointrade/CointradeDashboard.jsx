@@ -187,11 +187,11 @@ const HOLDINGS_COL_WIDTHS = {
     quantity: '120px',
     valuation: '120px',
     profitRate: '100px',
-    surgeProbability: '140px',
-    surgeDay: '100px',
-    expireDate: '100px',
-    buyScore: '100px',
-    buyDate: '120px'
+    upProbability: '100px',
+    downProbability: '100px',
+    expectedReturn: '100px',
+    buyDate: '120px',
+    profitConfirmDate: '140px'
 };
 
 // 보유 종목 테이블 컬럼 정의
@@ -302,64 +302,70 @@ const HOLDINGS_TABLE_COLUMNS = [
         )
     },
     {
-        key: 'surgeProbability',
-        label: '급등확률',
-        width: HOLDINGS_COL_WIDTHS.surgeProbability,
-        sortable: true,
-        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap',
-        render: (value) => (
-            <div className="flex items-center gap-2">
-                <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2 min-w-[60px]">
-                    <div
-                        className="bg-purple-500 dark:bg-purple-400 h-2 rounded-full"
-                        style={{ width: `${(value || 0) * 100}%` }}
-                    />
-                </div>
-                <span className="text-xs font-medium text-purple-600 dark:text-purple-400 w-8 text-right">
-                    {((value || 0) * 100).toFixed(0)}%
-                </span>
-            </div>
-        )
-    },
-    {
-        key: 'surgeDay',
-        label: '급등예상일',
-        width: HOLDINGS_COL_WIDTHS.surgeDay,
-        sortable: true,
-        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-center text-slate-900 dark:text-slate-100',
-        render: (value) => value ? `D+${value}` : '-'
-    },
-    {
-        key: 'expireDate',
-        label: '만료일',
-        width: HOLDINGS_COL_WIDTHS.expireDate,
-        sortable: true,
-        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
-        render: (value) => calculateDday(value)
-    },
-    {
-        key: 'buyScore',
-        label: '매수점수',
-        width: HOLDINGS_COL_WIDTHS.buyScore,
+        key: 'upProbability',
+        label: '상승확률',
+        width: HOLDINGS_COL_WIDTHS.upProbability,
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-700 dark:text-slate-300',
-        render: (value) => value != null ? `${value.toFixed(2)}점` : '-'
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-red-600 dark:text-red-400 font-medium',
+        render: (value) => value != null ? `${value.toFixed(1)}%` : '-'
+    },
+    {
+        key: 'downProbability',
+        label: '하락확률',
+        width: HOLDINGS_COL_WIDTHS.downProbability,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-blue-600 dark:text-blue-400 font-medium',
+        render: (value) => value != null ? `${value.toFixed(1)}%` : '-'
+    },
+    {
+        key: 'expectedReturn',
+        label: '기대수익',
+        width: HOLDINGS_COL_WIDTHS.expectedReturn,
+        sortable: true,
+        headerClassName: 'px-4 py-3 pr-8 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-right text-slate-700 dark:text-slate-300',
+        render: (value) => value != null ? `${value.toFixed(2)}%` : '-'
     },
     {
         key: 'buyDate',
         label: '매수일',
         width: HOLDINGS_COL_WIDTHS.buyDate,
         sortable: true,
-        headerClassName: 'px-4 py-3 pr-8 text-left text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
+        headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
         render: (value) => new Date(value).toLocaleDateString('ko-KR', {
             month: '2-digit',
             day: '2-digit'
         })
+    },
+    {
+        key: 'profitConfirmDate',
+        label: '수익확정일',
+        width: HOLDINGS_COL_WIDTHS.profitConfirmDate,
+        sortable: true,
+        headerClassName: 'px-4 py-3 pr-8 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
+        render: (value, row) => {
+            if (!row.buyDate) return '-';
+            const buyDate = new Date(row.buyDate);
+            const confirmDate = new Date(buyDate);
+            confirmDate.setDate(buyDate.getDate() + 7);
+            
+            const today = new Date();
+            const isPassed = today >= confirmDate;
+
+            return (
+                <span className={isPassed ? 'text-green-600 dark:text-green-400 font-bold' : ''}>
+                    {confirmDate.toLocaleDateString('ko-KR', {
+                        month: '2-digit',
+                        day: '2-digit'
+                    })}
+                    {isPassed ? ' (도래)' : ''}
+                </span>
+            );
+        }
     }
 ];
 
@@ -957,14 +963,6 @@ export default function CointradeDashboard() {
 
                                                                     processedHoldings.map((holding, index) => {
 
-                                                // 만료 임박 여부 (3일 이내)
-
-                                                const isExpiring = holding.expireDate &&
-
-                                                    (new Date(holding.expireDate) - new Date()) / (1000 * 60 * 60 * 24) <= 3;
-
-            
-
                                                 return (
 
                                                     <tr
@@ -973,9 +971,7 @@ export default function CointradeDashboard() {
 
                                                         onDoubleClick={() => handleRowDoubleClick(holding)}
 
-                                                        className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 ${isExpiring ? 'bg-orange-50 dark:bg-orange-900/10' : ''
-
-                                                            }`}
+                                                        className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50"
 
                                                     >
 
@@ -991,7 +987,7 @@ export default function CointradeDashboard() {
 
                                                                     key={col.key}
 
-                                                                    className={`${col.cellClassName} ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''} ${isExpiring && col.sticky ? '!bg-orange-50 dark:!bg-slate-800' : ''}`}
+                                                                    className={`${col.cellClassName} ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
 
                                                                     style={{
 
@@ -1182,26 +1178,42 @@ export default function CointradeDashboard() {
                             </span>
                         </div>
 
-                        {/* 익절 성공률 */}
+                        {/* 1. AI 예측 기반 익절 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">익절 성공률</span>
-                                <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">AI 예측 익절 (어깨 매도)</span>
+                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                                     {performance.takeProfitRate.toFixed(1)}%
                                 </span>
                             </div>
                             <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                                 <div
-                                    className="bg-green-500 dark:bg-green-400 h-2 rounded-full"
+                                    className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full"
                                     style={{ width: `${performance.takeProfitRate}%` }}
                                 />
                             </div>
                         </div>
 
-                        {/* 손절률 */}
+                        {/* 2. 7일 보유 수익 확정 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">손절률</span>
+                                <span className="text-sm text-slate-600 dark:text-slate-400">7일 보유 익절 (수익 확정)</span>
+                                <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                    {performance.expiredRate.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                                <div
+                                    className="bg-green-500 dark:bg-green-400 h-2 rounded-full"
+                                    style={{ width: `${performance.expiredRate}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* 3. 손절 관리 */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">손절 관리 (리스크 최소화)</span>
                                 <span className="text-sm font-bold text-red-600 dark:text-red-400">
                                     {performance.stopLossRate.toFixed(1)}%
                                 </span>
@@ -1214,36 +1226,20 @@ export default function CointradeDashboard() {
                             </div>
                         </div>
 
-                        {/* 만료 매도율 */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">만료 매도율</span>
-                                <span className="text-sm font-bold text-slate-600 dark:text-slate-400">
-                                    {performance.expiredRate.toFixed(1)}%
-                                </span>
-                            </div>
-                            <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                <div
-                                    className="bg-slate-500 dark:bg-slate-400 h-2 rounded-full"
-                                    style={{ width: `${performance.expiredRate}%` }}
-                                />
-                            </div>
-                        </div>
-
                         {/* 평균 수익률 */}
                         <div className={`flex items-center justify-between p-4 rounded-lg ${performance.avgProfitRate >= 0
-                            ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800'
-                            : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'
+                            ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800'
+                            : 'bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700'
                             }`}>
                             <span className={`text-sm font-medium ${performance.avgProfitRate >= 0
-                                ? 'text-red-700 dark:text-red-400'
-                                : 'text-blue-700 dark:text-blue-400'
+                                ? 'text-orange-700 dark:text-orange-400'
+                                : 'text-slate-700 dark:text-slate-400'
                                 }`}>
-                                평균 수익률
+                                실현 평균 수익률
                             </span>
                             <span className={`text-2xl font-bold ${performance.avgProfitRate >= 0
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-blue-600 dark:text-blue-400'
+                                ? 'text-orange-600 dark:text-orange-400'
+                                : 'text-slate-600 dark:text-slate-400'
                                 }`}>
                                 {performance.avgProfitRate >= 0 ? '+' : ''}{performance.avgProfitRate.toFixed(2)}%
                             </span>
@@ -1507,51 +1503,50 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                         </div>
                     </div>
 
-                    {/* 급등 정보 및 기타 */}
+                    {/* 예측 정보 */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                        {/* 급등확률 */}
-                        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-purple-700 dark:text-purple-400 mb-2">급등 확률</div>
+                        {/* 상승확률 */}
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-lg p-3 sm:p-4">
+                            <div className="text-xs text-red-700 dark:text-red-400 mb-2">상승 확률</div>
                             <div className="flex items-center gap-2">
                                 <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                                     <div
-                                        className="bg-purple-500 dark:bg-purple-400 h-2 rounded-full"
-                                        style={{ width: `${(selectedHolding.surgeProbability || 0) * 100}%` }}
+                                        className="bg-red-500 dark:bg-red-400 h-2 rounded-full"
+                                        style={{ width: `${selectedHolding.upProbability || 0}%` }}
                                     />
                                 </div>
-                                <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
-                                    {((selectedHolding.surgeProbability || 0) * 100).toFixed(0)}%
+                                <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                                    {(selectedHolding.upProbability || 0).toFixed(1)}%
                                 </span>
                             </div>
                         </div>
 
-                        {/* 급등예상일 */}
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">급등예상일</div>
-                            <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
-                                {selectedHolding.surgeDay ? `D+${selectedHolding.surgeDay}` : '-'}
-                            </div>
-                        </div>
-
-                        {/* 매수점수 */}
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수점수</div>
-                            <div className="text-base sm:text-lg text-slate-800 dark:text-slate-200">
-                                {selectedHolding.buyScore != null ? `${selectedHolding.buyScore.toFixed(2)}점` : '-'}
-                            </div>
-                        </div>
-
-                        {/* 만료일 */}
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">만료일</div>
-                            <div className="text-base sm:text-lg font-bold">
-                                {calculateDday(selectedHolding.expireDate)}
-                            </div>
-                            {selectedHolding.expireDate && (
-                                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                    {new Date(selectedHolding.expireDate).toLocaleDateString('ko-KR')}
+                        {/* 하락확률 */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+                            <div className="text-xs text-blue-700 dark:text-blue-400 mb-2">하락 확률</div>
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                                    <div
+                                        className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full"
+                                        style={{ width: `${selectedHolding.downProbability || 0}%` }}
+                                    />
                                 </div>
-                            )}
+                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                    {(selectedHolding.downProbability || 0).toFixed(1)}%
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* 기대수익률 */}
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">기대 수익률</div>
+                            <div className={`text-base sm:text-lg font-bold ${
+                                (selectedHolding.expectedReturn || 0) >= 0 
+                                ? 'text-red-600 dark:text-red-400' 
+                                : 'text-blue-600 dark:text-blue-400'
+                            }`}>
+                                {(selectedHolding.expectedReturn || 0).toFixed(2)}%
+                            </div>
                         </div>
                     </div>
 
@@ -1567,9 +1562,44 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
 
                     {/* 매수일 정보 */}
                     <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수일시</div>
-                        <div className="text-sm sm:text-base text-slate-800 dark:text-slate-200">
-                            {formatDateTime(selectedHolding.buyDate)}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수일시</div>
+                                <div className="text-sm sm:text-base text-slate-800 dark:text-slate-200">
+                                    {formatDateTime(selectedHolding.buyDate)}
+                                </div>
+                            </div>
+                            
+                            {/* 수익 확정일 (7일 후) */}
+                            {selectedHolding.buyDate && (
+                                <div className="sm:text-right">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수익 확정일 (D+7)</div>
+                                    <div className="text-sm sm:text-base font-bold text-green-700 dark:text-green-400">
+                                        {(() => {
+                                            const confirmDate = new Date(selectedHolding.buyDate);
+                                            confirmDate.setDate(confirmDate.getDate() + 7);
+                                            return formatDateTime(confirmDate);
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 수익 확정 설명 */}
+                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">💡 수익 확정일이란?</span><br/>
+                            {selectedHolding.buyDate && (() => {
+                                const buyDate = new Date(selectedHolding.buyDate);
+                                const confirmDate = new Date(buyDate);
+                                confirmDate.setDate(buyDate.getDate() + 7);
+                                
+                                const m1 = buyDate.getMonth() + 1;
+                                const d1 = buyDate.getDate();
+                                const m2 = confirmDate.getMonth() + 1;
+                                const d2 = confirmDate.getDate();
+
+                                return `${m1}월 ${d1}일에 매수했다면, ${m2}월 ${d2}일 새벽부터 수익률이 최소익절률을 넘기는 즉시 매도 프로세스가 작동합니다.`;
+                            })()}
                         </div>
                     </div>
                 </div>

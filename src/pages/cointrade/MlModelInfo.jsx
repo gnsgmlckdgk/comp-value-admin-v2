@@ -113,22 +113,13 @@ const TABLE_COLUMNS = [
         render: (val) => val?.toFixed(8)
     },
     {
-        key: 'mseSurgeProb',
-        label: 'MSE(급등)',
-        field: 'mseSurgeProb',
-        width: COL_WIDTHS.mseSurgeProb,
+        key: 'mseUpProb',
+        label: 'MSE(상승확률)',
+        field: 'mseUpProb',
+        width: COL_WIDTHS.mseSurgeProb, // Reuse width variable or add new one
         sortable: true,
         align: 'right',
         render: (val) => val?.toFixed(8)
-    },
-    {
-        key: 'accuracySurgeDay',
-        label: '급등정확도',
-        field: 'accuracySurgeDay',
-        width: COL_WIDTHS.accuracySurgeDay,
-        sortable: true,
-        align: 'right',
-        render: (val) => val ? `${(val * 100).toFixed(2)}%` : '-'
     },
     {
         key: 'createdAt',
@@ -456,19 +447,11 @@ export default function MlModelInfo() {
                                     </div>
                                 </div>
 
-                                {/* MSE 급등확률 */}
+                                {/* MSE 상승확률 */}
                                 <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
-                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">MSE (급등확률)</div>
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">MSE (상승확률)</div>
                                     <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
-                                        {selectedModel.mseSurgeProb != null ? selectedModel.mseSurgeProb.toFixed(8) : '-'}
-                                    </div>
-                                </div>
-
-                                {/* 급등 정확도 */}
-                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
-                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">급등 정확도</div>
-                                    <div className="text-base sm:text-lg font-bold text-purple-700 dark:text-purple-300">
-                                        {selectedModel.accuracySurgeDay != null ? `${(selectedModel.accuracySurgeDay * 100).toFixed(2)}%` : '-'}
+                                        {selectedModel.mseUpProb != null ? selectedModel.mseUpProb.toFixed(8) : '-'}
                                     </div>
                                 </div>
                             </div>

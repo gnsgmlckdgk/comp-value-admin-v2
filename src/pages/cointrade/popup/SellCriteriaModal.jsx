@@ -49,130 +49,60 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
                 <div className="p-6 space-y-8 text-slate-800 dark:text-slate-200">
 
                     {/* 개요 */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
-                        <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">목표가 vs 급등기준 결정표</h4>
-                        <p className="text-sm text-blue-700 dark:text-blue-200">
-                            사용자 혼동을 방지하기 위해 <strong>예측 최고가(개별 목표)</strong>와 <strong>급등 기준(<code>SURGE_THRESHOLD</code>, 전역 정책)</strong>에 따른 매도 결정 로직을 정리합니다.
-                            <br />
-                            <span className="text-xs opacity-80">(예시 가정: 급등 기준 20%)</span>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-lg border border-blue-100 dark:border-blue-800">
+                        <h4 className="font-bold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2 text-lg">
+                            💰 매도 전략 가이드 (AI 자동 매도)
+                        </h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-200 leading-relaxed">
+                            자산을 안전하게 보호하고 수익을 확정하기 위해 <strong>3단계 매도 필터</strong>를 사용합니다. 
+                            모든 매도는 체결 가능성을 높이기 위해 <span className="font-bold underline">시장가</span>로 실행됩니다.
                         </p>
                     </div>
 
-                    {/* 시나리오 A */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-3">
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white">[시나리오 A] 목표가 높음</h4>
-                            <span className="text-sm px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                                예측 30% / 급등 기준 20%
-                            </span>
-                        </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 italic">목표: "크게 먹자"</p>
-
-                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                            {/* Header */}
-                            <div className="hidden md:grid md:grid-cols-12 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-600">
-                                <div className="md:col-span-2 px-4 py-3 text-center">현재 수익률</div>
-                                <div className="md:col-span-2 px-4 py-3 text-center">만료일 여부</div>
-                                <div className="md:col-span-2 px-4 py-3 text-center">결정</div>
-                                <div className="md:col-span-6 px-4 py-3">설명</div>
-                            </div>
-
-                            <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                                {/* Rows */}
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-50/50 dark:bg-green-900/10 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-red-600 dark:text-red-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>32%</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>상관없음</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>익절 매도</div>
-                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>예측가(30%) 초과 달성. (가장 먼저 체크됨)</div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>25%</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-orange-600 font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>지남</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-blue-600 dark:text-blue-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>보유 유보</div>
-                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가(30%) 미달이지만, 급등 기준(<code>SURGE_THRESHOLD</code>, 20%)을 넘겨 상승세 인정.</div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-slate-50/50 dark:bg-slate-800/50 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>15%</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-orange-600 font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>지남</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium text-slate-600 dark:text-slate-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>만료 매도</div>
-                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가 실패, 급등 기준 미달. "예측 실패"로 간주.</div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>15%</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>안 지남</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium text-slate-600 dark:text-slate-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>보유 유지</div>
-                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>아직 기회가 남았으므로 목표가(30%) 대기.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* 시나리오 B */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-3">
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white">[시나리오 B] 목표가 낮음</h4>
-                            <span className="text-sm px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                                예측 10% / 급등 기준 20%
-                            </span>
-                        </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 italic">목표: "소박하게 먹자"</p>
-
-                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                            {/* Header */}
-                            <div className="hidden md:grid md:grid-cols-12 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-600">
-                                <div className="md:col-span-2 px-4 py-3 text-center">현재 수익률</div>
-                                <div className="md:col-span-2 px-4 py-3 text-center">만료일 여부</div>
-                                <div className="md:col-span-2 px-4 py-3 text-center">결정</div>
-                                <div className="md:col-span-6 px-4 py-3">설명</div>
-                            </div>
-
-                            <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                                {/* Rows */}
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-50/50 dark:bg-green-900/10 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-red-600 dark:text-red-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>25%</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>상관없음</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>익절 매도</div>
-                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가(10%)를 넘었으므로 진작에 매도됨.</div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-50/50 dark:bg-green-900/10 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-red-600 dark:text-red-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>15%</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>상관없음</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>익절 매도</div>
-                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>이미 목표가(10%)를 초과 달성함. 급등 기준과 무관하게 수익 확정.</div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-slate-50/50 dark:bg-slate-800/50 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>5%</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-orange-600 font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>지남</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium text-slate-600 dark:text-slate-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>만료 매도</div>
-                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가(10%) 실패, 급등 기준(<code>SURGE_THRESHOLD</code>, 20%) 미달.</div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">현재 수익률:</span>5%</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">만료일 여부:</span>안 지남</div>
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium text-slate-600 dark:text-slate-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결정:</span>보유 유지</div>
-                                    <div className="md:col-span-6 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">설명:</span>목표가(10%) 도달 대기.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* 핵심 요약 */}
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-5 rounded-lg border border-yellow-100 dark:border-yellow-800">
-                        <h4 className="font-bold text-yellow-800 dark:text-yellow-300 mb-3 flex items-center gap-2">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            핵심 요약
+                    {/* 전략 1 */}
+                    <section className="space-y-3">
+                        <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            1. AI 예측 기반 익절 (어깨에서 파는 전략) 📈
                         </h4>
-                        <ol className="list-decimal list-inside space-y-2 text-sm text-yellow-900 dark:text-yellow-200">
-                            <li>
-                                <strong>익절(목표가 달성)</strong>이 최우선입니다. (급등 기준보다 낮아도 목표가만 넘으면 팝니다.)
-                            </li>
-                            <li>
-                                <strong>유보(패자부활전)</strong>는 만료일이 되었을 때 <strong>"목표가는 못 갔지만 급등 기준(<code>SURGE_THRESHOLD</code>)은 넘은"</strong> 특수 상황에서만 작동합니다.
-                            </li>
-                        </ol>
-                    </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            AI가 예측한 최고가에 도달하기 직전에 미리 매도하여 수익을 실현합니다.
+                        </p>
+                        <ul className="list-disc list-inside text-sm space-y-1.5 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <li><strong>목표가 계산:</strong> AI 예측 최고가에서 <strong>익절 버퍼(<code>TAKE_PROFIT_BUFFER</code>)</strong>만큼 차감한 가격</li>
+                            <li><strong>안전장치:</strong> 만약 예측가가 너무 높더라도, <strong>최대 이익률(<code>MAX_PROFIT_RATE</code>)</strong>에 도달하면 즉시 매도하여 과도한 욕심을 방지합니다.</li>
+                            <li className="list-none pt-2 font-semibold text-blue-600 dark:text-blue-400 italic">"머리(최고점)가 아닌 어깨에서 확실하게 수익을 챙깁니다."</li>
+                        </ul>
+                    </section>
+
+                    {/* 전략 2 */}
+                    <section className="space-y-3">
+                        <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            2. 7일 보유 수익 확정 (시간 기반 익절) ⏳
+                        </h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            종목을 매수한 지 7일이 지났을 때, 무작정 기다리지 않고 수익을 확정 짓습니다.
+                        </p>
+                        <ul className="list-disc list-inside text-sm space-y-1.5 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <li><strong>조건:</strong> 매수 후 7일 이상 경과 + 수익률이 <strong>최소 익절률(<code>MIN_PROFIT_RATE</code>)</strong> 이상일 때</li>
+                            <li><strong>이유:</strong> 기회비용을 고려하여, 일주일간 충분한 수익이 났다면 다음 꿀통 종목으로 교체하기 위함입니다.</li>
+                            <li className="list-none pt-2 font-semibold text-green-600 dark:text-green-400 italic">"7일간 공들인 종목, 목표 수익 달성 시 기분 좋게 이별합니다."</li>
+                        </ul>
+                    </section>
+
+                    {/* 전략 3 */}
+                    <section className="space-y-3">
+                        <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            3. 손절 관리 (리스크 최소화) 🛡️
+                        </h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            예측과 달리 시장 상황이 악화될 경우 손실을 짧게 끊어냅니다.
+                        </p>
+                        <ul className="list-disc list-inside text-sm space-y-1.5 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <li><strong>조건:</strong> 수익률이 <strong>손절 기준(<code>STOP_LOSS_THRESHOLD</code>)</strong> 이하로 하락할 때</li>
+                            <li><strong>설명:</strong> 추가 하락으로 인한 큰 손실을 막기 위해 정해진 기준에서 과감하게 매도합니다.</li>
+                            <li className="list-none pt-2 font-semibold text-red-600 dark:text-red-400 italic">"소나기는 피하고, 다음 기회를 위해 투자금을 보존합니다."</li>
+                        </ul>
+                    </section>
 
                 </div>
 

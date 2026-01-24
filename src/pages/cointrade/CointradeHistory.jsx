@@ -94,8 +94,8 @@ const COL_WIDTHS = {
     reason: '100px',
     profitLoss: '120px',
     profitLossRate: '100px',
-    buyScore: '100px',
-    surgeProbability: '100px',
+    upProbability: '100px',
+    expectedReturn: '100px',
 };
 
 // 테이블 컬럼 정의
@@ -200,22 +200,22 @@ const TABLE_COLUMNS = [
         ) : '-'
     },
     {
-        key: 'buyScore',
-        label: '매수점수',
-        width: COL_WIDTHS.buyScore,
+        key: 'upProbability',
+        label: '상승확률',
+        width: COL_WIDTHS.upProbability,
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-700 dark:text-slate-300',
-        render: (value) => value != null ? `${value.toFixed(2)}점` : '-'
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-red-600 dark:text-red-400 font-medium',
+        render: (value) => value != null ? `${value.toFixed(1)}%` : '-'
     },
     {
-        key: 'surgeProbability',
-        label: '급등확률',
-        width: COL_WIDTHS.surgeProbability,
+        key: 'expectedReturn',
+        label: '기대수익',
+        width: COL_WIDTHS.expectedReturn,
         sortable: true,
         headerClassName: 'px-4 py-3 pr-8 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-right text-purple-600 dark:text-purple-400 font-medium',
-        render: (value) => value != null ? `${(value * 100).toFixed(0)}%` : '-'
+        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-right text-slate-700 dark:text-slate-300',
+        render: (value) => value != null ? `${value.toFixed(2)}%` : '-'
     }
 ];
 
@@ -658,30 +658,52 @@ export default function CointradeHistory() {
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">AI 예측 정보</h4>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                {/* 매수점수 */}
-                                {selectedRecord.buyScore != null && (
-                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수점수</div>
-                                        <div className="text-base sm:text-lg text-slate-800 dark:text-slate-200">
-                                            {selectedRecord.buyScore.toFixed(2)}점
+                                {/* 상승확률 */}
+                                {selectedRecord.upProbability != null && (
+                                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                                        <div className="text-xs text-red-700 dark:text-red-400 mb-2">상승 확률</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                                                <div
+                                                    className="bg-red-500 dark:bg-red-400 h-2 rounded-full"
+                                                    style={{ width: `${selectedRecord.upProbability}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-sm text-red-600 dark:text-red-400 font-bold">
+                                                {selectedRecord.upProbability.toFixed(1)}%
+                                            </span>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* 급등확률 */}
-                                {selectedRecord.surgeProbability != null && (
-                                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-                                        <div className="text-xs text-purple-700 dark:text-purple-400 mb-2">급등 확률</div>
+                                {/* 하락확률 */}
+                                {selectedRecord.downProbability != null && (
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                        <div className="text-xs text-blue-700 dark:text-blue-400 mb-2">하락 확률</div>
                                         <div className="flex items-center gap-2">
                                             <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                                                 <div
-                                                    className="bg-purple-500 dark:bg-purple-400 h-2 rounded-full"
-                                                    style={{ width: `${(selectedRecord.surgeProbability || 0) * 100}%` }}
+                                                    className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full"
+                                                    style={{ width: `${selectedRecord.downProbability}%` }}
                                                 />
                                             </div>
-                                            <span className="text-sm text-purple-600 dark:text-purple-400">
-                                                {((selectedRecord.surgeProbability || 0) * 100).toFixed(0)}%
+                                            <span className="text-sm text-blue-600 dark:text-blue-400 font-bold">
+                                                {selectedRecord.downProbability.toFixed(1)}%
                                             </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 기대수익률 */}
+                                {selectedRecord.expectedReturn != null && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">기대 수익률</div>
+                                        <div className={`text-base sm:text-lg font-bold ${
+                                            selectedRecord.expectedReturn >= 0 
+                                            ? 'text-red-600 dark:text-red-400' 
+                                            : 'text-blue-600 dark:text-blue-400'
+                                        }`}>
+                                            {selectedRecord.expectedReturn.toFixed(2)}%
                                         </div>
                                     </div>
                                 )}
@@ -702,26 +724,6 @@ export default function CointradeHistory() {
                                         <div className="text-xs text-green-700 dark:text-green-400 mb-1">예측고가</div>
                                         <div className="text-base text-green-700 dark:text-green-400 font-bold">
                                             {renderFormattedPrice(selectedRecord.predictedHigh, '원')}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* 급등예상일 */}
-                                {selectedRecord.surgeDay != null && (
-                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">급등예상일</div>
-                                        <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
-                                            D+{selectedRecord.surgeDay}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* 만료일 */}
-                                {selectedRecord.expireDate && (
-                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">만료일</div>
-                                        <div className="text-sm text-slate-800 dark:text-slate-200">
-                                            {new Date(selectedRecord.expireDate).toLocaleDateString('ko-KR')}
                                         </div>
                                     </div>
                                 )}

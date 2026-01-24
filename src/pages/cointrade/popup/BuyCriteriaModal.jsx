@@ -25,7 +25,7 @@ export default function BuyCriteriaModal({ isOpen, onClose }) {
     };
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
             onClick={handleBackdropClick}
         >
@@ -35,7 +35,7 @@ export default function BuyCriteriaModal({ isOpen, onClose }) {
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
                         매수 기준 상세 케이스
                     </h3>
-                    <button 
+                    <button
                         onClick={onClose}
                         className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                     >
@@ -47,73 +47,64 @@ export default function BuyCriteriaModal({ isOpen, onClose }) {
 
                 {/* 콘텐츠 */}
                 <div className="p-6 space-y-8 text-slate-800 dark:text-slate-200">
-                    
+
                     {/* 개요 */}
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
                         <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">매수 조건 논리</h4>
                         <div className="px-4 py-2 bg-white dark:bg-slate-800 rounded border border-blue-200 dark:border-blue-700 mb-3 text-center font-bold text-blue-600 dark:text-blue-400">
-                            매수 조건: (수익률 &gt;= X% OR 급등확률 &gt;= S%) AND 점수 &gt;= 최소 매수 점수
+                            매수 조건: 기대 수익률 &gt;= 최소 익절률 AND 상승 확률 &gt;= 최소 상승 확률
                         </div>
                         <p className="text-sm text-blue-700 dark:text-blue-200">
-                            매수는 기본적으로 <strong>예측 수익률(<code>BUY_PROFIT_THRESHOLD</code>)</strong> 또는 <strong>급등 확률(<code>MIN_SURGE_PROBABILITY</code>)</strong> 중 하나라도 조건을 만족하면 진행됩니다.
-                            <br/>
-                            <span className="text-xs opacity-80">(단, 모든 경우에 최소 매수 점수(<code>MIN_BUY_SCORE</code>)는 넘어야 합니다.)</span>
+                            매수는 <strong>기대 수익률(<code>BUY_PROFIT_THRESHOLD</code>)</strong>이 설정값(<code>MIN_PROFIT_RATE</code>) 이상이면서, AI가 예측한 <strong>상승 확률(<code>MIN_UP_PROBABILITY</code>)</strong>이 높을 때 진행됩니다.
                         </p>
                     </div>
 
-                    {/* 케이스 표 */}
-                    <section>
-                        <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white">매수 판단 케이스 예시</h4>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 text-right">
-                                * 예시 기준: 수익률 10%↑ / 급등확률 60%↑
+                    {/* 기대 수익률 상세 설명 */}
+                    <section className="space-y-4">
+                        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
+                            <h4 className="text-lg font-bold text-slate-900 dark:text-white">📊 기대 수익률 (Expected Return)</h4>
+                        </div>
+
+                        <p className="text-sm text-slate-600 dark:text-slate-300">
+                            AI가 예측한 '최고점'과 '최저점'을 종합하여 계산한 <strong>위험 조정 수익률</strong>입니다.
+                        </p>
+
+                        <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
+                            <h5 className="font-semibold text-sm mb-2 text-slate-800 dark:text-slate-200">1. 계산 공식</h5>
+                            <div className="flex flex-col items-center justify-center py-2 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 mb-3">
+                                <span className="font-mono text-lg font-bold text-blue-600 dark:text-blue-400">
+                                    기대 수익률 = (예상 최고 상승률 - 예상 최저 하락률) / 2
+                                </span>
+                            </div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400 pl-2 border-l-4 border-blue-200 dark:border-blue-800">
+                                <div className="font-semibold mb-1">예시)</div>
+                                <ul className="list-disc list-inside space-y-1">
+                                    <li>예상 최고가: <span className="text-blue-600 dark:text-blue-400 font-bold">+20%</span> (상승 잠재력)</li>
+                                    <li>예상 최저가: <span className="text-red-600 dark:text-red-400 font-bold">10%</span> (하락 리스크)</li>
+                                    <li>기대 수익률: (20 - 10) / 2 = <span className="font-bold text-slate-800 dark:text-slate-100">5%</span></li>
+                                </ul>
                             </div>
                         </div>
-                        
-                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                            {/* Header */}
-                            <div className="hidden md:grid md:grid-cols-12 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-600">
-                                <div className="md:col-span-2 px-4 py-3 text-center">구분</div>
-                                <div className="md:col-span-3 px-4 py-3 text-center">예측 수익률</div>
-                                <div className="md:col-span-3 px-4 py-3 text-center">급등 확률</div>
-                                <div className="md:col-span-1 px-4 py-3 text-center">결과</div>
-                                <div className="md:col-span-3 px-4 py-3">비고</div>
-                            </div>
-                            
-                            <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                                {/* Row 1 */}
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-50/50 dark:bg-green-900/10 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">구분:</span>케이스 1</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">예측 수익률:</span><span className="font-bold text-blue-600 dark:text-blue-400">15%</span><span className="text-xs text-slate-500 block md:inline md:ml-1">(기준 10%↑)</span></div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">급등 확률:</span><span className="text-slate-600 dark:text-slate-400">10%</span><span className="text-xs text-slate-500 block md:inline md:ml-1">(기준 60%↑)</span></div>
-                                    <div className="md:col-span-1 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결과:</span>매수</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">비고:</span>수익률 조건으로 통과</div>
-                                </div>
-                                {/* Row 2 */}
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-50/50 dark:bg-green-900/10 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">구분:</span>케이스 2</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">예측 수익률:</span><span className="text-slate-600 dark:text-slate-400">5%</span><span className="text-xs text-slate-500 block md:inline md:ml-1">(기준 10%↑)</span></div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">급등 확률:</span><span className="font-bold text-purple-600 dark:text-purple-400">80%</span><span className="text-xs text-slate-500 block md:inline md:ml-1">(기준 60%↑)</span></div>
-                                    <div className="md:col-span-1 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결과:</span>매수</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">비고:</span>급등 확률 조건으로 통과</div>
-                                </div>
-                                {/* Row 3 */}
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-green-100/50 dark:bg-green-900/30 md:border-b md:border-slate-100 md:dark:border-slate-700">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">구분:</span>케이스 3</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">예측 수익률:</span><span className="font-bold text-blue-600 dark:text-blue-400">20%</span><span className="text-xs text-slate-500 block md:inline md:ml-1">(기준 10%↑)</span></div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 md:text-center"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">급등 확률:</span><span className="font-bold text-purple-600 dark:text-purple-400">90%</span><span className="text-xs text-slate-500 block md:inline md:ml-1">(기준 60%↑)</span></div>
-                                    <div className="md:col-span-1 md:px-4 md:py-3 md:text-center font-bold text-green-600 dark:text-green-400"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결과:</span>매수</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">비고:</span>우량 종목 (점수 매우 높음)</div>
-                                </div>
-                                {/* Row 4 */}
-                                <div className="grid grid-cols-1 md:grid-cols-12 md:items-center gap-2 md:gap-0 p-3 md:p-0 bg-slate-50/50 dark:bg-slate-800/50">
-                                    <div className="md:col-span-2 md:px-4 md:py-3 md:text-center font-medium"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">구분:</span>케이스 4</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">예측 수익률:</span>5%</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 md:text-center text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">급등 확률:</span>10%</div>
-                                    <div className="md:col-span-1 md:px-4 md:py-3 md:text-center font-medium text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">결과:</span>패스</div>
-                                    <div className="md:col-span-3 md:px-4 md:py-3 text-slate-500"><span className="font-semibold text-xs text-slate-500 dark:text-slate-400 md:hidden mr-2">비고:</span>조건 미충족</div>
-                                </div>
-                            </div>
+
+                        <div className="space-y-2">
+                            <h5 className="font-semibold text-sm text-slate-800 dark:text-slate-200">2. 왜 이렇게 계산하나요?</h5>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                단순히 "얼마나 오를까(최고가)"만 보고 매수하면, 변동성이 심해 하락 위험이 큰 종목에 물릴 수 있습니다.
+                                이 방식은 <strong>상승폭이 크더라도 하락 위험이 너무 크면 기대값을 깎아서</strong>, '상방은 열려있고 하방은 닫힌' 꿀통 종목만 걸러내기 위함입니다.
+                            </p>
+                        </div>
+
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-100 dark:border-yellow-800">
+                            <h5 className="font-bold text-sm text-yellow-800 dark:text-yellow-300 mb-2 flex items-center gap-1">
+                                <span>⭐</span> 3. 설정 팁 (중요!)
+                            </h5>
+                            <p className="text-sm text-yellow-900 dark:text-yellow-200 leading-relaxed mb-2">
+                                이 값은 하락분(마이너스)이 반영된 평균값이므로, <strong>실제 목표 수익률보다 낮게 설정해야 합니다.</strong>
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-yellow-900 dark:text-yellow-200 space-y-1 ml-2">
+                                <li>목표 수익이 10%라면? 👉 <strong>3% ~ 5%</strong> 로 설정하세요.</li>
+                                <li>10%로 설정하면? 👉 실제로는 25% 이상 폭등할 종목만 찾게 되어 매수가 거의 안 됩니다.</li>
+                            </ul>
                         </div>
                     </section>
 

@@ -33,6 +33,16 @@ export default function UpbitCandleChart({ market }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [yAxisWidth, setYAxisWidth] = useState(60);
+
+    useEffect(() => {
+        const updateWidth = () => {
+            setYAxisWidth(window.innerWidth < 768 ? 40 : 45); // md breakpoint
+        };
+        updateWidth();
+        window.addEventListener('resize', updateWidth);
+        return () => window.removeEventListener('resize', updateWidth);
+    }, []);
 
     // Fetch data when market, interval, or viewCount changes
     useEffect(() => {
@@ -191,7 +201,7 @@ export default function UpbitCandleChart({ market }) {
     return (
         <div className="w-full h-full flex flex-col">
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div className={`flex flex-wrap items-center justify-between gap-2 mb-4 pr-[${yAxisWidth}px]`}>
                 <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
                     {INTERVALS.map(opt => (
                         <button
@@ -264,7 +274,7 @@ export default function UpbitCandleChart({ market }) {
                                 domain={yDomain}
                                 tick={{ fontSize: 12, fill: '#64748b' }}
                                 tickFormatter={(val) => val.toLocaleString()}
-                                width={60}
+                                width={yAxisWidth}
                             />
                             {/* Y-Axis for Volume (Left, Hidden or minimized) */}
                             <YAxis

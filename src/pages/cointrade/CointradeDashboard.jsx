@@ -229,8 +229,8 @@ const HOLDINGS_TABLE_COLUMNS = [
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
         render: (value, row) => {
             if (!value) return '-';
-            const rate = (row.buyPrice && row.buyPrice > 0) 
-                ? ((value - row.buyPrice) / row.buyPrice) * 100 
+            const rate = (row.buyPrice && row.buyPrice > 0)
+                ? ((value - row.buyPrice) / row.buyPrice) * 100
                 : 0;
             return (
                 <div className="flex flex-col items-end">
@@ -260,8 +260,8 @@ const HOLDINGS_TABLE_COLUMNS = [
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
         render: (value, row) => {
             if (!value) return '-';
-            const rate = (row.buyPrice && row.buyPrice > 0) 
-                ? ((value - row.buyPrice) / row.buyPrice) * 100 
+            const rate = (row.buyPrice && row.buyPrice > 0)
+                ? ((value - row.buyPrice) / row.buyPrice) * 100
                 : 0;
             return (
                 <div className="flex flex-col items-end">
@@ -358,7 +358,7 @@ const HOLDINGS_TABLE_COLUMNS = [
             const buyDate = new Date(row.buyDate);
             const confirmDate = new Date(buyDate);
             confirmDate.setDate(buyDate.getDate() + 7);
-            
+
             const today = new Date();
             const isPassed = today >= confirmDate;
 
@@ -403,51 +403,51 @@ export default function CointradeDashboard() {
     const [selectedHolding, setSelectedHolding] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-        // 테이블 필터/정렬 상태
-        const [columnFilters, setColumnFilters] = useState({});
-        const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
-        
-        // 보유 종목 테이블 필터/정렬 상태
-        const [holdingsColumnFilters, setHoldingsColumnFilters] = useState({});
-        const [holdingsSortConfig, setHoldingsSortConfig] = useState({ key: 'profitRate', direction: 'desc' });
-    
-        const [itemsPerPage, setItemsPerPage] = useState(10); // 대시보드이므로 기본 10개
-        const [currentPage, setCurrentPage] = useState(1);
-    
-        // 예측 성능 요약
-        const [performance, setPerformance] = useState({
-            takeProfitRate: 0,
-            stopLossRate: 0,
-            expiredRate: 0,
-            avgProfitRate: 0,
-            totalTrades: 0
-        });
-    
-        // Toast auto-hide
-        useEffect(() => {
-            if (!toast) return;
-            const timer = setTimeout(() => setToast(null), 3000);
-            return () => clearTimeout(timer);
-        }, [toast]);
-    
-        // 데이터 조회
-        const fetchData = useCallback(async (isBackground = false) => {
-            if (!isBackground) setLoading(true);
-            try {
-                // 1. 상태 조회
-                const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
-                if (statusResponse.data?.success && statusResponse.data?.response) {
-                    const resp = statusResponse.data.response;
-                    setStatus({
-                        buySchedulerEnabled: resp.buySchedulerEnabled || false,
-                        sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
-                        totalInvestment: resp.totalInvestment || 0,
-                        totalValuation: resp.totalValuation || 0,
-                        totalProfitRate: resp.totalProfitRate || 0,
-                        holdingsCount: resp.holdings?.length || 0
-                    });
-                }
-    
+    // 테이블 필터/정렬 상태
+    const [columnFilters, setColumnFilters] = useState({});
+    const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+
+    // 보유 종목 테이블 필터/정렬 상태
+    const [holdingsColumnFilters, setHoldingsColumnFilters] = useState({});
+    const [holdingsSortConfig, setHoldingsSortConfig] = useState({ key: 'profitRate', direction: 'desc' });
+
+    const [itemsPerPage, setItemsPerPage] = useState(10); // 대시보드이므로 기본 10개
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // 예측 성능 요약
+    const [performance, setPerformance] = useState({
+        takeProfitRate: 0,
+        stopLossRate: 0,
+        expiredRate: 0,
+        avgProfitRate: 0,
+        totalTrades: 0
+    });
+
+    // Toast auto-hide
+    useEffect(() => {
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(null), 3000);
+        return () => clearTimeout(timer);
+    }, [toast]);
+
+    // 데이터 조회
+    const fetchData = useCallback(async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
+        try {
+            // 1. 상태 조회
+            const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
+            if (statusResponse.data?.success && statusResponse.data?.response) {
+                const resp = statusResponse.data.response;
+                setStatus({
+                    buySchedulerEnabled: resp.buySchedulerEnabled || false,
+                    sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
+                    totalInvestment: resp.totalInvestment || 0,
+                    totalValuation: resp.totalValuation || 0,
+                    totalProfitRate: resp.totalProfitRate || 0,
+                    holdingsCount: resp.holdings?.length || 0
+                });
+            }
+
             // 2. 보유 종목 조회
             const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
             if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
@@ -491,7 +491,7 @@ export default function CointradeDashboard() {
                     const valuation = holding.currentPrice
                         ? holding.currentPrice * holding.quantity
                         : holding.totalAmount;
-                    
+
                     newTotalInvestment += (holding.totalAmount || 0);
                     newTotalValuation += valuation;
 
@@ -504,8 +504,8 @@ export default function CointradeDashboard() {
                 setHoldings(calculatedHoldings);
 
                 // 상단 카드 상태 업데이트 (실시간 평가금액 반영)
-                const newTotalProfitRate = newTotalInvestment > 0 
-                    ? ((newTotalValuation - newTotalInvestment) / newTotalInvestment) * 100 
+                const newTotalProfitRate = newTotalInvestment > 0
+                    ? ((newTotalValuation - newTotalInvestment) / newTotalInvestment) * 100
                     : 0;
 
                 setStatus(prev => ({
@@ -516,203 +516,203 @@ export default function CointradeDashboard() {
                     holdingsCount: calculatedHoldings.length
                 }));
             }
-    
-                // 3. 최근 거래 내역 조회 (최근 30일)
-                const today = new Date();
-                const thirtyDaysAgo = new Date(today);
-                thirtyDaysAgo.setDate(today.getDate() - 30);
-    
-                // 날짜와 시간 조립 (ISO 8601 형식 - KST 고려)
-                const formatDateParam = (date) => {
-                    const yyyy = date.getFullYear();
-                    const mm = String(date.getMonth() + 1).padStart(2, '0');
-                    const dd = String(date.getDate()).padStart(2, '0');
-                    return `${yyyy}-${mm}-${dd}`;
-                }
-    
-                const startDateStr = formatDateParam(thirtyDaysAgo);
-                const endDateStr = formatDateParam(today);
-    
-                const startDateTime = `${startDateStr}T00:00:00`;
-                const endDateTime = `${endDateStr}T23:59:59`;
-    
-                const historyResponse = await send(
-                    `/dart/api/cointrade/history?startDate=${startDateTime}&endDate=${endDateTime}`,
-                    {},
-                    'GET'
-                );
-    
-                if (historyResponse.data?.success && historyResponse.data?.response) {
-                    const trades = historyResponse.data.response.content || historyResponse.data.response || [];
-                    setAllRecentTrades(trades);
-                    calculatePerformance(trades);
-                } else {
-                    setAllRecentTrades([]);
-                }
-            } catch (e) {
-                console.error('데이터 조회 실패:', e);
-            } finally {
-                if (!isBackground) setLoading(false);
+
+            // 3. 최근 거래 내역 조회 (최근 30일)
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+
+            // 날짜와 시간 조립 (ISO 8601 형식 - KST 고려)
+            const formatDateParam = (date) => {
+                const yyyy = date.getFullYear();
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const dd = String(date.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
             }
-        }, []);    
-        // 예측 성능 계산
-        const calculatePerformance = (trades) => {
-            const sellTrades = trades.filter(t => t.tradeType === 'SELL');
-            const totalSells = sellTrades.length;
-    
-            if (totalSells === 0) {
-                setPerformance({
-                    takeProfitRate: 0,
-                    stopLossRate: 0,
-                    expiredRate: 0,
-                    avgProfitRate: 0,
-                    totalTrades: 0
-                });
-                return;
+
+            const startDateStr = formatDateParam(thirtyDaysAgo);
+            const endDateStr = formatDateParam(today);
+
+            const startDateTime = `${startDateStr}T00:00:00`;
+            const endDateTime = `${endDateStr}T23:59:59`;
+
+            const historyResponse = await send(
+                `/dart/api/cointrade/history?startDate=${startDateTime}&endDate=${endDateTime}`,
+                {},
+                'GET'
+            );
+
+            if (historyResponse.data?.success && historyResponse.data?.response) {
+                const trades = historyResponse.data.response.content || historyResponse.data.response || [];
+                setAllRecentTrades(trades);
+                calculatePerformance(trades);
+            } else {
+                setAllRecentTrades([]);
             }
-    
-            const takeProfitCount = sellTrades.filter(t => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(t.reason)).length;
-            const stopLossCount = sellTrades.filter(t => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(t.reason)).length;
-            const expiredCount = sellTrades.filter(t => ['EXPIRED', '7DAY_PROFIT', 'PARTIAL_7DAY_PROFIT'].includes(t.reason)).length;
-    
-            const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
-            const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
-            const avgProfitRate = totalAmount > 0 ? (totalProfit / totalAmount) * 100 : 0;
-    
+        } catch (e) {
+            console.error('데이터 조회 실패:', e);
+        } finally {
+            if (!isBackground) setLoading(false);
+        }
+    }, []);
+    // 예측 성능 계산
+    const calculatePerformance = (trades) => {
+        const sellTrades = trades.filter(t => t.tradeType === 'SELL');
+        const totalSells = sellTrades.length;
+
+        if (totalSells === 0) {
             setPerformance({
-                takeProfitRate: (takeProfitCount / totalSells) * 100,
-                stopLossRate: (stopLossCount / totalSells) * 100,
-                expiredRate: (expiredCount / totalSells) * 100,
-                avgProfitRate,
-                totalTrades: totalSells
+                takeProfitRate: 0,
+                stopLossRate: 0,
+                expiredRate: 0,
+                avgProfitRate: 0,
+                totalTrades: 0
             });
-        };
-    
-        // 보유 종목 데이터 처리 (필터링 -> 정렬)
-        const processedHoldings = useMemo(() => {
-            // 1. 필터링
-            let data = holdings.filter(row => {
-                return Object.entries(holdingsColumnFilters).every(([key, filterValue]) => {
-                    if (!filterValue) return true;
-                    const cellValue = row[key];
-                    return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
-                });
-            });
-    
-            // 2. 정렬
-            if (holdingsSortConfig.key) {
-                data.sort((a, b) => {
-                    const aVal = a[holdingsSortConfig.key];
-                    const bVal = b[holdingsSortConfig.key];
-    
-                    if (aVal == null && bVal == null) return 0;
-                    if (aVal == null) return 1;
-                    if (bVal == null) return -1;
-    
-                    if (typeof aVal === 'number' && typeof bVal === 'number') {
-                        return holdingsSortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
-                    }
-    
-                    const aStr = String(aVal).toLowerCase();
-                    const bStr = String(bVal).toLowerCase();
-                    return holdingsSortConfig.direction === 'asc'
-                        ? aStr.localeCompare(bStr)
-                        : bStr.localeCompare(aStr);
-                });
-            }
-    
-            return data;
-        }, [holdings, holdingsColumnFilters, holdingsSortConfig]);
-    
-        // 최근 거래 데이터 처리 (필터링 -> 정렬)
-        const processedData = useMemo(() => {
-            // 1. 필터링
-            let data = allRecentTrades.filter(row => {
-                return Object.entries(columnFilters).every(([key, filterValue]) => {
-                    if (!filterValue) return true;
-                    const cellValue = row[key];
-                    return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
-                });
-            });
-    
-            // 2. 정렬
-            if (sortConfig.key) {
-                data.sort((a, b) => {
-                    const aVal = a[sortConfig.key];
-                    const bVal = b[sortConfig.key];
-    
-                    if (aVal == null && bVal == null) return 0;
-                    if (aVal == null) return 1;
-                    if (bVal == null) return -1;
-    
-                    if (typeof aVal === 'number' && typeof bVal === 'number') {
-                        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
-                    }
-    
-                    const aStr = String(aVal).toLowerCase();
-                    const bStr = String(bVal).toLowerCase();
-                    return sortConfig.direction === 'asc'
-                        ? aStr.localeCompare(bStr)
-                        : bStr.localeCompare(aStr);
-                });
-            }
-    
-            return data;
-        }, [allRecentTrades, columnFilters, sortConfig]);
-    
-        // 페이지네이션 데이터
-        const indexOfLastItem = currentPage * itemsPerPage;
-        const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-        const currentRecords = processedData.slice(indexOfFirstItem, indexOfLastItem);
-        const totalPages = Math.ceil(processedData.length / itemsPerPage);
-    
-        // 핸들러들
-        const handleColumnFilterChange = useCallback((key, value) => {
-            setColumnFilters((prev) => ({ ...prev, [key]: value }));
-            setCurrentPage(1);
-        }, []);
-    
-        const clearColumnFilters = useCallback(() => {
-            setColumnFilters({});
-            setCurrentPage(1);
-        }, []);
-    
-        const handleSort = useCallback((key) => {
-            setSortConfig((prev) => ({
-                key,
-                direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
-            }));
-        }, []);
-    
-        const handleHoldingsColumnFilterChange = useCallback((key, value) => {
-            setHoldingsColumnFilters((prev) => ({ ...prev, [key]: value }));
-        }, []);
-    
-        const handleHoldingsSort = useCallback((key) => {
-            setHoldingsSortConfig((prev) => ({
-                key,
-                direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
-            }));
-        }, []);
-    
-        const handlePageChange = (page) => setCurrentPage(page);
-        const handleItemsPerPageChange = (e) => {
-            setItemsPerPage(Number(e.target.value));
-            setCurrentPage(1);
-        };
+            return;
+        }
 
-        // 보유 종목 상세보기 모달 핸들러
-        const handleRowDoubleClick = (holding) => {
-            setSelectedHolding(holding);
-            setIsDetailModalOpen(true);
-        };
+        const takeProfitCount = sellTrades.filter(t => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(t.reason)).length;
+        const stopLossCount = sellTrades.filter(t => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(t.reason)).length;
+        const expiredCount = sellTrades.filter(t => ['EXPIRED', '7DAY_PROFIT', 'PARTIAL_7DAY_PROFIT'].includes(t.reason)).length;
 
-        const handleCloseDetailModal = () => {
-            setIsDetailModalOpen(false);
-            setSelectedHolding(null);
-        };
-    
-        // 페이지 로드 시 + 30초마다 자동 새로고침
+        const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
+        const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+        const avgProfitRate = totalAmount > 0 ? (totalProfit / totalAmount) * 100 : 0;
+
+        setPerformance({
+            takeProfitRate: (takeProfitCount / totalSells) * 100,
+            stopLossRate: (stopLossCount / totalSells) * 100,
+            expiredRate: (expiredCount / totalSells) * 100,
+            avgProfitRate,
+            totalTrades: totalSells
+        });
+    };
+
+    // 보유 종목 데이터 처리 (필터링 -> 정렬)
+    const processedHoldings = useMemo(() => {
+        // 1. 필터링
+        let data = holdings.filter(row => {
+            return Object.entries(holdingsColumnFilters).every(([key, filterValue]) => {
+                if (!filterValue) return true;
+                const cellValue = row[key];
+                return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+            });
+        });
+
+        // 2. 정렬
+        if (holdingsSortConfig.key) {
+            data.sort((a, b) => {
+                const aVal = a[holdingsSortConfig.key];
+                const bVal = b[holdingsSortConfig.key];
+
+                if (aVal == null && bVal == null) return 0;
+                if (aVal == null) return 1;
+                if (bVal == null) return -1;
+
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return holdingsSortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                const aStr = String(aVal).toLowerCase();
+                const bStr = String(bVal).toLowerCase();
+                return holdingsSortConfig.direction === 'asc'
+                    ? aStr.localeCompare(bStr)
+                    : bStr.localeCompare(aStr);
+            });
+        }
+
+        return data;
+    }, [holdings, holdingsColumnFilters, holdingsSortConfig]);
+
+    // 최근 거래 데이터 처리 (필터링 -> 정렬)
+    const processedData = useMemo(() => {
+        // 1. 필터링
+        let data = allRecentTrades.filter(row => {
+            return Object.entries(columnFilters).every(([key, filterValue]) => {
+                if (!filterValue) return true;
+                const cellValue = row[key];
+                return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+            });
+        });
+
+        // 2. 정렬
+        if (sortConfig.key) {
+            data.sort((a, b) => {
+                const aVal = a[sortConfig.key];
+                const bVal = b[sortConfig.key];
+
+                if (aVal == null && bVal == null) return 0;
+                if (aVal == null) return 1;
+                if (bVal == null) return -1;
+
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                const aStr = String(aVal).toLowerCase();
+                const bStr = String(bVal).toLowerCase();
+                return sortConfig.direction === 'asc'
+                    ? aStr.localeCompare(bStr)
+                    : bStr.localeCompare(aStr);
+            });
+        }
+
+        return data;
+    }, [allRecentTrades, columnFilters, sortConfig]);
+
+    // 페이지네이션 데이터
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentRecords = processedData.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(processedData.length / itemsPerPage);
+
+    // 핸들러들
+    const handleColumnFilterChange = useCallback((key, value) => {
+        setColumnFilters((prev) => ({ ...prev, [key]: value }));
+        setCurrentPage(1);
+    }, []);
+
+    const clearColumnFilters = useCallback(() => {
+        setColumnFilters({});
+        setCurrentPage(1);
+    }, []);
+
+    const handleSort = useCallback((key) => {
+        setSortConfig((prev) => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+        }));
+    }, []);
+
+    const handleHoldingsColumnFilterChange = useCallback((key, value) => {
+        setHoldingsColumnFilters((prev) => ({ ...prev, [key]: value }));
+    }, []);
+
+    const handleHoldingsSort = useCallback((key) => {
+        setHoldingsSortConfig((prev) => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+        }));
+    }, []);
+
+    const handlePageChange = (page) => setCurrentPage(page);
+    const handleItemsPerPageChange = (e) => {
+        setItemsPerPage(Number(e.target.value));
+        setCurrentPage(1);
+    };
+
+    // 보유 종목 상세보기 모달 핸들러
+    const handleRowDoubleClick = (holding) => {
+        setSelectedHolding(holding);
+        setIsDetailModalOpen(true);
+    };
+
+    const handleCloseDetailModal = () => {
+        setIsDetailModalOpen(false);
+        setSelectedHolding(null);
+    };
+
+    // 페이지 로드 시 + 30초마다 자동 새로고침
     useEffect(() => {
         fetchData(false); // 초기 로딩은 loading 표시
         const interval = setInterval(() => fetchData(true), 30000); // 30초마다 백그라운드 갱신
@@ -805,229 +805,229 @@ export default function CointradeDashboard() {
                 </div>
             </div>
 
-                        {/* 보유 종목 테이블 */}
+            {/* 보유 종목 테이블 */}
 
-                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
 
-                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
 
-                                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
 
-                                    보유 종목 ({holdings.length})
+                        보유 종목 ({holdings.length})
 
-                                </h2>
+                    </h2>
 
-                                {Object.values(holdingsColumnFilters).some((v) => v !== '') && (
+                    {Object.values(holdingsColumnFilters).some((v) => v !== '') && (
 
-                                    <button
+                        <button
 
-                                        type="button"
+                            type="button"
 
-                                        onClick={() => setHoldingsColumnFilters({})}
+                            onClick={() => setHoldingsColumnFilters({})}
 
-                                        className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
+                            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
+
+                        >
+
+                            필터 초기화
+
+                        </button>
+
+                    )}
+
+                </div>
+
+
+
+                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[500px] pr-2">
+
+                    <table
+
+                        className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
+
+                        style={{ width: '100%', tableLayout: 'fixed', minWidth: '1200px' }}
+
+                    >
+
+                        <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
+
+                            <tr>
+
+                                {HOLDINGS_TABLE_COLUMNS.map((col, index) => (
+
+                                    <th
+
+                                        key={col.key}
+
+                                        className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+
+                                        style={{
+
+                                            width: col.width,
+
+                                            left: col.sticky ? (index === 0 ? 0 : '100px') : undefined // coinCode width is 100px
+
+                                        }}
+
+                                        onClick={() => col.sortable && handleHoldingsSort(col.key)}
 
                                     >
 
-                                        필터 초기화
+                                        <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
 
-                                    </button>
+                                            <span>{col.label}</span>
 
-                                )}
+                                            {col.sortable && (
 
-                            </div>
+                                                <span className="flex flex-col text-[10px] leading-none opacity-60">
 
-            
+                                                    <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
 
-                            <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[500px] pr-2">
+                                                    <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
 
-                                <table
+                                                </span>
 
-                                    className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
+                                            )}
 
-                                    style={{ width: '100%', tableLayout: 'fixed', minWidth: '1200px' }}
+                                        </div>
 
-                                >
+                                    </th>
 
-                                    <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
+                                ))}
 
-                                        <tr>
+                            </tr>
 
-                                            {HOLDINGS_TABLE_COLUMNS.map((col, index) => (
+                            <tr className="bg-slate-100 dark:bg-slate-700">
 
-                                                <th
+                                {HOLDINGS_TABLE_COLUMNS.map((col, index) => (
 
-                                                    key={col.key}
+                                    <th
 
-                                                    className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                        key={`filter-${col.key}`}
 
-                                                    style={{
+                                        className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
 
-                                                        width: col.width,
+                                        style={{
 
-                                                        left: col.sticky ? (index === 0 ? 0 : '100px') : undefined // coinCode width is 100px
+                                            width: col.width,
 
-                                                    }}
+                                            left: col.sticky ? (index === 0 ? 0 : '100px') : undefined
 
-                                                    onClick={() => col.sortable && handleHoldingsSort(col.key)}
+                                        }}
 
-                                                >
+                                    >
 
-                                                    <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
+                                        <input
 
-                                                        <span>{col.label}</span>
+                                            type="text"
 
-                                                        {col.sortable && (
+                                            value={holdingsColumnFilters[col.key] || ''}
 
-                                                            <span className="flex flex-col text-[10px] leading-none opacity-60">
+                                            onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
 
-                                                                <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
+                                            placeholder="..."
 
-                                                                <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
+                                            className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
 
-                                                            </span>
+                                        />
 
-                                                        )}
+                                    </th>
 
-                                                    </div>
+                                ))}
 
-                                                </th>
+                            </tr>
 
-                                            ))}
+                        </thead>
 
-                                        </tr>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
 
-                                        <tr className="bg-slate-100 dark:bg-slate-700">
+                            {loading ? (
 
-                                            {HOLDINGS_TABLE_COLUMNS.map((col, index) => (
+                                <tr>
 
-                                                <th
+                                    <td colSpan={HOLDINGS_TABLE_COLUMNS.length} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
 
-                                                    key={`filter-${col.key}`}
+                                        조회 중입니다...
 
-                                                    className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                    </td>
 
-                                                    style={{
+                                </tr>
 
-                                                        width: col.width,
+                            ) : processedHoldings.length === 0 ? (
 
-                                                        left: col.sticky ? (index === 0 ? 0 : '100px') : undefined
+                                <tr>
 
-                                                    }}
+                                    <td colSpan={HOLDINGS_TABLE_COLUMNS.length} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
 
-                                                >
+                                        보유 종목이 없습니다.
 
-                                                    <input
+                                    </td>
 
-                                                        type="text"
+                                </tr>
 
-                                                        value={holdingsColumnFilters[col.key] || ''}
+                            ) : (
 
-                                                        onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
+                                processedHoldings.map((holding, index) => {
 
-                                                        placeholder="..."
+                                    return (
 
-                                                        className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+                                        <tr
 
-                                                    />
+                                            key={index}
 
-                                                </th>
+                                            onDoubleClick={() => handleRowDoubleClick(holding)}
 
-                                            ))}
+                                            className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50"
 
-                                        </tr>
+                                        >
 
-                                    </thead>
+                                            {HOLDINGS_TABLE_COLUMNS.map((col, colIndex) => {
 
-                                                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                const value = holding[col.key];
 
-                                                                {loading ? (
-
-                                                                    <tr>
-
-                                                                        <td colSpan={HOLDINGS_TABLE_COLUMNS.length} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
-
-                                                                            조회 중입니다...
-
-                                                                        </td>
-
-                                                                    </tr>
-
-                                                                ) : processedHoldings.length === 0 ? (
-
-                                                                    <tr>
-
-                                                                        <td colSpan={HOLDINGS_TABLE_COLUMNS.length} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-
-                                                                            보유 종목이 없습니다.
-
-                                                                        </td>
-
-                                                                    </tr>
-
-                                                                ) : (
-
-                                                                    processedHoldings.map((holding, index) => {
+                                                const displayValue = col.render ? col.render(value, holding) : (value ?? '-');
 
                                                 return (
 
-                                                    <tr
+                                                    <td
 
-                                                        key={index}
+                                                        key={col.key}
 
-                                                        onDoubleClick={() => handleRowDoubleClick(holding)}
+                                                        className={`${col.cellClassName} ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
 
-                                                        className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                                        style={{
+
+                                                            width: col.width,
+
+                                                            left: col.sticky ? (colIndex === 0 ? 0 : '100px') : undefined
+
+                                                        }}
 
                                                     >
 
-                                                        {HOLDINGS_TABLE_COLUMNS.map((col, colIndex) => {
+                                                        {displayValue}
 
-                                                            const value = holding[col.key];
-
-                                                                                                                        const displayValue = col.render ? col.render(value, holding) : (value ?? '-');
-
-                                                            return (
-
-                                                                <td
-
-                                                                    key={col.key}
-
-                                                                    className={`${col.cellClassName} ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
-
-                                                                    style={{
-
-                                                                        width: col.width,
-
-                                                                        left: col.sticky ? (colIndex === 0 ? 0 : '100px') : undefined
-
-                                                                    }}
-
-                                                                >
-
-                                                                    {displayValue}
-
-                                                                </td>
-
-                                                            );
-
-                                                        })}
-
-                                                    </tr>
+                                                    </td>
 
                                                 );
 
-                                            })
+                                            })}
 
-                                        )}
+                                        </tr>
 
-                                    </tbody>
+                                    );
 
-                                </table>
+                                })
 
-                            </div>
+                            )}
 
-                        </div>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* 최근 거래 내역 테이블 */}
@@ -1269,10 +1269,10 @@ export default function CointradeDashboard() {
             )}
 
             {/* 상세보기 모달 */}
-            <DetailModal 
-                isOpen={isDetailModalOpen} 
-                selectedHolding={selectedHolding} 
-                onClose={handleCloseDetailModal} 
+            <DetailModal
+                isOpen={isDetailModalOpen}
+                selectedHolding={selectedHolding}
+                onClose={handleCloseDetailModal}
             />
         </div>
     );
@@ -1287,10 +1287,10 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
         const handleEsc = (e) => {
             if (e.key === 'Escape') onClose();
         };
-        
+
         window.addEventListener('keydown', handleEsc);
         document.body.style.overflow = 'hidden';
-        
+
         return () => {
             window.removeEventListener('keydown', handleEsc);
             document.body.style.overflow = '';
@@ -1354,13 +1354,13 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                                 const dataMin = Math.min(predictedLow, buyPrice, currentPrice);
                                 const dataMax = Math.max(predictedHigh, buyPrice, currentPrice);
                                 let dataRange = dataMax - dataMin;
-                                
+
                                 // 범위가 0이거나 너무 작을 경우를 대비한 최소 범위 설정 (가격의 1%)
                                 if (dataRange === 0) dataRange = dataMin * 0.01;
-                                
+
                                 // 여백 설정 (데이터 범위의 10%)
                                 const padding = dataRange * 0.1;
-                                
+
                                 const minPrice = dataMin - padding;
                                 const maxPrice = dataMax + padding;
                                 const range = maxPrice - minPrice;
@@ -1560,18 +1560,17 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                         {/* 기대수익률 */}
                         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">기대 수익률</div>
-                            <div className={`text-base sm:text-lg font-bold ${
-                                (selectedHolding.expectedReturn || 0) >= 0 
-                                ? 'text-red-600 dark:text-red-400' 
+                            <div className={`text-base sm:text-lg font-bold ${(selectedHolding.expectedReturn || 0) >= 0
+                                ? 'text-red-600 dark:text-red-400'
                                 : 'text-blue-600 dark:text-blue-400'
-                            }`}>
+                                }`}>
                                 {(selectedHolding.expectedReturn || 0).toFixed(2)}%
                             </div>
                         </div>
                     </div>
 
                     {/* 차트 영역 */}
-                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 sm:p-6 min-h-[500px]">
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 sm:p-6 pr-0 sm:pr-0 min-h-[300px]">
                         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
                             {selectedHolding.coinCode} 시세 차트
                         </h4>
@@ -1589,7 +1588,7 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                                     {formatDateTime(selectedHolding.buyDate)}
                                 </div>
                             </div>
-                            
+
                             {/* 수익 확정일 (7일 후) */}
                             {selectedHolding.buyDate && (
                                 <div className="sm:text-right">
@@ -1607,12 +1606,12 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
 
                         {/* 수익 확정 설명 */}
                         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">💡 수익 확정일이란?</span><br/>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">💡 수익 확정일이란?</span><br />
                             {selectedHolding.buyDate && (() => {
                                 const buyDate = new Date(selectedHolding.buyDate);
                                 const confirmDate = new Date(buyDate);
                                 confirmDate.setDate(buyDate.getDate() + 7);
-                                
+
                                 const m1 = buyDate.getMonth() + 1;
                                 const d1 = buyDate.getDate();
                                 const m2 = confirmDate.getMonth() + 1;

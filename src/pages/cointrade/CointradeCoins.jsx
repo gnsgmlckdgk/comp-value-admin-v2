@@ -195,7 +195,6 @@ export default function CointradeCoins() {
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
                             종목 선택 모드
                         </h2>
-                        {console.log('Rendered with targetMode:', targetMode)}
                         <div className="flex gap-6">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input
@@ -248,8 +247,8 @@ export default function CointradeCoins() {
                                         <button
                                             onClick={() => setMarketFilter('ALL')}
                                             className={`px-3 py-1 rounded text-sm ${marketFilter === 'ALL'
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                                                 }`}
                                         >
                                             전체
@@ -257,8 +256,8 @@ export default function CointradeCoins() {
                                         <button
                                             onClick={() => setMarketFilter('KRW')}
                                             className={`px-3 py-1 rounded text-sm ${marketFilter === 'KRW'
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                                                 }`}
                                         >
                                             KRW
@@ -266,8 +265,8 @@ export default function CointradeCoins() {
                                         <button
                                             onClick={() => setMarketFilter('BTC')}
                                             className={`px-3 py-1 rounded text-sm ${marketFilter === 'BTC'
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                                                 }`}
                                         >
                                             BTC
@@ -275,8 +274,8 @@ export default function CointradeCoins() {
                                         <button
                                             onClick={() => setMarketFilter('USDT')}
                                             className={`px-3 py-1 rounded text-sm ${marketFilter === 'USDT'
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                                                 }`}
                                         >
                                             USDT

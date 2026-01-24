@@ -79,7 +79,7 @@ export default function UpbitCandleChart({ market }) {
 
                 let fetchedData = [];
                 if (response.data && Array.isArray(response.data)) {
-                     // Case 1: Direct array (e.g. from some proxies or if send() returns raw axios data)
+                    // Case 1: Direct array (e.g. from some proxies or if send() returns raw axios data)
                     fetchedData = response.data;
                 } else if (response.data && response.data.response && Array.isArray(response.data.response)) {
                     // Case 2: Standard wrapper (success: true, response: [...])
@@ -91,10 +91,8 @@ export default function UpbitCandleChart({ market }) {
 
                 if (fetchedData.length === 0) break; // No more data
 
-                console.log(`Fetched batch ${i+1}:`, fetchedData.length, 'items');
-
                 allCandles = [...allCandles, ...fetchedData];
-                
+
                 // Update 'to' for next request
                 // The API returns data in reverse chronological order (newest first).
                 // The last item is the oldest in this batch.
@@ -118,7 +116,6 @@ export default function UpbitCandleChart({ market }) {
                 displayDate: formatDisplayDate(item.candle_date_time_kst, interval)
             }));
 
-            console.log('Chart Data:', sortedData); // Debugging
             setData(sortedData);
 
         } catch (e) {
@@ -252,19 +249,20 @@ export default function UpbitCandleChart({ market }) {
                     </div>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <ComposedChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                             <XAxis
                                 dataKey="displayDate"
-                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                tick={{ fontSize: 12, fill: '#64748b' }}
                                 minTickGap={30}
+                                padding={{ left: 0, right: 0 }}
                             />
                             {/* Y-Axis for Price (Right) */}
                             <YAxis
                                 yAxisId="right"
                                 orientation="right"
                                 domain={yDomain}
-                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                tick={{ fontSize: 12, fill: '#64748b' }}
                                 tickFormatter={(val) => val.toLocaleString()}
                                 width={60}
                             />

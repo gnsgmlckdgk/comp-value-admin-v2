@@ -194,7 +194,7 @@ export default function MlModelInfo() {
         setLoading(true);
         try {
             const { data, error } = await send('/dart/api/cointrade/ml-models', {}, 'GET');
-            
+
             if (error) {
                 setToast('데이터 조회 실패: ' + error);
                 setDataList([]);
@@ -214,7 +214,7 @@ export default function MlModelInfo() {
     const handleManualTrain = async () => {
         try {
             const { data, error } = await send('/dart/api/cointrade/trade/model/train', {}, 'GET');
-            
+
             if (error) {
                 setToast('모델 재학습 요청 실패: ' + error);
             } else if (data?.success) {
@@ -334,7 +334,7 @@ export default function MlModelInfo() {
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
                 onClick={handleBackdropClick}
             >
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto flex flex-col">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[85vh] overflow-y-auto flex flex-col">
                     {/* 헤더 */}
                     <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                         <div className="flex items-center gap-2 sm:gap-3">
@@ -512,9 +512,9 @@ export default function MlModelInfo() {
                 {/* 툴바 */}
                 <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                         <h3 className="text-lg font-semibold text-slate-800 dark:text-white">모델 목록</h3>
-                         <button 
-                            onClick={fetchData} 
+                        <h3 className="text-lg font-semibold text-slate-800 dark:text-white">모델 목록</h3>
+                        <button
+                            onClick={fetchData}
                             className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                             title="새로고침"
                         >
@@ -523,7 +523,7 @@ export default function MlModelInfo() {
                             </svg>
                         </button>
                     </div>
-                   
+
                     <div className="flex items-center gap-2 flex-wrap">
                         {lastTrainRun && (
                             <span className="text-xs text-amber-600 dark:text-amber-400 mr-2">
@@ -573,8 +573,8 @@ export default function MlModelInfo() {
                                     <th
                                         key={col.key}
                                         className={`px-3 py-3 text-xs font-semibold uppercase tracking-wider select-none ${col.sticky ? 'sticky z-20 bg-slate-700' : ''} ${col.sortable ? 'cursor-pointer hover:bg-slate-600' : ''}`}
-                                        style={{ 
-                                            width: col.width, 
+                                        style={{
+                                            width: col.width,
                                             left: col.sticky ? 0 : undefined,
                                             textAlign: col.align || 'left'
                                         }}
@@ -634,8 +634,8 @@ export default function MlModelInfo() {
                                             <td
                                                 key={`${row.id}-${col.key}`}
                                                 className={`px-3 py-2 whitespace-nowrap ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
-                                                style={{ 
-                                                    width: col.width, 
+                                                style={{
+                                                    width: col.width,
                                                     left: col.sticky ? 0 : undefined,
                                                     textAlign: col.align || 'left'
                                                 }}

@@ -1280,20 +1280,24 @@ export default function CointradeDashboard() {
 
 // 상세보기 모달 컴포넌트 (외부로 분리)
 const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
-    if (!isOpen || !selectedHolding) return null;
-
-    // ESC 키로 모달 닫기
+    // ESC 키로 모달 닫기 및 스크롤 잠금
     useEffect(() => {
+        if (!isOpen) return;
+
         const handleEsc = (e) => {
             if (e.key === 'Escape') onClose();
         };
+        
         window.addEventListener('keydown', handleEsc);
         document.body.style.overflow = 'hidden';
+        
         return () => {
             window.removeEventListener('keydown', handleEsc);
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = '';
         };
     }, [isOpen, onClose]);
+
+    if (!isOpen || !selectedHolding) return null;
 
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) onClose();
@@ -1308,7 +1312,7 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
             onClick={handleBackdropClick}
         >
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto flex flex-col">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                     <div className="flex items-center gap-2 sm:gap-3">
@@ -1346,9 +1350,19 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                                 const predictedHigh = selectedHolding.predictedHigh || buyPrice;
                                 const predictedLow = selectedHolding.predictedLow || buyPrice;
 
-                                // 범위 계산 (예측저가부터 예측고가까지)
-                                const minPrice = Math.min(predictedLow, buyPrice, currentPrice) * 0.95;
-                                const maxPrice = Math.max(predictedHigh, buyPrice, currentPrice) * 1.05;
+                                // 범위 계산 (전체 가격 데이터를 포함하는 최소/최대값)
+                                const dataMin = Math.min(predictedLow, buyPrice, currentPrice);
+                                const dataMax = Math.max(predictedHigh, buyPrice, currentPrice);
+                                let dataRange = dataMax - dataMin;
+                                
+                                // 범위가 0이거나 너무 작을 경우를 대비한 최소 범위 설정 (가격의 1%)
+                                if (dataRange === 0) dataRange = dataMin * 0.01;
+                                
+                                // 여백 설정 (데이터 범위의 10%)
+                                const padding = dataRange * 0.1;
+                                
+                                const minPrice = dataMin - padding;
+                                const maxPrice = dataMax + padding;
                                 const range = maxPrice - minPrice;
 
                                 // 각 가격의 위치 계산 (%)

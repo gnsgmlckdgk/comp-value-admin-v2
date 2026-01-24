@@ -334,7 +334,7 @@ export default function MlModelInfo() {
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
                 onClick={handleBackdropClick}
             >
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[85vh] overflow-y-auto flex flex-col">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] sm:max-h-[85vh] overflow-y-auto flex flex-col">
                     {/* 헤더 */}
                     <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                         <div className="flex items-center gap-2 sm:gap-3">

@@ -238,7 +238,7 @@ export default function CointradeConfig() {
             PRICE_MONITOR_SECONDS: '가격 모니터링 주기',
             BUY_CHECK_HOURS: '매수 조건 체크 주기 (시간)',
             MIN_UP_PROBABILITY: '상승 확률이 이 값 이상이어야 매수',
-            MIN_PROFIT_RATE: '7일이나 기다렸는데 이 정도 수익이면 충분합니다. (추천: 5%)',
+            MIN_PROFIT_RATE: '{PREDICTION_DAYS}일 이나 기다렸는데 이 정도 수익이면 충분합니다. (추천: 5%)',
             MAX_PROFIT_RATE: 'AI가 폭등을 예측해도 이 정도 수익이면 만족하고 나옵니다. (추천: 30%)',
             TARGET_MODE: 'ALL: 전체 종목 매매, SELECTED: 선택 종목만 매매',
             PREDICTION_DAYS: 'AI 모델이 예측할 미래 기간 (일 단위)',
@@ -388,9 +388,9 @@ export default function CointradeConfig() {
                                                                 placeholder={key === 'TRAIN_SCHEDULE_CRON' ? '0 3 * * 2,5' : '0'}
                                                                 step={
                                                                     key === 'TRAIN_SCHEDULE_CRON' ? undefined :
-                                                                    key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
-                                                                        key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
-                                                                            '1'
+                                                                        key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
+                                                                            key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
+                                                                                '1'
                                                                 }
                                                             />
                                                         )}

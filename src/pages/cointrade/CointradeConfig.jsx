@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
+import ExcelJS from 'exceljs';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Input from '@/component/common/input/Input';
@@ -200,6 +201,107 @@ export default function CointradeConfig() {
         }
     };
 
+    const handleExportExcel = async () => {
+        try {
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet('자동매매 파라미터');
+
+            // 제목 행 추가
+            ws.mergeCells('A1:E1');
+            const titleCell = ws.getCell('A1');
+            titleCell.value = `코인 자동매매 파라미터 설정 (${new Date().toLocaleString()})`;
+            titleCell.font = { size: 16, bold: true };
+            titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            ws.getRow(1).height = 30;
+
+            // 헤더 행 (2행)
+            const headers = ['그룹', '항목명', '설명', '설정값', '키(Key)'];
+            const headerRow = ws.getRow(2);
+            headerRow.values = headers;
+
+            // 헤더 스타일
+            headerRow.eachCell((cell) => {
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF4F81BD' } // Blueish
+                };
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
+            headerRow.height = 25;
+
+            // 컬럼 너비 설정
+            ws.getColumn(1).width = 15; // 그룹
+            ws.getColumn(2).width = 25; // 항목명
+            ws.getColumn(3).width = 60; // 설명
+            ws.getColumn(4).width = 20; // 설정값
+            ws.getColumn(5).width = 25; // 키
+
+            let rowIndex = 3;
+
+            Object.entries(PARAM_GROUPS).forEach(([groupKey, group]) => {
+                const startRow = rowIndex;
+
+                group.keys.forEach((key) => {
+                    const row = ws.getRow(rowIndex);
+                    row.values = [
+                        group.label,
+                        getParamLabel(key),
+                        getParamDescription(key),
+                        params[key],
+                        key
+                    ];
+
+                    // 스타일 적용
+                    row.eachCell((cell, colNumber) => {
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                        cell.alignment = { vertical: 'middle', wrapText: true };
+
+                        // 설정값 중앙 정렬
+                        if (colNumber === 4) {
+                            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                        }
+                    });
+
+                    rowIndex++;
+                });
+
+                // 그룹 셀 병합
+                if (rowIndex - startRow > 0) {
+                    ws.mergeCells(`A${startRow}:A${rowIndex - 1}`);
+                }
+            });
+
+            // 파일 저장
+            const buf = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Cointrade_Config_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+        } catch (e) {
+            console.error('Excel export failed:', e);
+            setToast('엑셀 내보내기 중 오류가 발생했습니다.');
+        }
+    };
+
     const handleInputChange = (key, value) => {
         setParams(prev => ({ ...prev, [key]: value }));
     };
@@ -260,11 +362,11 @@ export default function CointradeConfig() {
                 <>
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                                매매 파라미터 설정
-                            </h2>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2 justify-end">
+                            <div className="flex flex-col gap-1">
+                                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                    매매 파라미터 설정
+                                </h2>
+                                <div className="flex items-center gap-2">
                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                                         즉시 반영
                                     </span>
@@ -272,6 +374,17 @@ export default function CointradeConfig() {
                                         스케줄러 재시작 없이 다음 주기부터 반영됩니다.
                                     </span>
                                 </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    onClick={handleExportExcel}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm shadow-sm"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    엑셀로 내보내기
+                                </Button>
                             </div>
                         </div>
 
@@ -363,7 +476,7 @@ export default function CointradeConfig() {
                                                             <select
                                                                 value={params[key]}
                                                                 onChange={(e) => handleInputChange(key, e.target.value)}
-                                                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm"
                                                             >
                                                                 <option value="ALL">ALL (전체)</option>
                                                                 <option value="SELECTED">SELECTED (선택)</option>
@@ -372,7 +485,7 @@ export default function CointradeConfig() {
                                                             <select
                                                                 value={params[key]}
                                                                 onChange={(e) => handleInputChange(key, e.target.value)}
-                                                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm"
                                                             >
                                                                 <option value="ensemble">ensemble</option>
                                                                 <option value="lstm_only">lstm_only</option>
@@ -382,7 +495,7 @@ export default function CointradeConfig() {
                                                         ) : (
                                                             <Input
                                                                 type={key === 'TRAIN_SCHEDULE_CRON' ? 'text' : 'number'}
-                                                                className="w-full h-10 md:h-9"
+                                                                className="w-full h-10 md:h-9 dark:!bg-slate-600 dark:placeholder-slate-300"
                                                                 value={params[key]}
                                                                 onChange={(e) => handleInputChange(key, e.target.value)}
                                                                 placeholder={key === 'TRAIN_SCHEDULE_CRON' ? '0 3 * * 2,5' : '0'}
@@ -406,7 +519,7 @@ export default function CointradeConfig() {
                                                                 <input
                                                                     type="number"
                                                                     placeholder="예상 최고가(%)"
-                                                                    className="w-full sm:w-24 px-2 py-1 border rounded text-xs"
+                                                                    className="w-full sm:w-36 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                     value={calcHigh}
                                                                     onChange={(e) => setCalcHigh(e.target.value)}
                                                                 />
@@ -414,7 +527,7 @@ export default function CointradeConfig() {
                                                                 <input
                                                                     type="number"
                                                                     placeholder="예상 하락률(%)"
-                                                                    className="w-full sm:w-24 px-2 py-1 border rounded text-xs"
+                                                                    className="w-full sm:w-36 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                     value={calcLow}
                                                                     onChange={(e) => setCalcLow(e.target.value)}
                                                                 />
@@ -438,15 +551,15 @@ export default function CointradeConfig() {
                     </div>
 
                     {/* 저장 버튼 */}
-                    <div className="flex justify-end gap-3">
-                        <Button
-                            onClick={handleSave}
-                            disabled={saveLoading}
-                            className="px-6 py-2"
-                        >
-                            {saveLoading ? '저장 중...' : '저장'}
-                        </Button>
-                    </div>
+                                                    <div className="flex justify-end gap-3">
+                                                        <Button
+                                                            onClick={handleSave}
+                                                            disabled={saveLoading}
+                                                            className="px-6 py-2"
+                                                        >
+                                                            {saveLoading ? '저장 중...' : '저장'}
+                                                        </Button>
+                                                    </div>
                 </>
             )}
 

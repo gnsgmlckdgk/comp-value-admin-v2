@@ -35,10 +35,21 @@ export default function CointradeConfig() {
         MIN_UP_PROBABILITY: '',        // 최소 상승 확률 %
         MIN_PROFIT_RATE: '',           // 최소 익절률 %
         MAX_PROFIT_RATE: '',           // 최대 익절률 %
+        PREDICTION_DAYS: '',           // 예측 기간 (일)
+        TRAIN_SCHEDULE_CRON: '',       // 모델 재학습 스케줄 (Cron)
+        ENSEMBLE_MODE: 'ensemble',     // 앙상블 모드
     });
 
     // 파라미터 그룹 정의
     const PARAM_GROUPS = {
+        PREDICTION: {
+            label: '설정',
+            keys: [
+                'PREDICTION_DAYS',
+                'TRAIN_SCHEDULE_CRON',
+                'ENSEMBLE_MODE'
+            ]
+        },
         BUY: {
             label: '매수 관련',
             keys: [
@@ -151,6 +162,7 @@ export default function CointradeConfig() {
             'SELL_CHECK_SECONDS',
             'PRICE_MONITOR_SECONDS',
             'BUY_CHECK_HOURS',
+            'PREDICTION_DAYS',
         ];
         numericParams.forEach(key => {
             if (key === 'TARGET_MODE') return;
@@ -207,6 +219,9 @@ export default function CointradeConfig() {
             MIN_PROFIT_RATE: '최소 익절률 (%)',
             MAX_PROFIT_RATE: '최대 익절률 (%)',
             TARGET_MODE: '대상 모드 (ALL/SELECTED)',
+            PREDICTION_DAYS: '예측 기간 (일)',
+            TRAIN_SCHEDULE_CRON: '모델 재학습 스케줄 (Cron)',
+            ENSEMBLE_MODE: '앙상블 모드',
         };
         return labels[key] || key;
     };
@@ -226,6 +241,9 @@ export default function CointradeConfig() {
             MIN_PROFIT_RATE: '7일이나 기다렸는데 이 정도 수익이면 충분합니다. (추천: 5%)',
             MAX_PROFIT_RATE: 'AI가 폭등을 예측해도 이 정도 수익이면 만족하고 나옵니다. (추천: 30%)',
             TARGET_MODE: 'ALL: 전체 종목 매매, SELECTED: 선택 종목만 매매',
+            PREDICTION_DAYS: 'AI 모델이 예측할 미래 기간 (일 단위)',
+            TRAIN_SCHEDULE_CRON: '모델 재학습 실행 주기 (예: 0 3 * * 2,5 -> 화/금 새벽 3시)',
+            ENSEMBLE_MODE: '사용할 모델 모드 (lstm_only/gru_only/cnn_only/ensemble)',
         };
         return descriptions[key] || '';
     };
@@ -350,14 +368,26 @@ export default function CointradeConfig() {
                                                                 <option value="ALL">ALL (전체)</option>
                                                                 <option value="SELECTED">SELECTED (선택)</option>
                                                             </select>
+                                                        ) : key === 'ENSEMBLE_MODE' ? (
+                                                            <select
+                                                                value={params[key]}
+                                                                onChange={(e) => handleInputChange(key, e.target.value)}
+                                                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            >
+                                                                <option value="ensemble">ensemble</option>
+                                                                <option value="lstm_only">lstm_only</option>
+                                                                <option value="gru_only">gru_only</option>
+                                                                <option value="cnn_only">cnn_only</option>
+                                                            </select>
                                                         ) : (
                                                             <Input
-                                                                type="number"
+                                                                type={key === 'TRAIN_SCHEDULE_CRON' ? 'text' : 'number'}
                                                                 className="w-full h-10 md:h-9"
                                                                 value={params[key]}
                                                                 onChange={(e) => handleInputChange(key, e.target.value)}
-                                                                placeholder="0"
+                                                                placeholder={key === 'TRAIN_SCHEDULE_CRON' ? '0 3 * * 2,5' : '0'}
                                                                 step={
+                                                                    key === 'TRAIN_SCHEDULE_CRON' ? undefined :
                                                                     key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
                                                                         key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
                                                                             '1'

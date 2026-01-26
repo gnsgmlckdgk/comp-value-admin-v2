@@ -350,7 +350,18 @@ const AbroadCompanyList = () => {
             newFilters.marketCapLowerThan = profile.marketCapMax;
         }
 
+        // 주가 (추가)
+        if (profile.priceMin !== null && profile.priceMin !== undefined) {
+            newFilters.priceMoreThan = profile.priceMin;
+        }
+        if (profile.priceMax !== null && profile.priceMax !== undefined) {
+            newFilters.priceLowerThan = profile.priceMax;
+        }
+
         // 베타
+        if (profile.betaMin !== null && profile.betaMin !== undefined) {
+            newFilters.betaMoreThan = profile.betaMin;
+        }
         if (profile.betaMax !== null && profile.betaMax !== undefined) {
             newFilters.betaLowerThan = profile.betaMax;
         }
@@ -358,6 +369,9 @@ const AbroadCompanyList = () => {
         // 거래량
         if (profile.volumeMin !== null && profile.volumeMin !== undefined) {
             newFilters.volumeMoreThan = profile.volumeMin;
+        }
+        if (profile.volumeMax !== null && profile.volumeMax !== undefined) {
+            newFilters.volumeLowerThan = profile.volumeMax;
         }
 
         // ETF, Fund, 활성거래 여부
@@ -371,13 +385,18 @@ const AbroadCompanyList = () => {
             newFilters.isActivelyTrading = profile.isActivelyTrading === 'Y';
         }
 
-        // 거래소 (콤마로 구분된 문자열 -> 배열)
-        if (profile.exchange) {
-            const exchangeArray = typeof profile.exchange === 'string'
-                ? profile.exchange.split(',').map(e => e.trim()).filter(e => e)
-                : (Array.isArray(profile.exchange) ? profile.exchange : []);
-            newFilters.exchange = exchangeArray;
-        }
+        // 문자열 필드 배열 변환 (거래소, 섹터, 산업군, 국가)
+        const splitToArray = (str) => {
+            if (!str) return [];
+            return typeof str === 'string'
+                ? str.split(',').map(e => e.trim()).filter(e => e)
+                : (Array.isArray(str) ? str : []);
+        };
+
+        newFilters.exchange = splitToArray(profile.exchange);
+        newFilters.sector = splitToArray(profile.sector);
+        newFilters.industry = splitToArray(profile.industry);
+        newFilters.country = splitToArray(profile.country);
 
         // 조회 제한 건수
         if (profile.screenerLimit !== null && profile.screenerLimit !== undefined) {

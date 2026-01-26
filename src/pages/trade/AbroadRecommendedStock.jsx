@@ -1296,12 +1296,19 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         sortOrder: 1,
         marketCapMin: '',
         marketCapMax: '',
+        betaMin: '',
         betaMax: '',
         volumeMin: '',
+        volumeMax: '',
+        priceMin: '',
+        priceMax: '',
         isEtf: 'N',
         isFund: 'N',
         isActivelyTrading: 'Y',
         exchange: [],
+        sector: [],
+        industry: [],
+        country: [],
         screenerLimit: '',
         peRatioMin: '',
         peRatioMax: '',
@@ -1313,12 +1320,17 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
     // 프로파일 선택 시
     const handleSelectProfile = (profile) => {
         setSelectedProfile(profile);
-        // exchange를 배열로 변환 (콤마로 구분된 문자열 -> 배열)
-        const formDataWithArrayExchange = {
+        // 콤마로 구분된 문자열을 배열로 변환
+        const splitToArray = (str) => str ? str.split(',').map(s => s.trim()).filter(s => s) : [];
+
+        const formDataWithArrays = {
             ...profile,
-            exchange: profile.exchange ? profile.exchange.split(',').map(e => e.trim()) : []
+            exchange: splitToArray(profile.exchange),
+            sector: splitToArray(profile.sector),
+            industry: splitToArray(profile.industry),
+            country: splitToArray(profile.country),
         };
-        setFormData(formDataWithArrayExchange);
+        setFormData(formDataWithArrays);
         setIsCreating(false);
     };
 
@@ -1398,10 +1410,15 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
 
         setIsLoading(true);
         try {
-            // exchange 배열을 콤마로 구분된 문자열로 변환
+            // 배열을 콤마로 구분된 문자열로 변환
+            const arrayToString = (arr) => Array.isArray(arr) ? arr.join(',') : arr;
+
             const dataToSend = {
                 ...formData,
-                exchange: Array.isArray(formData.exchange) ? formData.exchange.join(',') : formData.exchange
+                exchange: arrayToString(formData.exchange),
+                sector: arrayToString(formData.sector),
+                industry: arrayToString(formData.industry),
+                country: arrayToString(formData.country),
             };
 
             const endpoint = isCreating ? '/dart/recommend/profile/regi' : '/dart/recommend/profile/modi';
@@ -1634,6 +1651,30 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         required
                     />
                     <FormInput
+                        label="주가 최소 (priceMin)"
+                        type="number"
+                        step="0.01"
+                        value={formData.priceMin}
+                        onChange={(v) => onChange('priceMin', v)}
+                        placeholder="1.00"
+                    />
+                    <FormInput
+                        label="주가 최대 (priceMax)"
+                        type="number"
+                        step="0.01"
+                        value={formData.priceMax}
+                        onChange={(v) => onChange('priceMax', v)}
+                        placeholder="1000.00"
+                    />
+                    <FormInput
+                        label="베타 최소값 (betaMin)"
+                        type="number"
+                        step="0.01"
+                        value={formData.betaMin}
+                        onChange={(v) => onChange('betaMin', v)}
+                        placeholder="0.5"
+                    />
+                    <FormInput
                         label="베타 최대값 (betaMax)"
                         type="number"
                         step="0.01"
@@ -1649,6 +1690,13 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         onChange={(v) => onChange('volumeMin', v)}
                         placeholder="100000"
                         required
+                    />
+                    <FormInput
+                        label="거래량 최대 (volumeMax)"
+                        type="number"
+                        value={formData.volumeMax}
+                        onChange={(v) => onChange('volumeMax', v)}
+                        placeholder="10000000"
                     />
                     <FormSelect
                         label="ETF 포함여부 (isEtf)"
@@ -1681,6 +1729,14 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         required
                     />
                     <FormMultiSelect
+                        label="국가 (country)"
+                        value={formData.country || []}
+                        onChange={(v) => onChange('country', v)}
+                        options={filterOptions?.countries || []}
+                        loading={filterOptionsLoading?.countries}
+                        placeholder="국가 선택"
+                    />
+                    <FormMultiSelect
                         label="거래소 (exchange)"
                         value={formData.exchange || []}
                         onChange={(v) => onChange('exchange', v)}
@@ -1688,6 +1744,22 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         loading={filterOptionsLoading?.exchanges}
                         placeholder="거래소 선택"
                         required
+                    />
+                    <FormMultiSelect
+                        label="섹터 (sector)"
+                        value={formData.sector || []}
+                        onChange={(v) => onChange('sector', v)}
+                        options={filterOptions?.sectors || []}
+                        loading={filterOptionsLoading?.sectors}
+                        placeholder="섹터 선택"
+                    />
+                    <FormMultiSelect
+                        label="산업군 (industry)"
+                        value={formData.industry || []}
+                        onChange={(v) => onChange('industry', v)}
+                        options={filterOptions?.industries || []}
+                        loading={filterOptionsLoading?.industries}
+                        placeholder="산업군 선택"
                     />
                     <FormInput
                         label="스크리너 조회 제한 건수 (screenerLimit)"
@@ -1707,25 +1779,25 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <FormInput
-                        label="PER 최소값 (peRatioMin)"
+                        label="PER 최소값 (이익의 몇 배? 예: 10)"
                         type="number"
                         step="0.01"
                         value={formData.peRatioMin}
                         onChange={(v) => onChange('peRatioMin', v)}
-                        placeholder="5.0"
+                        placeholder="10"
                         required
                     />
                     <FormInput
-                        label="PER 최대값 (peRatioMax)"
+                        label="PER 최대값 (이익의 몇 배? 예: 20)"
                         type="number"
                         step="0.01"
                         value={formData.peRatioMax}
                         onChange={(v) => onChange('peRatioMax', v)}
-                        placeholder="15.0"
+                        placeholder="20"
                         required
                     />
                     <FormInput
-                        label="PBR 최대값 (pbRatioMax)"
+                        label="PBR 최대값 (자산의 몇 배? 예: 1.5)"
                         type="number"
                         step="0.01"
                         value={formData.pbRatioMax}
@@ -1734,21 +1806,21 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         required
                     />
                     <FormInput
-                        label="ROE 최소값 (roeMin)"
+                        label="ROE 최소값 (소수점 입력, 예: 0.1 -> 10%)"
                         type="number"
                         step="0.01"
                         value={formData.roeMin}
                         onChange={(v) => onChange('roeMin', v)}
-                        placeholder="0.10 (10%)"
+                        placeholder="0.1"
                         required
                     />
                     <FormInput
-                        label="부채비율 최대값 (debtEquityMax)"
+                        label="부채비율 최대값 (소수점 입력, 예: 2.0 -> 200%)"
                         type="number"
                         step="0.01"
                         value={formData.debtEquityMax}
                         onChange={(v) => onChange('debtEquityMax', v)}
-                        placeholder="1.0"
+                        placeholder="2.0"
                         required
                     />
                 </div>

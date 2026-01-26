@@ -26,6 +26,7 @@ const formatDate = (dateStr) => {
 const COL_WIDTHS = {
     id: '60px',
     coinCode: '100px',
+    modelType: '120px',
     modelPath: '200px',
     trainedAt: '180px',
     trainDataStart: '100px',
@@ -57,6 +58,29 @@ const TABLE_COLUMNS = [
         sticky: true,
         align: 'left',
         fontBold: true,
+    },
+    {
+        key: 'modelType',
+        label: '모델타입',
+        field: 'modelType',
+        width: COL_WIDTHS.modelType,
+        sortable: true,
+        align: 'center',
+        render: (val) => {
+            const type = String(val || '').trim().toLowerCase();
+            let colorClass = 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+            
+            if (type === 'ensemble') colorClass = 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+            else if (type.includes('lstm')) colorClass = 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+            else if (type.includes('gru')) colorClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+            else if (type.includes('cnn')) colorClass = 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+            
+            return (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+                    {val || '-'}
+                </span>
+            );
+        }
     },
     {
         key: 'modelPath',
@@ -367,6 +391,14 @@ export default function MlModelInfo() {
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">종목 코드</div>
                                     <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
                                         {selectedModel.coinCode}
+                                    </div>
+                                </div>
+
+                                {/* 모델 타입 */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">모델 타입</div>
+                                    <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
+                                        {selectedModel.modelType || '-'}
                                     </div>
                                 </div>
 

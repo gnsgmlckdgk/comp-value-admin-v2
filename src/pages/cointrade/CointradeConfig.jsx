@@ -216,7 +216,7 @@ export default function CointradeConfig() {
                 lines.push('');
             });
 
-            const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+            const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -403,24 +403,24 @@ export default function CointradeConfig() {
                                     </span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <Button
-                                    onClick={handleExportExcel}
-                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-sm shadow-sm"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    엑셀로 내보내기
-                                </Button>
+                            <div className="flex flex-wrap items-center gap-2 justify-end">
                                 <Button
                                     onClick={handleExportText}
-                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white flex items-center gap-2 text-sm shadow-sm"
+                                    className="px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white flex items-center gap-2 text-xs sm:text-sm shadow-sm"
                                 >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                     텍스트로 내보내기
+                                </Button>
+                                <Button
+                                    onClick={handleExportExcel}
+                                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-xs sm:text-sm shadow-sm"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    엑셀로 내보내기
                                 </Button>
                             </div>
                         </div>

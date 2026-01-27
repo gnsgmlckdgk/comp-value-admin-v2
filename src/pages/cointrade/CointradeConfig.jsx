@@ -201,6 +201,34 @@ export default function CointradeConfig() {
         }
     };
 
+    const handleExportText = () => {
+        try {
+            const lines = [];
+            lines.push(`코인 자동매매 파라미터 설정 (${new Date().toLocaleString()})`);
+            lines.push('='.repeat(50));
+            lines.push('');
+
+            Object.entries(PARAM_GROUPS).forEach(([groupKey, group]) => {
+                lines.push(`[${group.label}]`);
+                group.keys.forEach((key) => {
+                    lines.push(`${key} (${getParamLabel(key)}) : ${params[key]}`);
+                });
+                lines.push('');
+            });
+
+            const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Cointrade_Config_${new Date().toISOString().slice(0, 10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('Text export failed:', e);
+            setToast('텍스트 내보내기 중 오류가 발생했습니다.');
+        }
+    };
+
     const handleExportExcel = async () => {
         try {
             const wb = new ExcelJS.Workbook();
@@ -344,7 +372,7 @@ export default function CointradeConfig() {
             MAX_PROFIT_RATE: 'AI가 폭등을 예측해도 이 정도 수익이면 만족하고 나옵니다. (추천: 30%)',
             TARGET_MODE: 'ALL: 전체 종목 매매, SELECTED: 선택 종목만 매매',
             PREDICTION_DAYS: 'AI 모델이 예측할 미래 기간 (일 단위)',
-            TRAIN_SCHEDULE_CRON: '모델 재학습 실행 주기 (예: 0 3 * * 2,5 -> 화/금 새벽 3시)',
+            TRAIN_SCHEDULE_CRON: '모델 재학습 실행 주기 (예: 0 3 * * 2,5 -> 수/토(Python APScheduler 기준) 새벽 3시 / 0=월, 6=일)',
             ENSEMBLE_MODE: '사용할 모델 모드 (lstm_only/gru_only/cnn_only/ensemble)',
         };
         return descriptions[key] || '';
@@ -384,6 +412,15 @@ export default function CointradeConfig() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                     엑셀로 내보내기
+                                </Button>
+                                <Button
+                                    onClick={handleExportText}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white flex items-center gap-2 text-sm shadow-sm"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    텍스트로 내보내기
                                 </Button>
                             </div>
                         </div>
@@ -551,15 +588,15 @@ export default function CointradeConfig() {
                     </div>
 
                     {/* 저장 버튼 */}
-                                                    <div className="flex justify-end gap-3">
-                                                        <Button
-                                                            onClick={handleSave}
-                                                            disabled={saveLoading}
-                                                            className="px-6 py-2"
-                                                        >
-                                                            {saveLoading ? '저장 중...' : '저장'}
-                                                        </Button>
-                                                    </div>
+                    <div className="flex justify-end gap-3">
+                        <Button
+                            onClick={handleSave}
+                            disabled={saveLoading}
+                            className="px-6 py-2"
+                        >
+                            {saveLoading ? '저장 중...' : '저장'}
+                        </Button>
+                    </div>
                 </>
             )}
 

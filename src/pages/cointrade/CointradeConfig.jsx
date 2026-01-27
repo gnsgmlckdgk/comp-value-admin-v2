@@ -4,6 +4,7 @@ import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
+import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import SellCriteriaModal from '@/pages/cointrade/popup/SellCriteriaModal';
 import BuyCriteriaModal from '@/pages/cointrade/popup/BuyCriteriaModal';
 
@@ -16,10 +17,17 @@ export default function CointradeConfig() {
     const [toast, setToast] = useState(null);
     const [isSellCriteriaModalOpen, setIsSellCriteriaModalOpen] = useState(false);
     const [isBuyCriteriaModalOpen, setIsBuyCriteriaModalOpen] = useState(false);
+    
+    // 변경 확인 모달 상태
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [changedParams, setChangedParams] = useState([]);
 
     // 기대 수익률 계산기 상태
     const [calcHigh, setCalcHigh] = useState('');
     const [calcLow, setCalcLow] = useState('');
+
+    // 초기 파라미터 상태 (변경 감지용)
+    const [initialParams, setInitialParams] = useState({});
 
     // 파라미터 상태
     const [params, setParams] = useState({
@@ -126,6 +134,7 @@ export default function CointradeConfig() {
                 });
 
                 setParams(prev => ({ ...prev, ...configMap }));
+                setInitialParams(prev => ({ ...prev, ...configMap }));
             }
         } catch (e) {
             console.error('설정값 조회 실패:', e);
@@ -178,6 +187,31 @@ export default function CointradeConfig() {
             return;
         }
 
+        // 변경된 항목 찾기
+        const changes = [];
+        Object.keys(params).forEach(key => {
+            // 값이 다른 경우 (문자열 비교)
+            if (String(params[key]) !== String(initialParams[key] || '')) {
+                changes.push({
+                    key,
+                    label: getParamLabel(key),
+                    oldValue: initialParams[key] || '(비어있음)',
+                    newValue: params[key]
+                });
+            }
+        });
+
+        if (changes.length === 0) {
+            setToast('변경된 내용이 없습니다.');
+            return;
+        }
+
+        setChangedParams(changes);
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleConfirmSave = async () => {
+        setIsConfirmModalOpen(false);
         setSaveLoading(true);
         try {
             // API 요청 형식으로 변환 (configKey, configValue)
@@ -192,6 +226,7 @@ export default function CointradeConfig() {
                 setToast('저장에 실패했습니다: ' + error);
             } else if (data?.success) {
                 setToast('설정이 저장되었습니다.');
+                setInitialParams({ ...params }); // 저장 성공 시 초기값 갱신
             }
         } catch (e) {
             console.error('설정 저장 실패:', e);
@@ -620,6 +655,40 @@ export default function CointradeConfig() {
                 isOpen={isBuyCriteriaModalOpen}
                 onClose={() => setIsBuyCriteriaModalOpen(false)}
             />
+
+            {/* 변경 확인 모달 */}
+            <AlertModal
+                open={isConfirmModalOpen}
+                onClose={() => setIsConfirmModalOpen(false)}
+                onConfirm={handleConfirmSave}
+                title="설정 변경 확인"
+            >
+                <div className="space-y-3">
+                    <p className="font-medium text-slate-800 dark:text-slate-200">
+                        다음 {changedParams.length}개 항목을 변경하시겠습니까?
+                    </p>
+                    <div className="max-h-[60vh] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-900 p-3 text-sm">
+                        <ul className="space-y-2">
+                            {changedParams.map((item) => (
+                                <li key={item.key} className="flex flex-col border-b border-slate-200 dark:border-slate-800 last:border-0 pb-2 last:pb-0">
+                                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                        {item.label}
+                                    </span>
+                                    <div className="flex items-center gap-2 mt-1 text-xs">
+                                        <span className="text-red-500 line-through bg-red-50 dark:bg-red-900/20 px-1 rounded">
+                                            {item.oldValue}
+                                        </span>
+                                        <span className="text-slate-400">→</span>
+                                        <span className="text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/20 px-1 rounded">
+                                            {item.newValue}
+                                        </span>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            </AlertModal>
         </div>
     );
 }

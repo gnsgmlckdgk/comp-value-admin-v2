@@ -469,7 +469,7 @@ export default function Backtest() {
 
             // 개별 종목 상세 (includeIndividual이 true일 때)
             if (includeIndividual && result.data.individual) {
-                Object.entries(result.data.individual).forEach(([coin, data]) => {
+                Object.entries(result.data.individual).filter(([coin, data]) => data !== null).forEach(([coin, data]) => {
                     // 시트 이름에서 특수문자 제거
                     const sheetName = coin.replace(/[:\\/?*\[\]]/g, '_').substring(0, 31);
                     const coinWs = wb.addWorksheet(sheetName);
@@ -1535,11 +1535,13 @@ function DetailView({ result, onClose, onExport }) {
     ];
 
     // 종목별 수익 기여도 (individual 데이터 기반)
-    const coinContributionData = Object.entries(individual).map(([coin, data]) => ({
-        name: coin,
-        return: data.total_return,
-        trades: data.total_trades
-    }));
+    const coinContributionData = Object.entries(individual)
+        .filter(([coin, data]) => data !== null) // null인 종목 제외
+        .map(([coin, data]) => ({
+            name: coin,
+            return: data.total_return,
+            trades: data.total_trades
+        }));
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -1641,7 +1643,7 @@ function DetailView({ result, onClose, onExport }) {
                             <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
                                 <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4">개별 종목 상세</h3>
                                 <div className="space-y-4">
-                                    {Object.entries(individual).map(([coin, data]) => (
+                                    {Object.entries(individual).filter(([coin, data]) => data !== null).map(([coin, data]) => (
                                         <details key={coin} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <summary className="px-4 py-3 cursor-pointer font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                                                 {coin} - 수익률: {data.total_return.toFixed(2)}% | 거래: {data.total_trades}회 | 승률: {data.win_rate.toFixed(2)}%

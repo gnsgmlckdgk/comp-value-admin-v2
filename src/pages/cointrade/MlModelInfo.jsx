@@ -69,12 +69,12 @@ const TABLE_COLUMNS = [
         render: (val) => {
             const type = String(val || '').trim().toLowerCase();
             let colorClass = 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-            
+
             if (type === 'ensemble') colorClass = 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
             else if (type.includes('lstm')) colorClass = 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
             else if (type.includes('gru')) colorClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
             else if (type.includes('cnn')) colorClass = 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
-            
+
             return (
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
                     {val || '-'}
@@ -176,6 +176,7 @@ export default function MlModelInfo() {
 
     // 재학습 확인 모달 상태
     const [isTrainConfirmModalOpen, setIsTrainConfirmModalOpen] = useState(false);
+    const [trainCoinCode, setTrainCoinCode] = useState('');
 
     // 테이블 필터/정렬 상태
     const [columnFilters, setColumnFilters] = useState({});
@@ -252,7 +253,9 @@ export default function MlModelInfo() {
         setIsTrainConfirmModalOpen(false); // 모달 닫기
 
         try {
-            const { data, error } = await send('/dart/api/cointrade/trade/model/train', {}, 'GET');
+            // coin_code 파라미터 추가
+            const params = trainCoinCode.trim() ? { coin_code: trainCoinCode.trim() } : {};
+            const { data, error } = await send('/dart/api/cointrade/trade/model/train', params, 'GET');
 
             if (error) {
                 setToast('모델 재학습 요청 실패: ' + error);
@@ -261,6 +264,7 @@ export default function MlModelInfo() {
                 const now = new Date();
                 setLastTrainRun(now);
                 localStorage.setItem(TRAIN_RUN_KEY, now.toISOString());
+                setTrainCoinCode(''); // 입력 필드 초기화
             } else {
                 setToast(data?.message || '모델 재학습 요청 실패');
             }
@@ -363,55 +367,9 @@ export default function MlModelInfo() {
         };
     }, [isDetailModalOpen, isTrainConfirmModalOpen]);
 
-    // 재학습 확인 모달 컴포넌트
-    const TrainConfirmModal = () => {
-        if (!isTrainConfirmModalOpen) return null;
-
-        const handleBackdropClick = (e) => {
-            if (e.target === e.currentTarget) handleCloseTrainConfirmModal();
-        };
-
-        return (
-            <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
-                onClick={handleBackdropClick}
-            >
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
-                    {/* 헤더 */}
-                    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                            모델 재학습 확인
-                        </h3>
-                    </div>
-
-                    {/* 콘텐츠 */}
-                    <div className="px-6 py-4">
-                        <p className="text-slate-700 dark:text-slate-300">
-                            모델 재학습을 실행하시겠습니까?
-                        </p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                            이 작업은 시간이 소요될 수 있습니다.
-                        </p>
-                    </div>
-
-                    {/* 버튼 */}
-                    <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2">
-                        <button
-                            onClick={handleCloseTrainConfirmModal}
-                            className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
-                        >
-                            취소
-                        </button>
-                        <button
-                            onClick={handleManualTrain}
-                            className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
-                        >
-                            확인
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
+    // Backdrop 클릭 핸들러
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) handleCloseTrainConfirmModal();
     };
 
     // 상세보기 모달 컴포넌트
@@ -798,7 +756,65 @@ export default function MlModelInfo() {
             )}
 
             {/* 재학습 확인 모달 */}
-            <TrainConfirmModal />
+            {isTrainConfirmModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                    onClick={handleBackdropClick}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                        {/* 헤더 */}
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                모델 재학습 확인
+                            </h3>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="px-6 py-4">
+                            <p className="text-slate-700 dark:text-slate-300 mb-4">
+                                모델 재학습을 실행하시겠습니까?
+                            </p>
+
+                            {/* 종목코드 입력 필드 */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    종목코드 (선택)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={trainCoinCode}
+                                    onChange={(e) => setTrainCoinCode(e.target.value)}
+                                    placeholder="KRW-BTC"
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                                    빈값을 넘기면 활성화된 종목 전체를 학습합니다.
+                                </p>
+                            </div>
+
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                이 작업은 시간이 소요될 수 있습니다.
+                            </p>
+                        </div>
+
+                        {/* 버튼 */}
+                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2">
+                            <button
+                                onClick={handleCloseTrainConfirmModal}
+                                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleManualTrain}
+                                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+                            >
+                                확인
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 상세보기 모달 */}
             <DetailModal />

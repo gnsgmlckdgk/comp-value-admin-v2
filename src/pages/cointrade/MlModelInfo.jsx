@@ -174,6 +174,9 @@ export default function MlModelInfo() {
     const [selectedModel, setSelectedModel] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
+    // 재학습 확인 모달 상태
+    const [isTrainConfirmModalOpen, setIsTrainConfirmModalOpen] = useState(false);
+
     // 테이블 필터/정렬 상태
     const [columnFilters, setColumnFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ key: 'coinCode', direction: 'asc' });
@@ -234,8 +237,20 @@ export default function MlModelInfo() {
         }
     };
 
+    // 모델 재학습 확인 모달 열기
+    const handleOpenTrainConfirmModal = () => {
+        setIsTrainConfirmModalOpen(true);
+    };
+
+    // 모델 재학습 확인 모달 닫기
+    const handleCloseTrainConfirmModal = () => {
+        setIsTrainConfirmModalOpen(false);
+    };
+
     // 모델 재학습(수동) 요청
     const handleManualTrain = async () => {
+        setIsTrainConfirmModalOpen(false); // 모달 닫기
+
         try {
             const { data, error } = await send('/dart/api/cointrade/trade/model/train', {}, 'GET');
 
@@ -333,9 +348,12 @@ export default function MlModelInfo() {
     // ESC 키로 모달 닫기
     useEffect(() => {
         const handleEsc = (e) => {
-            if (e.key === 'Escape' && isDetailModalOpen) handleCloseDetailModal();
+            if (e.key === 'Escape') {
+                if (isDetailModalOpen) handleCloseDetailModal();
+                if (isTrainConfirmModalOpen) handleCloseTrainConfirmModal();
+            }
         };
-        if (isDetailModalOpen) {
+        if (isDetailModalOpen || isTrainConfirmModalOpen) {
             window.addEventListener('keydown', handleEsc);
             document.body.style.overflow = 'hidden';
         }
@@ -343,7 +361,58 @@ export default function MlModelInfo() {
             window.removeEventListener('keydown', handleEsc);
             document.body.style.overflow = 'unset';
         };
-    }, [isDetailModalOpen]);
+    }, [isDetailModalOpen, isTrainConfirmModalOpen]);
+
+    // 재학습 확인 모달 컴포넌트
+    const TrainConfirmModal = () => {
+        if (!isTrainConfirmModalOpen) return null;
+
+        const handleBackdropClick = (e) => {
+            if (e.target === e.currentTarget) handleCloseTrainConfirmModal();
+        };
+
+        return (
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                onClick={handleBackdropClick}
+            >
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                    {/* 헤더 */}
+                    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                            모델 재학습 확인
+                        </h3>
+                    </div>
+
+                    {/* 콘텐츠 */}
+                    <div className="px-6 py-4">
+                        <p className="text-slate-700 dark:text-slate-300">
+                            모델 재학습을 실행하시겠습니까?
+                        </p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                            이 작업은 시간이 소요될 수 있습니다.
+                        </p>
+                    </div>
+
+                    {/* 버튼 */}
+                    <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2">
+                        <button
+                            onClick={handleCloseTrainConfirmModal}
+                            className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={handleManualTrain}
+                            className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+                        >
+                            확인
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     // 상세보기 모달 컴포넌트
     const DetailModal = () => {
@@ -563,7 +632,7 @@ export default function MlModelInfo() {
                             </span>
                         )}
                         <button
-                            onClick={handleManualTrain}
+                            onClick={handleOpenTrainConfirmModal}
                             className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors mr-2"
                         >
                             모델 재학습(수동)
@@ -727,6 +796,9 @@ export default function MlModelInfo() {
                     {toast}
                 </div>
             )}
+
+            {/* 재학습 확인 모달 */}
+            <TrainConfirmModal />
 
             {/* 상세보기 모달 */}
             <DetailModal />

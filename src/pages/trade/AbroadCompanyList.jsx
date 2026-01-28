@@ -339,7 +339,27 @@ const AbroadCompanyList = () => {
 
     // 프로파일을 검색 조건으로 변환하는 매핑 함수
     const mapProfileToFilters = useCallback((profile) => {
-        const newFilters = { ...INITIAL_FILTERS };
+        // 빈 상태로 시작 (프로파일에 있는 값만 세팅)
+        const newFilters = {
+            marketCapMoreThan: null,
+            marketCapLowerThan: null,
+            priceMoreThan: null,
+            priceLowerThan: null,
+            betaMoreThan: null,
+            betaLowerThan: null,
+            volumeMoreThan: null,
+            volumeLowerThan: null,
+            dividendMoreThan: null,
+            dividendLowerThan: null,
+            isEtf: false,
+            isFund: false,
+            isActivelyTrading: false,
+            sector: [],
+            industry: [],
+            country: [],
+            exchange: [],
+            limit: INITIAL_FILTERS.limit, // 기본 limit 값 유지
+        };
 
         // 프로파일 필드명 -> 검색 조건 필드명 매핑
         // 시가총액
@@ -350,7 +370,7 @@ const AbroadCompanyList = () => {
             newFilters.marketCapLowerThan = profile.marketCapMax;
         }
 
-        // 주가 (추가)
+        // 주가
         if (profile.priceMin !== null && profile.priceMin !== undefined) {
             newFilters.priceMoreThan = profile.priceMin;
         }
@@ -372,6 +392,14 @@ const AbroadCompanyList = () => {
         }
         if (profile.volumeMax !== null && profile.volumeMax !== undefined) {
             newFilters.volumeLowerThan = profile.volumeMax;
+        }
+
+        // 배당
+        if (profile.dividendMin !== null && profile.dividendMin !== undefined) {
+            newFilters.dividendMoreThan = profile.dividendMin;
+        }
+        if (profile.dividendMax !== null && profile.dividendMax !== undefined) {
+            newFilters.dividendLowerThan = profile.dividendMax;
         }
 
         // ETF, Fund, 활성거래 여부

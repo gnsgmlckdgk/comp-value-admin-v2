@@ -1501,7 +1501,7 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
                 {/* 본문 */}
                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                     {/* 왼쪽: 프로파일 목록 */}
-                    <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 overflow-y-auto max-h-[40vh] md:max-h-none">
+                    <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 overflow-y-auto max-h-[40vh] md:max-h-none bg-slate-100/50 dark:bg-black/20">
                         <div className="p-3 md:p-4">
                             <button
                                 onClick={handleCreateNew}

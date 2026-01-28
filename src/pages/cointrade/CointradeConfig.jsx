@@ -7,6 +7,7 @@ import Button from '@/component/common/button/Button';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import SellCriteriaModal from '@/pages/cointrade/popup/SellCriteriaModal';
 import BuyCriteriaModal from '@/pages/cointrade/popup/BuyCriteriaModal';
+import ConfigOverviewModal from '@/pages/cointrade/popup/ConfigOverviewModal';
 
 /**
  * 코인 자동매매 파라미터 설정 페이지
@@ -17,6 +18,7 @@ export default function CointradeConfig() {
     const [toast, setToast] = useState(null);
     const [isSellCriteriaModalOpen, setIsSellCriteriaModalOpen] = useState(false);
     const [isBuyCriteriaModalOpen, setIsBuyCriteriaModalOpen] = useState(false);
+    const [isOverviewModalOpen, setIsOverviewModalOpen] = useState(false);
     
     // 변경 확인 모달 상태
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -452,6 +454,16 @@ export default function CointradeConfig() {
                             </div>
                             <div className="flex flex-wrap items-center gap-2 justify-end">
                                 <Button
+                                    onClick={() => setIsOverviewModalOpen(true)}
+                                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 text-xs sm:text-sm shadow-sm"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    한눈에 보기
+                                </Button>
+                                <Button
                                     onClick={handleExportText}
                                     className="px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white flex items-center gap-2 text-xs sm:text-sm shadow-sm"
                                 >
@@ -675,6 +687,16 @@ export default function CointradeConfig() {
             <BuyCriteriaModal
                 isOpen={isBuyCriteriaModalOpen}
                 onClose={() => setIsBuyCriteriaModalOpen(false)}
+            />
+
+            {/* 설정값 한눈에 보기 모달 */}
+            <ConfigOverviewModal
+                isOpen={isOverviewModalOpen}
+                onClose={() => setIsOverviewModalOpen(false)}
+                params={params}
+                getParamLabel={getParamLabel}
+                getParamDescription={getParamDescription}
+                paramGroups={PARAM_GROUPS}
             />
 
             {/* 변경 확인 모달 */}

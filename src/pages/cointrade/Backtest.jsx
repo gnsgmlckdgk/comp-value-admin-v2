@@ -1,0 +1,1761 @@
+import { useState, useEffect, useMemo } from 'react';
+import { send } from '@/util/ClientUtil';
+import PageTitle from '@/component/common/display/PageTitle';
+import Button from '@/component/common/button/Button';
+import ExcelJS from 'exceljs';
+import {
+    LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+/**
+ * 숫자를 정수 부분(볼드)과 소수점 부분으로 분리하여 렌더링
+ */
+function NumberWithBoldInteger({ value, decimals = 2, suffix = '' }) {
+    if (value == null) return '-';
+    const fixed = Number(value).toFixed(decimals);
+    const [integer, decimal] = fixed.split('.');
+
+    return (
+        <>
+            <span className="font-bold">{integer}</span>
+            {decimal && <span className="font-normal">.{decimal}</span>}
+            {suffix && <span className="font-normal">{suffix}</span>}
+        </>
+    );
+}
+
+/**
+ * 백테스트 페이지
+ */
+export default function Backtest() {
+    const [activeTab, setActiveTab] = useState('run'); // 'run' | 'history'
+    const [loading, setLoading] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    // 실행 탭 상태
+    const [allCoins, setAllCoins] = useState([]);
+    const [selectedCoins, setSelectedCoins] = useState(new Set());
+    const [coinSelectionMode, setCoinSelectionMode] = useState('all'); // 'all' | 'active' | 'custom'
+    const [searchText, setSearchText] = useState('');
+    const [marketFilter, setMarketFilter] = useState('ALL');
+
+    // 날짜 상태
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [selectedPreset, setSelectedPreset] = useState('1year');
+
+    // 실행 상태
+    const [runningTaskId, setRunningTaskId] = useState(null);
+    const [taskStatus, setTaskStatus] = useState(null);
+    const [taskResult, setTaskResult] = useState(null);
+    const [isRunConfirmModalOpen, setIsRunConfirmModalOpen] = useState(false);
+
+    // 삭제 확인 모달
+    const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
+    const [deleteTargetTaskId, setDeleteTargetTaskId] = useState(null);
+
+    // 이력 탭 상태
+    const [historyList, setHistoryList] = useState([]);
+    const [selectedHistoryIds, setSelectedHistoryIds] = useState([]);
+    const [compareResults, setCompareResults] = useState([]);
+    const [selectedDetailTaskId, setSelectedDetailTaskId] = useState(null);
+    const [detailResult, setDetailResult] = useState(null);
+
+    // Toast auto-hide
+    useEffect(() => {
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(null), 3000);
+        return () => clearTimeout(timer);
+    }, [toast]);
+
+    // 페이지 로드 시
+    useEffect(() => {
+        fetchCoins();
+        setDefaultDates();
+    }, []);
+
+    // 이력 탭 활성화 시 이력 조회
+    useEffect(() => {
+        if (activeTab === 'history') {
+            fetchHistory();
+        }
+    }, [activeTab]);
+
+    // ESC 키로 모달 닫기
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                if (isRunConfirmModalOpen) {
+                    setIsRunConfirmModalOpen(false);
+                }
+                if (isDeleteConfirmModalOpen) {
+                    setIsDeleteConfirmModalOpen(false);
+                }
+            }
+        };
+        if (isRunConfirmModalOpen || isDeleteConfirmModalOpen) {
+            window.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        }
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isRunConfirmModalOpen, isDeleteConfirmModalOpen]);
+
+    const setDefaultDates = () => {
+        const today = new Date();
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+        setEndDate(formatDate(today));
+        setStartDate(formatDate(oneYearAgo));
+    };
+
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const fetchCoins = async () => {
+        try {
+            const { data, error } = await send('/dart/api/upbit/market/all', {}, 'GET');
+            if (error) {
+                setToast('종목 목록 조회 실패: ' + error);
+            } else if (data?.success && data?.response) {
+                setAllCoins(data.response);
+            }
+        } catch (e) {
+            console.error('종목 조회 실패:', e);
+            setToast('종목 조회 중 오류가 발생했습니다.');
+        }
+    };
+
+    const fetchHistory = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await send('/dart/api/backtest/history', {}, 'GET');
+            if (error) {
+                setToast('이력 조회 실패: ' + error);
+            } else if (data?.success && data?.response) {
+                setHistoryList(data.response);
+            }
+        } catch (e) {
+            console.error('이력 조회 실패:', e);
+            setToast('이력 조회 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDatePreset = (preset) => {
+        const today = new Date();
+        let start = new Date();
+
+        setSelectedPreset(preset);
+
+        switch (preset) {
+            case '1month':
+                start.setMonth(today.getMonth() - 1);
+                break;
+            case '3months':
+                start.setMonth(today.getMonth() - 3);
+                break;
+            case '6months':
+                start.setMonth(today.getMonth() - 6);
+                break;
+            case '1year':
+                start.setFullYear(today.getFullYear() - 1);
+                break;
+            case 'lastyear':
+                start = new Date(today.getFullYear() - 1, 0, 1);
+                const lastYearEnd = new Date(today.getFullYear() - 1, 11, 31);
+                setStartDate(formatDate(start));
+                setEndDate(formatDate(lastYearEnd));
+                return;
+        }
+
+        setStartDate(formatDate(start));
+        setEndDate(formatDate(today));
+    };
+
+    const handleCoinSelectionModeChange = async (mode) => {
+        setCoinSelectionMode(mode);
+
+        if (mode === 'active') {
+            try {
+                const { data, error } = await send('/dart/api/cointrade/coins', {}, 'GET');
+                if (error) {
+                    setToast('활성 종목 조회 실패: ' + error);
+                } else if (data?.success && data?.response) {
+                    const activeCoins = data.response
+                        .filter(coin => coin.isActive)
+                        .map(coin => coin.coinCode);
+                    setSelectedCoins(new Set(activeCoins));
+                }
+            } catch (e) {
+                console.error('활성 종목 조회 실패:', e);
+                setToast('활성 종목 조회 중 오류가 발생했습니다.');
+            }
+        } else if (mode === 'all') {
+            setSelectedCoins(new Set());
+        }
+    };
+
+    const handleOpenRunConfirmModal = () => {
+        // 유효성 검사
+        if (coinSelectionMode === 'custom' && selectedCoins.size === 0) {
+            setToast('종목을 선택해주세요.');
+            return;
+        }
+
+        if (!startDate || !endDate) {
+            setToast('시작일과 종료일을 선택해주세요.');
+            return;
+        }
+
+        if (new Date(startDate) >= new Date(endDate)) {
+            setToast('종료일은 시작일보다 나중이어야 합니다.');
+            return;
+        }
+
+        setIsRunConfirmModalOpen(true);
+    };
+
+    const handleConfirmRun = async () => {
+        setIsRunConfirmModalOpen(false);
+
+        let coinCodes = [];
+
+        if (coinSelectionMode === 'custom') {
+            coinCodes = Array.from(selectedCoins);
+        } else if (coinSelectionMode === 'active') {
+            coinCodes = Array.from(selectedCoins);
+        }
+        // 'all' 모드면 빈 배열로 전송
+
+        setLoading(true);
+        try {
+            const payload = {
+                coin_codes: coinCodes,
+                start_date: startDate,
+                end_date: endDate
+            };
+
+            const { data, error } = await send('/dart/api/backtest/run', payload, 'POST');
+
+            if (error) {
+                setToast('백테스트 실행 실패: ' + error);
+            } else if (data?.success && data?.response?.task_id) {
+                setRunningTaskId(data.response.task_id);
+                setTaskStatus(null);
+                setTaskResult(null);
+                setToast('백테스트가 시작되었습니다.');
+            }
+        } catch (e) {
+            console.error('백테스트 실행 실패:', e);
+            setToast('백테스트 실행 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCheckStatus = async () => {
+        if (!runningTaskId) return;
+
+        setLoading(true);
+        try {
+            const { data, error } = await send(`/dart/api/backtest/status/${runningTaskId}`, {}, 'GET');
+
+            if (error) {
+                setToast('상태 조회 실패: ' + error);
+            } else if (data?.success && data?.response) {
+                setTaskStatus(data.response);
+
+                // 완료되면 결과 자동 조회
+                if (data.response.status === 'completed') {
+                    await fetchTaskResult(runningTaskId);
+                }
+            }
+        } catch (e) {
+            console.error('상태 조회 실패:', e);
+            setToast('상태 조회 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchTaskResult = async (taskId, includeDetails = false) => {
+        try {
+            const params = includeDetails ? '?include_individual=true&include_trades=true' : '';
+            const { data, error } = await send(`/dart/api/backtest/result/${taskId}${params}`, {}, 'GET');
+
+            if (error) {
+                setToast('결과 조회 실패: ' + error);
+            } else if (data?.success && data?.response?.data) {
+                if (includeDetails) {
+                    setDetailResult({ taskId, data: data.response.data });
+                } else {
+                    setTaskResult(data.response.data);
+                }
+            }
+        } catch (e) {
+            console.error('결과 조회 실패:', e);
+            setToast('결과 조회 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleDeleteResult = (taskId) => {
+        setDeleteTargetTaskId(taskId);
+        setIsDeleteConfirmModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        setIsDeleteConfirmModalOpen(false);
+        const taskId = deleteTargetTaskId;
+        setDeleteTargetTaskId(null);
+
+        try {
+            const { data, error } = await send(`/dart/api/backtest/result/${taskId}`, {}, 'DELETE');
+
+            if (error) {
+                setToast('삭제 실패: ' + error);
+            } else if (data?.success) {
+                setToast('삭제되었습니다.');
+                fetchHistory();
+
+                if (runningTaskId === taskId) {
+                    setRunningTaskId(null);
+                    setTaskStatus(null);
+                    setTaskResult(null);
+                }
+            }
+        } catch (e) {
+            console.error('삭제 실패:', e);
+            setToast('삭제 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleHistorySelect = (taskId) => {
+        if (selectedHistoryIds.includes(taskId)) {
+            setSelectedHistoryIds(selectedHistoryIds.filter(id => id !== taskId));
+            setCompareResults(compareResults.filter(r => r.taskId !== taskId));
+        } else {
+            if (selectedHistoryIds.length >= 2) {
+                setToast('최대 2개까지만 선택할 수 있습니다.');
+                return;
+            }
+            setSelectedHistoryIds([...selectedHistoryIds, taskId]);
+            fetchTaskResult(taskId);
+        }
+    };
+
+    const handleCompare = async () => {
+        if (selectedHistoryIds.length !== 2) {
+            setToast('비교할 항목을 2개 선택해주세요.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const results = [];
+            for (const taskId of selectedHistoryIds) {
+                const { data, error } = await send(`/dart/api/backtest/result/${taskId}`, {}, 'GET');
+                if (error) {
+                    setToast('결과 조회 실패: ' + error);
+                    return;
+                } else if (data?.success && data?.response?.data) {
+                    results.push({ taskId, data: data.response.data });
+                }
+            }
+            setCompareResults(results);
+        } catch (e) {
+            console.error('비교 실패:', e);
+            setToast('비교 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleViewDetail = async (taskId) => {
+        setSelectedDetailTaskId(taskId);
+        await fetchTaskResult(taskId, true);
+    };
+
+    const handleExportExcel = async (result, includeIndividual = false) => {
+        try {
+            const wb = new ExcelJS.Workbook();
+            const portfolio = result.data.portfolio;
+
+            // 요약 시트
+            const summaryWs = wb.addWorksheet('요약');
+
+            // 제목
+            const titleRow = summaryWs.addRow(['백테스트 결과 요약']);
+            titleRow.font = { size: 16, bold: true };
+            titleRow.height = 25;
+            summaryWs.mergeCells('A1:B1');
+
+            summaryWs.addRow([]);
+
+            // 헤더
+            const headerRow = summaryWs.addRow(['항목', '값']);
+            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF4472C4' }
+            };
+            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+            headerRow.height = 20;
+
+            // 데이터 행
+            const dataRows = [
+                ['종목 수', portfolio.coin_count],
+                ['기간', `${portfolio.start_date} ~ ${portfolio.end_date}`],
+                ['초기 자본 (KRW)', portfolio.initial_capital],
+                ['최종 자본 (KRW)', portfolio.final_capital],
+                ['총 수익률 (%)', portfolio.total_return.toFixed(2)],
+                ['총 거래 횟수', portfolio.total_trades],
+                ['승리 거래', portfolio.winning_trades],
+                ['패배 거래', portfolio.losing_trades],
+                ['승률 (%)', portfolio.win_rate.toFixed(2)],
+                ['최대 낙폭 (%)', (portfolio.max_drawdown * 100).toFixed(2)],
+                ['샤프 지수', portfolio.sharpe_ratio.toFixed(2)]
+            ];
+
+            dataRows.forEach((rowData, idx) => {
+                const row = summaryWs.addRow(rowData);
+                row.alignment = { vertical: 'middle' };
+                row.getCell(1).font = { bold: true };
+                row.getCell(2).alignment = { horizontal: 'right' };
+
+                // 수익률 색상
+                if (rowData[0] === '총 수익률 (%)') {
+                    row.getCell(2).font = {
+                        color: { argb: portfolio.total_return >= 0 ? 'FF00B050' : 'FFFF0000' },
+                        bold: true
+                    };
+                }
+
+                // 승률 색상
+                if (rowData[0] === '승률 (%)') {
+                    row.getCell(2).font = { bold: true };
+                }
+            });
+
+            // 열 너비 조정
+            summaryWs.getColumn(1).width = 25;
+            summaryWs.getColumn(2).width = 30;
+
+            // 테두리 추가
+            summaryWs.eachRow((row, rowNumber) => {
+                if (rowNumber >= 3) {
+                    row.eachCell(cell => {
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                    });
+                }
+            });
+
+            // 개별 종목 상세 (includeIndividual이 true일 때)
+            if (includeIndividual && result.data.individual) {
+                Object.entries(result.data.individual).forEach(([coin, data]) => {
+                    // 시트 이름에서 특수문자 제거
+                    const sheetName = coin.replace(/[:\\/?*\[\]]/g, '_').substring(0, 31);
+                    const coinWs = wb.addWorksheet(sheetName);
+
+                    // 종목 정보
+                    const coinTitleRow = coinWs.addRow([`${coin} 거래 내역`]);
+                    coinTitleRow.font = { size: 14, bold: true };
+                    coinTitleRow.height = 25;
+                    coinWs.mergeCells('A1:L1');
+
+                    coinWs.addRow([]);
+
+                    // 종목 요약 정보
+                    const coinSummaryRow = coinWs.addRow(['종목 요약']);
+                    coinSummaryRow.font = { bold: true };
+                    coinWs.mergeCells('A3:B3');
+
+                    const summaryData = [
+                        ['총 수익률 (%)', data.total_return.toFixed(2)],
+                        ['총 거래 횟수', data.total_trades],
+                        ['승률 (%)', data.win_rate.toFixed(2)],
+                        ['평균 보유일', data.avg_holding_days.toFixed(1)],
+                        ['평균 수익 (KRW)', data.avg_profit.toFixed(2)],
+                        ['평균 손실 (KRW)', data.avg_loss.toFixed(2)],
+                        ['Profit Factor', data.profit_factor.toFixed(2)]
+                    ];
+
+                    summaryData.forEach(rowData => {
+                        const row = coinWs.addRow(rowData);
+                        row.getCell(1).font = { bold: true };
+                        row.getCell(2).alignment = { horizontal: 'right' };
+                    });
+
+                    coinWs.addRow([]);
+                    coinWs.addRow([]);
+
+                    // 거래 내역 헤더
+                    const tradeHeaderRow = coinWs.addRow([
+                        '진입일', '청산일', '진입가', '청산가', '수량',
+                        '손익', '수익률(%)', '예측 고가', '예측 저가',
+                        '상승 확률(%)', '기대 수익률(%)', '사유'
+                    ]);
+                    tradeHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    tradeHeaderRow.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FF4472C4' }
+                    };
+                    tradeHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+                    tradeHeaderRow.height = 20;
+
+                    // 거래 내역 데이터
+                    if (data.trades && data.trades.length > 0) {
+                        data.trades.forEach(trade => {
+                            const row = coinWs.addRow([
+                                trade.entry_date,
+                                trade.exit_date,
+                                trade.entry_price,
+                                trade.exit_price,
+                                trade.quantity,
+                                trade.profit_loss,
+                                trade.profit_loss_rate.toFixed(2),
+                                trade.predicted_high,
+                                trade.predicted_low,
+                                (trade.up_probability * 100).toFixed(2),
+                                trade.expected_return.toFixed(2),
+                                trade.reason
+                            ]);
+
+                            // 숫자 컬럼 오른쪽 정렬
+                            [3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(colIdx => {
+                                row.getCell(colIdx).alignment = { horizontal: 'right' };
+                            });
+
+                            // 손익 색상
+                            row.getCell(6).font = {
+                                color: { argb: trade.profit_loss >= 0 ? 'FF00B050' : 'FFFF0000' }
+                            };
+                            row.getCell(7).font = {
+                                color: { argb: trade.profit_loss_rate >= 0 ? 'FF00B050' : 'FFFF0000' },
+                                bold: true
+                            };
+                        });
+                    }
+
+                    // 열 너비 조정
+                    coinWs.getColumn(1).width = 12; // 진입일
+                    coinWs.getColumn(2).width = 12; // 청산일
+                    coinWs.getColumn(3).width = 15; // 진입가
+                    coinWs.getColumn(4).width = 15; // 청산가
+                    coinWs.getColumn(5).width = 15; // 수량
+                    coinWs.getColumn(6).width = 12; // 손익
+                    coinWs.getColumn(7).width = 12; // 수익률
+                    coinWs.getColumn(8).width = 15; // 예측 고가
+                    coinWs.getColumn(9).width = 15; // 예측 저가
+                    coinWs.getColumn(10).width = 12; // 상승 확률
+                    coinWs.getColumn(11).width = 14; // 기대 수익률
+                    coinWs.getColumn(12).width = 15; // 사유
+
+                    // 테두리 추가
+                    const startRow = 13; // 거래 내역 시작 행
+                    coinWs.eachRow((row, rowNumber) => {
+                        if (rowNumber >= startRow) {
+                            row.eachCell(cell => {
+                                cell.border = {
+                                    top: { style: 'thin' },
+                                    left: { style: 'thin' },
+                                    bottom: { style: 'thin' },
+                                    right: { style: 'thin' }
+                                };
+                            });
+                        }
+                    });
+                });
+            }
+
+            const buf = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Backtest_${result.taskId}_${includeIndividual ? 'detailed_' : ''}${new Date().getTime()}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('엑셀 내보내기 실패:', e);
+            setToast('엑셀 내보내기 중 오류가 발생했습니다.');
+        }
+    };
+
+    const getFilteredCoins = () => {
+        return allCoins.filter(coin => {
+            if (marketFilter !== 'ALL') {
+                if (!coin.market.startsWith(marketFilter + '-')) {
+                    return false;
+                }
+            }
+
+            if (searchText) {
+                const search = searchText.toLowerCase();
+                const marketLower = coin.market.toLowerCase();
+                const koreanLower = (coin.korean_name || '').toLowerCase();
+                const englishLower = (coin.english_name || '').toLowerCase();
+
+                if (!marketLower.includes(search) &&
+                    !koreanLower.includes(search) &&
+                    !englishLower.includes(search)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    };
+
+    const handleCoinToggle = (coinCode) => {
+        const newSelected = new Set(selectedCoins);
+        if (newSelected.has(coinCode)) {
+            newSelected.delete(coinCode);
+        } else {
+            newSelected.add(coinCode);
+        }
+        setSelectedCoins(newSelected);
+    };
+
+    const handleSelectAllFiltered = () => {
+        const filtered = getFilteredCoins();
+        const newSelected = new Set(selectedCoins);
+        filtered.forEach(coin => newSelected.add(coin.market));
+        setSelectedCoins(newSelected);
+    };
+
+    const handleDeselectAllFiltered = () => {
+        const filtered = getFilteredCoins();
+        const newSelected = new Set(selectedCoins);
+        filtered.forEach(coin => newSelected.delete(coin.market));
+        setSelectedCoins(newSelected);
+    };
+
+    const getMarketBadgeColor = (market) => {
+        if (market.startsWith('KRW-')) return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        if (market.startsWith('BTC-')) return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+        if (market.startsWith('USDT-')) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    };
+
+    const filteredCoins = getFilteredCoins();
+
+    return (
+        <div className="container mx-auto max-w-7xl p-4">
+            <PageTitle>백테스트</PageTitle>
+
+            {/* 탭 */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 mb-6">
+                <div className="flex border-b border-slate-200 dark:border-slate-700">
+                    <button
+                        onClick={() => setActiveTab('run')}
+                        className={`flex-1 px-6 py-3 font-medium transition-colors ${activeTab === 'run'
+                            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                    >
+                        백테스트 실행
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('history')}
+                        className={`flex-1 px-6 py-3 font-medium transition-colors ${activeTab === 'history'
+                            ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                    >
+                        이력 조회
+                    </button>
+                </div>
+            </div>
+
+            {/* 실행 탭 */}
+            {activeTab === 'run' && (
+                <div className="space-y-6">
+                    {/* 종목 선택 모드 */}
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+                            종목 선택
+                        </h2>
+                        <div className="flex gap-6 mb-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="coinMode"
+                                    value="all"
+                                    checked={coinSelectionMode === 'all'}
+                                    onChange={(e) => handleCoinSelectionModeChange(e.target.value)}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-slate-700 dark:text-slate-300">전체 종목</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="coinMode"
+                                    value="active"
+                                    checked={coinSelectionMode === 'active'}
+                                    onChange={(e) => handleCoinSelectionModeChange(e.target.value)}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-slate-700 dark:text-slate-300">활성화된 종목만</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="coinMode"
+                                    value="custom"
+                                    checked={coinSelectionMode === 'custom'}
+                                    onChange={(e) => handleCoinSelectionModeChange(e.target.value)}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-slate-700 dark:text-slate-300">직접 선택</span>
+                            </label>
+                        </div>
+
+                        {coinSelectionMode === 'active' && (
+                            <div className="text-sm text-slate-600 dark:text-slate-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
+                                활성화된 {selectedCoins.size}개 종목이 선택되었습니다.
+                            </div>
+                        )}
+
+                        {coinSelectionMode === 'custom' && (
+                            <>
+                                <div className="flex flex-col md:flex-row gap-4 mb-4">
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setMarketFilter('ALL')}
+                                            className={`px-3 py-1.5 rounded text-sm ${marketFilter === 'ALL' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                        >
+                                            전체
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('KRW')}
+                                            className={`px-3 py-1.5 rounded text-sm ${marketFilter === 'KRW' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                        >
+                                            KRW
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('BTC')}
+                                            className={`px-3 py-1.5 rounded text-sm ${marketFilter === 'BTC' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                        >
+                                            BTC
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('USDT')}
+                                            className={`px-3 py-1.5 rounded text-sm ${marketFilter === 'USDT' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                        >
+                                            USDT
+                                        </button>
+                                    </div>
+                                    <div className="flex-1">
+                                        <input
+                                            type="text"
+                                            placeholder="종목코드 또는 종목명 검색..."
+                                            value={searchText}
+                                            onChange={(e) => setSearchText(e.target.value)}
+                                            className="w-full px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button onClick={handleSelectAllFiltered} className="px-4 py-1.5 text-sm">
+                                            전체 선택
+                                        </Button>
+                                        <Button onClick={handleDeselectAllFiltered} className="px-4 py-1.5 text-sm">
+                                            전체 해제
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="max-h-96 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded p-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        {filteredCoins.map((coin) => (
+                                            <label
+                                                key={coin.market}
+                                                className="flex items-center gap-2 p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedCoins.has(coin.market)}
+                                                    onChange={() => handleCoinToggle(coin.market)}
+                                                    className="w-4 h-4"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${getMarketBadgeColor(coin.market)}`}>
+                                                            {coin.market.split('-')[0]}
+                                                        </span>
+                                                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                                                            {coin.market}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                                                        {coin.korean_name}
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                                    {selectedCoins.size}개 종목 선택됨
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* 날짜 선택 */}
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+                            기간 선택
+                        </h2>
+
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            <button
+                                onClick={() => handleDatePreset('1month')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '1month'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                최근 1개월
+                            </button>
+                            <button
+                                onClick={() => handleDatePreset('3months')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '3months'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                최근 3개월
+                            </button>
+                            <button
+                                onClick={() => handleDatePreset('6months')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '6months'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                최근 6개월
+                            </button>
+                            <button
+                                onClick={() => handleDatePreset('1year')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '1year'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                최근 1년
+                            </button>
+                            <button
+                                onClick={() => handleDatePreset('lastyear')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === 'lastyear'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                전년도 전체
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    시작일
+                                </label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => {
+                                        setStartDate(e.target.value);
+                                        setSelectedPreset(null);
+                                    }}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    종료일
+                                </label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => {
+                                        setEndDate(e.target.value);
+                                        setSelectedPreset(null);
+                                    }}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 실행 버튼 */}
+                    <div className="flex justify-end gap-3">
+                        <Button
+                            onClick={handleOpenRunConfirmModal}
+                            disabled={loading}
+                            className="px-6 py-2"
+                        >
+                            {loading ? '실행 중...' : '백테스트 실행'}
+                        </Button>
+                    </div>
+
+                    {/* 실행 상태 및 결과 */}
+                    {runningTaskId && (
+                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                    실행 상태
+                                </h2>
+                                <Button onClick={handleCheckStatus} className="px-4 py-2 text-sm">
+                                    상태 확인
+                                </Button>
+                            </div>
+
+                            {taskStatus && (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <span className="text-sm text-slate-600 dark:text-slate-400">Task ID:</span>
+                                            <div className="text-sm font-mono text-slate-900 dark:text-slate-100">{taskStatus.task_id}</div>
+                                        </div>
+                                        <div>
+                                            <span className="text-sm text-slate-600 dark:text-slate-400">상태:</span>
+                                            <div className={`text-sm font-semibold ${taskStatus.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                                                taskStatus.status === 'running' ? 'text-blue-600 dark:text-blue-400' :
+                                                    taskStatus.status === 'failed' ? 'text-red-600 dark:text-red-400' :
+                                                        'text-slate-600 dark:text-slate-400'
+                                                }`}>
+                                                {taskStatus.status}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span className="text-sm text-slate-600 dark:text-slate-400">진행률:</span>
+                                            <div className="text-sm text-slate-900 dark:text-slate-100">{taskStatus.progress}</div>
+                                        </div>
+                                        <div>
+                                            <span className="text-sm text-slate-600 dark:text-slate-400">생성 시간:</span>
+                                            <div className="text-sm text-slate-900 dark:text-slate-100">{taskStatus.created_at}</div>
+                                        </div>
+                                    </div>
+
+                                    {taskStatus.error_message && (
+                                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                            <span className="text-sm text-red-700 dark:text-red-300">{taskStatus.error_message}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {taskResult && (
+                                <ResultSummary result={taskResult} onExport={() => handleExportExcel({ taskId: runningTaskId, data: taskResult }, false)} />
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 이력 탭 */}
+            {activeTab === 'history' && (
+                <div className="space-y-6">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <div className="text-slate-600 dark:text-slate-400">로딩 중...</div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* 비교 기능 */}
+                            {selectedHistoryIds.length > 0 && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-blue-700 dark:text-blue-300">
+                                            {selectedHistoryIds.length}개 항목 선택됨
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button onClick={() => { setSelectedHistoryIds([]); setCompareResults([]); }} className="px-4 py-2 text-sm">
+                                                선택 취소
+                                            </Button>
+                                            {selectedHistoryIds.length === 2 && (
+                                                <Button onClick={handleCompare} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700">
+                                                    비교하기
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 비교 결과 */}
+                            {compareResults.length === 2 && (
+                                <ComparisonView results={compareResults} />
+                            )}
+
+                            {/* 이력 목록 */}
+                            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+                                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                        백테스트 이력 ({historyList.length})
+                                    </h2>
+                                </div>
+
+                                {historyList.length === 0 ? (
+                                    <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                                        이력이 없습니다.
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* 데스크톱 테이블 뷰 */}
+                                        <div className="hidden md:block overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-slate-50 dark:bg-slate-700">
+                                                    <tr>
+                                                        <th className="px-4 py-3 text-left">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="w-4 h-4"
+                                                                disabled
+                                                            />
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Task ID</th>
+                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">종목 수</th>
+                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">기간</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">총 수익률</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">승률</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">거래 횟수</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">MDD</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">샤프 지수</th>
+                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">작업</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                    {historyList.map((item) => (
+                                                        <tr key={item.task_id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                                            <td className="px-4 py-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedHistoryIds.includes(item.task_id)}
+                                                                    onChange={() => handleHistorySelect(item.task_id)}
+                                                                    className="w-4 h-4"
+                                                                />
+                                                            </td>
+                                                            <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{item.task_id}</td>
+                                                            <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100">{item.coin_count}</td>
+                                                            <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100 text-xs">{item.start_date} ~ {item.end_date}</td>
+                                                            <td className={`px-4 py-3 text-right font-semibold ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                {item.total_return.toFixed(2)}%
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.win_rate.toFixed(2)}%</td>
+                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.total_trades}</td>
+                                                            <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{(item.max_drawdown * 100).toFixed(2)}%</td>
+                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.sharpe_ratio.toFixed(2)}</td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    <button
+                                                                        onClick={() => handleViewDetail(item.task_id)}
+                                                                        className="text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200 hover:underline text-xs font-medium"
+                                                                    >
+                                                                        상세
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteResult(item.task_id)}
+                                                                        className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors"
+                                                                    >
+                                                                        삭제
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* 모바일 카드 뷰 */}
+                                        <div className="md:hidden p-4 space-y-4">
+                                            {historyList.map((item) => (
+                                                <div
+                                                    key={item.task_id}
+                                                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 shadow-sm space-y-3"
+                                                >
+                                                    {/* 체크박스와 Task ID */}
+                                                    <div className="flex items-start gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedHistoryIds.includes(item.task_id)}
+                                                            onChange={() => handleHistorySelect(item.task_id)}
+                                                            className="w-4 h-4 mt-1"
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                                                Task ID
+                                                            </div>
+                                                            <div className="font-mono text-xs text-slate-600 dark:text-slate-400 break-all">
+                                                                {item.task_id}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 주요 지표 - 2열 그리드 */}
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                                                총 수익률
+                                                            </div>
+                                                            <div className={`text-lg font-bold ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                {item.total_return.toFixed(2)}%
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                                                승률
+                                                            </div>
+                                                            <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                                                                {item.win_rate.toFixed(2)}%
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                                                거래 횟수
+                                                            </div>
+                                                            <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                                                                {item.total_trades}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                                                종목 수
+                                                            </div>
+                                                            <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                                                                {item.coin_count}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 기타 정보 */}
+                                                    <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-slate-600 dark:text-slate-400">기간</span>
+                                                            <span className="text-slate-900 dark:text-slate-100 font-medium text-xs">
+                                                                {item.start_date} ~ {item.end_date}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-slate-600 dark:text-slate-400">MDD</span>
+                                                            <span className="text-red-600 dark:text-red-400 font-medium">
+                                                                {(item.max_drawdown * 100).toFixed(2)}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-slate-600 dark:text-slate-400">샤프 지수</span>
+                                                            <span className="text-slate-900 dark:text-slate-100 font-medium">
+                                                                {item.sharpe_ratio.toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 액션 버튼 */}
+                                                    <div className="flex gap-2 pt-2">
+                                                        <button
+                                                            onClick={() => handleViewDetail(item.task_id)}
+                                                            className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                                                        >
+                                                            상세 보기
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteResult(item.task_id)}
+                                                            className="px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-red-900/30 text-red-600 dark:text-red-200 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/50 transition-colors"
+                                                        >
+                                                            삭제
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* 상세 보기 */}
+                            {detailResult && selectedDetailTaskId && (
+                                <DetailView
+                                    result={detailResult}
+                                    onClose={() => { setDetailResult(null); setSelectedDetailTaskId(null); }}
+                                    onExport={(includeIndividual) => handleExportExcel(detailResult, includeIndividual)}
+                                />
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* 백테스트 실행 확인 모달 */}
+            {isRunConfirmModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsRunConfirmModalOpen(false);
+                    }}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                        {/* 헤더 */}
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                백테스트 실행 확인
+                            </h3>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="px-6 py-4 space-y-4">
+                            <p className="text-slate-700 dark:text-slate-300">
+                                다음 조건으로 백테스트를 실행하시겠습니까?
+                            </p>
+
+                            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3">
+                                {/* 종목 선택 정보 */}
+                                <div>
+                                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                        종목 선택
+                                    </div>
+                                    <div className="text-sm text-slate-900 dark:text-slate-100">
+                                        {coinSelectionMode === 'all' && '전체 종목'}
+                                        {coinSelectionMode === 'active' && `활성화된 종목 (${selectedCoins.size}개)`}
+                                        {coinSelectionMode === 'custom' && `직접 선택 (${selectedCoins.size}개)`}
+                                    </div>
+                                </div>
+
+                                {/* 기간 정보 */}
+                                <div>
+                                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                        백테스트 기간
+                                    </div>
+                                    <div className="text-sm text-slate-900 dark:text-slate-100">
+                                        {startDate} ~ {endDate}
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                        {(() => {
+                                            const start = new Date(startDate);
+                                            const end = new Date(endDate);
+                                            const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                                            return `총 ${diffDays}일`;
+                                        })()}
+                                    </div>
+                                </div>
+
+                                {/* 선택된 종목 목록 (custom 모드일 때만) */}
+                                {coinSelectionMode === 'custom' && selectedCoins.size > 0 && selectedCoins.size <= 10 && (
+                                    <div>
+                                        <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                            선택된 종목
+                                        </div>
+                                        <div className="text-xs text-slate-700 dark:text-slate-300 flex flex-wrap gap-1">
+                                            {Array.from(selectedCoins).map(coin => (
+                                                <span key={coin} className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded">
+                                                    {coin}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-3">
+                                ⚠️ 백테스트는 시간이 소요될 수 있습니다. 실행 후 상태 확인 버튼으로 진행 상황을 확인하세요.
+                            </div>
+                        </div>
+
+                        {/* 버튼 */}
+                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2">
+                            <button
+                                onClick={() => setIsRunConfirmModalOpen(false)}
+                                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleConfirmRun}
+                                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                            >
+                                확인
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 삭제 확인 모달 */}
+            {isDeleteConfirmModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsDeleteConfirmModalOpen(false);
+                    }}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                        {/* 헤더 */}
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                백테스트 결과 삭제
+                            </h3>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="px-6 py-4 space-y-4">
+                            <p className="text-slate-700 dark:text-slate-300">
+                                이 백테스트 결과를 삭제하시겠습니까?
+                            </p>
+
+                            {deleteTargetTaskId && (
+                                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
+                                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                        Task ID
+                                    </div>
+                                    <div className="text-sm font-mono text-slate-900 dark:text-slate-100 break-all">
+                                        {deleteTargetTaskId}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="text-xs text-slate-500 dark:text-slate-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                ⚠️ 삭제된 데이터는 복구할 수 없습니다.
+                            </div>
+                        </div>
+
+                        {/* 버튼 */}
+                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2">
+                            <button
+                                onClick={() => {
+                                    setIsDeleteConfirmModalOpen(false);
+                                    setDeleteTargetTaskId(null);
+                                }}
+                                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleConfirmDelete}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+                            >
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast */}
+            {toast && (
+                <div className="fixed bottom-4 right-4 z-50 animate-fade-in bg-slate-800 text-white px-6 py-3 rounded shadow-lg">
+                    {toast}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// 결과 요약 컴포넌트
+function ResultSummary({ result, onExport }) {
+    const portfolio = result.portfolio;
+
+    return (
+        <div className="mt-6 space-y-4">
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">결과 요약</h3>
+                <Button onClick={onExport} className="px-4 py-2 text-sm">
+                    요약 엑셀 내보내기
+                </Button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">총 수익률</div>
+                    <div className={`text-2xl font-bold ${portfolio.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {portfolio.total_return.toFixed(2)}%
+                    </div>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">승률</div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                        {portfolio.win_rate.toFixed(2)}%
+                    </div>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">거래 횟수</div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                        {portfolio.total_trades}
+                    </div>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">샤프 지수</div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                        {portfolio.sharpe_ratio.toFixed(2)}
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">자본 변화</div>
+                    <div className="space-y-1">
+                        <div className="flex justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">초기 자본</span>
+                            <span className="text-sm text-slate-900 dark:text-slate-100">
+                                <NumberWithBoldInteger value={portfolio.initial_capital} decimals={2} suffix=" KRW" />
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">최종 자본</span>
+                            <span className="text-sm text-slate-900 dark:text-slate-100">
+                                <NumberWithBoldInteger value={portfolio.final_capital} decimals={2} suffix=" KRW" />
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">거래 통계</div>
+                    <div className="space-y-1">
+                        <div className="flex justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">승리 거래</span>
+                            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                                {portfolio.winning_trades}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">패배 거래</span>
+                            <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                                {portfolio.losing_trades}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">최대 낙폭 (MDD)</span>
+                            <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                                {(portfolio.max_drawdown * 100).toFixed(2)}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// 비교 뷰 컴포넌트
+function ComparisonView({ results }) {
+    const [result1, result2] = results;
+
+    const comparisonData = [
+        { name: '총 수익률', value1: result1.data.portfolio.total_return, value2: result2.data.portfolio.total_return, unit: '%' },
+        { name: '승률', value1: result1.data.portfolio.win_rate, value2: result2.data.portfolio.win_rate, unit: '%' },
+        { name: '거래 횟수', value1: result1.data.portfolio.total_trades, value2: result2.data.portfolio.total_trades, unit: '' },
+        { name: 'MDD', value1: result1.data.portfolio.max_drawdown * 100, value2: result2.data.portfolio.max_drawdown * 100, unit: '%' },
+        { name: '샤프 지수', value1: result1.data.portfolio.sharpe_ratio, value2: result2.data.portfolio.sharpe_ratio, unit: '' },
+    ];
+
+    return (
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-6">결과 비교</h2>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-700">
+                        <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">지표</th>
+                            <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">
+                                Test 1<br />
+                                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{result1.taskId}</span>
+                            </th>
+                            <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">
+                                Test 2<br />
+                                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{result2.taskId}</span>
+                            </th>
+                            <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">차이</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {comparisonData.map((item) => {
+                            const diff = item.value1 - item.value2;
+                            const better = diff > 0 ? 1 : diff < 0 ? 2 : 0;
+
+                            return (
+                                <tr key={item.name}>
+                                    <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{item.name}</td>
+                                    <td className={`px-4 py-3 text-center ${better === 1 ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                                        {item.value1.toFixed(2)}{item.unit}
+                                    </td>
+                                    <td className={`px-4 py-3 text-center ${better === 2 ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                                        {item.value2.toFixed(2)}{item.unit}
+                                    </td>
+                                    <td className={`px-4 py-3 text-center font-medium ${diff > 0 ? 'text-green-600 dark:text-green-400' : diff < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                                        {diff > 0 ? '+' : ''}{diff.toFixed(2)}{item.unit}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+// 상세 뷰 컴포넌트
+function DetailView({ result, onClose, onExport }) {
+    const portfolio = result.data.portfolio;
+    const individual = result.data.individual || {};
+
+    // 월별 데이터 계산 (실제로는 trades 데이터를 기반으로 계산해야 함 - 여기서는 샘플)
+    const monthlyData = useMemo(() => {
+        // 실제 구현: trades를 월별로 그룹화하여 수익률 계산
+        // 여기서는 샘플 데이터
+        return [];
+    }, [result]);
+
+    // 승률/패율 차트 데이터
+    const winLossData = [
+        { name: '승리', value: portfolio.winning_trades, color: '#10b981' },
+        { name: '패배', value: portfolio.losing_trades, color: '#ef4444' },
+    ];
+
+    // 종목별 수익 기여도 (individual 데이터 기반)
+    const coinContributionData = Object.entries(individual).map(([coin, data]) => ({
+        name: coin,
+        return: data.total_return,
+        trades: data.total_trades
+    }));
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm" onClick={onClose}>
+            <div className="flex items-center justify-center min-h-screen p-4">
+                <div
+                    className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* 헤더 */}
+                    <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">백테스트 상세 결과</h2>
+                        <div className="flex items-center gap-2">
+                            <Button onClick={() => onExport(false)} className="px-4 py-2 text-sm bg-slate-600 hover:bg-slate-700">
+                                요약 엑셀
+                            </Button>
+                            <Button onClick={() => onExport(true)} className="px-4 py-2 text-sm">
+                                상세 엑셀
+                            </Button>
+                            <button
+                                onClick={onClose}
+                                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 콘텐츠 */}
+                    <div className="p-6 space-y-6">
+                        {/* 요약 */}
+                        <ResultSummary result={result.data} onExport={() => onExport(false)} />
+
+                        {/* 차트 섹션 */}
+                        <div className="space-y-6">
+                            {/* 승률/패율 파이 차트 */}
+                            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
+                                <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4">승률 / 패율</h3>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <PieChart>
+                                        <Pie
+                                            data={winLossData}
+                                            cx="50%"
+                                            cy="50%"
+                                            labelLine={false}
+                                            label={(entry) => `${entry.name}: ${entry.value}`}
+                                            outerRadius={100}
+                                            fill="#8884d8"
+                                            dataKey="value"
+                                        >
+                                            {winLossData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* 종목별 수익 기여도 */}
+                            {coinContributionData.length > 0 && (
+                                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
+                                    <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4">종목별 수익 기여도</h3>
+                                    <ResponsiveContainer width="100%" height={300}>
+                                        <BarChart data={coinContributionData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                                            <YAxis />
+                                            <Tooltip />
+                                            <Legend />
+                                            <Bar dataKey="return" fill="#3b82f6" name="수익률 (%)" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+
+                            {/* 종목별 거래횟수 */}
+                            {coinContributionData.length > 0 && (
+                                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
+                                    <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4">종목별 거래 횟수</h3>
+                                    <ResponsiveContainer width="100%" height={300}>
+                                        <BarChart data={coinContributionData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                                            <YAxis />
+                                            <Tooltip />
+                                            <Legend />
+                                            <Bar dataKey="trades" fill="#10b981" name="거래 횟수" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 개별 종목 상세 */}
+                        {Object.keys(individual).length > 0 && (
+                            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
+                                <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4">개별 종목 상세</h3>
+                                <div className="space-y-4">
+                                    {Object.entries(individual).map(([coin, data]) => (
+                                        <details key={coin} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <summary className="px-4 py-3 cursor-pointer font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                                {coin} - 수익률: {data.total_return.toFixed(2)}% | 거래: {data.total_trades}회 | 승률: {data.win_rate.toFixed(2)}%
+                                            </summary>
+                                            <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700">
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                                    <div>
+                                                        <div className="text-xs text-slate-600 dark:text-slate-400">평균 보유일</div>
+                                                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                            {data.avg_holding_days.toFixed(1)}일
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-slate-600 dark:text-slate-400">평균 수익</div>
+                                                        <div className="text-sm text-green-600 dark:text-green-400">
+                                                            <NumberWithBoldInteger value={data.avg_profit} decimals={2} suffix=" KRW" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-slate-600 dark:text-slate-400">평균 손실</div>
+                                                        <div className="text-sm text-red-600 dark:text-red-400">
+                                                            <NumberWithBoldInteger value={data.avg_loss} decimals={2} suffix=" KRW" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-slate-600 dark:text-slate-400">Profit Factor</div>
+                                                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                            {data.profit_factor.toFixed(2)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* 거래 내역 */}
+                                                {data.trades && data.trades.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                                총 {data.trades.length}개 거래
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 dark:text-slate-500 italic hidden sm:block">
+                                                                ← 좌우로 스크롤 가능 →
+                                                            </div>
+                                                        </div>
+                                                        <div className="overflow-x-auto border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800/50 shadow-sm">
+                                                            <table className="w-full text-xs min-w-[1200px]">
+                                                                <thead className="bg-slate-100 dark:bg-slate-700">
+                                                                    <tr>
+                                                                        <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">진입일</th>
+                                                                        <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">청산일</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">진입가</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">청산가</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">수량</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">손익</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">수익률</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">예측 고가</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">예측 저가</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">상승 확률</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">기대 수익률</th>
+                                                                        <th className="px-3 py-2 text-center font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">사유</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                                    {data.trades.map((trade, idx) => (
+                                                                        <tr key={idx} className="text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                                                            <td className="px-3 py-2 whitespace-nowrap">{trade.entry_date}</td>
+                                                                            <td className="px-3 py-2 whitespace-nowrap">{trade.exit_date}</td>
+                                                                            <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                                                <NumberWithBoldInteger value={trade.entry_price} decimals={2} />
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                                                <NumberWithBoldInteger value={trade.exit_price} decimals={2} />
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                                                {trade.quantity.toFixed(8)}
+                                                                            </td>
+                                                                            <td className={`px-3 py-2 text-right whitespace-nowrap ${trade.profit_loss >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                                <NumberWithBoldInteger value={trade.profit_loss} decimals={2} />
+                                                                            </td>
+                                                                            <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${trade.profit_loss_rate >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                                {trade.profit_loss_rate.toFixed(2)}%
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-right whitespace-nowrap text-blue-600 dark:text-blue-400">
+                                                                                <NumberWithBoldInteger value={trade.predicted_high} decimals={2} />
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-right whitespace-nowrap text-orange-600 dark:text-orange-400">
+                                                                                <NumberWithBoldInteger value={trade.predicted_low} decimals={2} />
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-right whitespace-nowrap text-purple-600 dark:text-purple-400">
+                                                                                {(trade.up_probability * 100).toFixed(2)}%
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-right font-medium whitespace-nowrap text-indigo-600 dark:text-indigo-400">
+                                                                                {trade.expected_return.toFixed(2)}%
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-center whitespace-nowrap">
+                                                                                <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                                                                    {trade.reason}
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </details>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

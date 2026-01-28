@@ -24,6 +24,7 @@ import CointradeCoins from '@/pages/cointrade/CointradeCoins'
 import CointradeScheduler from '@/pages/cointrade/CointradeScheduler'
 import CointradeHistory from '@/pages/cointrade/CointradeHistory'
 import MlModelInfo from '@/pages/cointrade/MlModelInfo'
+import Backtest from '@/pages/cointrade/Backtest'
 
 const routes = {
 
@@ -114,6 +115,13 @@ const routes = {
         label: '모델 예측정보 조회',
         path: '/cointrade/ml-models',
         element: <MlModelInfo />,
+        requiredRoles: ['ROLE_SUPER_ADMIN']
+    },
+    "Backtest": {
+        section: '코인',
+        label: '백테스트',
+        path: '/cointrade/backtest',
+        element: <Backtest />,
         requiredRoles: ['ROLE_SUPER_ADMIN']
     }
 }

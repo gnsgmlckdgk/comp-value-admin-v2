@@ -1140,20 +1140,16 @@ export default function Backtest() {
 
                     {/* 날짜 선택 */}
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                            기간 선택
-                        </h2>
+                        <div className="mb-4">
+                            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                                기간 선택
+                            </h2>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                ⚠️ 60일 이상의 기간을 선택해야 정상적으로 동작합니다.
+                            </p>
+                        </div>
 
                         <div className="flex flex-wrap gap-2 mb-4">
-                            <button
-                                onClick={() => handleDatePreset('1month')}
-                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '1month'
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
-                                    }`}
-                            >
-                                최근 1개월
-                            </button>
                             <button
                                 onClick={() => handleDatePreset('3months')}
                                 className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '3months'

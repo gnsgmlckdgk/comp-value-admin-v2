@@ -28,6 +28,23 @@ function NumberWithBoldInteger({ value, decimals = 2, suffix = '' }) {
 }
 
 /**
+ * 진행률 문자열 보정 (0/? -> 0/10 형태로 변환)
+ */
+function formatProgress(progress) {
+    if (!progress) return '-';
+
+    // "0/?" 형태인 경우 localStorage에서 전체 개수 가져오기
+    if (progress.includes('?')) {
+        const totalCount = localStorage.getItem('backtest_total_count');
+        if (totalCount) {
+            return progress.replace('?', totalCount);
+        }
+    }
+
+    return progress;
+}
+
+/**
  * 백테스트 페이지
  */
 export default function Backtest() {
@@ -38,7 +55,7 @@ export default function Backtest() {
     // 실행 탭 상태
     const [allCoins, setAllCoins] = useState([]);
     const [selectedCoins, setSelectedCoins] = useState(new Set());
-    const [coinSelectionMode, setCoinSelectionMode] = useState('all'); // 'all' | 'active' | 'custom'
+    const [coinSelectionMode, setCoinSelectionMode] = useState('active'); // 'all' | 'active' | 'custom'
     const [searchText, setSearchText] = useState('');
     const [marketFilter, setMarketFilter] = useState('ALL');
 
@@ -75,7 +92,61 @@ export default function Backtest() {
     useEffect(() => {
         fetchCoins();
         setDefaultDates();
+        restoreRunningBacktest();
+        loadActiveCoins(); // 활성 종목 자동 로드
     }, []);
+
+    // 활성 종목 자동 로드
+    const loadActiveCoins = async () => {
+        try {
+            const { data, error } = await send('/dart/api/cointrade/coins', {}, 'GET');
+            if (error) {
+                console.error('활성 종목 조회 실패:', error);
+            } else if (data?.success && data?.response) {
+                const activeCoins = data.response
+                    .filter(coin => coin.isActive)
+                    .map(coin => coin.coinCode);
+                setSelectedCoins(new Set(activeCoins));
+            }
+        } catch (e) {
+            console.error('활성 종목 조회 실패:', e);
+        }
+    };
+
+    // localStorage에서 진행 중인 백테스트 복원
+    const restoreRunningBacktest = async () => {
+        try {
+            const savedTaskId = localStorage.getItem('backtest_running_task_id');
+            if (savedTaskId) {
+                setRunningTaskId(savedTaskId);
+                // 상태 조회하여 현재 상태 확인
+                const { data, error } = await send(`/dart/api/backtest/status/${savedTaskId}`, {}, 'GET');
+
+                if (error) {
+                    // 에러 시 localStorage 정리
+                    localStorage.removeItem('backtest_running_task_id');
+                    localStorage.removeItem('backtest_total_count');
+                } else if (data?.success && data?.response) {
+                    setTaskStatus(data.response);
+
+                    // 완료되었으면 결과 자동 조회
+                    if (data.response.status === 'completed') {
+                        await fetchTaskResult(savedTaskId);
+                        localStorage.removeItem('backtest_running_task_id');
+                        localStorage.removeItem('backtest_total_count');
+                    } else if (data.response.status === 'failed') {
+                        // 실패한 경우도 localStorage 정리
+                        localStorage.removeItem('backtest_running_task_id');
+                        localStorage.removeItem('backtest_total_count');
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('백테스트 복원 실패:', e);
+            localStorage.removeItem('backtest_running_task_id');
+            localStorage.removeItem('backtest_total_count');
+        }
+    };
 
     // 이력 탭 활성화 시 이력 조회
     useEffect(() => {
@@ -83,6 +154,43 @@ export default function Backtest() {
             fetchHistory();
         }
     }, [activeTab]);
+
+    // 실행 중인 백테스트 자동 폴링
+    useEffect(() => {
+        if (!runningTaskId || activeTab !== 'run') return;
+
+        // 현재 상태가 완료 또는 실패면 폴링 중지
+        if (taskStatus?.status === 'completed' || taskStatus?.status === 'failed') {
+            return;
+        }
+
+        // 5초마다 상태 체크
+        const intervalId = setInterval(async () => {
+            try {
+                const { data, error } = await send(`/dart/api/backtest/status/${runningTaskId}`, {}, 'GET');
+
+                if (!error && data?.success && data?.response) {
+                    setTaskStatus(data.response);
+
+                    // 완료되면 결과 자동 조회 및 폴링 중지
+                    if (data.response.status === 'completed') {
+                        await fetchTaskResult(runningTaskId);
+                        localStorage.removeItem('backtest_running_task_id');
+                        localStorage.removeItem('backtest_total_count');
+                        clearInterval(intervalId);
+                    } else if (data.response.status === 'failed') {
+                        localStorage.removeItem('backtest_running_task_id');
+                        localStorage.removeItem('backtest_total_count');
+                        clearInterval(intervalId);
+                    }
+                }
+            } catch (e) {
+                console.error('자동 상태 조회 실패:', e);
+            }
+        }, 5000);
+
+        return () => clearInterval(intervalId);
+    }, [runningTaskId, taskStatus?.status, activeTab]);
 
     // ESC 키로 모달 닫기
     useEffect(() => {
@@ -239,6 +347,14 @@ export default function Backtest() {
         }
         // 'all' 모드면 빈 배열로 전송
 
+        // 전체 종목 수 계산
+        let totalCount = 0;
+        if (coinSelectionMode === 'all') {
+            totalCount = allCoins.length;
+        } else {
+            totalCount = selectedCoins.size;
+        }
+
         setLoading(true);
         try {
             const payload = {
@@ -252,9 +368,24 @@ export default function Backtest() {
             if (error) {
                 setToast('백테스트 실행 실패: ' + error);
             } else if (data?.success && data?.response?.task_id) {
-                setRunningTaskId(data.response.task_id);
-                setTaskStatus(null);
+                const taskId = data.response.task_id;
+                setRunningTaskId(taskId);
                 setTaskResult(null);
+                // localStorage에 실행 중인 백테스트 정보 및 전체 종목 수 저장
+                localStorage.setItem('backtest_running_task_id', taskId);
+                localStorage.setItem('backtest_total_count', totalCount.toString());
+
+                // 백테스트 실행 응답에 상태 정보가 포함되어 있으면 설정, 없으면 즉시 조회
+                if (data.response.status) {
+                    setTaskStatus(data.response);
+                } else {
+                    // 즉시 상태 조회
+                    const statusResponse = await send(`/dart/api/backtest/status/${taskId}`, {}, 'GET');
+                    if (statusResponse.data?.success && statusResponse.data?.response) {
+                        setTaskStatus(statusResponse.data.response);
+                    }
+                }
+
                 setToast('백테스트가 시작되었습니다.');
             }
         } catch (e) {
@@ -277,9 +408,15 @@ export default function Backtest() {
             } else if (data?.success && data?.response) {
                 setTaskStatus(data.response);
 
-                // 완료되면 결과 자동 조회
+                // 완료되면 결과 자동 조회 및 localStorage 정리
                 if (data.response.status === 'completed') {
                     await fetchTaskResult(runningTaskId);
+                    localStorage.removeItem('backtest_running_task_id');
+                    localStorage.removeItem('backtest_total_count');
+                } else if (data.response.status === 'failed') {
+                    // 실패한 경우도 localStorage 정리
+                    localStorage.removeItem('backtest_running_task_id');
+                    localStorage.removeItem('backtest_total_count');
                 }
             }
         } catch (e) {
@@ -405,14 +542,24 @@ export default function Backtest() {
 
             // 헤더
             const headerRow = summaryWs.addRow(['항목', '값']);
-            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            headerRow.fill = {
+            headerRow.height = 20;
+
+            // 각 셀에 개별적으로 스타일 적용
+            headerRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.getCell(1).fill = {
                 type: 'pattern',
                 pattern: 'solid',
                 fgColor: { argb: 'FF4472C4' }
             };
-            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-            headerRow.height = 20;
+            headerRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+            headerRow.getCell(2).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.getCell(2).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF4472C4' }
+            };
+            headerRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
 
             // 데이터 행
             const dataRows = [
@@ -449,8 +596,50 @@ export default function Backtest() {
                 }
             });
 
+            // 실행 시점 파라미터 추가
+            if (result.data.params) {
+                summaryWs.addRow([]);
+                summaryWs.addRow([]);
+
+                const paramsTitleRow = summaryWs.addRow(['실행 시점 파라미터']);
+                paramsTitleRow.font = { size: 14, bold: true };
+                paramsTitleRow.height = 25;
+                summaryWs.mergeCells(`A${paramsTitleRow.number}:B${paramsTitleRow.number}`);
+
+                summaryWs.addRow([]);
+
+                const paramsHeaderRow = summaryWs.addRow(['파라미터', '값']);
+                paramsHeaderRow.height = 20;
+
+                // 각 셀에 개별적으로 스타일 적용
+                paramsHeaderRow.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                paramsHeaderRow.getCell(1).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF70AD47' }
+                };
+                paramsHeaderRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+                paramsHeaderRow.getCell(2).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                paramsHeaderRow.getCell(2).fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF70AD47' }
+                };
+                paramsHeaderRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
+
+                Object.entries(result.data.params).forEach(([key, value]) => {
+                    const row = summaryWs.addRow([
+                        `${getParamLabel(key)} (${key})`,
+                        typeof value === 'object' ? JSON.stringify(value) : String(value)
+                    ]);
+                    row.getCell(1).font = { bold: true };
+                    row.getCell(2).alignment = { horizontal: 'right' };
+                });
+            }
+
             // 열 너비 조정
-            summaryWs.getColumn(1).width = 25;
+            summaryWs.getColumn(1).width = 35;
             summaryWs.getColumn(2).width = 30;
 
             // 테두리 추가
@@ -487,8 +676,18 @@ export default function Backtest() {
                     coinSummaryRow.font = { bold: true };
                     coinWs.mergeCells('A3:B3');
 
+                    // 총 수익/손실 계산
+                    const totalProfit = data.trades && data.trades.length > 0
+                        ? data.trades.reduce((sum, trade) => sum + trade.profit_loss, 0)
+                        : (() => {
+                            const winningTrades = Math.round(data.total_trades * (data.win_rate / 100));
+                            const losingTrades = data.total_trades - winningTrades;
+                            return (data.avg_profit * winningTrades) + (data.avg_loss * losingTrades);
+                        })();
+
                     const summaryData = [
                         ['총 수익률 (%)', data.total_return.toFixed(2)],
+                        ['총 수익/손실 (KRW)', totalProfit.toFixed(2)],
                         ['총 거래 횟수', data.total_trades],
                         ['승률 (%)', data.win_rate.toFixed(2)],
                         ['평균 보유일', data.avg_holding_days.toFixed(1)],
@@ -501,6 +700,22 @@ export default function Backtest() {
                         const row = coinWs.addRow(rowData);
                         row.getCell(1).font = { bold: true };
                         row.getCell(2).alignment = { horizontal: 'right' };
+
+                        // 총 수익률 색상
+                        if (rowData[0] === '총 수익률 (%)') {
+                            row.getCell(2).font = {
+                                color: { argb: data.total_return >= 0 ? 'FF00B050' : 'FFFF0000' },
+                                bold: true
+                            };
+                        }
+
+                        // 총 수익/손실 색상
+                        if (rowData[0] === '총 수익/손실 (KRW)') {
+                            row.getCell(2).font = {
+                                color: { argb: totalProfit >= 0 ? 'FF00B050' : 'FFFF0000' },
+                                bold: true
+                            };
+                        }
                     });
 
                     coinWs.addRow([]);
@@ -726,7 +941,14 @@ export default function Backtest() {
                                     onChange={(e) => handleCoinSelectionModeChange(e.target.value)}
                                     className="w-4 h-4"
                                 />
-                                <span className="text-slate-700 dark:text-slate-300">직접 선택</span>
+                                <span className="text-slate-700 dark:text-slate-300">
+                                    직접 선택
+                                    {coinSelectionMode === 'custom' && selectedCoins.size > 0 && (
+                                        <span className="ml-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                            ({selectedCoins.size}개 선택됨)
+                                        </span>
+                                    )}
+                                </span>
                             </label>
                         </div>
 
@@ -815,8 +1037,8 @@ export default function Backtest() {
                                     </div>
                                 </div>
 
-                                <div className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-                                    {selectedCoins.size}개 종목 선택됨
+                                <div className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-blue-50 dark:bg-blue-900/20 p-3 rounded border border-blue-200 dark:border-blue-800">
+                                    ✓ {selectedCoins.size}개 종목 선택됨
                                 </div>
                             </>
                         )}
@@ -950,7 +1172,7 @@ export default function Backtest() {
                                         </div>
                                         <div>
                                             <span className="text-sm text-slate-600 dark:text-slate-400">진행률:</span>
-                                            <div className="text-sm text-slate-900 dark:text-slate-100">{taskStatus.progress}</div>
+                                            <div className="text-sm text-slate-900 dark:text-slate-100">{formatProgress(taskStatus.progress)}</div>
                                         </div>
                                         <div>
                                             <span className="text-sm text-slate-600 dark:text-slate-400">생성 시간:</span>
@@ -1516,6 +1738,39 @@ function ComparisonView({ results }) {
     );
 }
 
+// 파라미터 한글 라벨 매핑 (대소문자 구분 없음)
+function getParamLabel(key) {
+    const labels = {
+        INITIAL_CAPITAL: '초기 자본 (원)',  // 백테스트에만 사용하는 파라미터
+        SEQUENCE_LENGTH: '시퀀스 길이', // 백테스트에만 사용하는 파라미터
+
+        BUY_PROFIT_THRESHOLD: '매수 조건 (기대 수익률 %)',
+        TAKE_PROFIT_BUFFER: '익절 버퍼 (%)',
+        STOP_LOSS_THRESHOLD: '손절선 (%)',
+        BUY_AMOUNT_PER_COIN: '종목당 매수금액 (원)',
+        BUY_WAIT_SECONDS: '매수 체결 대기 (초)',
+        BUY_RETRY_COUNT: '매수 재시도 (회)',
+        SELL_CHECK_SECONDS: '매도 체결 확인 (초)',
+        PRICE_MONITOR_SECONDS: '가격 모니터링 주기 (초)',
+        BUY_CHECK_HOURS: '매수 체크 주기 (시간)',
+        MIN_UP_PROBABILITY: '최소 상승 확률 (%)',
+        MIN_PROFIT_RATE: '최소 익절률 (%)',
+        MAX_PROFIT_RATE: '최대 익절률 (%)',
+        TARGET_MODE: '대상 모드 (ALL/SELECTED)',
+        PREDICTION_DAYS: '예측 기간 (일)',
+        TRAIN_SCHEDULE_ENABLED: '재학습 스케줄러 활성화 여부',
+        TRAIN_SCHEDULE_CRON: '모델 재학습 스케줄 (Cron)',
+        ENSEMBLE_MODE: '앙상블 모드',
+        BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부',
+        SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부',
+    };
+
+    // 대소문자 구분 없이 매칭
+    const upperKey = key.toUpperCase();
+    const matchedKey = Object.keys(labels).find(k => k.toUpperCase() === upperKey);
+    return matchedKey ? labels[matchedKey] : key;
+}
+
 // 상세 뷰 컴포넌트
 function DetailView({ result, onClose, onExport }) {
     const portfolio = result.data.portfolio;
@@ -1575,6 +1830,34 @@ function DetailView({ result, onClose, onExport }) {
                     <div className="p-6 space-y-6">
                         {/* 요약 */}
                         <ResultSummary result={result.data} onExport={() => onExport(false)} />
+
+                        {/* 실행 파라미터 */}
+                        {result.data.params && (
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-lg p-6 border border-blue-200 dark:border-slate-600">
+                                <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    실행 시점 파라미터
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {Object.entries(result.data.params).map(([key, value]) => (
+                                        <div key={key} className="bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm">
+                                            <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
+                                                {getParamLabel(key)}
+                                            </div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                                {key}
+                                            </div>
+                                            <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* 차트 섹션 */}
                         <div className="space-y-6">
@@ -1646,10 +1929,29 @@ function DetailView({ result, onClose, onExport }) {
                                     {Object.entries(individual).filter(([coin, data]) => data !== null).map(([coin, data]) => (
                                         <details key={coin} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <summary className="px-4 py-3 cursor-pointer font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                                {coin} - 수익률: {data.total_return.toFixed(2)}% | 거래: {data.total_trades}회 | 승률: {data.win_rate.toFixed(2)}%
+                                                {(() => {
+                                                    // 실제 거래 내역이 있으면 정확한 합산, 없으면 평균값으로 근사치 계산
+                                                    const totalProfit = data.trades && data.trades.length > 0
+                                                        ? data.trades.reduce((sum, trade) => sum + trade.profit_loss, 0)
+                                                        : (() => {
+                                                            const winningTrades = Math.round(data.total_trades * (data.win_rate / 100));
+                                                            const losingTrades = data.total_trades - winningTrades;
+                                                            return (data.avg_profit * winningTrades) + (data.avg_loss * losingTrades);
+                                                        })();
+                                                    const sign = totalProfit >= 0 ? '+' : '';
+                                                    const profitColor = totalProfit >= 0
+                                                        ? 'text-green-600 dark:text-green-400'
+                                                        : 'text-red-600 dark:text-red-400';
+
+                                                    return (
+                                                        <span>
+                                                            {coin} - 수익률: {data.total_return.toFixed(2)}% | 거래: {data.total_trades}회 | 승률: {data.win_rate.toFixed(2)}% | <span className={profitColor}>수익: {sign}{totalProfit.toFixed(2)} KRW</span>
+                                                        </span>
+                                                    );
+                                                })()}
                                             </summary>
                                             <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700">
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
                                                     <div>
                                                         <div className="text-xs text-slate-600 dark:text-slate-400">평균 보유일</div>
                                                         <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -1666,6 +1968,35 @@ function DetailView({ result, onClose, onExport }) {
                                                         <div className="text-xs text-slate-600 dark:text-slate-400">평균 손실</div>
                                                         <div className="text-sm text-red-600 dark:text-red-400">
                                                             <NumberWithBoldInteger value={data.avg_loss} decimals={2} suffix=" KRW" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-slate-600 dark:text-slate-400">총 수익/손실</div>
+                                                        <div className={`text-sm font-semibold ${(() => {
+                                                            // 실제 거래 내역이 있으면 정확한 합산, 없으면 평균값으로 근사치 계산
+                                                            const totalProfit = data.trades && data.trades.length > 0
+                                                                ? data.trades.reduce((sum, trade) => sum + trade.profit_loss, 0)
+                                                                : (() => {
+                                                                    const winningTrades = Math.round(data.total_trades * (data.win_rate / 100));
+                                                                    const losingTrades = data.total_trades - winningTrades;
+                                                                    return (data.avg_profit * winningTrades) + (data.avg_loss * losingTrades);
+                                                                })();
+                                                            return totalProfit >= 0
+                                                                ? 'text-green-600 dark:text-green-400'
+                                                                : 'text-red-600 dark:text-red-400';
+                                                        })()}`}>
+                                                            {(() => {
+                                                                // 실제 거래 내역이 있으면 정확한 합산, 없으면 평균값으로 근사치 계산
+                                                                const totalProfit = data.trades && data.trades.length > 0
+                                                                    ? data.trades.reduce((sum, trade) => sum + trade.profit_loss, 0)
+                                                                    : (() => {
+                                                                        const winningTrades = Math.round(data.total_trades * (data.win_rate / 100));
+                                                                        const losingTrades = data.total_trades - winningTrades;
+                                                                        return (data.avg_profit * winningTrades) + (data.avg_loss * losingTrades);
+                                                                    })();
+                                                                const sign = totalProfit >= 0 ? '+' : '';
+                                                                return `${sign}${totalProfit.toFixed(2)} KRW`;
+                                                            })()}
                                                         </div>
                                                     </div>
                                                     <div>

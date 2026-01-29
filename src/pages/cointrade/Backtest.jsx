@@ -1374,8 +1374,8 @@ export default function Backtest() {
                                                             <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                                                 Task ID
                                                             </div>
-                                                            <div className="font-mono text-xs text-slate-600 dark:text-slate-400 break-all">
-                                                                {item.task_id}
+                                                            <div className="font-mono text-xs text-slate-600 dark:text-slate-400">
+                                                                <TogglableTaskId taskId={item.task_id} maxLength={25} />
                                                             </div>
                                                         </div>
                                                     </div>

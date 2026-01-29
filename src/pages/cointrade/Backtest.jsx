@@ -1397,8 +1397,12 @@ export default function Backtest() {
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                                     {historyList.map((item) => (
-                                                        <tr key={item.task_id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                                            <td className="px-4 py-3">
+                                                        <tr
+                                                            key={item.task_id}
+                                                            className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+                                                            onDoubleClick={() => handleViewDetail(item.task_id)}
+                                                        >
+                                                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={selectedHistoryIds.includes(item.task_id)}
@@ -1418,21 +1422,13 @@ export default function Backtest() {
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.total_trades}</td>
                                                             <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 whitespace-nowrap">{(item.max_drawdown * 100).toFixed(2)}%</td>
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.sharpe_ratio.toFixed(2)}</td>
-                                                            <td className="px-4 py-3 text-center">
-                                                                <div className="flex items-center justify-center gap-2">
-                                                                    <button
-                                                                        onClick={() => handleViewDetail(item.task_id)}
-                                                                        className="text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200 hover:underline text-xs font-medium whitespace-nowrap"
-                                                                    >
-                                                                        상세
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDeleteResult(item.task_id)}
-                                                                        className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
-                                                                    >
-                                                                        삭제
-                                                                    </button>
-                                                                </div>
+                                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                                                <button
+                                                                    onClick={() => handleDeleteResult(item.task_id)}
+                                                                    className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
+                                                                >
+                                                                    삭제
+                                                                </button>
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -1445,16 +1441,19 @@ export default function Backtest() {
                                             {historyList.map((item) => (
                                                 <div
                                                     key={item.task_id}
-                                                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 shadow-sm space-y-3"
+                                                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 shadow-sm space-y-3 cursor-pointer"
+                                                    onDoubleClick={() => handleViewDetail(item.task_id)}
                                                 >
                                                     {/* 체크박스와 Task ID */}
                                                     <div className="flex items-start gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedHistoryIds.includes(item.task_id)}
-                                                            onChange={() => handleHistorySelect(item.task_id)}
-                                                            className="w-4 h-4 mt-1"
-                                                        />
+                                                        <div onClick={(e) => e.stopPropagation()}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedHistoryIds.includes(item.task_id)}
+                                                                onChange={() => handleHistorySelect(item.task_id)}
+                                                                className="w-4 h-4 mt-1"
+                                                            />
+                                                        </div>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                                                 Task ID
@@ -1524,16 +1523,10 @@ export default function Backtest() {
                                                     </div>
 
                                                     {/* 액션 버튼 */}
-                                                    <div className="flex gap-2 pt-2">
-                                                        <button
-                                                            onClick={() => handleViewDetail(item.task_id)}
-                                                            className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
-                                                        >
-                                                            상세 보기
-                                                        </button>
+                                                    <div className="flex gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             onClick={() => handleDeleteResult(item.task_id)}
-                                                            className="px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-red-900/30 text-red-600 dark:text-red-200 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/50 transition-colors"
+                                                            className="flex-1 px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-red-900/30 text-red-600 dark:text-red-200 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/50 transition-colors"
                                                         >
                                                             삭제
                                                         </button>

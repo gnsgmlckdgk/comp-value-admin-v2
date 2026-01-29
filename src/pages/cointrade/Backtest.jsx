@@ -45,6 +45,36 @@ function formatProgress(progress) {
 }
 
 /**
+ * 토글 가능한 Task ID 표시 컴포넌트
+ */
+function TogglableTaskId({ taskId, maxLength = 20, className = '' }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    if (!taskId) return null;
+
+    const shouldTruncate = taskId.length > maxLength;
+    const displayId = shouldTruncate && !isExpanded
+        ? `${taskId.substring(0, maxLength)}...`
+        : taskId;
+
+    return (
+        <span className={className}>
+            {shouldTruncate ? (
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left break-all"
+                    title={isExpanded ? "클릭하여 줄이기" : "클릭하여 전체 보기"}
+                >
+                    {displayId}
+                </button>
+            ) : (
+                <span className="break-all">{taskId}</span>
+            )}
+        </span>
+    );
+}
+
+/**
  * 백테스트 페이지
  */
 export default function Backtest() {
@@ -1168,7 +1198,9 @@ export default function Backtest() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <span className="text-sm text-slate-600 dark:text-slate-400">Task ID:</span>
-                                            <div className="text-sm font-mono text-slate-900 dark:text-slate-100">{taskStatus.task_id}</div>
+                                            <div className="text-sm font-mono text-slate-900 dark:text-slate-100">
+                                                <TogglableTaskId taskId={taskStatus.task_id} maxLength={20} />
+                                            </div>
                                         </div>
                                         <div>
                                             <span className="text-sm text-slate-600 dark:text-slate-400">상태:</span>
@@ -1257,25 +1289,25 @@ export default function Backtest() {
                                     <>
                                         {/* 데스크톱 테이블 뷰 */}
                                         <div className="hidden md:block overflow-x-auto">
-                                            <table className="w-full text-sm">
+                                            <table className="w-full text-sm min-w-max">
                                                 <thead className="bg-slate-50 dark:bg-slate-700">
                                                     <tr>
-                                                        <th className="px-4 py-3 text-left">
+                                                        <th className="px-4 py-3 text-left w-12">
                                                             <input
                                                                 type="checkbox"
                                                                 className="w-4 h-4"
                                                                 disabled
                                                             />
                                                         </th>
-                                                        <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">Task ID</th>
-                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">종목 수</th>
-                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">기간</th>
-                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">총 수익률</th>
-                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">승률</th>
-                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">거래 횟수</th>
-                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">MDD</th>
-                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">샤프 지수</th>
-                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">작업</th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 min-w-[200px]">Task ID</th>
+                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-20">종목 수</th>
+                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 min-w-[240px]">기간</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-24">총 수익률</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-20">승률</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-24">거래 횟수</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-20">MDD</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-24">샤프 지수</th>
+                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-32">작업</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -1289,27 +1321,29 @@ export default function Backtest() {
                                                                     className="w-4 h-4"
                                                                 />
                                                             </td>
-                                                            <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{item.task_id}</td>
+                                                            <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
+                                                                <TogglableTaskId taskId={item.task_id} maxLength={20} />
+                                                            </td>
                                                             <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100">{item.coin_count}</td>
-                                                            <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100 text-xs">{item.start_date} ~ {item.end_date}</td>
-                                                            <td className={`px-4 py-3 text-right font-semibold ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100 text-xs whitespace-nowrap">{item.start_date} ~ {item.end_date}</td>
+                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                                 {item.total_return.toFixed(2)}%
                                                             </td>
-                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.win_rate.toFixed(2)}%</td>
+                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100 whitespace-nowrap">{item.win_rate.toFixed(2)}%</td>
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.total_trades}</td>
-                                                            <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{(item.max_drawdown * 100).toFixed(2)}%</td>
+                                                            <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 whitespace-nowrap">{(item.max_drawdown * 100).toFixed(2)}%</td>
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.sharpe_ratio.toFixed(2)}</td>
                                                             <td className="px-4 py-3 text-center">
                                                                 <div className="flex items-center justify-center gap-2">
                                                                     <button
                                                                         onClick={() => handleViewDetail(item.task_id)}
-                                                                        className="text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200 hover:underline text-xs font-medium"
+                                                                        className="text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200 hover:underline text-xs font-medium whitespace-nowrap"
                                                                     >
                                                                         상세
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleDeleteResult(item.task_id)}
-                                                                        className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors"
+                                                                        className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
                                                                     >
                                                                         삭제
                                                                     </button>
@@ -1560,8 +1594,8 @@ export default function Backtest() {
                                     <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                                         Task ID
                                     </div>
-                                    <div className="text-sm font-mono text-slate-900 dark:text-slate-100 break-all">
-                                        {deleteTargetTaskId}
+                                    <div className="text-sm font-mono text-slate-900 dark:text-slate-100">
+                                        <TogglableTaskId taskId={deleteTargetTaskId} maxLength={30} />
                                     </div>
                                 </div>
                             )}

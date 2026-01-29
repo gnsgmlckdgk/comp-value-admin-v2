@@ -522,6 +522,20 @@ export default function Backtest() {
         }
     };
 
+    const handleSelectAll = () => {
+        if (historyList.length > 2) {
+            setToast('최대 2개까지만 선택할 수 있습니다.');
+            return;
+        }
+        const allIds = historyList.map(item => item.task_id);
+        setSelectedHistoryIds(allIds);
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedHistoryIds([]);
+        setCompareResults([]);
+    };
+
     const handleCompare = async () => {
         if (selectedHistoryIds.length !== 2) {
             setToast('비교할 항목을 2개 선택해주세요.');
@@ -1275,10 +1289,27 @@ export default function Backtest() {
 
                             {/* 이력 목록 */}
                             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-                                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                                     <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                                         백테스트 이력 ({historyList.length})
                                     </h2>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleSelectAll}
+                                            disabled={historyList.length === 0 || historyList.length > 2}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title={historyList.length > 2 ? '최대 2개까지만 선택 가능합니다' : '전체 선택'}
+                                        >
+                                            전체선택
+                                        </button>
+                                        <button
+                                            onClick={handleDeselectAll}
+                                            disabled={selectedHistoryIds.length === 0}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            전체해제
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {historyList.length === 0 ? (
@@ -1295,8 +1326,17 @@ export default function Backtest() {
                                                         <th className="px-4 py-3 text-left w-12">
                                                             <input
                                                                 type="checkbox"
-                                                                className="w-4 h-4"
-                                                                disabled
+                                                                className="w-4 h-4 cursor-pointer"
+                                                                checked={historyList.length > 0 && selectedHistoryIds.length === historyList.length}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        handleSelectAll();
+                                                                    } else {
+                                                                        handleDeselectAll();
+                                                                    }
+                                                                }}
+                                                                disabled={historyList.length === 0 || historyList.length > 2}
+                                                                title={historyList.length > 2 ? '최대 2개까지만 선택 가능합니다' : '전체 선택/해제'}
                                                             />
                                                         </th>
                                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 min-w-[200px]">Task ID</th>
@@ -1746,11 +1786,15 @@ function ComparisonView({ results }) {
                             <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200">지표</th>
                             <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">
                                 Test 1<br />
-                                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{result1.taskId}</span>
+                                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                                    <TogglableTaskId taskId={result1.taskId} maxLength={20} />
+                                </span>
                             </th>
                             <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">
                                 Test 2<br />
-                                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{result2.taskId}</span>
+                                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                                    <TogglableTaskId taskId={result2.taskId} maxLength={20} />
+                                </span>
                             </th>
                             <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200">차이</th>
                         </tr>

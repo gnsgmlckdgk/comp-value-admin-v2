@@ -513,20 +513,11 @@ export default function Backtest() {
             setSelectedHistoryIds(selectedHistoryIds.filter(id => id !== taskId));
             setCompareResults(compareResults.filter(r => r.taskId !== taskId));
         } else {
-            if (selectedHistoryIds.length >= 2) {
-                setToast('최대 2개까지만 선택할 수 있습니다.');
-                return;
-            }
             setSelectedHistoryIds([...selectedHistoryIds, taskId]);
-            fetchTaskResult(taskId);
         }
     };
 
     const handleSelectAll = () => {
-        if (historyList.length > 2) {
-            setToast('최대 2개까지만 선택할 수 있습니다.');
-            return;
-        }
         const allIds = historyList.map(item => item.task_id);
         setSelectedHistoryIds(allIds);
     };
@@ -536,9 +527,53 @@ export default function Backtest() {
         setCompareResults([]);
     };
 
+    const handleDeleteSelected = async () => {
+        if (selectedHistoryIds.length === 0) {
+            setToast('삭제할 항목을 선택해주세요.');
+            return;
+        }
+
+        if (!confirm(`선택한 ${selectedHistoryIds.length}개의 항목을 삭제하시겠습니까?`)) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const taskId of selectedHistoryIds) {
+                try {
+                    const { data, error } = await send(`/dart/api/backtest/result/${taskId}`, {}, 'DELETE');
+                    if (error || !data?.success) {
+                        failCount++;
+                    } else {
+                        successCount++;
+                    }
+                } catch (e) {
+                    failCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                setToast(`${successCount}개 항목이 삭제되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`);
+                fetchHistory();
+                setSelectedHistoryIds([]);
+                setCompareResults([]);
+            } else {
+                setToast('삭제에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error('삭제 실패:', e);
+            setToast('삭제 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleCompare = async () => {
         if (selectedHistoryIds.length !== 2) {
-            setToast('비교할 항목을 2개 선택해주세요.');
+            setToast('비교하기는 정확히 2개만 선택해야 합니다.');
             return;
         }
 
@@ -1272,6 +1307,12 @@ export default function Backtest() {
                                             <Button onClick={() => { setSelectedHistoryIds([]); setCompareResults([]); }} className="px-4 py-2 text-sm">
                                                 선택 취소
                                             </Button>
+                                            <Button
+                                                onClick={handleDeleteSelected}
+                                                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white"
+                                            >
+                                                선택 삭제
+                                            </Button>
                                             {selectedHistoryIds.length === 2 && (
                                                 <Button onClick={handleCompare} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700">
                                                     비교하기
@@ -1296,9 +1337,8 @@ export default function Backtest() {
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={handleSelectAll}
-                                            disabled={historyList.length === 0 || historyList.length > 2}
+                                            disabled={historyList.length === 0}
                                             className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title={historyList.length > 2 ? '최대 2개까지만 선택 가능합니다' : '전체 선택'}
                                         >
                                             전체선택
                                         </button>
@@ -1335,8 +1375,8 @@ export default function Backtest() {
                                                                         handleDeselectAll();
                                                                     }
                                                                 }}
-                                                                disabled={historyList.length === 0 || historyList.length > 2}
-                                                                title={historyList.length > 2 ? '최대 2개까지만 선택 가능합니다' : '전체 선택/해제'}
+                                                                disabled={historyList.length === 0}
+                                                                title="전체 선택/해제"
                                                             />
                                                         </th>
                                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 min-w-[200px]">Task ID</th>

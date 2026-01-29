@@ -103,6 +103,7 @@ export default function Backtest() {
     // 삭제 확인 모달
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
     const [deleteTargetTaskId, setDeleteTargetTaskId] = useState(null);
+    const [isDeleteSelectedModalOpen, setIsDeleteSelectedModalOpen] = useState(false);
 
     // 이력 탭 상태
     const [historyList, setHistoryList] = useState([]);
@@ -232,9 +233,12 @@ export default function Backtest() {
                 if (isDeleteConfirmModalOpen) {
                     setIsDeleteConfirmModalOpen(false);
                 }
+                if (isDeleteSelectedModalOpen) {
+                    setIsDeleteSelectedModalOpen(false);
+                }
             }
         };
-        if (isRunConfirmModalOpen || isDeleteConfirmModalOpen) {
+        if (isRunConfirmModalOpen || isDeleteConfirmModalOpen || isDeleteSelectedModalOpen) {
             window.addEventListener('keydown', handleEsc);
             document.body.style.overflow = 'hidden';
         }
@@ -242,7 +246,7 @@ export default function Backtest() {
             window.removeEventListener('keydown', handleEsc);
             document.body.style.overflow = 'unset';
         };
-    }, [isRunConfirmModalOpen, isDeleteConfirmModalOpen]);
+    }, [isRunConfirmModalOpen, isDeleteConfirmModalOpen, isDeleteSelectedModalOpen]);
 
     const setDefaultDates = () => {
         const today = new Date();
@@ -527,15 +531,16 @@ export default function Backtest() {
         setCompareResults([]);
     };
 
-    const handleDeleteSelected = async () => {
+    const handleDeleteSelected = () => {
         if (selectedHistoryIds.length === 0) {
             setToast('삭제할 항목을 선택해주세요.');
             return;
         }
+        setIsDeleteSelectedModalOpen(true);
+    };
 
-        if (!confirm(`선택한 ${selectedHistoryIds.length}개의 항목을 삭제하시겠습니까?`)) {
-            return;
-        }
+    const handleConfirmDeleteSelected = async () => {
+        setIsDeleteSelectedModalOpen(false);
 
         setLoading(true);
         try {
@@ -1698,6 +1703,52 @@ export default function Backtest() {
                             </button>
                             <button
                                 onClick={handleConfirmDelete}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+                            >
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 선택 삭제 확인 모달 */}
+            {isDeleteSelectedModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsDeleteSelectedModalOpen(false);
+                    }}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                        {/* 헤더 */}
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                선택 항목 삭제
+                            </h3>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="px-6 py-4 space-y-4">
+                            <p className="text-slate-700 dark:text-slate-300">
+                                선택한 {selectedHistoryIds.length}개의 항목을 삭제하시겠습니까?
+                            </p>
+
+                            <div className="text-xs text-slate-500 dark:text-slate-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                ⚠️ 삭제된 데이터는 복구할 수 없습니다.
+                            </div>
+                        </div>
+
+                        {/* 버튼 */}
+                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2">
+                            <button
+                                onClick={() => setIsDeleteSelectedModalOpen(false)}
+                                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleConfirmDeleteSelected}
                                 className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
                             >
                                 삭제

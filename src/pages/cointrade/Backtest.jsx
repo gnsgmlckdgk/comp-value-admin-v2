@@ -806,7 +806,17 @@ export default function Backtest() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Backtest_${result.taskId}_${includeIndividual ? 'detailed_' : ''}${new Date().getTime()}.xlsx`;
+
+            // 파일명 생성: backtest_[종목수]_[시작기간]_[종료기간]_[백테스트실행시간]
+            const formatDate = (dateStr) => dateStr.replace(/-/g, '');
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+            const startDate = formatDate(portfolio.start_date);
+            const endDate = formatDate(portfolio.end_date);
+            const coinCount = portfolio.coin_count;
+            const detailSuffix = includeIndividual ? '_detailed' : '';
+
+            a.download = `backtest_${coinCount}coins_${startDate}_${endDate}_${timestamp}${detailSuffix}.xlsx`;
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) {

@@ -2018,6 +2018,23 @@ function DetailView({ result, onClose, onExport }) {
         return Object.values(tradesByDate).sort((a, b) => a.date.localeCompare(b.date));
     }, [individual]);
 
+    // 일별 평균 거래건수 계산
+    const dailyTradeAverage = useMemo(() => {
+        if (dailyTradeData.length === 0) {
+            return { avgBuy: 0, avgSell: 0, totalDays: 0 };
+        }
+
+        const totalBuy = dailyTradeData.reduce((sum, day) => sum + day.buy, 0);
+        const totalSell = dailyTradeData.reduce((sum, day) => sum + day.sell, 0);
+        const totalDays = dailyTradeData.length;
+
+        return {
+            avgBuy: totalBuy / totalDays,
+            avgSell: totalSell / totalDays,
+            totalDays: totalDays
+        };
+    }, [dailyTradeData]);
+
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm" onClick={onClose}>
             <div className="flex items-center justify-center min-h-screen p-4">
@@ -2244,6 +2261,26 @@ function DetailView({ result, onClose, onExport }) {
                                         <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                                             각 날짜별 매수/매도 거래 건수를 나타냅니다.
                                         </p>
+                                        <div className="mt-3 flex gap-6 text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600 dark:text-slate-400">거래일수:</span>
+                                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                    {dailyTradeAverage.totalDays}일
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600 dark:text-slate-400">일평균 매수:</span>
+                                                <span className="font-semibold text-red-600 dark:text-red-400">
+                                                    {dailyTradeAverage.avgBuy.toFixed(2)}건
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600 dark:text-slate-400">일평균 매도:</span>
+                                                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                                                    {dailyTradeAverage.avgSell.toFixed(2)}건
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <ResponsiveContainer width="100%" height={300}>
                                         <BarChart data={dailyTradeData}>

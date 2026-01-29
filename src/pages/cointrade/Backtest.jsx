@@ -1773,6 +1773,10 @@ function getParamLabel(key) {
 
 // 상세 뷰 컴포넌트
 function DetailView({ result, onClose, onExport }) {
+    const [showProfitRanking, setShowProfitRanking] = useState(false);
+    const [showTradeCountRanking, setShowTradeCountRanking] = useState(false);
+    const [showParams, setShowParams] = useState(false);
+
     const portfolio = result.data.portfolio;
     const individual = result.data.individual || {};
 
@@ -1834,28 +1838,38 @@ function DetailView({ result, onClose, onExport }) {
                         {/* 실행 파라미터 */}
                         {result.data.params && (
                             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-lg p-6 border border-blue-200 dark:border-slate-600">
-                                <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    실행 시점 파라미터
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {Object.entries(result.data.params).map(([key, value]) => (
-                                        <div key={key} className="bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm">
-                                            <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                                                {getParamLabel(key)}
-                                            </div>
-                                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-                                                {key}
-                                            </div>
-                                            <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        실행 시점 파라미터
+                                    </h3>
+                                    <button
+                                        onClick={() => setShowParams(!showParams)}
+                                        className="text-sm px-3 py-1 rounded bg-blue-200 dark:bg-blue-600 hover:bg-blue-300 dark:hover:bg-blue-500 text-blue-800 dark:text-blue-100 transition-colors"
+                                    >
+                                        {showParams ? '숨기기' : '보기'}
+                                    </button>
                                 </div>
+                                {showParams && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {Object.entries(result.data.params).map(([key, value]) => (
+                                            <div key={key} className="bg-white dark:bg-slate-800 rounded-lg p-3 shadow-sm">
+                                                <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
+                                                    {getParamLabel(key)}
+                                                </div>
+                                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                                    {key}
+                                                </div>
+                                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -1889,7 +1903,15 @@ function DetailView({ result, onClose, onExport }) {
                             {/* 종목별 수익 기여도 */}
                             {coinContributionData.length > 0 && (
                                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
-                                    <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4">종목별 수익 기여도</h3>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200">종목별 수익 기여도</h3>
+                                        <button
+                                            onClick={() => setShowProfitRanking(!showProfitRanking)}
+                                            className="text-sm px-3 py-1 rounded bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 transition-colors"
+                                        >
+                                            {showProfitRanking ? '순위 숨기기' : '순위 보기'}
+                                        </button>
+                                    </div>
                                     <ResponsiveContainer width="100%" height={300}>
                                         <BarChart data={coinContributionData}>
                                             <CartesianGrid strokeDasharray="3 3" />
@@ -1900,13 +1922,58 @@ function DetailView({ result, onClose, onExport }) {
                                             <Bar dataKey="return" fill="#3b82f6" name="수익률 (%)" />
                                         </BarChart>
                                     </ResponsiveContainer>
+
+                                    {/* 순위별 리스트 */}
+                                    {showProfitRanking && (
+                                        <div className="mt-4 bg-white dark:bg-slate-800 rounded-lg p-4">
+                                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">수익률 순위</h4>
+                                            <div className="space-y-2">
+                                                {[...coinContributionData]
+                                                    .sort((a, b) => b.return - a.return)
+                                                    .map((coin, index) => (
+                                                        <div
+                                                            key={coin.name}
+                                                            className="flex items-center justify-between py-2 px-3 rounded bg-slate-50 dark:bg-slate-700/50"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <span className={`text-sm font-bold ${
+                                                                    index === 0 ? 'text-yellow-500' :
+                                                                    index === 1 ? 'text-slate-400' :
+                                                                    index === 2 ? 'text-amber-600' :
+                                                                    'text-slate-600 dark:text-slate-400'
+                                                                }`}>
+                                                                    {index + 1}위
+                                                                </span>
+                                                                <span className="font-medium text-slate-800 dark:text-slate-200">{coin.name}</span>
+                                                            </div>
+                                                            <span className={`font-semibold ${
+                                                                coin.return >= 0
+                                                                    ? 'text-green-600 dark:text-green-400'
+                                                                    : 'text-red-600 dark:text-red-400'
+                                                            }`}>
+                                                                {coin.return >= 0 ? '+' : ''}{coin.return.toFixed(2)}%
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* 종목별 거래횟수 */}
                             {coinContributionData.length > 0 && (
                                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
-                                    <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4">종목별 거래 횟수</h3>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200">종목별 거래 횟수</h3>
+                                        <button
+                                            onClick={() => setShowTradeCountRanking(!showTradeCountRanking)}
+                                            className="text-sm px-3 py-1 rounded bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 transition-colors"
+                                        >
+                                            {showTradeCountRanking ? '순위 숨기기' : '순위 보기'}
+                                        </button>
+                                    </div>
                                     <ResponsiveContainer width="100%" height={300}>
                                         <BarChart data={coinContributionData}>
                                             <CartesianGrid strokeDasharray="3 3" />
@@ -1917,6 +1984,39 @@ function DetailView({ result, onClose, onExport }) {
                                             <Bar dataKey="trades" fill="#10b981" name="거래 횟수" />
                                         </BarChart>
                                     </ResponsiveContainer>
+
+                                    {/* 순위별 리스트 */}
+                                    {showTradeCountRanking && (
+                                        <div className="mt-4 bg-white dark:bg-slate-800 rounded-lg p-4">
+                                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">거래 횟수 순위</h4>
+                                            <div className="space-y-2">
+                                                {[...coinContributionData]
+                                                    .sort((a, b) => b.trades - a.trades)
+                                                    .map((coin, index) => (
+                                                        <div
+                                                            key={coin.name}
+                                                            className="flex items-center justify-between py-2 px-3 rounded bg-slate-50 dark:bg-slate-700/50"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <span className={`text-sm font-bold ${
+                                                                    index === 0 ? 'text-yellow-500' :
+                                                                    index === 1 ? 'text-slate-400' :
+                                                                    index === 2 ? 'text-amber-600' :
+                                                                    'text-slate-600 dark:text-slate-400'
+                                                                }`}>
+                                                                    {index + 1}위
+                                                                </span>
+                                                                <span className="font-medium text-slate-800 dark:text-slate-200">{coin.name}</span>
+                                                            </div>
+                                                            <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                                                {coin.trades}회
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

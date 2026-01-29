@@ -1220,6 +1220,22 @@ export default function Backtest() {
                         </div>
                     </div>
 
+                    {/* 백테스트 안내 */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="text-blue-600 dark:text-blue-400 text-lg mt-0.5">
+                                💡
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm text-blue-900 dark:text-blue-200 leading-relaxed">
+                                    백테스트는 <span className="font-semibold">초기 자본 100만원</span>을 기준으로 진행됩니다.
+                                    <br />
+                                    각 종목당 <span className="font-semibold">BUY_AMOUNT_PER_COIN</span> 값만큼 투자하여 수익률이 계산됩니다.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* 실행 버튼 */}
                     <div className="flex justify-end gap-3">
                         <Button
@@ -1970,6 +1986,38 @@ function DetailView({ result, onClose, onExport }) {
             trades: data.total_trades
         }));
 
+    // 기간별 거래 건수 데이터 (날짜별 매수/매도 건수)
+    const dailyTradeData = useMemo(() => {
+        const tradesByDate = {};
+
+        // 모든 종목의 거래 내역을 순회
+        Object.entries(individual).forEach(([coin, data]) => {
+            if (data && data.trades && data.trades.length > 0) {
+                data.trades.forEach(trade => {
+                    // 매수 날짜
+                    if (trade.entry_date) {
+                        const date = trade.entry_date.split(' ')[0]; // 날짜만 추출
+                        if (!tradesByDate[date]) {
+                            tradesByDate[date] = { date, buy: 0, sell: 0 };
+                        }
+                        tradesByDate[date].buy += 1;
+                    }
+                    // 매도 날짜
+                    if (trade.exit_date) {
+                        const date = trade.exit_date.split(' ')[0]; // 날짜만 추출
+                        if (!tradesByDate[date]) {
+                            tradesByDate[date] = { date, buy: 0, sell: 0 };
+                        }
+                        tradesByDate[date].sell += 1;
+                    }
+                });
+            }
+        });
+
+        // 날짜순으로 정렬
+        return Object.values(tradesByDate).sort((a, b) => a.date.localeCompare(b.date));
+    }, [individual]);
+
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm" onClick={onClose}>
             <div className="flex items-center justify-center min-h-screen p-4">
@@ -2185,6 +2233,40 @@ function DetailView({ result, onClose, onExport }) {
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {/* 기간별 거래 차트 */}
+                            {dailyTradeData.length > 0 && (
+                                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
+                                    <div className="mb-4">
+                                        <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200">기간별 거래 현황</h3>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                                            각 날짜별 매수/매도 거래 건수를 나타냅니다.
+                                        </p>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={300}>
+                                        <BarChart data={dailyTradeData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis
+                                                dataKey="date"
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={100}
+                                                tick={{ fontSize: 11 }}
+                                            />
+                                            <YAxis
+                                                label={{ value: '거래 건수', angle: -90, position: 'insideLeft' }}
+                                            />
+                                            <Tooltip
+                                                formatter={(value) => `${value}건`}
+                                                labelFormatter={(label) => `날짜: ${label}`}
+                                            />
+                                            <Legend />
+                                            <Bar dataKey="buy" fill="#ef4444" name="매수" />
+                                            <Bar dataKey="sell" fill="#3b82f6" name="매도" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
                                 </div>
                             )}
                         </div>

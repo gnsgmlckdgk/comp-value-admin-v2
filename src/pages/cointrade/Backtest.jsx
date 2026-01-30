@@ -2020,22 +2020,58 @@ function DetailView({ result, onClose, onExport }) {
         return Object.values(tradesByDate).sort((a, b) => a.date.localeCompare(b.date));
     }, [individual]);
 
-    // 일별 평균 거래건수 계산
+    // 일별 평균 거래건수 및 최댓값 계산
     const dailyTradeAverage = useMemo(() => {
         if (dailyTradeData.length === 0) {
-            return { avgBuy: 0, avgSell: 0, totalDays: 0 };
+            return { avgBuy: 0, avgSell: 0, totalDays: 0, maxBuy: 0, maxSell: 0 };
         }
 
         const totalBuy = dailyTradeData.reduce((sum, day) => sum + day.buy, 0);
         const totalSell = dailyTradeData.reduce((sum, day) => sum + day.sell, 0);
         const totalDays = dailyTradeData.length;
+        const maxBuy = Math.max(...dailyTradeData.map(day => day.buy));
+        const maxSell = Math.max(...dailyTradeData.map(day => day.sell));
 
         return {
             avgBuy: totalBuy / totalDays,
             avgSell: totalSell / totalDays,
-            totalDays: totalDays
+            totalDays: totalDays,
+            maxBuy: maxBuy,
+            maxSell: maxSell
         };
     }, [dailyTradeData]);
+
+    // 하루 최대 보유량 계산
+    const maxDailyHoldings = useMemo(() => {
+        const holdingsByDate = {};
+
+        // 모든 종목의 거래 내역을 순회
+        Object.entries(individual).forEach(([coin, data]) => {
+            if (data && data.trades && data.trades.length > 0) {
+                data.trades.forEach(trade => {
+                    if (trade.entry_date && trade.exit_date) {
+                        const entryDate = new Date(trade.entry_date.split(' ')[0]);
+                        const exitDate = new Date(trade.exit_date.split(' ')[0]);
+
+                        // entry_date부터 exit_date까지 모든 날짜에 보유량 +1
+                        let currentDate = new Date(entryDate);
+                        while (currentDate <= exitDate) {
+                            const dateStr = currentDate.toISOString().split('T')[0];
+                            holdingsByDate[dateStr] = (holdingsByDate[dateStr] || 0) + 1;
+                            currentDate.setDate(currentDate.getDate() + 1);
+                        }
+                    }
+                });
+            }
+        });
+
+        // 최대 보유량 찾기
+        const maxHoldings = Object.values(holdingsByDate).length > 0
+            ? Math.max(...Object.values(holdingsByDate))
+            : 0;
+
+        return maxHoldings;
+    }, [individual]);
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -2260,7 +2296,7 @@ function DetailView({ result, onClose, onExport }) {
                                         <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                                             각 날짜별 매수/매도 거래 건수를 나타냅니다.
                                         </p>
-                                        <div className="mt-3 flex gap-6 text-sm">
+                                        <div className="mt-3 flex flex-wrap gap-6 text-sm">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-slate-600 dark:text-slate-400">거래일수:</span>
                                                 <span className="font-semibold text-slate-800 dark:text-slate-200">
@@ -2277,6 +2313,24 @@ function DetailView({ result, onClose, onExport }) {
                                                 <span className="text-slate-600 dark:text-slate-400">일평균 매도:</span>
                                                 <span className="font-semibold text-blue-600 dark:text-blue-400">
                                                     {dailyTradeAverage.avgSell.toFixed(2)}건
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600 dark:text-slate-400">하루 최대 보유종목:</span>
+                                                <span className="font-semibold text-purple-600 dark:text-purple-400">
+                                                    {maxDailyHoldings}개
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600 dark:text-slate-400">하루 최대 매수건수:</span>
+                                                <span className="font-semibold text-orange-600 dark:text-orange-400">
+                                                    {dailyTradeAverage.maxBuy}건
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-600 dark:text-slate-400">하루 최대 매도건수:</span>
+                                                <span className="font-semibold text-teal-600 dark:text-teal-400">
+                                                    {dailyTradeAverage.maxSell}건
                                                 </span>
                                             </div>
                                         </div>

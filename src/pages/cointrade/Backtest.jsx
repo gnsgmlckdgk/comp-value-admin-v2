@@ -1959,14 +1959,9 @@ function getParamLabel(key) {
 
 // 파라미터 값 포맷팅 (퍼센트 값 변환)
 function formatParamValue(key, value) {
-    // 퍼센트로 표시해야 하는 파라미터들 (백엔드에서 0~1 비율로 저장됨)
+    // MIN_UP_PROBABILITY만 백엔드에서 0~1 비율로 저장됨
     const percentParams = [
-        'MIN_UP_PROBABILITY',
-        'BUY_PROFIT_THRESHOLD',
-        'MIN_PROFIT_RATE',
-        'MAX_PROFIT_RATE',
-        'TAKE_PROFIT_BUFFER',
-        'STOP_LOSS_THRESHOLD'
+        'MIN_UP_PROBABILITY'
     ];
 
     const upperKey = key.toUpperCase();

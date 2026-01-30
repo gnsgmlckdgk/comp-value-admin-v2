@@ -1947,6 +1947,8 @@ function getParamLabel(key) {
         ENSEMBLE_MODE: '앙상블 모드',
         BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부',
         SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부',
+        BUY_FEE_RATE: '매수 수수료율(0.05%면 0.0005)',
+        SELL_FEE_RATE: '매도 수수료율(0.05%면 0.0005)',
     };
 
     // 대소문자 구분 없이 매칭
@@ -2169,21 +2171,19 @@ function DetailView({ result, onClose, onExport }) {
                                                             className="flex items-center justify-between py-2 px-3 rounded bg-slate-50 dark:bg-slate-700/50"
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <span className={`text-sm font-bold ${
-                                                                    index === 0 ? 'text-yellow-500' :
+                                                                <span className={`text-sm font-bold ${index === 0 ? 'text-yellow-500' :
                                                                     index === 1 ? 'text-slate-400' :
-                                                                    index === 2 ? 'text-amber-600' :
-                                                                    'text-slate-600 dark:text-slate-400'
-                                                                }`}>
+                                                                        index === 2 ? 'text-amber-600' :
+                                                                            'text-slate-600 dark:text-slate-400'
+                                                                    }`}>
                                                                     {index + 1}위
                                                                 </span>
                                                                 <span className="font-medium text-slate-800 dark:text-slate-200">{coin.name}</span>
                                                             </div>
-                                                            <span className={`font-semibold ${
-                                                                coin.return >= 0
-                                                                    ? 'text-green-600 dark:text-green-400'
-                                                                    : 'text-red-600 dark:text-red-400'
-                                                            }`}>
+                                                            <span className={`font-semibold ${coin.return >= 0
+                                                                ? 'text-green-600 dark:text-green-400'
+                                                                : 'text-red-600 dark:text-red-400'
+                                                                }`}>
                                                                 {coin.return >= 0 ? '+' : ''}{coin.return.toFixed(2)}%
                                                             </span>
                                                         </div>
@@ -2231,12 +2231,11 @@ function DetailView({ result, onClose, onExport }) {
                                                             className="flex items-center justify-between py-2 px-3 rounded bg-slate-50 dark:bg-slate-700/50"
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <span className={`text-sm font-bold ${
-                                                                    index === 0 ? 'text-yellow-500' :
+                                                                <span className={`text-sm font-bold ${index === 0 ? 'text-yellow-500' :
                                                                     index === 1 ? 'text-slate-400' :
-                                                                    index === 2 ? 'text-amber-600' :
-                                                                    'text-slate-600 dark:text-slate-400'
-                                                                }`}>
+                                                                        index === 2 ? 'text-amber-600' :
+                                                                            'text-slate-600 dark:text-slate-400'
+                                                                    }`}>
                                                                     {index + 1}위
                                                                 </span>
                                                                 <span className="font-medium text-slate-800 dark:text-slate-200">{coin.name}</span>

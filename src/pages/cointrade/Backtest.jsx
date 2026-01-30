@@ -715,7 +715,7 @@ export default function Backtest() {
                 Object.entries(result.data.params).forEach(([key, value]) => {
                     const row = summaryWs.addRow([
                         `${getParamLabel(key)} (${key})`,
-                        typeof value === 'object' ? JSON.stringify(value) : String(value)
+                        formatParamValue(key, value)
                     ]);
                     row.getCell(1).font = { bold: true };
                     row.getCell(2).alignment = { horizontal: 'right' };
@@ -1957,6 +1957,35 @@ function getParamLabel(key) {
     return matchedKey ? labels[matchedKey] : key;
 }
 
+// 파라미터 값 포맷팅 (퍼센트 값 변환)
+function formatParamValue(key, value) {
+    // 퍼센트로 표시해야 하는 파라미터들 (백엔드에서 0~1 비율로 저장됨)
+    const percentParams = [
+        'MIN_UP_PROBABILITY',
+        'BUY_PROFIT_THRESHOLD',
+        'MIN_PROFIT_RATE',
+        'MAX_PROFIT_RATE',
+        'TAKE_PROFIT_BUFFER',
+        'STOP_LOSS_THRESHOLD'
+    ];
+
+    const upperKey = key.toUpperCase();
+
+    if (typeof value === 'object') {
+        return JSON.stringify(value);
+    }
+
+    // 퍼센트 파라미터인 경우 100을 곱해서 표시
+    if (percentParams.some(param => upperKey === param)) {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+            return (numValue * 100).toFixed(2);
+        }
+    }
+
+    return String(value);
+}
+
 // 상세 뷰 컴포넌트
 function DetailView({ result, onClose, onExport }) {
     const [showProfitRanking, setShowProfitRanking] = useState(false);
@@ -2135,7 +2164,7 @@ function DetailView({ result, onClose, onExport }) {
                                                     {key}
                                                 </div>
                                                 <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                                    {formatParamValue(key, value)}
                                                 </div>
                                             </div>
                                         ))}

@@ -52,6 +52,7 @@ export default function CointradeConfig() {
         ENSEMBLE_MODE: 'ensemble',     // 앙상블 모드
         BUY_SCHEDULER_ENABLED: 'false', // 매수 스케줄러 활성화 여부
         SELL_SCHEDULER_ENABLED: 'false', // 매도 스케줄러 활성화 여부
+        TRADING_FEE_RATE: '',          // 거래 수수료율 %
     });
 
     // 파라미터 그룹 정의
@@ -62,7 +63,8 @@ export default function CointradeConfig() {
                 'PREDICTION_DAYS',
                 'TRAIN_SCHEDULE_ENABLED',
                 'TRAIN_SCHEDULE_CRON',
-                'ENSEMBLE_MODE'
+                'ENSEMBLE_MODE',
+                'TRADING_FEE_RATE'
             ]
         },
         BUY: {
@@ -104,7 +106,8 @@ export default function CointradeConfig() {
         'STOP_LOSS_THRESHOLD',
         'MIN_PROFIT_RATE',
         'MAX_PROFIT_RATE',
-        'SELL_CHECK_SECONDS'
+        'SELL_CHECK_SECONDS',
+        'TRADING_FEE_RATE'
     ];
 
     // Toast auto-hide
@@ -189,6 +192,14 @@ export default function CointradeConfig() {
                 errors.push(`${getParamLabel(key)}는 0 이상의 값이어야 합니다.`);
             }
         });
+
+        // 거래 수수료율 검증 (0~1)
+        if (params['TRADING_FEE_RATE']) {
+            const value = parseFloat(params['TRADING_FEE_RATE']);
+            if (isNaN(value) || value < 0 || value > 1) {
+                errors.push(`${getParamLabel('TRADING_FEE_RATE')}는 0~1 사이의 값이어야 합니다. (예: 0.05%는 0.0005로 입력)`);
+            }
+        }
 
         if (errors.length > 0) {
             setToast(errors.join('\n'));
@@ -398,6 +409,7 @@ export default function CointradeConfig() {
             ENSEMBLE_MODE: '앙상블 모드',
             BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부',
             SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부',
+            TRADING_FEE_RATE: '거래 수수료율 (비율)',
         };
         return labels[key] || key;
     };
@@ -423,6 +435,7 @@ export default function CointradeConfig() {
             ENSEMBLE_MODE: '사용할 모델 모드 (lstm_only/gru_only/cnn_only/ensemble)',
             BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부 (true/false)',
             SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부 (true/false)',
+            TRADING_FEE_RATE: '거래소 수수료율 (0.05%면 0.0005로 입력, 업비트: 0.0005, 바이낸스: 0.001)',
         };
         return descriptions[key] || '';
     };
@@ -603,12 +616,17 @@ export default function CointradeConfig() {
                                                                 className="w-full h-10 md:h-9 dark:!bg-slate-600 dark:placeholder-slate-300"
                                                                 value={params[key]}
                                                                 onChange={(e) => handleInputChange(key, e.target.value)}
-                                                                placeholder={key === 'TRAIN_SCHEDULE_CRON' ? '0 3 * * 2,5' : '0'}
+                                                                placeholder={
+                                                                    key === 'TRAIN_SCHEDULE_CRON' ? '0 3 * * 2,5' :
+                                                                        key === 'TRADING_FEE_RATE' ? '0.0005' :
+                                                                            '0'
+                                                                }
                                                                 step={
                                                                     key === 'TRAIN_SCHEDULE_CRON' ? undefined :
-                                                                        key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
-                                                                            key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
-                                                                                '1'
+                                                                        key === 'TRADING_FEE_RATE' ? '0.0001' :
+                                                                            key === 'BUY_AMOUNT_PER_COIN' ? '1000' :
+                                                                                key.includes('THRESHOLD') || key.includes('BUFFER') ? '0.1' :
+                                                                                    '1'
                                                                 }
                                                             />
                                                         )}

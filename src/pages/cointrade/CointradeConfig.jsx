@@ -732,9 +732,14 @@ export default function CointradeConfig() {
                         <ul className="space-y-2">
                             {changedParams.map((item) => (
                                 <li key={item.key} className="flex flex-col border-b border-slate-200 dark:border-slate-800 last:border-0 pb-2 last:pb-0">
-                                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                        {item.label}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                            {item.label}
+                                        </span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                            {item.key}
+                                        </span>
+                                    </div>
                                     <div className="flex items-center gap-2 mt-1 text-xs">
                                         <span className="text-red-500 line-through bg-red-50 dark:bg-red-900/20 px-1 rounded">
                                             {item.oldValue}

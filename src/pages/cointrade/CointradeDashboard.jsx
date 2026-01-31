@@ -353,11 +353,11 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 pr-8 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
-        render: (value, row) => {
+        render: (value, row, predictionDays = 7) => {
             if (!row.buyDate) return '-';
             const buyDate = new Date(row.buyDate);
             const confirmDate = new Date(buyDate);
-            confirmDate.setDate(buyDate.getDate() + 7);
+            confirmDate.setDate(buyDate.getDate() + predictionDays);
 
             const today = new Date();
             const isPassed = today >= confirmDate;
@@ -391,6 +391,11 @@ export default function CointradeDashboard() {
         totalValuation: 0,
         totalProfitRate: 0,
         holdingsCount: 0
+    });
+
+    // 설정 정보 (PREDICTION_DAYS 등)
+    const [config, setConfig] = useState({
+        predictionDays: 7 // 기본값 7일
     });
 
     // 보유 종목
@@ -434,7 +439,25 @@ export default function CointradeDashboard() {
     const fetchData = useCallback(async (isBackground = false) => {
         if (!isBackground) setLoading(true);
         try {
-            // 1. 상태 조회
+            // 1. 설정 조회 (PREDICTION_DAYS 등)
+            const configResponse = await send('/dart/api/cointrade/config', {}, 'GET');
+            if (configResponse.data?.success && configResponse.data?.response) {
+                const configList = configResponse.data.response;
+                const configMap = {};
+
+                // API 응답을 객체로 변환
+                configList.forEach(config => {
+                    const key = config.configKey || config.paramName;
+                    const value = config.configValue || config.paramValue;
+                    configMap[key] = value;
+                });
+
+                setConfig({
+                    predictionDays: parseInt(configMap.PREDICTION_DAYS || 7)
+                });
+            }
+
+            // 2. 상태 조회
             const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
             if (statusResponse.data?.success && statusResponse.data?.response) {
                 const resp = statusResponse.data.response;
@@ -448,7 +471,7 @@ export default function CointradeDashboard() {
                 });
             }
 
-            // 2. 보유 종목 조회
+            // 3. 보유 종목 조회
             const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
             if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
                 let initialHoldings = holdingsResponse.data.response;
@@ -517,7 +540,7 @@ export default function CointradeDashboard() {
                 }));
             }
 
-            // 3. 최근 거래 내역 조회 (최근 30일)
+            // 4. 최근 거래 내역 조회 (최근 30일)
             const today = new Date();
             const thirtyDaysAgo = new Date(today);
             thirtyDaysAgo.setDate(today.getDate() - 30);
@@ -985,7 +1008,7 @@ export default function CointradeDashboard() {
 
                                                 const value = holding[col.key];
 
-                                                const displayValue = col.render ? col.render(value, holding) : (value ?? '-');
+                                                const displayValue = col.render ? col.render(value, holding, config.predictionDays) : (value ?? '-');
 
                                                 return (
 
@@ -1200,10 +1223,10 @@ export default function CointradeDashboard() {
                             </div>
                         </div>
 
-                        {/* 2. 7일 보유 수익 확정 */}
+                        {/* 2. 기간 보유 수익 확정 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">7일 보유 익절 (수익 확정)</span>
+                                <span className="text-sm text-slate-600 dark:text-slate-400">{config.predictionDays}일 보유 익절 (수익 확정)</span>
                                 <span className="text-sm font-bold text-green-600 dark:text-green-400">
                                     {performance.expiredRate.toFixed(1)}%
                                 </span>
@@ -1273,13 +1296,14 @@ export default function CointradeDashboard() {
                 isOpen={isDetailModalOpen}
                 selectedHolding={selectedHolding}
                 onClose={handleCloseDetailModal}
+                config={config}
             />
         </div>
     );
 }
 
 // 상세보기 모달 컴포넌트 (외부로 분리)
-const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
+const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
     // ESC 키로 모달 닫기 및 스크롤 잠금
     useEffect(() => {
         if (!isOpen) return;
@@ -1589,14 +1613,14 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                                 </div>
                             </div>
 
-                            {/* 수익 확정일 (7일 후) */}
+                            {/* 수익 확정일 */}
                             {selectedHolding.buyDate && (
                                 <div className="sm:text-right">
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수익 확정일 (D+7)</div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수익 확정일 (D+{config?.predictionDays || 7})</div>
                                     <div className="text-sm sm:text-base font-bold text-green-700 dark:text-green-400">
                                         {(() => {
                                             const confirmDate = new Date(selectedHolding.buyDate);
-                                            confirmDate.setDate(confirmDate.getDate() + 7);
+                                            confirmDate.setDate(confirmDate.getDate() + (config?.predictionDays || 7));
                                             return formatDateTime(confirmDate);
                                         })()}
                                     </div>
@@ -1608,9 +1632,10 @@ const DetailModal = ({ isOpen, selectedHolding, onClose }) => {
                         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                             <span className="font-semibold text-slate-700 dark:text-slate-300">💡 수익 확정일이란?</span><br />
                             {selectedHolding.buyDate && (() => {
+                                const predictionDays = config?.predictionDays || 7;
                                 const buyDate = new Date(selectedHolding.buyDate);
                                 const confirmDate = new Date(buyDate);
-                                confirmDate.setDate(buyDate.getDate() + 7);
+                                confirmDate.setDate(buyDate.getDate() + predictionDays);
 
                                 const m1 = buyDate.getMonth() + 1;
                                 const d1 = buyDate.getDate();

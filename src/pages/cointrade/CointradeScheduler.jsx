@@ -45,7 +45,7 @@ export default function CointradeScheduler() {
             // 1. 스케줄러 상태 조회
             const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
             let schedulerStatus = {};
-            
+
             if (statusResponse.data?.success && statusResponse.data?.response) {
                 schedulerStatus = statusResponse.data.response;
             }
@@ -53,7 +53,7 @@ export default function CointradeScheduler() {
             // 2. 보유 종목 조회 (별도 API 호출)
             const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
             let holdings = [];
-            
+
             if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
                 holdings = holdingsResponse.data.response;
             }
@@ -82,7 +82,7 @@ export default function CointradeScheduler() {
                         holdings = holdings.map(holding => {
                             const currentPrice = tickerMap[holding.coinCode] || holding.currentPrice;
                             const valuation = currentPrice ? currentPrice * holding.quantity : (holding.totalAmount || 0);
-                            
+
                             totalInvestment += (holding.totalAmount || 0);
                             totalValuation += valuation;
 
@@ -95,8 +95,8 @@ export default function CointradeScheduler() {
                             return { ...holding, currentPrice };
                         });
 
-                        totalProfitRate = totalInvestment > 0 
-                            ? ((totalValuation - totalInvestment) / totalInvestment) * 100 
+                        totalProfitRate = totalInvestment > 0
+                            ? ((totalValuation - totalInvestment) / totalInvestment) * 100
                             : 0;
                     } else {
                         // 티커 조회 실패 시 기존 데이터로 계산
@@ -153,7 +153,7 @@ export default function CointradeScheduler() {
             setToast('복사할 로그가 없습니다.');
             return;
         }
-        
+
         try {
             const logText = logs.map(log => `[${log.time}] ${log.message}`).join('\n');
             await navigator.clipboard.writeText(logText);
@@ -180,7 +180,7 @@ export default function CointradeScheduler() {
                 setToast('매수 스케줄러 설정 실패: ' + error);
             } else if (data?.success) {
                 setToast(`매수 스케줄러가 ${newValue ? '활성화' : '비활성화'} 되었습니다.`);
-                
+
                 // 스케줄러 재로딩 호출
                 try {
                     await send('/dart/api/cointrade/scheduler/reload', {}, 'POST');
@@ -244,7 +244,7 @@ export default function CointradeScheduler() {
         sell: 0,
         stop: 0
     });
-    
+
     // 남은 시간 상태 (초)
     const [remainingTimes, setRemainingTimes] = useState({
         buy: 0,
@@ -289,7 +289,7 @@ export default function CointradeScheduler() {
         }
     }, [sellProcessLogs]);
 
-    // 프로세스 상태 폴링 (1초 간격)
+    // 프로세스 상태 폴링 (500ms 간격으로 단축하여 로그 누락 방지)
     useEffect(() => {
         const fetchProcessStatus = async (mode) => {
             try {
@@ -297,43 +297,72 @@ export default function CointradeScheduler() {
                 if (data?.success && data?.response) {
                     const resp = data.response;
                     const serverLogs = resp.logs || [];
-                    
+
                     const setStatus = mode === 'buy' ? setBuyProcessStatus : setSellProcessStatus;
                     const setLogs = mode === 'buy' ? setBuyProcessLogs : setSellProcessLogs;
                     const lastServerLogsRef = mode === 'buy' ? buyLastServerLogsRef : sellLastServerLogsRef;
-                    const currentLogs = mode === 'buy' ? buyProcessLogs : sellProcessLogs;
 
                     // 상태 업데이트
                     setStatus(resp);
 
-                    // 초기화 로직
+                    // 초기화 로직 개선: setState 콜백 사용
                     if (resp.percent === 0 || resp.message?.includes('스케줄러 초기화 완료')) {
-                         if (currentLogs.length > 0 && resp.percent === 0) {
-                            setLogs([]);
-                            lastServerLogsRef.current = [];
-                        }
+                        setLogs(prev => {
+                            if (prev.length > 0 && resp.percent === 0) {
+                                lastServerLogsRef.current = [];
+                                return [];
+                            }
+                            return prev;
+                        });
                     }
 
-                    // 로그 처리 (Append 로직)
-                    const prevLogs = lastServerLogsRef.current;
+                    // 로그 처리 (개선된 로직)
+                    const prevServerLogs = lastServerLogsRef.current;
+
+                    // 서버 로그가 변경되었는지 확인
+                    if (JSON.stringify(prevServerLogs) === JSON.stringify(serverLogs)) {
+                        // 변경 없음 - 스킵
+                        return;
+                    }
+
                     let newLogsToAdd = [];
 
-                    if (serverLogs.length > prevLogs.length) {
-                        const isExtension = prevLogs.every((log, idx) => log === serverLogs[idx]);
-                        if (isExtension) {
-                            newLogsToAdd = serverLogs.slice(prevLogs.length);
-                        } else {
-                             newLogsToAdd = serverLogs;
-                        }
-                    } else if (serverLogs.length < prevLogs.length) {
+                    // Case 1: 최초 로그 수신
+                    if (prevServerLogs.length === 0 && serverLogs.length > 0) {
                         newLogsToAdd = serverLogs;
-                    } else {
-                        // 길이 같음: 마지막 내용 다르면 추가 (버퍼 롤링 등)
-                         const lastNew = serverLogs[serverLogs.length - 1];
-                         const lastOld = prevLogs[prevLogs.length - 1];
-                         if (lastNew !== lastOld && lastNew) {
-                             newLogsToAdd = [lastNew];
-                         }
+                    }
+                    // Case 2: 서버 로그가 늘어난 경우 (정상적인 append)
+                    else if (serverLogs.length > prevServerLogs.length) {
+                        // 이전 로그가 서버 로그의 앞부분과 일치하는지 확인
+                        const isSequential = prevServerLogs.every((log, idx) => log === serverLogs[idx]);
+
+                        if (isSequential) {
+                            // 순차적 증가: 새로운 로그만 추가
+                            newLogsToAdd = serverLogs.slice(prevServerLogs.length);
+                        } else {
+                            // 버퍼가 롤링됨: 겹치는 부분 찾기
+                            let overlapFound = false;
+                            for (let i = Math.max(0, prevServerLogs.length - 100); i < prevServerLogs.length; i++) {
+                                const searchText = prevServerLogs[i];
+                                const serverIdx = serverLogs.indexOf(searchText);
+                                if (serverIdx !== -1 && serverIdx < serverLogs.length - 1) {
+                                    // 겹치는 지점 발견: 그 이후만 추가
+                                    newLogsToAdd = serverLogs.slice(serverIdx + 1);
+                                    overlapFound = true;
+                                    break;
+                                }
+                            }
+
+                            // 겹치는 부분 없음: 전체 교체 (로그 누락 발생했을 가능성)
+                            if (!overlapFound) {
+                                newLogsToAdd = serverLogs;
+                                console.warn(`[${mode}] 로그 누락 감지: 서버 버퍼 롤오버`);
+                            }
+                        }
+                    }
+                    // Case 3: 서버 로그가 줄어든 경우 (리셋)
+                    else if (serverLogs.length < prevServerLogs.length) {
+                        newLogsToAdd = serverLogs;
                     }
 
                     if (newLogsToAdd.length > 0) {
@@ -342,10 +371,10 @@ export default function CointradeScheduler() {
                             time: timeStr,
                             message: msg
                         }));
-                        
+
                         setLogs(prev => {
                             const combined = [...prev, ...formattedLogs];
-                            return combined.slice(-1000); 
+                            return combined.slice(-1000); // 최대 1000개 유지
                         });
                     }
 
@@ -359,10 +388,10 @@ export default function CointradeScheduler() {
         const interval = setInterval(() => {
             fetchProcessStatus('buy');
             fetchProcessStatus('sell');
-        }, 1000);
-        
+        }, 500); // 1000ms -> 500ms로 단축하여 로그 누락 확률 감소
+
         return () => clearInterval(interval);
-    }, [buyProcessLogs.length, sellProcessLogs.length]);
+    }, []); // 의존성 배열 제거 - 인터벌 재설정 방지 (가장 중요한 수정!)
 
     // 쿨타임 타이머
     useEffect(() => {
@@ -384,7 +413,7 @@ export default function CointradeScheduler() {
 
         // 쿨타임 설정 (10초)
         setCooldowns(prev => ({ ...prev, buy: Date.now() + 10000 }));
-        
+
         try {
             const { data, error } = await send('/dart/api/cointrade/trade/buy/start', {}, 'GET');
             if (error) {
@@ -625,24 +654,24 @@ export default function CointradeScheduler() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                    <Button 
-                        onClick={handleManualBuy} 
+                    <Button
+                        onClick={handleManualBuy}
                         disabled={remainingTimes.buy > 0}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[140px]"
                     >
                         {remainingTimes.buy > 0 ? `대기 (${remainingTimes.buy}s)` : '매수 프로세스 실행'}
                     </Button>
 
-                    <Button 
-                        onClick={handleManualSell} 
+                    <Button
+                        onClick={handleManualSell}
                         disabled={remainingTimes.sell > 0}
                         className="bg-amber-600 hover:bg-amber-700 text-white min-w-[140px]"
                     >
                         {remainingTimes.sell > 0 ? `대기 (${remainingTimes.sell}s)` : '매도 프로세스 실행'}
                     </Button>
 
-                    <Button 
-                        onClick={handleForceStop} 
+                    <Button
+                        onClick={handleForceStop}
                         disabled={remainingTimes.stop > 0}
                         variant="danger"
                         className="min-w-[140px]"
@@ -660,11 +689,10 @@ export default function CointradeScheduler() {
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                             매수 프로세스 진행도
                         </h2>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${
-                            buyProcessStatus.status === 'running' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 animate-pulse' :
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${buyProcessStatus.status === 'running' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 animate-pulse' :
                             buyProcessStatus.status === 'finished' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                            'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                        }`}>
+                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                            }`}>
                             {buyProcessStatus.status}
                         </span>
                     </div>
@@ -685,8 +713,8 @@ export default function CointradeScheduler() {
                                 </div>
                             </div>
                             <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200 dark:bg-blue-900/50">
-                                <div 
-                                    style={{ width: `${buyProcessStatus.percent}%` }} 
+                                <div
+                                    style={{ width: `${buyProcessStatus.percent}%` }}
                                     className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500 ease-out"
                                 ></div>
                             </div>
@@ -708,7 +736,7 @@ export default function CointradeScheduler() {
                                     </svg>
                                 </button>
                             </div>
-                            <div 
+                            <div
                                 ref={buyLogContainerRef}
                                 className="bg-slate-900 text-slate-300 rounded-md p-4 h-48 overflow-y-auto font-mono text-xs border border-slate-700 shadow-inner"
                             >
@@ -735,11 +763,10 @@ export default function CointradeScheduler() {
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                             매도 프로세스 진행도
                         </h2>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${
-                            sellProcessStatus.status === 'running' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 animate-pulse' :
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${sellProcessStatus.status === 'running' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 animate-pulse' :
                             sellProcessStatus.status === 'finished' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                            'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                        }`}>
+                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                            }`}>
                             {sellProcessStatus.status}
                         </span>
                     </div>
@@ -760,8 +787,8 @@ export default function CointradeScheduler() {
                                 </div>
                             </div>
                             <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-orange-200 dark:bg-orange-900/50">
-                                <div 
-                                    style={{ width: `${sellProcessStatus.percent}%` }} 
+                                <div
+                                    style={{ width: `${sellProcessStatus.percent}%` }}
                                     className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-orange-500 transition-all duration-500 ease-out"
                                 ></div>
                             </div>
@@ -783,7 +810,7 @@ export default function CointradeScheduler() {
                                     </svg>
                                 </button>
                             </div>
-                            <div 
+                            <div
                                 ref={sellLogContainerRef}
                                 className="bg-slate-900 text-slate-300 rounded-md p-4 h-48 overflow-y-auto font-mono text-xs border border-slate-700 shadow-inner"
                             >

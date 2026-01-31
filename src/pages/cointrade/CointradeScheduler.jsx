@@ -309,6 +309,7 @@ export default function CointradeScheduler() {
                     if (resp.percent === 0 || resp.message?.includes('스케줄러 초기화 완료')) {
                         setLogs(prev => {
                             if (prev.length > 0 && resp.percent === 0) {
+                                console.log(`[${mode}] 🔄 로그 초기화: ${prev.length}개 삭제`);
                                 lastServerLogsRef.current = [];
                                 return [];
                             }
@@ -325,10 +326,13 @@ export default function CointradeScheduler() {
                         return;
                     }
 
+                    console.log(`[${mode}] 로그 변경 감지: prev=${prevServerLogs.length}, server=${serverLogs.length}`);
+
                     let newLogsToAdd = [];
 
                     // Case 1: 최초 로그 수신
                     if (prevServerLogs.length === 0 && serverLogs.length > 0) {
+                        console.log(`[${mode}] Case 1: 최초 로그 수신 (${serverLogs.length}개)`);
                         newLogsToAdd = serverLogs;
                     }
                     // Case 2: 서버 로그가 늘어난 경우 (정상적인 append)
@@ -338,8 +342,11 @@ export default function CointradeScheduler() {
 
                         if (isSequential) {
                             // 순차적 증가: 새로운 로그만 추가
+                            const newCount = serverLogs.length - prevServerLogs.length;
+                            console.log(`[${mode}] Case 2-1: 순차 증가 (새 로그 ${newCount}개 추가)`);
                             newLogsToAdd = serverLogs.slice(prevServerLogs.length);
                         } else {
+                            console.log(`[${mode}] Case 2-2: 비순차 증가 - 겹치는 부분 찾기 시작`);
                             // 버퍼가 롤링됨: 겹치는 부분 찾기
                             let overlapFound = false;
                             for (let i = Math.max(0, prevServerLogs.length - 100); i < prevServerLogs.length; i++) {
@@ -347,6 +354,8 @@ export default function CointradeScheduler() {
                                 const serverIdx = serverLogs.indexOf(searchText);
                                 if (serverIdx !== -1 && serverIdx < serverLogs.length - 1) {
                                     // 겹치는 지점 발견: 그 이후만 추가
+                                    const newCount = serverLogs.length - serverIdx - 1;
+                                    console.log(`[${mode}] 겹침 발견: serverIdx=${serverIdx}, 새 로그 ${newCount}개 추가`);
                                     newLogsToAdd = serverLogs.slice(serverIdx + 1);
                                     overlapFound = true;
                                     break;
@@ -355,13 +364,14 @@ export default function CointradeScheduler() {
 
                             // 겹치는 부분 없음: 전체 교체 (로그 누락 발생했을 가능성)
                             if (!overlapFound) {
+                                console.warn(`[${mode}] ⚠️ 로그 누락 감지: 서버 버퍼 롤오버 - 전체 교체 (${serverLogs.length}개)`);
                                 newLogsToAdd = serverLogs;
-                                console.warn(`[${mode}] 로그 누락 감지: 서버 버퍼 롤오버`);
                             }
                         }
                     }
                     // Case 3: 서버 로그가 줄어든 경우 (리셋)
                     else if (serverLogs.length < prevServerLogs.length) {
+                        console.log(`[${mode}] Case 3: 서버 로그 감소 (리셋) - 전체 교체 (${serverLogs.length}개)`);
                         newLogsToAdd = serverLogs;
                     }
 
@@ -372,10 +382,16 @@ export default function CointradeScheduler() {
                             message: msg
                         }));
 
+                        console.log(`[${mode}] 프론트 로그 추가: ${formattedLogs.length}개`);
+
                         setLogs(prev => {
                             const combined = [...prev, ...formattedLogs];
-                            return combined.slice(-1000); // 최대 1000개 유지
+                            const result = combined.slice(-1000);
+                            console.log(`[${mode}] 프론트 총 로그: ${prev.length} → ${result.length}`);
+                            return result; // 최대 1000개 유지
                         });
+                    } else {
+                        console.log(`[${mode}] 추가할 로그 없음`);
                     }
 
                     lastServerLogsRef.current = serverLogs;

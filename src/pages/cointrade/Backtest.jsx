@@ -1981,11 +1981,48 @@ function formatParamValue(key, value) {
     return String(value);
 }
 
+// 커스텀 툴팁 컴포넌트 (정수 부분만 볼드체 + % 표시)
+function CustomProfitTooltip({ active, payload, label }) {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+            <div className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg p-3 shadow-lg">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    날짜: {label}
+                </p>
+                {data.profit !== undefined && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                        수익/손실: {data.profit >= 0 ? '+' : ''}<NumberWithBoldInteger value={Math.abs(data.profit)} decimals={0} suffix=" KRW" />
+                        {data.dailyReturnPct !== undefined && (
+                            <span className={`ml-2 ${data.dailyReturnPct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                (<span className="font-bold">{data.dailyReturnPct >= 0 ? '+' : ''}{data.dailyReturnPct.toFixed(2)}%</span>)
+                            </span>
+                        )}
+                    </p>
+                )}
+                {data.cumulativeProfit !== undefined && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                        누적: {data.cumulativeProfit >= 0 ? '+' : ''}<NumberWithBoldInteger value={Math.abs(data.cumulativeProfit)} decimals={0} suffix=" KRW" />
+                        {data.cumulativeReturnPct !== undefined && (
+                            <span className={`ml-2 ${data.cumulativeReturnPct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                (<span className="font-bold">{data.cumulativeReturnPct >= 0 ? '+' : ''}{data.cumulativeReturnPct.toFixed(2)}%</span>)
+                            </span>
+                        )}
+                    </p>
+                )}
+            </div>
+        );
+    }
+    return null;
+}
+
 // 상세 뷰 컴포넌트
 function DetailView({ result, onClose, onExport }) {
     const [showProfitRanking, setShowProfitRanking] = useState(false);
     const [showTradeCountRanking, setShowTradeCountRanking] = useState(false);
     const [showParams, setShowParams] = useState(false);
+    const [showDailyProfitRanking, setShowDailyProfitRanking] = useState(false);
+    const [showCumulativeProfitRanking, setShowCumulativeProfitRanking] = useState(false);
 
     const portfolio = result.data.portfolio;
     const individual = result.data.individual || {};
@@ -2096,6 +2133,55 @@ function DetailView({ result, onClose, onExport }) {
 
         return maxHoldings;
     }, [individual]);
+
+    // 날짜별 수익률 데이터 계산
+    const dailyProfitData = useMemo(() => {
+        const profitByDate = {};
+        const initialCapital = result.data.params?.INITIAL_CAPITAL || result.data.params?.initial_capital || 10000000; // 기본값 1000만원
+
+        // 모든 종목의 거래 내역을 순회
+        Object.entries(individual).forEach(([coin, data]) => {
+            if (data && data.trades && data.trades.length > 0) {
+                data.trades.forEach(trade => {
+                    // 매도 날짜를 기준으로 수익 집계
+                    if (trade.exit_date && trade.profit_loss !== undefined) {
+                        const date = trade.exit_date.split(' ')[0];
+                        if (!profitByDate[date]) {
+                            profitByDate[date] = {
+                                date,
+                                profit: 0,
+                                trades: 0
+                            };
+                        }
+                        profitByDate[date].profit += trade.profit_loss;
+                        profitByDate[date].trades += 1;
+                    }
+                });
+            }
+        });
+
+        // 날짜순으로 정렬하고 누적 수익률 계산
+        const sortedData = Object.values(profitByDate).sort((a, b) => a.date.localeCompare(b.date));
+
+        let cumulativeProfit = 0;
+        const dataWithCumulative = sortedData.map((item, index) => {
+            cumulativeProfit += item.profit;
+
+            // 당일 수익률 % = (당일 수익 / 초기 자본) * 100
+            const dailyReturnPct = (item.profit / initialCapital) * 100;
+            // 누적 수익률 % = (누적 수익 / 초기 자본) * 100
+            const cumulativeReturnPct = (cumulativeProfit / initialCapital) * 100;
+
+            return {
+                ...item,
+                cumulativeProfit: cumulativeProfit,
+                dailyReturnPct: dailyReturnPct,
+                cumulativeReturnPct: cumulativeReturnPct
+            };
+        });
+
+        return dataWithCumulative;
+    }, [individual, result.data.params]);
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -2381,6 +2467,160 @@ function DetailView({ result, onClose, onExport }) {
                                             <Bar dataKey="sell" fill="#3b82f6" name="매도" />
                                         </BarChart>
                                     </ResponsiveContainer>
+                                </div>
+                            )}
+
+                            {/* 기간별 수익률 현황 (하루 수익률) */}
+                            {dailyProfitData.length > 0 && (
+                                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
+                                    <div className="mb-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200">기간별 수익률 현황</h3>
+                                            <button
+                                                onClick={() => setShowDailyProfitRanking(!showDailyProfitRanking)}
+                                                className="text-sm px-3 py-1 rounded bg-blue-200 dark:bg-blue-600 hover:bg-blue-300 dark:hover:bg-blue-500 text-blue-800 dark:text-blue-100 transition-colors"
+                                            >
+                                                {showDailyProfitRanking ? '순위 숨기기' : '순위 보기'}
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                                            각 날짜별 당일 수익/손실을 나타냅니다. (% = 당일 수익 / 초기 자본 × 100)
+                                        </p>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={300}>
+                                        <BarChart data={dailyProfitData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis
+                                                dataKey="date"
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={100}
+                                                tick={{ fontSize: 11 }}
+                                            />
+                                            <YAxis
+                                                label={{ value: '수익/손실 (KRW)', angle: -90, position: 'insideLeft' }}
+                                            />
+                                            <Tooltip content={<CustomProfitTooltip />} />
+                                            <Legend />
+                                            <Bar dataKey="profit" name="수익/손실">
+                                                {dailyProfitData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#10b981' : '#ef4444'} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+
+                                    {/* 수익률 순위 */}
+                                    {showDailyProfitRanking && (
+                                        <div className="mt-4 bg-white dark:bg-slate-800 rounded-lg p-4">
+                                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">일별 수익률 순위 (상위 10개)</h4>
+                                            <div className="space-y-2">
+                                                {[...dailyProfitData]
+                                                    .sort((a, b) => b.profit - a.profit)
+                                                    .slice(0, 10)
+                                                    .map((day, index) => (
+                                                        <div
+                                                            key={day.date}
+                                                            className="flex items-center justify-between py-2 px-3 rounded bg-slate-50 dark:bg-slate-700/50"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <span className={`text-sm font-bold ${index === 0 ? 'text-yellow-500' :
+                                                                    index === 1 ? 'text-slate-400' :
+                                                                        index === 2 ? 'text-amber-600' :
+                                                                            'text-slate-600 dark:text-slate-400'
+                                                                    }`}>
+                                                                    {index + 1}위
+                                                                </span>
+                                                                <span className="font-medium text-slate-800 dark:text-slate-200">{day.date}</span>
+                                                            </div>
+                                                            <span className={`${day.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                {day.profit >= 0 ? '+' : ''}<NumberWithBoldInteger value={Math.abs(day.profit)} decimals={2} suffix=" KRW" /> (<span className="font-semibold">{day.dailyReturnPct >= 0 ? '+' : ''}{day.dailyReturnPct.toFixed(2)}%</span>) · {day.trades}건
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 기간별 누적 수익률 현황 */}
+                            {dailyProfitData.length > 0 && (
+                                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-6">
+                                    <div className="mb-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200">기간별 누적 수익률 현황</h3>
+                                            <button
+                                                onClick={() => setShowCumulativeProfitRanking(!showCumulativeProfitRanking)}
+                                                className="text-sm px-3 py-1 rounded bg-blue-200 dark:bg-blue-600 hover:bg-blue-300 dark:hover:bg-blue-500 text-blue-800 dark:text-blue-100 transition-colors"
+                                            >
+                                                {showCumulativeProfitRanking ? '순위 숨기기' : '순위 보기'}
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                                            날짜별 누적 수익/손실을 나타냅니다. (% = 누적 수익 / 초기 자본 × 100, 마지막 값 = 최종 수익률)
+                                        </p>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={300}>
+                                        <LineChart data={dailyProfitData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis
+                                                dataKey="date"
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={100}
+                                                tick={{ fontSize: 11 }}
+                                            />
+                                            <YAxis
+                                                label={{ value: '누적 수익/손실 (KRW)', angle: -90, position: 'insideLeft' }}
+                                            />
+                                            <Tooltip content={<CustomProfitTooltip />} />
+                                            <Legend />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="cumulativeProfit"
+                                                stroke="#8b5cf6"
+                                                strokeWidth={2}
+                                                name="누적 수익/손실"
+                                                dot={{ fill: '#8b5cf6', r: 3 }}
+                                                activeDot={{ r: 5 }}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+
+                                    {/* 누적 수익률 순위 */}
+                                    {showCumulativeProfitRanking && (
+                                        <div className="mt-4 bg-white dark:bg-slate-800 rounded-lg p-4">
+                                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">누적 수익률 순위 (상위 10개)</h4>
+                                            <div className="space-y-2">
+                                                {[...dailyProfitData]
+                                                    .sort((a, b) => b.cumulativeProfit - a.cumulativeProfit)
+                                                    .slice(0, 10)
+                                                    .map((day, index) => (
+                                                        <div
+                                                            key={day.date}
+                                                            className="flex items-center justify-between py-2 px-3 rounded bg-slate-50 dark:bg-slate-700/50"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <span className={`text-sm font-bold ${index === 0 ? 'text-yellow-500' :
+                                                                    index === 1 ? 'text-slate-400' :
+                                                                        index === 2 ? 'text-amber-600' :
+                                                                            'text-slate-600 dark:text-slate-400'
+                                                                    }`}>
+                                                                    {index + 1}위
+                                                                </span>
+                                                                <span className="font-medium text-slate-800 dark:text-slate-200">{day.date}</span>
+                                                            </div>
+                                                            <span className={`${day.cumulativeProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                {day.cumulativeProfit >= 0 ? '+' : ''}<NumberWithBoldInteger value={Math.abs(day.cumulativeProfit)} decimals={2} suffix=" KRW" /> (<span className="font-semibold">{day.cumulativeReturnPct >= 0 ? '+' : ''}{day.cumulativeReturnPct.toFixed(2)}%</span>)
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

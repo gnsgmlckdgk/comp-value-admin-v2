@@ -263,6 +263,7 @@ export default function CointradeScheduler() {
     const [buyProcessLogs, setBuyProcessLogs] = useState([]);
     const buyLogContainerRef = useRef(null);
     const buyLastServerLogsRef = useRef([]);
+    const buyPrevStatusRef = useRef('idle'); // 이전 상태 추적
 
     // 매도 프로세스 상태 모니터링
     const [sellProcessStatus, setSellProcessStatus] = useState({
@@ -275,6 +276,7 @@ export default function CointradeScheduler() {
     const [sellProcessLogs, setSellProcessLogs] = useState([]);
     const sellLogContainerRef = useRef(null);
     const sellLastServerLogsRef = useRef([]);
+    const sellPrevStatusRef = useRef('idle'); // 이전 상태 추적
 
     // 로그 자동 스크롤
     useEffect(() => {
@@ -301,20 +303,21 @@ export default function CointradeScheduler() {
                     const setStatus = mode === 'buy' ? setBuyProcessStatus : setSellProcessStatus;
                     const setLogs = mode === 'buy' ? setBuyProcessLogs : setSellProcessLogs;
                     const lastServerLogsRef = mode === 'buy' ? buyLastServerLogsRef : sellLastServerLogsRef;
+                    const prevStatusRef = mode === 'buy' ? buyPrevStatusRef : sellPrevStatusRef;
+
+                    // 상태 변경 감지 (running → idle 또는 finished → idle로 변경될 때만 초기화)
+                    const statusChanged = prevStatusRef.current !== 'idle' && resp.status === 'idle';
+                    prevStatusRef.current = resp.status;
 
                     // 상태 업데이트
                     setStatus(resp);
 
-                    // 초기화 로직 개선: setState 콜백 사용
-                    if (resp.percent === 0 || resp.message?.includes('스케줄러 초기화 완료')) {
-                        setLogs(prev => {
-                            if (prev.length > 0 && resp.percent === 0) {
-                                console.log(`[${mode}] 🔄 로그 초기화: ${prev.length}개 삭제`);
-                                lastServerLogsRef.current = [];
-                                return [];
-                            }
-                            return prev;
-                        });
+                    // 초기화 로직: 상태가 idle로 돌아갔을 때만 (프로세스 종료)
+                    if (statusChanged) {
+                        console.log(`[${mode}] 🔄 프로세스 종료 - 로그 초기화`);
+                        setLogs([]);
+                        lastServerLogsRef.current = [];
+                        return; // 더 이상 로그 처리하지 않음
                     }
 
                     // 로그 처리 (개선된 로직)

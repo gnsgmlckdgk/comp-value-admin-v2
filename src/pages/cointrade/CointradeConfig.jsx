@@ -53,6 +53,7 @@ export default function CointradeConfig() {
         BUY_SCHEDULER_ENABLED: 'false', // 매수 스케줄러 활성화 여부
         SELL_SCHEDULER_ENABLED: 'false', // 매도 스케줄러 활성화 여부
         TRADING_FEE_RATE: '',          // 거래 수수료율 %
+        TRAIN_WORKERS: '',             // 학습 워커 개수 (병렬처리)
     });
 
     // 파라미터 그룹 정의
@@ -63,6 +64,7 @@ export default function CointradeConfig() {
                 'PREDICTION_DAYS',
                 'TRAIN_SCHEDULE_ENABLED',
                 'TRAIN_SCHEDULE_CRON',
+                'TRAIN_WORKERS',
                 'ENSEMBLE_MODE',
                 'TRADING_FEE_RATE'
             ]
@@ -108,6 +110,11 @@ export default function CointradeConfig() {
         'MAX_PROFIT_RATE',
         'SELL_CHECK_SECONDS',
         'TRADING_FEE_RATE'
+    ];
+
+    // 재기동이 필요한 파라미터 목록
+    const RESTART_REQUIRED_PARAMS = [
+        'TRAIN_WORKERS'
     ];
 
     // Toast auto-hide
@@ -198,6 +205,14 @@ export default function CointradeConfig() {
             const value = parseFloat(params['TRADING_FEE_RATE']);
             if (isNaN(value) || value < 0 || value > 1) {
                 errors.push(`${getParamLabel('TRADING_FEE_RATE')}는 0~1 사이의 값이어야 합니다. (예: 0.05%는 0.0005로 입력)`);
+            }
+        }
+
+        // TRAIN_WORKERS 검증 (1~10)
+        if (params['TRAIN_WORKERS']) {
+            const value = parseInt(params['TRAIN_WORKERS']);
+            if (isNaN(value) || value < 1 || value > 10) {
+                errors.push(`${getParamLabel('TRAIN_WORKERS')}는 1~10 사이의 값이어야 합니다.`);
             }
         }
 
@@ -410,6 +425,7 @@ export default function CointradeConfig() {
             BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부',
             SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부',
             TRADING_FEE_RATE: '거래 수수료율 (비율)',
+            TRAIN_WORKERS: '학습 워커 개수 (병렬처리)',
         };
         return labels[key] || key;
     };
@@ -436,6 +452,7 @@ export default function CointradeConfig() {
             BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부 (true/false)',
             SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부 (true/false)',
             TRADING_FEE_RATE: '거래소 수수료율 (0.05%면 0.0005로 입력, 업비트: 0.0005, 바이낸스: 0.001)',
+            TRAIN_WORKERS: '학습 시 병렬처리할 워커 개수 (최대 10개)',
         };
         return descriptions[key] || '';
     };
@@ -554,6 +571,11 @@ export default function CointradeConfig() {
                                                                     즉시 반영
                                                                 </span>
                                                             )}
+                                                            {RESTART_REQUIRED_PARAMS.includes(key) && (
+                                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 whitespace-nowrap">
+                                                                    재기동 필요
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-tight">
                                                             {key}
@@ -610,6 +632,17 @@ export default function CointradeConfig() {
                                                                 <option value="gru_only">gru_only</option>
                                                                 <option value="cnn_only">cnn_only</option>
                                                             </select>
+                                                        ) : key === 'TRAIN_WORKERS' ? (
+                                                            <Input
+                                                                type="number"
+                                                                className="w-full h-10 md:h-9 dark:!bg-slate-600 dark:placeholder-slate-300"
+                                                                value={params[key]}
+                                                                onChange={(e) => handleInputChange(key, e.target.value)}
+                                                                placeholder="1"
+                                                                min="1"
+                                                                max="10"
+                                                                step="1"
+                                                            />
                                                         ) : (
                                                             <Input
                                                                 type={key === 'TRAIN_SCHEDULE_CRON' ? 'text' : 'number'}

@@ -49,6 +49,7 @@ jobs:
       - name: Build and Push Multi-Arch Image (amd64 + arm64)
         run: |
           docker buildx build \
+            --platform linux/amd64,linux/arm64 \
             -f docker/Dockerfile \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \

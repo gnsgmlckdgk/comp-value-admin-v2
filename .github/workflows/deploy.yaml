@@ -16,7 +16,8 @@ env:
 jobs:
   build:
     # self-hosted ARM64 runner (ex. Mac M1)
-    runs-on: self-hosted
+    #runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       # (1) 소스코드 체크아웃
@@ -49,7 +50,6 @@ jobs:
       - name: Build and Push Multi-Arch Image (amd64 + arm64)
         run: |
           docker buildx build \
-            --platform linux/amd64,linux/arm64 \
             -f docker/Dockerfile \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \

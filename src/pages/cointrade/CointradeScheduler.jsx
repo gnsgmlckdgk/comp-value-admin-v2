@@ -11,6 +11,26 @@ const formatNumberWithComma = (value) => {
     return num.toLocaleString('en-US');
 };
 
+// 롤링 버퍼에서 새로운 로그 찾기
+const findNewLogs = (prevLogs, serverLogs) => {
+    if (serverLogs.length === 0) return [];
+
+    // 이전 로그의 마지막 부분에서 겹치는 지점 찾기
+    for (let i = Math.max(0, prevLogs.length - 100); i < prevLogs.length; i++) {
+        const searchText = prevLogs[i];
+        const serverIdx = serverLogs.indexOf(searchText);
+        if (serverIdx !== -1 && serverIdx < serverLogs.length - 1) {
+            // 겹치는 지점 발견: 그 이후만 추가
+            return serverLogs.slice(serverIdx + 1);
+        }
+    }
+
+    // 겹치는 부분 없음: 서버 로그에서 이전에 없던 새 로그만 추출
+    const prevSet = new Set(prevLogs);
+    const newLogs = serverLogs.filter(log => !prevSet.has(log));
+    return newLogs.length > 0 ? newLogs : serverLogs;
+};
+
 /**
  * 코인 자동매매 스케줄러 관리 페이지
  * v2.1 - 만료 임박, 급등 확률 정보 포함
@@ -344,27 +364,18 @@ export default function CointradeScheduler() {
                             newLogsToAdd = serverLogs.slice(prevServerLogs.length);
                         } else {
                             // 버퍼가 롤링됨: 겹치는 부분 찾기
-                            let overlapFound = false;
-                            for (let i = Math.max(0, prevServerLogs.length - 100); i < prevServerLogs.length; i++) {
-                                const searchText = prevServerLogs[i];
-                                const serverIdx = serverLogs.indexOf(searchText);
-                                if (serverIdx !== -1 && serverIdx < serverLogs.length - 1) {
-                                    // 겹치는 지점 발견: 그 이후만 추가
-                                    newLogsToAdd = serverLogs.slice(serverIdx + 1);
-                                    overlapFound = true;
-                                    break;
-                                }
-                            }
-
-                            // 겹치는 부분 없음: 전체 교체 (로그 누락 발생했을 가능성)
-                            if (!overlapFound) {
-                                newLogsToAdd = serverLogs;
-                            }
+                            newLogsToAdd = findNewLogs(prevServerLogs, serverLogs);
                         }
                     }
                     // Case 3: 서버 로그가 줄어든 경우 (리셋)
                     else if (serverLogs.length < prevServerLogs.length) {
                         newLogsToAdd = serverLogs;
+                    }
+                    // Case 4: 길이는 같지만 내용이 다른 경우 (롤링 버퍼)
+                    else if (serverLogs.length === prevServerLogs.length) {
+                        // 이미 JSON.stringify로 내용이 다름을 확인했으므로
+                        // 롤링 버퍼에서 새로운 로그 찾기
+                        newLogsToAdd = findNewLogs(prevServerLogs, serverLogs);
                     }
 
                     if (newLogsToAdd.length > 0) {

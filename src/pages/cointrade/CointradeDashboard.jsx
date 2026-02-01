@@ -35,7 +35,9 @@ const getReasonColor = (reason) => {
         'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
         'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
         'PARTIAL_7DAY_PROFIT': 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
-        'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+        'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
+        'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
+        'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
     };
     return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
 };
@@ -49,7 +51,9 @@ const getReasonLabel = (reason) => {
         'STOP_LOSS': '손절',
         'PARTIAL_TAKE_PROFIT': '부분익절',
         'PARTIAL_7DAY_PROFIT': '부분기간',
-        'PARTIAL_STOP_LOSS': '부분손절'
+        'PARTIAL_STOP_LOSS': '부분손절',
+        'MANUAL': '수동매도',
+        'PARTIAL_MANUAL': '부분수동'
     };
     return labels[reason] || reason;
 };
@@ -185,6 +189,7 @@ const renderFormattedNumber = (value, decimals = 8) => {
 
 // 보유 종목 컬럼 너비 정의
 const HOLDINGS_COL_WIDTHS = {
+    checkbox: '50px',
     coinCode: '100px',
     buyPrice: '120px',
     currentPrice: '120px',
@@ -202,6 +207,16 @@ const HOLDINGS_COL_WIDTHS = {
 
 // 보유 종목 테이블 컬럼 정의
 const HOLDINGS_TABLE_COLUMNS = [
+    {
+        key: 'checkbox',
+        label: '',
+        width: HOLDINGS_COL_WIDTHS.checkbox,
+        sortable: false,
+        sticky: true,
+        headerClassName: 'px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-2 py-3 whitespace-nowrap text-center',
+        isCheckbox: true
+    },
     {
         key: 'coinCode',
         label: '종목',
@@ -407,6 +422,12 @@ export default function CointradeDashboard() {
     // 상세보기 모달 상태
     const [selectedHolding, setSelectedHolding] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    // 매도 관련 상태
+    const [selectedCoins, setSelectedCoins] = useState([]);
+    const [showSellModal, setShowSellModal] = useState(false);
+    const [sellResult, setSellResult] = useState(null);
+    const [isSelling, setIsSelling] = useState(false);
 
     // 테이블 필터/정렬 상태
     const [columnFilters, setColumnFilters] = useState({});
@@ -735,6 +756,67 @@ export default function CointradeDashboard() {
         setSelectedHolding(null);
     };
 
+    // 매도 관련 핸들러
+    const handleCoinSelect = useCallback((coinCode) => {
+        setSelectedCoins(prev => {
+            if (prev.includes(coinCode)) {
+                return prev.filter(c => c !== coinCode);
+            } else {
+                return [...prev, coinCode];
+            }
+        });
+    }, []);
+
+    const handleSelectAll = useCallback(() => {
+        if (selectedCoins.length === processedHoldings.length) {
+            setSelectedCoins([]);
+        } else {
+            setSelectedCoins(processedHoldings.map(h => h.coinCode));
+        }
+    }, [selectedCoins.length, processedHoldings]);
+
+    const handleSellClick = () => {
+        setShowSellModal(true);
+    };
+
+    const handleSellConfirm = async () => {
+        setIsSelling(true);
+        try {
+            const requestBody = selectedCoins.length > 0
+                ? { coin_codes: selectedCoins }
+                : {};
+
+            const { data, error } = await send('/dart/api/holdings/sell', requestBody, 'POST');
+
+            if (error) {
+                setSellResult({
+                    status: 'error',
+                    message: error.message || '매도 요청 중 오류가 발생했습니다.'
+                });
+            } else {
+                setSellResult(data);
+            }
+        } catch (err) {
+            setSellResult({
+                status: 'error',
+                message: '매도 요청 중 오류가 발생했습니다.'
+            });
+        } finally {
+            setIsSelling(false);
+            setShowSellModal(false);
+        }
+    };
+
+    const handleSellCancel = () => {
+        setShowSellModal(false);
+    };
+
+    const handleSellResultClose = () => {
+        setSellResult(null);
+        setSelectedCoins([]);
+        fetchData(false); // 매도 후 데이터 새로고침
+    };
+
     // 페이지 로드 시 + 30초마다 자동 새로고침
     useEffect(() => {
         fetchData(false); // 초기 로딩은 loading 표시
@@ -840,23 +922,40 @@ export default function CointradeDashboard() {
 
                     </h2>
 
-                    {Object.values(holdingsColumnFilters).some((v) => v !== '') && (
+                    <div className="flex items-center gap-2">
+                        {selectedCoins.length > 0 && (
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                                {selectedCoins.length}개 선택
+                            </span>
+                        )}
 
                         <button
-
                             type="button"
-
-                            onClick={() => setHoldingsColumnFilters({})}
-
-                            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
-
+                            onClick={handleSellClick}
+                            disabled={holdings.length === 0}
+                            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors dark:disabled:bg-slate-600"
                         >
-
-                            필터 초기화
-
+                            매도
                         </button>
 
-                    )}
+                        {Object.values(holdingsColumnFilters).some((v) => v !== '') && (
+
+                            <button
+
+                                type="button"
+
+                                onClick={() => setHoldingsColumnFilters({})}
+
+                                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
+
+                            >
+
+                                필터 초기화
+
+                            </button>
+
+                        )}
+                    </div>
 
                 </div>
 
@@ -876,87 +975,104 @@ export default function CointradeDashboard() {
 
                             <tr>
 
-                                {HOLDINGS_TABLE_COLUMNS.map((col, index) => (
+                                {HOLDINGS_TABLE_COLUMNS.map((col, index) => {
+                                    const leftPosition = col.sticky
+                                        ? (index === 0 ? 0 : index === 1 ? '50px' : undefined)
+                                        : undefined;
 
-                                    <th
+                                    return (
+                                        <th
 
-                                        key={col.key}
+                                            key={col.key}
 
-                                        className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                            className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
 
-                                        style={{
+                                            style={{
 
-                                            width: col.width,
+                                                width: col.width,
 
-                                            left: col.sticky ? (index === 0 ? 0 : '100px') : undefined // coinCode width is 100px
+                                                left: leftPosition
 
-                                        }}
+                                            }}
 
-                                        onClick={() => col.sortable && handleHoldingsSort(col.key)}
+                                            onClick={() => col.sortable && handleHoldingsSort(col.key)}
 
-                                    >
+                                        >
+                                            {col.isCheckbox ? (
+                                                <input
+                                                    type="checkbox"
+                                                    checked={processedHoldings.length > 0 && selectedCoins.length === processedHoldings.length}
+                                                    onChange={handleSelectAll}
+                                                    className="w-4 h-4 cursor-pointer"
+                                                />
+                                            ) : (
+                                                <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
 
-                                        <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
+                                                    <span>{col.label}</span>
 
-                                            <span>{col.label}</span>
+                                                    {col.sortable && (
 
-                                            {col.sortable && (
+                                                        <span className="flex flex-col text-[10px] leading-none opacity-60">
 
-                                                <span className="flex flex-col text-[10px] leading-none opacity-60">
+                                                            <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
 
-                                                    <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
+                                                            <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
 
-                                                    <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
+                                                        </span>
 
-                                                </span>
+                                                    )}
 
+                                                </div>
                                             )}
 
-                                        </div>
-
-                                    </th>
-
-                                ))}
+                                        </th>
+                                    );
+                                })}
 
                             </tr>
 
                             <tr className="bg-slate-100 dark:bg-slate-700">
 
-                                {HOLDINGS_TABLE_COLUMNS.map((col, index) => (
+                                {HOLDINGS_TABLE_COLUMNS.map((col, index) => {
+                                    const leftPosition = col.sticky
+                                        ? (index === 0 ? 0 : index === 1 ? '50px' : undefined)
+                                        : undefined;
 
-                                    <th
+                                    return (
+                                        <th
 
-                                        key={`filter-${col.key}`}
+                                            key={`filter-${col.key}`}
 
-                                        className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                            className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
 
-                                        style={{
+                                            style={{
 
-                                            width: col.width,
+                                                width: col.width,
 
-                                            left: col.sticky ? (index === 0 ? 0 : '100px') : undefined
+                                                left: leftPosition
 
-                                        }}
+                                            }}
 
-                                    >
+                                        >
+                                            {!col.isCheckbox && (
+                                                <input
 
-                                        <input
+                                                    type="text"
 
-                                            type="text"
+                                                    value={holdingsColumnFilters[col.key] || ''}
 
-                                            value={holdingsColumnFilters[col.key] || ''}
+                                                    onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
 
-                                            onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
+                                                    placeholder="..."
 
-                                            placeholder="..."
+                                                    className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
 
-                                            className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+                                                />
+                                            )}
 
-                                        />
-
-                                    </th>
-
-                                ))}
+                                        </th>
+                                    );
+                                })}
 
                             </tr>
 
@@ -1010,6 +1126,10 @@ export default function CointradeDashboard() {
 
                                                 const displayValue = col.render ? col.render(value, holding, config.predictionDays) : (value ?? '-');
 
+                                                const leftPosition = col.sticky
+                                                    ? (colIndex === 0 ? 0 : colIndex === 1 ? '50px' : undefined)
+                                                    : undefined;
+
                                                 return (
 
                                                     <td
@@ -1022,13 +1142,28 @@ export default function CointradeDashboard() {
 
                                                             width: col.width,
 
-                                                            left: col.sticky ? (colIndex === 0 ? 0 : '100px') : undefined
+                                                            left: leftPosition
 
                                                         }}
 
-                                                    >
+                                                        onClick={(e) => {
+                                                            if (col.isCheckbox) {
+                                                                e.stopPropagation();
+                                                            }
+                                                        }}
 
-                                                        {displayValue}
+                                                    >
+                                                        {col.isCheckbox ? (
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedCoins.includes(holding.coinCode)}
+                                                                onChange={() => handleCoinSelect(holding.coinCode)}
+                                                                className="w-4 h-4 cursor-pointer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        ) : (
+                                                            displayValue
+                                                        )}
 
                                                     </td>
 
@@ -1648,6 +1783,208 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
                     </div>
                 </div>
             </div>
+
+            {/* 매도 확인 모달 */}
+            {showSellModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full p-6">
+                        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+                            매도 확인
+                        </h3>
+
+                        {selectedCoins.length > 0 ? (
+                            <div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                                    다음 종목을 매도하시겠습니까?
+                                </p>
+                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3 mb-4 max-h-60 overflow-y-auto">
+                                    {selectedCoins.map((coin, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="text-sm text-slate-700 dark:text-slate-300 py-1"
+                                        >
+                                            {coin}
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-red-600 dark:text-red-400">
+                                    총 {selectedCoins.length}개 종목이 매도됩니다.
+                                </p>
+                            </div>
+                        ) : (
+                            <div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                                    선택된 종목이 없습니다.
+                                </p>
+                                <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+                                    보유 종목 전체가 매도됩니다.
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={handleSellCancel}
+                                disabled={isSelling}
+                                className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleSellConfirm}
+                                disabled={isSelling}
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {isSelling ? '처리 중...' : '확인'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 매도 결과 모달 */}
+            {sellResult && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                매도 결과
+                            </h3>
+                            <button
+                                onClick={handleSellResultClose}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* 상태 메시지 */}
+                        <div className={`mb-4 p-4 rounded-lg ${
+                            sellResult.status === 'success'
+                                ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
+                                : sellResult.status === 'warning'
+                                ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300'
+                                : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
+                        }`}>
+                            <p className="font-medium">{sellResult.message}</p>
+                        </div>
+
+                        {/* 결과 요약 */}
+                        {sellResult.data && (
+                            <div className="mb-4">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">전체</div>
+                                        <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                            {sellResult.data.total}
+                                        </div>
+                                    </div>
+                                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                                        <div className="text-xs text-green-600 dark:text-green-400 mb-1">성공</div>
+                                        <div className="text-xl font-bold text-green-700 dark:text-green-300">
+                                            {sellResult.data.success}
+                                        </div>
+                                    </div>
+                                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
+                                        <div className="text-xs text-red-600 dark:text-red-400 mb-1">실패</div>
+                                        <div className="text-xl font-bold text-red-700 dark:text-red-300">
+                                            {sellResult.data.failed}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 상세 결과 */}
+                        {sellResult.data?.results && sellResult.data.results.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                                    상세 내역
+                                </h4>
+                                <div className="space-y-2">
+                                    {sellResult.data.results.map((result, idx) => (
+                                        <div
+                                            key={idx}
+                                            className={`p-3 rounded-lg border ${
+                                                result.success
+                                                    ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+                                                    : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between mb-2">
+                                                <span className="font-medium text-slate-800 dark:text-slate-200">
+                                                    {result.coin_code}
+                                                </span>
+                                                <span className={`text-xs font-semibold ${
+                                                    result.success
+                                                        ? 'text-green-700 dark:text-green-400'
+                                                        : 'text-red-700 dark:text-red-400'
+                                                }`}>
+                                                    {result.success ? '성공' : '실패'}
+                                                </span>
+                                            </div>
+
+                                            {result.success ? (
+                                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                                    <div>
+                                                        <span className="text-slate-500 dark:text-slate-400">수량: </span>
+                                                        <span className="text-slate-700 dark:text-slate-300">
+                                                            {result.quantity?.toFixed(8)}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 dark:text-slate-400">매도가: </span>
+                                                        <span className="text-slate-700 dark:text-slate-300">
+                                                            {formatNumberWithComma(result.sell_price)}원
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 dark:text-slate-400">매수가: </span>
+                                                        <span className="text-slate-700 dark:text-slate-300">
+                                                            {formatNumberWithComma(result.buy_price)}원
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 dark:text-slate-400">매도금액: </span>
+                                                        <span className="text-slate-700 dark:text-slate-300">
+                                                            {formatNumberWithComma(result.sell_total)}원
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 dark:text-slate-400">손익: </span>
+                                                        <span className={result.profit_loss >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>
+                                                            {result.profit_loss >= 0 ? '+' : ''}{formatNumberWithComma(result.profit_loss)}원
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-500 dark:text-slate-400">수익률: </span>
+                                                        <span className={result.profit_loss_rate >= 0 ? 'text-red-600 dark:text-red-400 font-bold' : 'text-blue-600 dark:text-blue-400 font-bold'}>
+                                                            {result.profit_loss_rate >= 0 ? '+' : ''}{result.profit_loss_rate?.toFixed(2)}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-red-600 dark:text-red-400">
+                                                    {result.reason}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-6">
+                            <button
+                                onClick={handleSellResultClose}
+                                className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+                            >
+                                확인
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

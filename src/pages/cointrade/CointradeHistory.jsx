@@ -70,7 +70,9 @@ const getReasonColor = (reason) => {
         'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
         'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
         'PARTIAL_7DAY_PROFIT': 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
-        'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+        'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
+        'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
+        'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
     };
     return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
 };
@@ -84,7 +86,9 @@ const getReasonLabel = (reason) => {
         'STOP_LOSS': '손절',
         'PARTIAL_TAKE_PROFIT': '부분익절',
         'PARTIAL_7DAY_PROFIT': '부분기간',
-        'PARTIAL_STOP_LOSS': '부분손절'
+        'PARTIAL_STOP_LOSS': '부분손절',
+        'MANUAL': '수동매도',
+        'PARTIAL_MANUAL': '부분수동'
     };
     return labels[reason] || reason;
 };

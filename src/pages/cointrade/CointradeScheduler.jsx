@@ -401,7 +401,7 @@ export default function CointradeScheduler() {
         const interval = setInterval(() => {
             fetchProcessStatus('buy');
             fetchProcessStatus('sell');
-        }, 500); // 1000ms -> 500ms로 단축하여 로그 누락 확률 감소
+        }, 3000); // 3초마다
 
         return () => clearInterval(interval);
     }, []); // 의존성 배열 제거 - 인터벌 재설정 방지 (가장 중요한 수정!)

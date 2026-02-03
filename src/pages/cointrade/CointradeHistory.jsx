@@ -260,9 +260,11 @@ export default function CointradeHistory() {
     const [records, setRecords] = useState([]);
     const [coinList, setCoinList] = useState([]);
 
-    // 페이지네이션
-    const [currentPage, setCurrentPage] = useState(1);
+    // 페이지네이션 (서버 사이드)
+    const [currentPage, setCurrentPage] = useState(0); // 0-based for server
     const [itemsPerPage, setItemsPerPage] = useState(20);
+    const [totalElements, setTotalElements] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
     // 요약 정보
     const [summary, setSummary] = useState({
@@ -327,11 +329,13 @@ export default function CointradeHistory() {
     };
 
     // 거래기록 조회
-    const handleSearch = async () => {
+    const handleSearch = async (page = 0, size = null) => {
         if (!filters.startDate || !filters.endDate) {
             setToast('조회 기간을 선택해주세요.');
             return;
         }
+
+        const pageSize = size !== null ? size : itemsPerPage;
 
         setLoading(true);
         try {
@@ -339,10 +343,12 @@ export default function CointradeHistory() {
             const startDateTime = `${filters.startDate}T${filters.startTime}:00`;
             const endDateTime = `${filters.endDate}T${filters.endTime}:59`;
 
-            // 쿼리 파라미터 생성
+            // 쿼리 파라미터 생성 (페이징 포함)
             const params = new URLSearchParams({
                 startDate: startDateTime,
-                endDate: endDateTime
+                endDate: endDateTime,
+                page: page.toString(),
+                size: pageSize.toString()
             });
 
             if (filters.coinCode !== 'all') {
@@ -360,13 +366,21 @@ export default function CointradeHistory() {
             if (error) {
                 setToast('조회 실패: ' + error);
                 setRecords([]);
+                setTotalElements(0);
+                setTotalPages(0);
             } else if (data?.success && data?.response) {
-                if (data.response.content.length === 0) {
+                if (data.response.content.length === 0 && page === 0) {
                     setToast('조회된 거래기록이 없습니다.');
                 }
                 setRecords(data.response.content);
-                calculateSummary(data.response.content);
-                setCurrentPage(1); // 검색 시 첫 페이지로
+                setTotalElements(data.response.totalElements || 0);
+                setTotalPages(data.response.totalPages || 0);
+                setCurrentPage(page);
+
+                // 첫 페이지 조회 시에만 요약 계산 (전체 데이터 기준으로 별도 API 필요할 수 있음)
+                if (page === 0) {
+                    calculateSummary(data.response.content);
+                }
             }
         } catch (e) {
             console.error('거래기록 조회 실패:', e);
@@ -407,19 +421,17 @@ export default function CointradeHistory() {
         setFilters(prev => ({ ...prev, [key]: value }));
     };
 
-    // 테이블 컬럼 필터 변경
+    // 테이블 컬럼 필터 변경 (클라이언트 사이드 - 현재 페이지 내에서만 필터링)
     const handleColumnFilterChange = useCallback((key, value) => {
         setColumnFilters((prev) => ({
             ...prev,
             [key]: value,
         }));
-        setCurrentPage(1); // 필터 변경 시 첫 페이지로
     }, []);
 
     // 필터 초기화
     const clearColumnFilters = useCallback(() => {
         setColumnFilters({});
-        setCurrentPage(1);
     }, []);
 
     // 정렬 핸들러
@@ -466,19 +478,20 @@ export default function CointradeHistory() {
         return data;
     }, [records, columnFilters, sortConfig]);
 
-    // 페이지네이션
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentRecords = processedData.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(processedData.length / itemsPerPage);
+    // 서버 사이드 페이징 - processedData가 현재 페이지 데이터
+    const currentRecords = processedData;
 
+    // 페이지 변경 (서버에서 다시 조회)
     const handlePageChange = (page) => {
-        setCurrentPage(page);
+        handleSearch(page);
     };
 
+    // 페이지 당 개수 변경
     const handleItemsPerPageChange = (e) => {
-        setItemsPerPage(Number(e.target.value));
-        setCurrentPage(1);
+        const newSize = Number(e.target.value);
+        setItemsPerPage(newSize);
+        // 새 페이지 사이즈로 첫 페이지부터 다시 조회
+        handleSearch(0, newSize);
     };
 
     // 상세보기 모달 핸들러
@@ -1103,11 +1116,11 @@ export default function CointradeHistory() {
                                 필터 초기화
                             </button>
                         )}
-                        {records.length > 0 && (
+                        {totalElements > 0 && (
                             <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 font-medium text-sm dark:bg-blue-900 dark:text-blue-200">
-                                {processedData.length !== records.length
-                                    ? `${processedData.length} / ${records.length}건`
-                                    : `${records.length}건`}
+                                {currentRecords.length !== totalElements
+                                    ? `${currentPage * itemsPerPage + 1}-${Math.min((currentPage + 1) * itemsPerPage, totalElements)} / 총 ${totalElements.toLocaleString()}건`
+                                    : `${totalElements.toLocaleString()}건`}
                             </span>
                         )}
                     </div>
@@ -1241,23 +1254,24 @@ export default function CointradeHistory() {
                     </table>
                 </div>
 
-                {/* 페이지네이션 */}
+                {/* 페이지네이션 (서버 사이드) */}
                 {totalPages > 1 && (
                     <div className="flex items-center justify-center gap-2 px-4 py-4 border-t border-slate-200 dark:border-slate-700">
                         <button
                             onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
+                            disabled={currentPage === 0}
                             className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 text-sm"
                         >
                             이전
                         </button>
 
                         {[...Array(totalPages)].map((_, i) => {
-                            const page = i + 1;
+                            const page = i; // 0-based
+                            const displayPage = i + 1; // 화면에는 1부터 표시
                             // 첫 페이지, 마지막 페이지, 현재 페이지 주변만 표시
                             if (
-                                page === 1 ||
-                                page === totalPages ||
+                                page === 0 ||
+                                page === totalPages - 1 ||
                                 (page >= currentPage - 2 && page <= currentPage + 2)
                             ) {
                                 return (
@@ -1269,7 +1283,7 @@ export default function CointradeHistory() {
                                             : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
                                             }`}
                                     >
-                                        {page}
+                                        {displayPage}
                                     </button>
                                 );
                             } else if (page === currentPage - 3 || page === currentPage + 3) {
@@ -1280,7 +1294,7 @@ export default function CointradeHistory() {
 
                         <button
                             onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages}
+                            disabled={currentPage >= totalPages - 1}
                             className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 text-sm"
                         >
                             다음

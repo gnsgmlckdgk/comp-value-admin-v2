@@ -438,7 +438,9 @@ export default function CointradeDashboard() {
     const [holdingsSortConfig, setHoldingsSortConfig] = useState({ key: 'profitRate', direction: 'desc' });
 
     const [itemsPerPage, setItemsPerPage] = useState(10); // 대시보드이므로 기본 10개
-    const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(0); // 0-based for server
+    const [totalElements, setTotalElements] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
     // 예측 성능 요약
     const [performance, setPerformance] = useState({
@@ -561,18 +563,29 @@ export default function CointradeDashboard() {
                 }));
             }
 
-            // 4. 최근 거래 내역 조회 (최근 30일)
+            // 4. 최근 거래 내역 조회 (서버 사이드 페이징)
+            await fetchRecentTrades(0, itemsPerPage, isBackground);
+        } catch (e) {
+            console.error('데이터 조회 실패:', e);
+        } finally {
+            if (!isBackground) setLoading(false);
+        }
+    }, [itemsPerPage]);
+
+    // 최근 거래 내역 조회 (서버 사이드 페이징)
+    const fetchRecentTrades = useCallback(async (page = 0, size = 10, isBackground = false) => {
+        try {
             const today = new Date();
             const thirtyDaysAgo = new Date(today);
             thirtyDaysAgo.setDate(today.getDate() - 30);
 
-            // 날짜와 시간 조립 (ISO 8601 형식 - KST 고려)
+            // 날짜와 시간 조립 (ISO 8601 형식)
             const formatDateParam = (date) => {
                 const yyyy = date.getFullYear();
                 const mm = String(date.getMonth() + 1).padStart(2, '0');
                 const dd = String(date.getDate()).padStart(2, '0');
                 return `${yyyy}-${mm}-${dd}`;
-            }
+            };
 
             const startDateStr = formatDateParam(thirtyDaysAgo);
             const endDateStr = formatDateParam(today);
@@ -581,24 +594,35 @@ export default function CointradeDashboard() {
             const endDateTime = `${endDateStr}T23:59:59`;
 
             const historyResponse = await send(
-                `/dart/api/cointrade/history?startDate=${startDateTime}&endDate=${endDateTime}`,
+                `/dart/api/cointrade/history?startDate=${startDateTime}&endDate=${endDateTime}&page=${page}&size=${size}`,
                 {},
                 'GET'
             );
 
             if (historyResponse.data?.success && historyResponse.data?.response) {
-                const trades = historyResponse.data.response.content || historyResponse.data.response || [];
+                const response = historyResponse.data.response;
+                const trades = response.content || [];
                 setAllRecentTrades(trades);
-                calculatePerformance(trades);
+                setTotalElements(response.totalElements || 0);
+                setTotalPages(response.totalPages || 0);
+                setCurrentPage(page);
+
+                // 첫 페이지 조회 시에만 성능 계산 (전체 데이터 기준이 아닌 현재 페이지 데이터 기준)
+                // 정확한 성능 계산이 필요하면 백엔드에서 별도 API 제공 필요
+                if (page === 0) {
+                    calculatePerformance(trades);
+                }
             } else {
                 setAllRecentTrades([]);
+                setTotalElements(0);
+                setTotalPages(0);
             }
         } catch (e) {
-            console.error('데이터 조회 실패:', e);
-        } finally {
-            if (!isBackground) setLoading(false);
+            console.error('거래 내역 조회 실패:', e);
+            setAllRecentTrades([]);
         }
     }, []);
+
     // 예측 성능 계산
     const calculatePerformance = (trades) => {
         const sellTrades = trades.filter(t => t.tradeType === 'SELL');
@@ -704,21 +728,16 @@ export default function CointradeDashboard() {
         return data;
     }, [allRecentTrades, columnFilters, sortConfig]);
 
-    // 페이지네이션 데이터
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentRecords = processedData.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(processedData.length / itemsPerPage);
+    // 서버 사이드 페이징 - processedData가 현재 페이지 데이터
+    const currentRecords = processedData;
 
     // 핸들러들
     const handleColumnFilterChange = useCallback((key, value) => {
         setColumnFilters((prev) => ({ ...prev, [key]: value }));
-        setCurrentPage(1);
     }, []);
 
     const clearColumnFilters = useCallback(() => {
         setColumnFilters({});
-        setCurrentPage(1);
     }, []);
 
     const handleSort = useCallback((key) => {
@@ -739,10 +758,16 @@ export default function CointradeDashboard() {
         }));
     }, []);
 
-    const handlePageChange = (page) => setCurrentPage(page);
+    // 페이지 변경 (서버에서 다시 조회)
+    const handlePageChange = (page) => {
+        fetchRecentTrades(page, itemsPerPage, false);
+    };
+
+    // 페이지 당 개수 변경
     const handleItemsPerPageChange = (e) => {
-        setItemsPerPage(Number(e.target.value));
-        setCurrentPage(1);
+        const newSize = Number(e.target.value);
+        setItemsPerPage(newSize);
+        fetchRecentTrades(0, newSize, false);
     };
 
     // 보유 종목 상세보기 모달 핸들러
@@ -1211,6 +1236,11 @@ export default function CointradeDashboard() {
                                     필터 초기화
                                 </button>
                             )}
+                            {totalElements > 0 && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-50 text-blue-700 font-medium text-xs dark:bg-blue-900 dark:text-blue-200">
+                                    총 {totalElements.toLocaleString()}건
+                                </span>
+                            )}
                         </div>
                     </div>
 
@@ -1303,22 +1333,22 @@ export default function CointradeDashboard() {
                         </table>
                     </div>
 
-                    {/* 페이지네이션 */}
+                    {/* 페이지네이션 (서버 사이드) */}
                     {totalPages > 1 && (
                         <div className="flex items-center justify-center gap-2 px-4 py-4 border-t border-slate-200 dark:border-slate-700">
                             <button
                                 onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage === 1}
+                                disabled={currentPage === 0}
                                 className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 text-sm"
                             >
                                 이전
                             </button>
                             <span className="text-sm text-slate-600 dark:text-slate-400">
-                                {currentPage} / {totalPages}
+                                {currentPage + 1} / {totalPages}
                             </span>
                             <button
                                 onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
+                                disabled={currentPage >= totalPages - 1}
                                 className="px-3 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 text-sm"
                             >
                                 다음

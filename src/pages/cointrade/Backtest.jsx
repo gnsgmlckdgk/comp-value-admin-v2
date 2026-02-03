@@ -2185,9 +2185,9 @@ function DetailView({ result, onClose, onExport }) {
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="flex items-center justify-center min-h-screen p-2 sm:p-4 py-8 sm:py-4">
                 <div
-                    className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto"
+                    className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* 헤더 */}

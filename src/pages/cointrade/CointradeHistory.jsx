@@ -241,6 +241,9 @@ export default function CointradeHistory() {
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
+    // 필터 설명 모달 상태
+    const [isFilterHelpModalOpen, setIsFilterHelpModalOpen] = useState(false);
+
     // 검색 필터 (서버 조회용)
     const [filters, setFilters] = useState({
         startDate: '',
@@ -377,8 +380,8 @@ export default function CointradeHistory() {
                 setTotalPages(data.response.totalPages || 0);
                 setCurrentPage(page);
 
-                // 첫 페이지 조회 시에만 요약 계산 (전체 데이터 기준으로 별도 API 필요할 수 있음)
-                if (page === 0) {
+                // 전체 보기(9999)일 때만 요약 계산 (페이징 시에는 전체 데이터가 아니므로 정확하지 않음)
+                if (pageSize === 9999) {
                     calculateSummary(data.response.content);
                 }
             }
@@ -442,6 +445,12 @@ export default function CointradeHistory() {
         }));
     }, []);
 
+    // 유형 라벨 (필터용)
+    const getTradeTypeLabel = (type) => {
+        const labels = { 'BUY': '매수', 'SELL': '매도' };
+        return labels[type] || type;
+    };
+
     // 클라이언트 사이드 필터링 및 정렬 데이터
     const processedData = useMemo(() => {
         // 1. 필터링
@@ -449,7 +458,30 @@ export default function CointradeHistory() {
             return Object.entries(columnFilters).every(([key, filterValue]) => {
                 if (!filterValue) return true;
                 const cellValue = row[key];
-                return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+                const filterLower = filterValue.toLowerCase();
+
+                // 원본 값으로 비교
+                if (String(cellValue).toLowerCase().includes(filterLower)) {
+                    return true;
+                }
+
+                // 유형(tradeType) 컬럼: 라벨 값으로도 비교
+                if (key === 'tradeType' && cellValue) {
+                    const label = getTradeTypeLabel(cellValue);
+                    if (label.toLowerCase().includes(filterLower)) {
+                        return true;
+                    }
+                }
+
+                // 사유(reason) 컬럼: 라벨 값으로도 비교
+                if (key === 'reason' && cellValue) {
+                    const label = getReasonLabel(cellValue);
+                    if (label.toLowerCase().includes(filterLower)) {
+                        return true;
+                    }
+                }
+
+                return false;
             });
         });
 
@@ -879,7 +911,7 @@ export default function CointradeHistory() {
                                 전체 데이터 보기 (디버깅용)
                             </summary>
                             <div className="px-4 pb-4 pt-2">
-                                <pre className="text-xs bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-600 overflow-x-auto">
+                                <pre className="text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 p-3 rounded border border-slate-200 dark:border-slate-600 overflow-x-auto">
                                     {JSON.stringify(selectedRecord, null, 2)}
                                 </pre>
                             </div>
@@ -1010,7 +1042,7 @@ export default function CointradeHistory() {
                 {/* 검색 버튼 */}
                 <div className="flex justify-end mt-4">
                     <Button
-                        onClick={handleSearch}
+                        onClick={() => handleSearch(0)}
                         disabled={loading}
                         className="px-8 py-2"
                     >
@@ -1020,80 +1052,106 @@ export default function CointradeHistory() {
             </div>
 
             {/* 요약 정보 */}
-            {records.length > 0 && (
+            {totalElements > 0 && (
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
                         조회 결과 요약
+                        {itemsPerPage !== 9999 && (
+                            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                                (전체 보기로 조회 시 정확한 요약을 확인할 수 있습니다)
+                            </span>
+                        )}
                     </h2>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                        {/* 매수 건수 */}
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-                            <div className="text-xs text-blue-700 dark:text-blue-400 mb-1">매수 건수</div>
-                            <div className="text-xl font-bold text-blue-800 dark:text-blue-300">
-                                {summary.buyCount}건
-                            </div>
-                        </div>
+                    {itemsPerPage === 9999 ? (
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                                {/* 매수 건수 */}
+                                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                                    <div className="text-xs text-blue-700 dark:text-blue-400 mb-1">매수 건수</div>
+                                    <div className="text-xl font-bold text-blue-800 dark:text-blue-300">
+                                        {summary.buyCount}건
+                                    </div>
+                                </div>
 
-                        {/* 매수 금액 */}
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-                            <div className="text-xs text-blue-700 dark:text-blue-400 mb-1">매수 금액</div>
-                            <div className="text-lg font-bold text-blue-800 dark:text-blue-300">
-                                {formatNumberWithComma(Math.floor(summary.buyAmount))}원
-                            </div>
-                        </div>
+                                {/* 매수 금액 */}
+                                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                                    <div className="text-xs text-blue-700 dark:text-blue-400 mb-1">매수 금액</div>
+                                    <div className="text-lg font-bold text-blue-800 dark:text-blue-300">
+                                        {formatNumberWithComma(Math.floor(summary.buyAmount))}원
+                                    </div>
+                                </div>
 
-                        {/* 매도 건수 */}
-                        <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매도 건수</div>
-                            <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                {summary.sellCount}건
-                            </div>
-                        </div>
+                                {/* 매도 건수 */}
+                                <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매도 건수</div>
+                                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                        {summary.sellCount}건
+                                    </div>
+                                </div>
 
-                        {/* 매도 금액 */}
-                        <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매도 금액</div>
-                            <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                                {formatNumberWithComma(Math.floor(summary.sellAmount))}원
-                            </div>
-                        </div>
+                                {/* 매도 금액 */}
+                                <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매도 금액</div>
+                                    <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                                        {formatNumberWithComma(Math.floor(summary.sellAmount))}원
+                                    </div>
+                                </div>
 
-                        {/* 실현 손익 */}
-                        <div className={`p-4 rounded-lg ${summary.totalProfit >= 0 ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'}`}>
-                            <div className={`text-xs mb-1 ${summary.totalProfit >= 0 ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>실현 손익</div>
-                            <div className={`text-lg font-bold ${summary.totalProfit >= 0 ? 'text-red-800 dark:text-red-300' : 'text-blue-800 dark:text-blue-300'}`}>
-                                {summary.totalProfit >= 0 ? '+' : ''}{formatNumberWithComma(Math.floor(summary.totalProfit))}원
-                            </div>
-                        </div>
+                                {/* 실현 손익 */}
+                                <div className={`p-4 rounded-lg ${summary.totalProfit >= 0 ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'}`}>
+                                    <div className={`text-xs mb-1 ${summary.totalProfit >= 0 ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>실현 손익</div>
+                                    <div className={`text-lg font-bold ${summary.totalProfit >= 0 ? 'text-red-800 dark:text-red-300' : 'text-blue-800 dark:text-blue-300'}`}>
+                                        {summary.totalProfit >= 0 ? '+' : ''}{formatNumberWithComma(Math.floor(summary.totalProfit))}원
+                                    </div>
+                                </div>
 
-                        {/* 익절 */}
-                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
-                            <div className="text-xs text-green-700 dark:text-green-400 mb-1">익절</div>
-                            <div className="text-xl font-bold text-green-800 dark:text-green-300">
-                                {summary.takeProfitCount}건
-                            </div>
-                        </div>
+                                {/* 익절 */}
+                                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
+                                    <div className="text-xs text-green-700 dark:text-green-400 mb-1">익절</div>
+                                    <div className="text-xl font-bold text-green-800 dark:text-green-300">
+                                        {summary.takeProfitCount}건
+                                    </div>
+                                </div>
 
-                        {/* 손절 */}
-                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
-                            <div className="text-xs text-red-700 dark:text-red-400 mb-1">손절</div>
-                            <div className="text-xl font-bold text-red-800 dark:text-red-300">
-                                {summary.stopLossCount}건
+                                {/* 손절 */}
+                                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
+                                    <div className="text-xs text-red-700 dark:text-red-400 mb-1">손절</div>
+                                    <div className="text-xl font-bold text-red-800 dark:text-red-300">
+                                        {summary.stopLossCount}건
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                        만료 매도: <span className="font-medium text-slate-700 dark:text-slate-300">{summary.expiredCount}건</span>
-                    </div>
+                            <div className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+                                만료 매도: <span className="font-medium text-slate-700 dark:text-slate-300">{summary.expiredCount}건</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-center py-4 text-slate-500 dark:text-slate-400">
+                            <p className="text-sm">총 <span className="font-bold text-slate-700 dark:text-slate-300">{totalElements.toLocaleString()}건</span>의 거래 내역이 있습니다.</p>
+                            <p className="text-xs mt-1">"전체 보기"를 선택하면 상세 요약을 확인할 수 있습니다.</p>
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* 거래기록 테이블 */}
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">거래 목록</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-slate-800 dark:text-white">거래 목록</h3>
+                        <button
+                            type="button"
+                            onClick={() => setIsFilterHelpModalOpen(true)}
+                            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                            title="필터 도움말"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </button>
+                    </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* 건수 선택 */}
                         <select
@@ -1105,6 +1163,7 @@ export default function CointradeHistory() {
                             <option value={20}>20개씩 보기</option>
                             <option value={50}>50개씩 보기</option>
                             <option value={100}>100개씩 보기</option>
+                            <option value={9999}>전체 보기</option>
                         </select>
 
                         {Object.values(columnFilters).some((v) => v !== '') && (
@@ -1118,9 +1177,9 @@ export default function CointradeHistory() {
                         )}
                         {totalElements > 0 && (
                             <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 font-medium text-sm dark:bg-blue-900 dark:text-blue-200">
-                                {currentRecords.length !== totalElements
-                                    ? `${currentPage * itemsPerPage + 1}-${Math.min((currentPage + 1) * itemsPerPage, totalElements)} / 총 ${totalElements.toLocaleString()}건`
-                                    : `${totalElements.toLocaleString()}건`}
+                                {itemsPerPage === 9999
+                                    ? `전체 ${totalElements.toLocaleString()}건`
+                                    : `${currentPage * itemsPerPage + 1}-${Math.min((currentPage + 1) * itemsPerPage, totalElements)} / 총 ${totalElements.toLocaleString()}건`}
                             </span>
                         )}
                     </div>
@@ -1308,6 +1367,156 @@ export default function CointradeHistory() {
                 <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
                     <div className="bg-slate-800 dark:bg-slate-700 text-white px-6 py-3 rounded-lg shadow-lg max-w-md">
                         <p className="text-sm whitespace-pre-line">{toast}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* 필터 도움말 모달 */}
+            {isFilterHelpModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={(e) => e.target === e.currentTarget && setIsFilterHelpModalOpen(false)}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                필터 도움말
+                            </h3>
+                            <button
+                                onClick={() => setIsFilterHelpModalOpen(false)}
+                                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="p-6 space-y-6">
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                테이블 컬럼 필터에서 <strong>표시되는 값</strong> 또는 <strong>원본 값</strong> 모두 사용할 수 있습니다.
+                            </p>
+
+                            {/* 유형 필터 */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
+                                    유형 (tradeType)
+                                </h4>
+                                <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-slate-100 dark:bg-slate-700">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left font-medium text-slate-700 dark:text-slate-300">입력값</th>
+                                                <th className="px-4 py-2 text-left font-medium text-slate-700 dark:text-slate-300">매칭 데이터</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">매수</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">BUY</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">매도</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">SELL</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* 사유 필터 */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
+                                    사유 (reason)
+                                </h4>
+                                <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-slate-100 dark:bg-slate-700">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left font-medium text-slate-700 dark:text-slate-300">입력값</th>
+                                                <th className="px-4 py-2 text-left font-medium text-slate-700 dark:text-slate-300">매칭 데이터</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">매수</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">SIGNAL</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">익절</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">TAKE_PROFIT</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">손절</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">STOP_LOSS</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">기간수익</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">7DAY_PROFIT</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분익절</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400">PARTIAL_TAKE_PROFIT</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분기간</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400">PARTIAL_7DAY_PROFIT</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분손절</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">PARTIAL_STOP_LOSS</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">수동매도</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">MANUAL</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분수동</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400">PARTIAL_MANUAL</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
+                                * 원본 값(BUY, SELL, SIGNAL 등)으로 입력해도 필터링됩니다.
+                            </p>
+                        </div>
+
+                        {/* 푸터 */}
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                            <button
+                                onClick={() => setIsFilterHelpModalOpen(false)}
+                                className="w-full px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
+                            >
+                                확인
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

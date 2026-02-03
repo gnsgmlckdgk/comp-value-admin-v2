@@ -2,6 +2,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { send } from '@/util/ClientUtil';
+import routes from '@/config/routes';
+import { hasAnyRole } from '@/util/RoleUtil';
 
 // 로그인 없이 접근 가능한 공개 페이지 목록
 const PUBLIC_ROUTES = [
@@ -20,8 +22,16 @@ const isPublicRoute = (pathname) => {
     });
 };
 
+// 현재 경로에 해당하는 라우트 설정 찾기
+const findRouteByPath = (pathname) => {
+    for (const [, route] of Object.entries(routes)) {
+        if (route.path === pathname) return route;
+    }
+    return null;
+};
+
 function PrivateRoute({ children }) {
-    const { isLoggedIn, setIsLoggedIn } = useAuth();
+    const { isLoggedIn, setIsLoggedIn, roles: userRoles } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -114,6 +124,48 @@ function PrivateRoute({ children }) {
                 </div>
             </div>
         );
+    }
+
+    // accessRoles 체크: 로그인은 되어있지만 접근 권한이 없는 경우
+    const currentRoute = findRouteByPath(location.pathname);
+    if (currentRoute?.accessRoles && currentRoute.accessRoles.length > 0) {
+        if (!hasAnyRole(userRoles, currentRoute.accessRoles)) {
+            return (
+                <div className="flex min-h-[calc(100vh-120px)] items-center justify-center px-4">
+                    <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.8}
+                                stroke="currentColor"
+                                className="h-7 w-7"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                />
+                            </svg>
+                        </div>
+                        <h2 className="mb-2 text-xl font-semibold text-slate-900 dark:text-white">접근 권한이 없습니다</h2>
+                        <p className="mb-6 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                            이 페이지는 관리자 권한이 필요합니다.
+                            <br />
+                            권한이 필요하시면 관리자에게 문의해주세요.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => navigate(-1)}
+                            className="inline-flex items-center justify-center rounded-full border border-slate-200 px-6 py-2 text-sm font-medium text-slate-600 hover:border-slate-300 hover:text-slate-800 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-200"
+                        >
+                            뒤로 가기
+                        </button>
+                    </div>
+                </div>
+            );
+        }
     }
 
     return children;

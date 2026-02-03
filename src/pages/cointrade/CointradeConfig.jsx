@@ -113,9 +113,7 @@ export default function CointradeConfig() {
     ];
 
     // 재기동이 필요한 파라미터 목록
-    const RESTART_REQUIRED_PARAMS = [
-        'TRAIN_WORKERS'
-    ];
+    const RESTART_REQUIRED_PARAMS = [];
 
     // Toast auto-hide
     useEffect(() => {

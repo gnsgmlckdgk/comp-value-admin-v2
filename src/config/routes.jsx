@@ -80,49 +80,49 @@ const routes = {
         label: '자동매매 대시보드',
         path: '/cointrade/dashboard',
         element: <CointradeDashboard />,
-        requiredRoles: ['ROLE_SUPER_ADMIN']
+        accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeConfig": {
         section: '코인',
         label: '자동매매 파라미터 설정',
         path: '/cointrade/config',
         element: <CointradeConfig />,
-        requiredRoles: ['ROLE_SUPER_ADMIN']
+        accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeCoins": {
         section: '코인',
         label: '대상 종목 설정',
         path: '/cointrade/coins',
         element: <CointradeCoins />,
-        requiredRoles: ['ROLE_SUPER_ADMIN']
+        accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeScheduler": {
         section: '코인',
         label: '스케줄러 관리',
         path: '/cointrade/scheduler',
         element: <CointradeScheduler />,
-        requiredRoles: ['ROLE_SUPER_ADMIN']
+        accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeHistory": {
         section: '코인',
         label: '거래기록 조회',
         path: '/cointrade/history',
         element: <CointradeHistory />,
-        requiredRoles: ['ROLE_SUPER_ADMIN']
+        accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "MlModelInfo": {
         section: '코인',
         label: '모델 예측정보 조회',
         path: '/cointrade/ml-models',
         element: <MlModelInfo />,
-        requiredRoles: ['ROLE_SUPER_ADMIN']
+        accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "Backtest": {
         section: '코인',
         label: '백테스트',
         path: '/cointrade/backtest',
         element: <Backtest />,
-        requiredRoles: ['ROLE_SUPER_ADMIN']
+        accessRoles: ['ROLE_SUPER_ADMIN']
     }
 }
 

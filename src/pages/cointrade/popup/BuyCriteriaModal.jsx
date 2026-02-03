@@ -72,7 +72,7 @@ export default function BuyCriteriaModal({ isOpen, onClose }) {
                         <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
                             <h5 className="font-semibold text-sm mb-2 text-slate-800 dark:text-slate-200">1. 계산 공식</h5>
                             <div className="flex flex-col items-center justify-center py-2 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 mb-3">
-                                <span className="font-mono text-lg font-bold text-blue-600 dark:text-blue-400">
+                                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                                     기대 수익률 = (예상 최고 상승률 - 예상 최저 하락률) / 2
                                 </span>
                             </div>

@@ -1159,10 +1159,10 @@ export default function BacktestOptimizer() {
 
                     {/* 모든 시행 결과 모달 */}
                     {showAllTrials && detailResult?.data?.all_trials && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                                <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-                                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
+                            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+                                <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-200 dark:border-slate-700">
+                                    <h3 className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-200">
                                         모든 시행 결과 ({detailResult.data.all_trials.length}개)
                                     </h3>
                                     <button
@@ -1174,19 +1174,19 @@ export default function BacktestOptimizer() {
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="flex-1 overflow-auto p-4">
-                                    <table className="w-full text-sm">
+                                <div className="flex-1 overflow-auto p-2 md:p-4">
+                                    <table className="w-full text-sm min-w-[800px]">
                                         <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700">
                                             <tr>
-                                                <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">#</th>
-                                                <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">수익률</th>
-                                                <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">승률</th>
-                                                <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">거래수</th>
-                                                <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">MDD</th>
-                                                <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">Sharpe</th>
-                                                <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">안정성</th>
-                                                <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">점수</th>
-                                                <th className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-300">파라미터</th>
+                                                <th className="px-2 py-2 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">#</th>
+                                                <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">수익률</th>
+                                                <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">승률</th>
+                                                <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">거래</th>
+                                                <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">MDD</th>
+                                                <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">Sharpe</th>
+                                                <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">안정성</th>
+                                                <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">점수</th>
+                                                <th className="px-2 py-2 text-center font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">파라미터</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1197,37 +1197,37 @@ export default function BacktestOptimizer() {
                                                         key={trial.trial_id}
                                                         className={`border-b border-slate-200 dark:border-slate-600 ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}
                                                     >
-                                                        <td className="px-3 py-2 text-slate-700 dark:text-slate-300">
+                                                        <td className="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                                             {trial.trial_id}
                                                             {index === 0 && <span className="ml-1 text-yellow-600">★</span>}
                                                         </td>
-                                                        <td className={`px-3 py-2 text-right font-medium ${trial.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                        <td className={`px-2 py-2 text-right font-medium whitespace-nowrap ${trial.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                             {trial.total_return?.toFixed(2)}%
                                                         </td>
-                                                        <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
-                                                            {trial.win_rate}%
+                                                        <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                            {typeof trial.win_rate === 'number' ? trial.win_rate.toFixed(2) : trial.win_rate}%
                                                         </td>
-                                                        <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
+                                                        <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
                                                             {trial.total_trades}
                                                         </td>
-                                                        <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
-                                                            {trial.max_drawdown}%
+                                                        <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                            {typeof trial.max_drawdown === 'number' ? trial.max_drawdown.toFixed(2) : trial.max_drawdown}%
                                                         </td>
-                                                        <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
+                                                        <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
                                                             {trial.sharpe_ratio?.toFixed(2)}
                                                         </td>
-                                                        <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
-                                                            {trial.stability_score?.toFixed(1)}
+                                                        <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                            {trial.stability_score?.toFixed(2)}
                                                         </td>
-                                                        <td className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-200">
-                                                            {trial.final_score?.toFixed(1)}
+                                                        <td className="px-2 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                            {trial.final_score?.toFixed(2)}
                                                         </td>
-                                                        <td className="px-3 py-2">
-                                                            <div className="flex flex-wrap gap-1 justify-center">
+                                                        <td className="px-2 py-2">
+                                                            <div className="flex flex-wrap gap-1 justify-center min-w-[150px]">
                                                                 {trial.params && Object.entries(trial.params).map(([k, v]) => (
                                                                     <span
                                                                         key={k}
-                                                                        className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 rounded"
+                                                                        className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 rounded whitespace-nowrap"
                                                                         title={getParamLabel(k)}
                                                                     >
                                                                         {typeof v === 'number' ? v.toFixed(2) : v}
@@ -1584,18 +1584,18 @@ export default function BacktestOptimizer() {
                                         모든 시행 결과 ({detailResult.data.all_trials.length}개)
                                     </h4>
                                     <div className="overflow-x-auto max-h-96">
-                                        <table className="w-full text-sm">
+                                        <table className="w-full text-sm min-w-[800px]">
                                             <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700">
                                                 <tr>
-                                                    <th className="px-3 py-2 text-left font-medium text-slate-600 dark:text-slate-300">#</th>
-                                                    <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">수익률</th>
-                                                    <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">승률</th>
-                                                    <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">거래수</th>
-                                                    <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">MDD</th>
-                                                    <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">Sharpe</th>
-                                                    <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">안정성</th>
-                                                    <th className="px-3 py-2 text-right font-medium text-slate-600 dark:text-slate-300">점수</th>
-                                                    <th className="px-3 py-2 text-center font-medium text-slate-600 dark:text-slate-300">파라미터</th>
+                                                    <th className="px-2 py-2 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">#</th>
+                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">수익률</th>
+                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">승률</th>
+                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">거래</th>
+                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">MDD</th>
+                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">Sharpe</th>
+                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">안정성</th>
+                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">점수</th>
+                                                    <th className="px-2 py-2 text-center font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">파라미터</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1606,37 +1606,37 @@ export default function BacktestOptimizer() {
                                                             key={trial.trial_id}
                                                             className={`border-b border-slate-200 dark:border-slate-600 ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}
                                                         >
-                                                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">
+                                                            <td className="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                                                 {trial.trial_id}
                                                                 {index === 0 && <span className="ml-1 text-yellow-600">★</span>}
                                                             </td>
-                                                            <td className={`px-3 py-2 text-right font-medium ${trial.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            <td className={`px-2 py-2 text-right font-medium whitespace-nowrap ${trial.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                                 {trial.total_return?.toFixed(2)}%
                                                             </td>
-                                                            <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
-                                                                {trial.win_rate}%
+                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                {typeof trial.win_rate === 'number' ? trial.win_rate.toFixed(2) : trial.win_rate}%
                                                             </td>
-                                                            <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
+                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
                                                                 {trial.total_trades}
                                                             </td>
-                                                            <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
-                                                                {trial.max_drawdown}%
+                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                {typeof trial.max_drawdown === 'number' ? trial.max_drawdown.toFixed(2) : trial.max_drawdown}%
                                                             </td>
-                                                            <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
+                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
                                                                 {trial.sharpe_ratio?.toFixed(2)}
                                                             </td>
-                                                            <td className="px-3 py-2 text-right text-slate-800 dark:text-slate-200">
-                                                                {trial.stability_score?.toFixed(1)}
+                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                {trial.stability_score?.toFixed(2)}
                                                             </td>
-                                                            <td className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-200">
-                                                                {trial.final_score?.toFixed(1)}
+                                                            <td className="px-2 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                {trial.final_score?.toFixed(2)}
                                                             </td>
-                                                            <td className="px-3 py-2">
-                                                                <div className="flex flex-wrap gap-1 justify-center">
+                                                            <td className="px-2 py-2">
+                                                                <div className="flex flex-wrap gap-1 justify-center min-w-[150px]">
                                                                     {trial.params && Object.entries(trial.params).map(([k, v]) => (
                                                                         <span
                                                                             key={k}
-                                                                            className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 rounded"
+                                                                            className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 rounded whitespace-nowrap"
                                                                             title={getParamLabel(k)}
                                                                         >
                                                                             {typeof v === 'number' ? v.toFixed(2) : v}

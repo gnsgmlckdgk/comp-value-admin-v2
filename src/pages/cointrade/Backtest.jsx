@@ -449,15 +449,15 @@ export default function Backtest() {
                 config: {
                     initial_capital: backtestConfig.initial_capital,
                     buy_amount_per_coin: backtestConfig.buy_amount_per_coin,
-                    min_up_probability: backtestConfig.min_up_probability,
+                    min_up_probability: backtestConfig.min_up_probability / 100,
                     buy_profit_threshold: backtestConfig.buy_profit_threshold,
                     take_profit_buffer: backtestConfig.take_profit_buffer,
                     stop_loss_threshold: backtestConfig.stop_loss_threshold,
                     min_profit_rate: backtestConfig.min_profit_rate,
                     max_profit_rate: backtestConfig.max_profit_rate,
                     prediction_days: backtestConfig.prediction_days,
-                    buy_fee_rate: backtestConfig.buy_fee_rate,
-                    sell_fee_rate: backtestConfig.sell_fee_rate,
+                    buy_fee_rate: backtestConfig.buy_fee_rate / 100,
+                    sell_fee_rate: backtestConfig.sell_fee_rate / 100,
                     sequence_length: backtestConfig.sequence_length
                 }
             };

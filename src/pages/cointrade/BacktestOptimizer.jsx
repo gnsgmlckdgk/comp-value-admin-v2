@@ -160,7 +160,7 @@ export default function BacktestOptimizer() {
 
     // 커스텀 파라미터 범위
     const [paramRanges, setParamRanges] = useState({
-        min_up_probability: { min_value: 0.50, max_value: 0.80, step: 0.05 },
+        min_up_probability: { min_value: 0.50, max_value: 0.80, step: 0.01 },
         buy_profit_threshold: { min_value: 0.5, max_value: 10.0, step: 0.5 },
         stop_loss_threshold: { min_value: 3.0, max_value: 10.0, step: 0.5 },
         take_profit_buffer: { min_value: 1.0, max_value: 5.0, step: 0.5 },

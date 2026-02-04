@@ -1690,7 +1690,7 @@ export default function Backtest() {
                                                 <input
                                                     type="number"
                                                     value={backtestConfig.initial_capital}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, initial_capital: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, initial_capital: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1701,7 +1701,7 @@ export default function Backtest() {
                                                 <input
                                                     type="number"
                                                     value={backtestConfig.buy_amount_per_coin}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_amount_per_coin: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_amount_per_coin: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1719,7 +1719,7 @@ export default function Backtest() {
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.min_up_probability}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_up_probability: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_up_probability: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1731,7 +1731,7 @@ export default function Backtest() {
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.buy_profit_threshold}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_profit_threshold: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_profit_threshold: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1749,7 +1749,7 @@ export default function Backtest() {
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.take_profit_buffer}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, take_profit_buffer: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, take_profit_buffer: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1761,7 +1761,7 @@ export default function Backtest() {
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.stop_loss_threshold}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, stop_loss_threshold: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, stop_loss_threshold: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1773,7 +1773,7 @@ export default function Backtest() {
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.min_profit_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_profit_rate: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_profit_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1785,7 +1785,7 @@ export default function Backtest() {
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.max_profit_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, max_profit_rate: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, max_profit_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1802,7 +1802,7 @@ export default function Backtest() {
                                                 <input
                                                     type="number"
                                                     value={backtestConfig.prediction_days}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, prediction_days: parseInt(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, prediction_days: e.target.value === '' ? '' : parseInt(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1814,7 +1814,7 @@ export default function Backtest() {
                                                     type="number"
                                                     step="0.001"
                                                     value={backtestConfig.buy_fee_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_fee_rate: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_fee_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1826,7 +1826,7 @@ export default function Backtest() {
                                                     type="number"
                                                     step="0.001"
                                                     value={backtestConfig.sell_fee_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, sell_fee_rate: parseFloat(e.target.value) || 0 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, sell_fee_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>
@@ -1837,7 +1837,7 @@ export default function Backtest() {
                                                 <input
                                                     type="number"
                                                     value={backtestConfig.sequence_length}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, sequence_length: parseInt(e.target.value) || 60 }))}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, sequence_length: e.target.value === '' ? '' : parseInt(e.target.value) }))}
                                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 />
                                             </div>

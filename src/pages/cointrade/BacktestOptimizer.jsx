@@ -875,6 +875,7 @@ export default function BacktestOptimizer() {
                                     onChange={(e) => setTargetReturn(parseFloat(e.target.value) || 15.0)}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                                 />
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">목표 수익률 미만의 결과는 결과에 포함되지 않습니다.</p>
                             </div>
                             <div>
                                 <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">병렬 작업자 수</label>

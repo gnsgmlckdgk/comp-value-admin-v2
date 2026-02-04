@@ -56,8 +56,30 @@ function TogglableTaskId({ taskId, maxLength = 20, className = '' }) {
  * 파라미터 범위 입력 컴포넌트
  */
 function ParamRangeInput({ label, paramKey, value, onChange, step = 0.01, unit = '' }) {
-    const handleChange = (field, val) => {
-        onChange(paramKey, { ...value, [field]: parseFloat(val) || 0 });
+    // 입력 중인 값을 문자열로 관리
+    const [localValues, setLocalValues] = useState({
+        min_value: value?.min_value?.toString() ?? '',
+        max_value: value?.max_value?.toString() ?? '',
+        step: value?.step?.toString() ?? ''
+    });
+
+    // 외부 value가 변경되면 로컬 값도 업데이트
+    useEffect(() => {
+        setLocalValues({
+            min_value: value?.min_value?.toString() ?? '',
+            max_value: value?.max_value?.toString() ?? '',
+            step: value?.step?.toString() ?? ''
+        });
+    }, [value?.min_value, value?.max_value, value?.step]);
+
+    const handleLocalChange = (field, val) => {
+        setLocalValues(prev => ({ ...prev, [field]: val }));
+    };
+
+    const handleBlur = (field) => {
+        const val = localValues[field];
+        const numVal = val === '' ? 0 : parseFloat(val);
+        onChange(paramKey, { ...value, [field]: isNaN(numVal) ? 0 : numVal });
     };
 
     return (
@@ -76,8 +98,9 @@ function ParamRangeInput({ label, paramKey, value, onChange, step = 0.01, unit =
                     <input
                         type="number"
                         step={step}
-                        value={value?.min_value ?? ''}
-                        onChange={(e) => handleChange('min_value', e.target.value)}
+                        value={localValues.min_value}
+                        onChange={(e) => handleLocalChange('min_value', e.target.value)}
+                        onBlur={() => handleBlur('min_value')}
                         className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                     />
                 </div>
@@ -86,8 +109,9 @@ function ParamRangeInput({ label, paramKey, value, onChange, step = 0.01, unit =
                     <input
                         type="number"
                         step={step}
-                        value={value?.max_value ?? ''}
-                        onChange={(e) => handleChange('max_value', e.target.value)}
+                        value={localValues.max_value}
+                        onChange={(e) => handleLocalChange('max_value', e.target.value)}
+                        onBlur={() => handleBlur('max_value')}
                         className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                     />
                 </div>
@@ -96,8 +120,9 @@ function ParamRangeInput({ label, paramKey, value, onChange, step = 0.01, unit =
                     <input
                         type="number"
                         step={step}
-                        value={value?.step ?? ''}
-                        onChange={(e) => handleChange('step', e.target.value)}
+                        value={localValues.step}
+                        onChange={(e) => handleLocalChange('step', e.target.value)}
+                        onBlur={() => handleBlur('step')}
                         className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
                     />
                 </div>

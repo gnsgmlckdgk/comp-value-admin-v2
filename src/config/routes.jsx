@@ -25,6 +25,7 @@ import CointradeScheduler from '@/pages/cointrade/CointradeScheduler'
 import CointradeHistory from '@/pages/cointrade/CointradeHistory'
 import MlModelInfo from '@/pages/cointrade/MlModelInfo'
 import Backtest from '@/pages/cointrade/Backtest'
+import BacktestOptimizer from '@/pages/cointrade/BacktestOptimizer'
 
 const routes = {
 
@@ -122,6 +123,13 @@ const routes = {
         label: '백테스트',
         path: '/cointrade/backtest',
         element: <Backtest />,
+        accessRoles: ['ROLE_SUPER_ADMIN']
+    },
+    "BacktestOptimizer": {
+        section: '코인',
+        label: '백테스트 옵티마이저',
+        path: '/cointrade/backtest-optimizer',
+        element: <BacktestOptimizer />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     }
 }

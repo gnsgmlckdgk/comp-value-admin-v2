@@ -100,6 +100,23 @@ export default function Backtest() {
     const [taskResult, setTaskResult] = useState(null);
     const [isRunConfirmModalOpen, setIsRunConfirmModalOpen] = useState(false);
 
+    // 백테스트 파라미터 설정
+    const [configLoading, setConfigLoading] = useState(false);
+    const [backtestConfig, setBacktestConfig] = useState({
+        initial_capital: 1000000,
+        buy_amount_per_coin: 100000,
+        min_up_probability: 60,
+        buy_profit_threshold: 10,
+        take_profit_buffer: 3,
+        stop_loss_threshold: 5,
+        min_profit_rate: 5,
+        max_profit_rate: 30,
+        prediction_days: 3,
+        buy_fee_rate: 0.05,
+        sell_fee_rate: 0.05,
+        sequence_length: 60
+    });
+
     // 삭제 확인 모달
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
     const [deleteTargetTaskId, setDeleteTargetTaskId] = useState(null);
@@ -349,7 +366,7 @@ export default function Backtest() {
         }
     };
 
-    const handleOpenRunConfirmModal = () => {
+    const handleOpenRunConfirmModal = async () => {
         // 유효성 검사
         if (coinSelectionMode === 'custom' && selectedCoins.size === 0) {
             setToast('종목을 선택해주세요.');
@@ -364,6 +381,40 @@ export default function Backtest() {
         if (new Date(startDate) >= new Date(endDate)) {
             setToast('종료일은 시작일보다 나중이어야 합니다.');
             return;
+        }
+
+        // 설정값 조회
+        setConfigLoading(true);
+        try {
+            const { data, error } = await send('/dart/api/cointrade/config', {}, 'GET');
+            if (data?.success && data?.response) {
+                const configList = data.response;
+                const configMap = {};
+                configList.forEach(c => {
+                    const key = c.configKey || c.paramName;
+                    const val = c.configValue || c.paramValue;
+                    if (key && val) configMap[key] = val;
+                });
+
+                setBacktestConfig(prev => ({
+                    ...prev,
+                    initial_capital: parseFloat(configMap['INITIAL_CAPITAL']) || prev.initial_capital,
+                    buy_amount_per_coin: parseFloat(configMap['BUY_AMOUNT_PER_COIN']) || prev.buy_amount_per_coin,
+                    min_up_probability: parseFloat(configMap['MIN_UP_PROBABILITY']) || prev.min_up_probability,
+                    buy_profit_threshold: parseFloat(configMap['BUY_PROFIT_THRESHOLD']) || prev.buy_profit_threshold,
+                    take_profit_buffer: parseFloat(configMap['TAKE_PROFIT_BUFFER']) || prev.take_profit_buffer,
+                    stop_loss_threshold: parseFloat(configMap['STOP_LOSS_THRESHOLD']) || prev.stop_loss_threshold,
+                    min_profit_rate: parseFloat(configMap['MIN_PROFIT_RATE']) || prev.min_profit_rate,
+                    max_profit_rate: parseFloat(configMap['MAX_PROFIT_RATE']) || prev.max_profit_rate,
+                    prediction_days: parseInt(configMap['PREDICTION_DAYS']) || prev.prediction_days,
+                    buy_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || prev.buy_fee_rate,
+                    sell_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || prev.sell_fee_rate,
+                }));
+            }
+        } catch (e) {
+            console.error('설정값 조회 실패:', e);
+        } finally {
+            setConfigLoading(false);
         }
 
         setIsRunConfirmModalOpen(true);
@@ -394,7 +445,21 @@ export default function Backtest() {
             const payload = {
                 coin_codes: coinCodes,
                 start_date: startDate,
-                end_date: endDate
+                end_date: endDate,
+                config: {
+                    initial_capital: backtestConfig.initial_capital,
+                    buy_amount_per_coin: backtestConfig.buy_amount_per_coin,
+                    min_up_probability: backtestConfig.min_up_probability,
+                    buy_profit_threshold: backtestConfig.buy_profit_threshold,
+                    take_profit_buffer: backtestConfig.take_profit_buffer,
+                    stop_loss_threshold: backtestConfig.stop_loss_threshold,
+                    min_profit_rate: backtestConfig.min_profit_rate,
+                    max_profit_rate: backtestConfig.max_profit_rate,
+                    prediction_days: backtestConfig.prediction_days,
+                    buy_fee_rate: backtestConfig.buy_fee_rate,
+                    sell_fee_rate: backtestConfig.sell_fee_rate,
+                    sequence_length: backtestConfig.sequence_length
+                }
             };
 
             const { data, error } = await send('/dart/api/backtest/run', payload, 'POST');
@@ -1566,80 +1631,228 @@ export default function Backtest() {
             {/* 백테스트 실행 확인 모달 */}
             {isRunConfirmModalOpen && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in overflow-y-auto"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setIsRunConfirmModalOpen(false);
                     }}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl my-4">
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                                백테스트 실행 확인
+                                백테스트 실행 설정
                             </h3>
                         </div>
 
                         {/* 콘텐츠 */}
-                        <div className="px-6 py-4 space-y-4">
-                            <p className="text-slate-700 dark:text-slate-300">
-                                다음 조건으로 백테스트를 실행하시겠습니까?
-                            </p>
-
-                            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3">
-                                {/* 종목 선택 정보 */}
-                                <div>
-                                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                        종목 선택
-                                    </div>
-                                    <div className="text-sm text-slate-900 dark:text-slate-100">
-                                        {coinSelectionMode === 'all' && '전체 종목'}
-                                        {coinSelectionMode === 'active' && `활성화된 종목 (${selectedCoins.size}개)`}
-                                        {coinSelectionMode === 'custom' && `직접 선택 (${selectedCoins.size}개)`}
-                                    </div>
+                        <div className="px-6 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                            {configLoading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <span className="ml-3 text-slate-600 dark:text-slate-400">설정값 로딩 중...</span>
                                 </div>
-
-                                {/* 기간 정보 */}
-                                <div>
-                                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                        백테스트 기간
-                                    </div>
-                                    <div className="text-sm text-slate-900 dark:text-slate-100">
-                                        {startDate} ~ {endDate}
-                                    </div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                        {(() => {
-                                            const start = new Date(startDate);
-                                            const end = new Date(endDate);
-                                            const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-                                            return `총 ${diffDays}일`;
-                                        })()}
-                                    </div>
-                                </div>
-
-                                {/* 선택된 종목 목록 (custom 모드일 때만) */}
-                                {coinSelectionMode === 'custom' && selectedCoins.size > 0 && selectedCoins.size <= 10 && (
-                                    <div>
-                                        <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                            선택된 종목
-                                        </div>
-                                        <div className="text-xs text-slate-700 dark:text-slate-300 flex flex-wrap gap-1">
-                                            {Array.from(selectedCoins).map(coin => (
-                                                <span key={coin} className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded">
-                                                    {coin}
-                                                </span>
-                                            ))}
+                            ) : (
+                                <>
+                                    {/* 기본 정보 */}
+                                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3">
+                                        <div className="flex flex-wrap gap-4">
+                                            <div className="flex-1 min-w-[150px]">
+                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">종목 선택</div>
+                                                <div className="text-sm text-slate-900 dark:text-slate-100">
+                                                    {coinSelectionMode === 'all' && '전체 종목'}
+                                                    {coinSelectionMode === 'active' && `활성화된 종목 (${selectedCoins.size}개)`}
+                                                    {coinSelectionMode === 'custom' && `직접 선택 (${selectedCoins.size}개)`}
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 min-w-[150px]">
+                                                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">백테스트 기간</div>
+                                                <div className="text-sm text-slate-900 dark:text-slate-100">{startDate} ~ {endDate}</div>
+                                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                    {(() => {
+                                                        const diffDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+                                                        return `총 ${diffDays}일`;
+                                                    })()}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                )}
-                            </div>
 
-                            <div className="text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-3">
-                                ⚠️ 백테스트는 시간이 소요될 수 있습니다. 실행 후 상태 확인 버튼으로 진행 상황을 확인하세요.
-                            </div>
+                                    {/* 파라미터 설정 */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2">
+                                            자본 설정
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    초기 자본금 (원) <code className="text-blue-500">initial_capital</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={backtestConfig.initial_capital}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, initial_capital: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    1회 매수 금액 (원) <code className="text-blue-500">buy_amount_per_coin</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={backtestConfig.buy_amount_per_coin}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_amount_per_coin: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
+                                            매수 조건
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    최소 상승 확률 (%) <code className="text-blue-500">min_up_probability</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={backtestConfig.min_up_probability}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_up_probability: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    기대 수익률 하한 (%) <code className="text-blue-500">buy_profit_threshold</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={backtestConfig.buy_profit_threshold}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_profit_threshold: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
+                                            매도 조건
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    익절 버퍼 (%) <code className="text-blue-500">take_profit_buffer</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={backtestConfig.take_profit_buffer}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, take_profit_buffer: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    손절 임계값 (%) <code className="text-blue-500">stop_loss_threshold</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={backtestConfig.stop_loss_threshold}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, stop_loss_threshold: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    최소 익절률 (%) <code className="text-blue-500">min_profit_rate</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={backtestConfig.min_profit_rate}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_profit_rate: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    최대 익절률 (%) <code className="text-blue-500">max_profit_rate</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={backtestConfig.max_profit_rate}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, max_profit_rate: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
+                                            기타 설정
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    예측 기간 (일) <code className="text-blue-500">prediction_days</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={backtestConfig.prediction_days}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, prediction_days: parseInt(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    매수 수수료 (%) <code className="text-blue-500">buy_fee_rate</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.001"
+                                                    value={backtestConfig.buy_fee_rate}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_fee_rate: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    매도 수수료 (%) <code className="text-blue-500">sell_fee_rate</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.001"
+                                                    value={backtestConfig.sell_fee_rate}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, sell_fee_rate: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    시퀀스 길이 <code className="text-blue-500">sequence_length</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={backtestConfig.sequence_length}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, sequence_length: parseInt(e.target.value) || 60 }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-3">
+                                        ⚠️ 백테스트는 시간이 소요될 수 있습니다. 실행 후 상태 확인 버튼으로 진행 상황을 확인하세요.
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* 버튼 */}
-                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2">
+                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-700">
                             <button
                                 onClick={() => setIsRunConfirmModalOpen(false)}
                                 className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
@@ -1648,9 +1861,10 @@ export default function Backtest() {
                             </button>
                             <button
                                 onClick={handleConfirmRun}
-                                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                                disabled={configLoading}
+                                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                확인
+                                실행
                             </button>
                         </div>
                     </div>

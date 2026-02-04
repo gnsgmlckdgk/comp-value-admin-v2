@@ -62,8 +62,13 @@ function ParamRangeInput({ label, paramKey, value, onChange, step = 0.01, unit =
 
     return (
         <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-            <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                {label} {unit && <span className="text-slate-500">({unit})</span>}
+            <div className="mb-3">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {label} {unit && <span className="text-slate-500">({unit})</span>}
+                </div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                    {paramKey}
+                </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -130,12 +135,12 @@ export default function BacktestOptimizer() {
 
     // 커스텀 파라미터 범위
     const [paramRanges, setParamRanges] = useState({
-        min_up_probability: { min_value: 0.55, max_value: 0.75, step: 0.05 },
-        buy_profit_threshold: { min_value: 8.0, max_value: 15.0, step: 1.0 },
-        stop_loss_threshold: { min_value: 3.0, max_value: 7.0, step: 0.5 },
-        take_profit_buffer: { min_value: 1.5, max_value: 4.0, step: 0.5 },
-        min_profit_rate: { min_value: 3.0, max_value: 8.0, step: 1.0 },
-        max_profit_rate: { min_value: 20.0, max_value: 40.0, step: 5.0 }
+        min_up_probability: { min_value: 0.50, max_value: 0.80, step: 0.05 },
+        buy_profit_threshold: { min_value: 0.5, max_value: 10.0, step: 0.5 },
+        stop_loss_threshold: { min_value: 3.0, max_value: 10.0, step: 0.5 },
+        take_profit_buffer: { min_value: 1.0, max_value: 5.0, step: 0.5 },
+        min_profit_rate: { min_value: 3.0, max_value: 10.0, step: 1.0 },
+        max_profit_rate: { min_value: 10.0, max_value: 50.0, step: 5.0 }
     });
 
     // 실행 상태
@@ -583,12 +588,20 @@ export default function BacktestOptimizer() {
 
     const getParamLabel = (key) => {
         const labels = {
-            min_up_probability: '최소 상승 확률',
-            buy_profit_threshold: '매수 수익 임계값',
-            stop_loss_threshold: '손절 임계값',
-            take_profit_buffer: '익절 버퍼',
-            min_profit_rate: '최소 수익률',
-            max_profit_rate: '최대 수익률'
+            // 백테스트 옵티마이저 파라미터 (소문자)
+            min_up_probability: '최소 상승 확률 (%)',
+            buy_profit_threshold: '매수 조건 (기대 수익률 %)',
+            stop_loss_threshold: '손절선 (%)',
+            take_profit_buffer: '익절 버퍼 (%)',
+            min_profit_rate: '최소 익절률 (%)',
+            max_profit_rate: '최대 익절률 (%)',
+            // 고정 파라미터 (소문자)
+            initial_capital: '초기 자본 (원)',
+            buy_amount_per_coin: '종목당 매수금액 (원)',
+            prediction_days: '예측 기간 (일)',
+            ensemble_mode: '앙상블 모드',
+            buy_fee_rate: '매수 수수료율',
+            sell_fee_rate: '매도 수수료율'
         };
         return labels[key] || key;
     };
@@ -874,7 +887,7 @@ export default function BacktestOptimizer() {
                                         unit="0~1"
                                     />
                                     <ParamRangeInput
-                                        label="매수 수익 임계값"
+                                        label="매수 조건 (기대 수익률)"
                                         paramKey="buy_profit_threshold"
                                         value={paramRanges.buy_profit_threshold}
                                         onChange={handleParamRangeChange}
@@ -882,7 +895,7 @@ export default function BacktestOptimizer() {
                                         unit="%"
                                     />
                                     <ParamRangeInput
-                                        label="손절 임계값"
+                                        label="손절선"
                                         paramKey="stop_loss_threshold"
                                         value={paramRanges.stop_loss_threshold}
                                         onChange={handleParamRangeChange}
@@ -898,7 +911,7 @@ export default function BacktestOptimizer() {
                                         unit="%"
                                     />
                                     <ParamRangeInput
-                                        label="최소 수익률"
+                                        label="최소 익절률"
                                         paramKey="min_profit_rate"
                                         value={paramRanges.min_profit_rate}
                                         onChange={handleParamRangeChange}
@@ -906,7 +919,7 @@ export default function BacktestOptimizer() {
                                         unit="%"
                                     />
                                     <ParamRangeInput
-                                        label="최대 수익률"
+                                        label="최대 익절률"
                                         paramKey="max_profit_rate"
                                         value={paramRanges.max_profit_rate}
                                         onChange={handleParamRangeChange}

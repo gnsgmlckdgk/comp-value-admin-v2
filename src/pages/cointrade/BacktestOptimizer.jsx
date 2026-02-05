@@ -808,8 +808,8 @@ export default function BacktestOptimizer() {
                                 </button>
                             ))}
                         </div>
-                        <div className="flex gap-4 items-center">
-                            <div>
+                        <div className="flex flex-wrap gap-4 items-center">
+                            <div className="min-w-0">
                                 <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">시작일</label>
                                 <input
                                     type="date"
@@ -818,11 +818,11 @@ export default function BacktestOptimizer() {
                                         setStartDate(e.target.value);
                                         setSelectedPreset('');
                                     }}
-                                    className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                                 />
                             </div>
-                            <span className="text-slate-400 mt-6">~</span>
-                            <div>
+                            <span className="text-slate-400 mt-6 hidden sm:inline">~</span>
+                            <div className="min-w-0">
                                 <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">종료일</label>
                                 <input
                                     type="date"
@@ -831,7 +831,7 @@ export default function BacktestOptimizer() {
                                         setEndDate(e.target.value);
                                         setSelectedPreset('');
                                     }}
-                                    className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                                 />
                             </div>
                         </div>
@@ -1423,15 +1423,16 @@ export default function BacktestOptimizer() {
                         <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-4">
                             Task ID로 직접 조회
                         </h3>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <input
                                 type="text"
                                 placeholder="Task ID 입력..."
                                 value={selectedDetailTaskId || ''}
                                 onChange={(e) => setSelectedDetailTaskId(e.target.value)}
-                                className="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                className="flex-1 min-w-0 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                             />
                             <Button
+                                className="shrink-0"
                                 onClick={async () => {
                                     if (!selectedDetailTaskId) {
                                         setToast('Task ID를 입력해주세요.');

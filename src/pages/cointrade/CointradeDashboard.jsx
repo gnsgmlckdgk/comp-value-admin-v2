@@ -31,15 +31,24 @@ const getReasonColor = (reason) => {
     const colors = {
         'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
         'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-        '7DAY_PROFIT': 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
         'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
         'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
-        'PARTIAL_7DAY_PROFIT': 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
         'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
         'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
         'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
     };
-    return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
+
+    if (colors[reason]) return colors[reason];
+
+    // {N}DAY_PROFIT 패턴
+    if (/^\d+DAY_PROFIT$/.test(reason)) {
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
+    }
+    if (/^PARTIAL_\d+DAY_PROFIT$/.test(reason)) {
+        return 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400';
+    }
+
+    return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
 };
 
 // 사유 라벨
@@ -47,15 +56,23 @@ const getReasonLabel = (reason) => {
     const labels = {
         'SIGNAL': '매수',
         'TAKE_PROFIT': '익절',
-        '7DAY_PROFIT': '기간수익',
         'STOP_LOSS': '손절',
         'PARTIAL_TAKE_PROFIT': '부분익절',
-        'PARTIAL_7DAY_PROFIT': '부분기간',
         'PARTIAL_STOP_LOSS': '부분손절',
         'MANUAL': '수동매도',
         'PARTIAL_MANUAL': '부분수동'
     };
-    return labels[reason] || reason;
+
+    if (labels[reason]) return labels[reason];
+
+    // {N}DAY_PROFIT 패턴
+    const dayProfitMatch = reason?.match(/^(\d+)DAY_PROFIT$/);
+    if (dayProfitMatch) return `${dayProfitMatch[1]}일수익`;
+
+    const partialDayProfitMatch = reason?.match(/^PARTIAL_(\d+)DAY_PROFIT$/);
+    if (partialDayProfitMatch) return `부분${partialDayProfitMatch[1]}일`;
+
+    return reason;
 };
 
 // D-day 계산
@@ -440,7 +457,7 @@ export default function CointradeDashboard() {
     const [holdingsColumnFilters, setHoldingsColumnFilters] = useState({});
     const [holdingsSortConfig, setHoldingsSortConfig] = useState({ key: 'profitRate', direction: 'desc' });
 
-    const [itemsPerPage, setItemsPerPage] = useState(10); // 대시보드이므로 기본 10개
+    const [itemsPerPage, setItemsPerPage] = useState(9999); // 기본 전체보기
     const [currentPage, setCurrentPage] = useState(0); // 0-based for server
     const [totalElements, setTotalElements] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -644,7 +661,12 @@ export default function CointradeDashboard() {
 
         const takeProfitCount = sellTrades.filter(t => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(t.reason)).length;
         const stopLossCount = sellTrades.filter(t => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(t.reason)).length;
-        const expiredCount = sellTrades.filter(t => ['EXPIRED', '7DAY_PROFIT', 'PARTIAL_7DAY_PROFIT'].includes(t.reason)).length;
+        const expiredCount = sellTrades.filter(t => {
+            const reason = t.reason || '';
+            return reason === 'EXPIRED' ||
+                   /^\d+DAY_PROFIT$/.test(reason) ||
+                   /^PARTIAL_\d+DAY_PROFIT$/.test(reason);
+        }).length;
 
         const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
         const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
@@ -1171,9 +1193,11 @@ export default function CointradeDashboard() {
 
                                             key={index}
 
+                                            onClick={() => handleCoinSelect(holding.coinCode)}
+
                                             onDoubleClick={() => handleRowDoubleClick(holding)}
 
-                                            className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                            className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selectedCoins.includes(holding.coinCode) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
 
                                         >
 
@@ -1193,7 +1217,7 @@ export default function CointradeDashboard() {
 
                                                         key={col.key}
 
-                                                        className={`${col.cellClassName} ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
+                                                        className={`${col.cellClassName} ${col.sticky ? `sticky z-[5] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${selectedCoins.includes(holding.coinCode) ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-slate-800'}` : ''}`}
 
                                                         style={{
 
@@ -1250,6 +1274,7 @@ export default function CointradeDashboard() {
                     <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                             <h3 className="text-lg font-semibold text-slate-800 dark:text-white">최근 거래 내역</h3>
+                            <span className="text-sm text-slate-500 dark:text-slate-400">(최근 30일)</span>
                             <button
                                 type="button"
                                 onClick={() => setIsFilterHelpModalOpen(true)}
@@ -1267,6 +1292,7 @@ export default function CointradeDashboard() {
                                 onChange={handleItemsPerPageChange}
                                 className="px-2 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium focus:outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
                             >
+                                <option value={9999}>전체보기</option>
                                 <option value={10}>10개씩</option>
                                 <option value={20}>20개씩</option>
                                 <option value={50}>50개씩</option>

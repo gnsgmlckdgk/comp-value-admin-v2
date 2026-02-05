@@ -15,6 +15,7 @@ import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPl
 import { TRANSFORMERS } from '@lexical/markdown';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { registerCodeHighlighting } from '@lexical/code';
+import { $patchStyleText, $getSelectionStyleValueForProperty } from '@lexical/selection';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-python';
@@ -65,6 +66,7 @@ import {
     ImageIcon,
     Quote,
     Code,
+    Palette,
 } from 'lucide-react';
 import { $isHeadingNode, $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
 import { $isListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, REMOVE_LIST_COMMAND } from '@lexical/list';
@@ -263,6 +265,20 @@ function $createImageNode(src, altText, width, height) {
     return new ImageNode(src, altText, width, height);
 }
 
+// 글자색 팔레트 상수
+const COLOR_PALETTE = [
+    { color: '#000000', label: '검정' },
+    { color: '#FF0000', label: '빨강' },
+    { color: '#FF6B00', label: '주황' },
+    { color: '#FFD700', label: '노랑' },
+    { color: '#00FF00', label: '초록' },
+    { color: '#00BFFF', label: '하늘' },
+    { color: '#0000FF', label: '파랑' },
+    { color: '#8B00FF', label: '보라' },
+    { color: '#FF1493', label: '분홍' },
+    { color: '#666666', label: '회색' },
+];
+
 const theme = {
     paragraph: 'editor-paragraph',
     heading: {
@@ -369,6 +385,30 @@ function convertHtmlToNodes(editor, htmlString) {
         }
     });
 
+    // 색상 스타일이 적용된 모든 요소의 내용을 마커로 교체 (span, strong, em 등)
+    // style 속성에서 color를 직접 확인 (background-color 제외)
+    const allStyledElements = dom.querySelectorAll('[style]');
+    const colorSpanData = [];
+    let colorIndex = 0;
+
+    allStyledElements.forEach((el) => {
+        const style = el.getAttribute('style') || '';
+        // color 속성만 추출 (background-color 제외)
+        const colorMatch = style.match(/(?:^|;|\s)color\s*:\s*([^;]+)/i);
+        if (colorMatch) {
+            const color = colorMatch[1].trim();
+            const text = el.textContent || '';
+            const markerId = `___COLOR_${colorIndex}___`;
+            colorSpanData.push({ markerId, text, color });
+
+            // 요소의 내용만 마커로 교체 (태그는 유지하여 bold 등 서식 보존)
+            el.textContent = markerId;
+            // style에서 color 속성 제거 (Lexical이 처리하지 않도록)
+            el.style.color = '';
+            colorIndex++;
+        }
+    });
+
     // 기본 파서로 노드 생성
     const nodes = $generateNodesFromDOM(editor, dom);
 
@@ -403,6 +443,27 @@ function convertHtmlToNodes(editor, htmlString) {
                     if (parent) {
                         parent.replace(codeNode);
                     }
+                    return;
+                }
+            }
+
+            // 색상 마커 확인 및 복원
+            const colorMarkerMatch = text.match(/___COLOR_(\d+)___/);
+            if (colorMarkerMatch) {
+                const idx = parseInt(colorMarkerMatch[1]);
+                const data = colorSpanData[idx];
+                if (data) {
+                    // 마커를 원본 텍스트로 교체
+                    const newTextContent = text.replace(data.markerId, data.text);
+                    // 새 TextNode 생성하여 교체 (기존 서식 복사 후 색상 추가)
+                    const newTextNode = $createTextNode(newTextContent);
+                    // 기존 노드의 format(bold, italic 등) 복사
+                    const format = node.getFormat();
+                    if (format) {
+                        newTextNode.setFormat(format);
+                    }
+                    newTextNode.setStyle(`color: ${data.color}`);
+                    node.replace(newTextNode);
                     return;
                 }
             }
@@ -677,6 +738,59 @@ function ToolbarButton({ onClick, isActive, title, icon: Icon }) {
     );
 }
 
+// 글자색 선택 드롭다운 컴포넌트
+function ColorPickerDropdown({ currentColor, onSelectColor, onRemoveColor, onClose }) {
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose]);
+
+    return (
+        <div
+            ref={dropdownRef}
+            className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg z-50 p-2"
+            style={{ minWidth: '140px' }}
+        >
+            <div className="grid grid-cols-5 gap-1 mb-2">
+                {COLOR_PALETTE.map(({ color, label }) => (
+                    <button
+                        key={color}
+                        type="button"
+                        onClick={() => {
+                            onSelectColor(color);
+                            onClose();
+                        }}
+                        className={`w-6 h-6 rounded border-2 transition-transform hover:scale-110 ${
+                            currentColor === color
+                                ? 'border-sky-500 ring-2 ring-sky-300'
+                                : 'border-slate-300 dark:border-slate-500'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={label}
+                    />
+                ))}
+            </div>
+            <button
+                type="button"
+                onClick={() => {
+                    onRemoveColor();
+                    onClose();
+                }}
+                className="w-full text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded px-2 py-1"
+            >
+                색상 제거
+            </button>
+        </div>
+    );
+}
+
 // 링크 편집 플러그인
 function FloatingLinkEditorPlugin() {
     const [editor] = useLexicalComposerContext();
@@ -855,6 +969,8 @@ function ToolbarPlugin() {
     const [showLinkInput, setShowLinkInput] = useState(false);
     const [linkInputUrl, setLinkInputUrl] = useState('');
     const linkInputRef = useRef(null);
+    const [showColorPicker, setShowColorPicker] = useState(false);
+    const [fontColor, setFontColor] = useState(null);
     const [activeStates, setActiveStates] = useState({
         isBold: false,
         isItalic: false,
@@ -877,6 +993,10 @@ function ToolbarPlugin() {
                 isLink: false,
                 blockType: 'paragraph',
             });
+
+            // 현재 선택된 텍스트의 글자색 감지
+            const currentColor = $getSelectionStyleValueForProperty(selection, 'color', null);
+            setFontColor(currentColor);
 
             const anchorNode = selection.anchor.getNode();
             let element =
@@ -940,6 +1060,26 @@ function ToolbarPlugin() {
 
     const formatStrikethrough = () => {
         editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
+    };
+
+    const applyFontColor = (color) => {
+        editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+                $patchStyleText(selection, { color: color });
+            }
+        });
+        setFontColor(color);
+    };
+
+    const removeFontColor = () => {
+        editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+                $patchStyleText(selection, { color: null });
+            }
+        });
+        setFontColor(null);
     };
 
     const formatHeading = (level) => {
@@ -1112,6 +1252,31 @@ function ToolbarPlugin() {
             <ToolbarButton onClick={formatItalic} isActive={activeStates.isItalic} title="기울임 (Ctrl+I)" icon={Italic} />
             <ToolbarButton onClick={formatUnderline} isActive={activeStates.isUnderline} title="밑줄 (Ctrl+U)" icon={UnderlineIcon} />
             <ToolbarButton onClick={formatStrikethrough} isActive={activeStates.isStrikethrough} title="취소선" icon={Strikethrough} />
+
+            <div className="relative">
+                <button
+                    type="button"
+                    onClick={() => setShowColorPicker(!showColorPicker)}
+                    className={`p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors relative editor-tooltip-btn ${
+                        fontColor ? 'bg-sky-100 dark:bg-sky-900' : 'text-slate-700 dark:text-slate-300'
+                    }`}
+                    data-tooltip="글자색"
+                >
+                    <Palette size={18} />
+                    <div
+                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-sm"
+                        style={{ backgroundColor: fontColor || '#000000' }}
+                    />
+                </button>
+                {showColorPicker && (
+                    <ColorPickerDropdown
+                        currentColor={fontColor}
+                        onSelectColor={applyFontColor}
+                        onRemoveColor={removeFontColor}
+                        onClose={() => setShowColorPicker(false)}
+                    />
+                )}
+            </div>
 
             <div className="w-px bg-slate-300 dark:bg-slate-500 mx-1"></div>
 

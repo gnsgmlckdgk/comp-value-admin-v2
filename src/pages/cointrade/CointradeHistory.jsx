@@ -923,7 +923,7 @@ export default function CointradeHistory() {
     };
 
     return (
-        <div className="container mx-auto max-w-7xl p-4">
+        <div className="p-2 md:p-4">
             <PageTitle>거래기록 조회</PageTitle>
 
             {/* 필터 영역 */}

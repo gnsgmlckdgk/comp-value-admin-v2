@@ -638,7 +638,7 @@ export default function BacktestOptimizer() {
     };
 
     return (
-        <div className="container mx-auto max-w-7xl p-4">
+        <div className="p-2 md:p-4">
             <PageTitle>백테스트 옵티마이저</PageTitle>
 
             {/* 탭 */}

@@ -181,7 +181,7 @@ export default function CointradeCoins() {
     const filteredSelectedCount = filteredCoins.filter(coin => selectedCoins.has(coin.market)).length;
 
     return (
-        <div className="container mx-auto max-w-6xl p-4">
+        <div className="p-2 md:p-4">
             <PageTitle>자동매매 대상 종목 설정</PageTitle>
 
             {loading ? (

@@ -535,7 +535,7 @@ export default function CointradeScheduler() {
     };
 
     return (
-        <div className="container mx-auto max-w-6xl p-4">
+        <div className="p-2 md:p-4">
             <PageTitle>스케줄러 관리</PageTitle>
 
             {/* 스케줄러 제어 */}

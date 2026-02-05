@@ -1033,7 +1033,7 @@ export default function Backtest() {
     const filteredCoins = getFilteredCoins();
 
     return (
-        <div className="container mx-auto max-w-7xl p-4">
+        <div className="p-2 md:p-4">
             <PageTitle>백테스트</PageTitle>
 
             {/* 탭 */}

@@ -910,7 +910,7 @@ export default function CointradeDashboard() {
     };
 
     return (
-        <div className="container mx-auto max-w-7xl p-4">
+        <div className="p-2 md:p-4">
             <div className="flex items-center justify-between mb-6">
                 <PageTitle>자동매매 대시보드</PageTitle>
                 <Button onClick={handleRefresh} disabled={loading} className="px-4 py-2">

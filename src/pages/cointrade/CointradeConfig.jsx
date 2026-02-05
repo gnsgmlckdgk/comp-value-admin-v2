@@ -456,7 +456,7 @@ export default function CointradeConfig() {
     };
 
     return (
-        <div className="container mx-auto max-w-5xl p-4">
+        <div className="p-2 md:p-4">
             <PageTitle>자동매매 파라미터 설정</PageTitle>
 
             {loading ? (

@@ -564,7 +564,7 @@ export default function MlModelInfo() {
     };
 
     return (
-        <div className="container mx-auto max-w-7xl p-4">
+        <div className="p-2 md:p-4">
             <PageTitle>모델 예측정보 조회</PageTitle>
 
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">

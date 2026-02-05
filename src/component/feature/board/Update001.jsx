@@ -58,7 +58,7 @@ function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {}, canSetNot
 
 
     return (
-        <div className="mx-auto max-w-7xl px-1 py-8">
+        <div className="px-2 md:px-4 py-4 md:py-6">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                 <div className="border-b border-slate-200 px-3 sm:px-4 py-4 dark:border-slate-700">
                     <div className="flex items-center gap-3">

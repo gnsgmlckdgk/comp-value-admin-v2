@@ -1472,24 +1472,22 @@ export default function RichTextEditor({ value, onChange, placeholder = '내용�
     };
 
     return (
-        <div className="lexical-editor border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden">
+        <div
+            className="lexical-editor border border-slate-200 dark:border-slate-600 rounded-lg"
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: height,
+                overflow: 'hidden'
+            }}
+        >
             <style>{`
                 /* Sticky toolbar styles */
-                .lexical-editor {
-                    display: flex;
-                    flex-direction: column;
-                    height: ${height};
-                    overflow: hidden;
-                }
                 .lexical-editor .editor-toolbar {
                     position: sticky;
                     top: 0;
                     z-index: 10;
                     flex-shrink: 0;
-                }
-                .lexical-editor .editor-content-wrapper {
-                    flex: 1;
-                    overflow-y: auto;
                 }
 
                 /* Tooltip styles */
@@ -1594,7 +1592,14 @@ export default function RichTextEditor({ value, onChange, placeholder = '내용�
 
             <LexicalComposer initialConfig={initialConfig}>
                 <ToolbarPlugin />
-                <div className="editor-content-wrapper">
+                <div
+                    className="editor-content-wrapper"
+                    style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        minHeight: 0
+                    }}
+                >
                     <div className="relative">
                         <RichTextPlugin
                             contentEditable={<ContentEditable className="editor-input" />}

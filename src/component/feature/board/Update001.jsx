@@ -137,7 +137,7 @@ function Update001({ boardData = {}, moveViewPage = {}, onUpdate = {}, canSetNot
                             <RichTextEditor
                                 value={content}
                                 onChange={setContent}
-                                height="400px"
+                                height="700px"
                                 onSizeChange={handleSizeChange}
                             />
                         )}

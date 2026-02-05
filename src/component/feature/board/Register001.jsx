@@ -138,7 +138,7 @@ function Register001({ moveListPage = () => {}, onRegister = () => {}, currentAu
                         <RichTextEditor
                             value={content}
                             onChange={setContent}
-                            height="400px"
+                            height="700px"
                             onSizeChange={handleSizeChange}
                         />
                         <div className="mt-2 flex flex-wrap gap-4 text-sm">

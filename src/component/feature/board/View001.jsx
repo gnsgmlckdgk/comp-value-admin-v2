@@ -226,7 +226,7 @@ function View001({
                             border-radius: 0.5rem;
                         }
                         .tiptap-view-content p {
-                            margin: 0.5em 0;
+                            margin: 0;
                         }
                         .tiptap-view-content [style*="text-align: left"] {
                             text-align: left;
@@ -241,7 +241,12 @@ function View001({
                     <div className="prose prose-slate max-w-none dark:prose-invert">
                         <div
                             className="tiptap-view-content leading-relaxed break-words"
-                            dangerouslySetInnerHTML={{ __html: boardData.content }}
+                            dangerouslySetInnerHTML={{
+                                __html: (boardData.content || '')
+                                    .replace(/<\/p>\s*<p[^>]*>/gi, '<br>')
+                                    .replace(/^<p[^>]*>/, '')
+                                    .replace(/<\/p>$/, '')
+                            }}
                         />
                     </div>
                 </div>

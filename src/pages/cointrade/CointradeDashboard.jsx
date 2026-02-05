@@ -1657,6 +1657,157 @@ export default function CointradeDashboard() {
                 onClose={handleCloseDetailModal}
                 config={config}
             />
+
+            {/* 매도 확인 모달 */}
+            {showSellModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={(e) => e.target === e.currentTarget && handleSellCancel()}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                매도 확인
+                            </h3>
+                            <button
+                                onClick={handleSellCancel}
+                                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="p-6 overflow-y-auto flex-1">
+                            <p className="text-slate-700 dark:text-slate-300 mb-4">
+                                {selectedCoins.length > 0
+                                    ? `선택한 ${selectedCoins.length}개 종목을 매도하시겠습니까?`
+                                    : `보유 중인 ${holdings.length}개 전체 종목을 매도하시겠습니까?`
+                                }
+                            </p>
+
+                            {/* 선택된 종목 목록 */}
+                            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 max-h-60 overflow-y-auto">
+                                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                                    매도 대상 종목 ({selectedCoins.length > 0 ? selectedCoins.length : holdings.length}개)
+                                </div>
+                                <div className="space-y-2">
+                                    {(selectedCoins.length > 0
+                                        ? holdings.filter(h => selectedCoins.includes(h.coinCode))
+                                        : holdings
+                                    ).map((h) => (
+                                        <div key={h.coinCode} className="flex items-center justify-between py-1 px-2 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-600">
+                                            <span className="font-medium text-slate-800 dark:text-slate-200">{h.coinCode}</span>
+                                            <span className={`text-sm font-medium ${h.profitRate >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                                                {h.profitRate >= 0 ? '+' : ''}{h.profitRate?.toFixed(2)}%
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 푸터 */}
+                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                            <button
+                                type="button"
+                                onClick={handleSellCancel}
+                                disabled={isSelling}
+                                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSellConfirm}
+                                disabled={isSelling}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isSelling ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        매도 중...
+                                    </>
+                                ) : '매도 확인'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 매도 결과 모달 */}
+            {sellResult && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={(e) => e.target === e.currentTarget && handleSellResultClose()}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                        {/* 헤더 */}
+                        <div className={`flex items-center justify-between px-6 py-4 ${
+                            sellResult.success || sellResult.response?.status === 'success'
+                                ? 'bg-green-50 dark:bg-green-900/30'
+                                : 'bg-red-50 dark:bg-red-900/30'
+                        }`}>
+                            <h3 className={`text-lg font-bold ${
+                                sellResult.success || sellResult.response?.status === 'success'
+                                    ? 'text-green-800 dark:text-green-300'
+                                    : 'text-red-800 dark:text-red-300'
+                            }`}>
+                                {sellResult.success || sellResult.response?.status === 'success' ? '매도 완료' : '매도 실패'}
+                            </h3>
+                            <button
+                                onClick={handleSellResultClose}
+                                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="p-6">
+                            <p className="text-slate-700 dark:text-slate-300 mb-4">
+                                {sellResult.message || sellResult.response?.message || '처리가 완료되었습니다.'}
+                            </p>
+
+                            {sellResult.response?.data && (
+                                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-600 dark:text-slate-400">총 요청</span>
+                                        <span className="font-medium text-slate-800 dark:text-slate-200">{sellResult.response.data.total}건</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-600 dark:text-slate-400">성공</span>
+                                        <span className="font-medium text-green-600 dark:text-green-400">{sellResult.response.data.success}건</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-600 dark:text-slate-400">실패</span>
+                                        <span className="font-medium text-red-600 dark:text-red-400">{sellResult.response.data.failed}건</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 푸터 */}
+                        <div className="flex items-center justify-end px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                            <button
+                                type="button"
+                                onClick={handleSellResultClose}
+                                className="px-4 py-2 rounded-lg bg-slate-600 text-white font-medium hover:bg-slate-700 transition-colors"
+                            >
+                                확인
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

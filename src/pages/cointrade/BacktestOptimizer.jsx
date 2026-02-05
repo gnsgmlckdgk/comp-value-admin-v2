@@ -158,6 +158,12 @@ export default function BacktestOptimizer() {
     const [numWorkers, setNumWorkers] = useState(2);
     const [useCustomParams, setUseCustomParams] = useState(false);
 
+    // 옵티마이저 설정 입력용 로컬 상태 (입력 중에는 문자열로 관리)
+    const [localMaxRuns, setLocalMaxRuns] = useState('50');
+    const [localMaxTimeMinutes, setLocalMaxTimeMinutes] = useState('30');
+    const [localTargetReturn, setLocalTargetReturn] = useState('15.0');
+    const [localNumWorkers, setLocalNumWorkers] = useState('2');
+
     // 커스텀 파라미터 범위
     const [paramRanges, setParamRanges] = useState({
         min_up_probability: { min_value: 0.50, max_value: 0.80, step: 0.01 },
@@ -849,8 +855,13 @@ export default function BacktestOptimizer() {
                                     type="number"
                                     min="1"
                                     max="1000"
-                                    value={maxRuns}
-                                    onChange={(e) => setMaxRuns(parseInt(e.target.value) || 50)}
+                                    value={localMaxRuns}
+                                    onChange={(e) => setLocalMaxRuns(e.target.value)}
+                                    onBlur={() => {
+                                        const val = parseInt(localMaxRuns) || 50;
+                                        setMaxRuns(val);
+                                        setLocalMaxRuns(val.toString());
+                                    }}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                                 />
                             </div>
@@ -860,8 +871,13 @@ export default function BacktestOptimizer() {
                                     type="number"
                                     min="1"
                                     max="180"
-                                    value={maxTimeMinutes}
-                                    onChange={(e) => setMaxTimeMinutes(parseInt(e.target.value) || 30)}
+                                    value={localMaxTimeMinutes}
+                                    onChange={(e) => setLocalMaxTimeMinutes(e.target.value)}
+                                    onBlur={() => {
+                                        const val = parseInt(localMaxTimeMinutes) || 30;
+                                        setMaxTimeMinutes(val);
+                                        setLocalMaxTimeMinutes(val.toString());
+                                    }}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                                 />
                             </div>
@@ -871,8 +887,13 @@ export default function BacktestOptimizer() {
                                     type="number"
                                     step="0.1"
                                     min="0"
-                                    value={targetReturn}
-                                    onChange={(e) => setTargetReturn(parseFloat(e.target.value) || 15.0)}
+                                    value={localTargetReturn}
+                                    onChange={(e) => setLocalTargetReturn(e.target.value)}
+                                    onBlur={() => {
+                                        const val = parseFloat(localTargetReturn) || 15.0;
+                                        setTargetReturn(val);
+                                        setLocalTargetReturn(val.toString());
+                                    }}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                                 />
                                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">목표 수익률 미만의 결과는 결과에 포함되지 않습니다.</p>
@@ -883,8 +904,13 @@ export default function BacktestOptimizer() {
                                     type="number"
                                     min="1"
                                     max="8"
-                                    value={numWorkers}
-                                    onChange={(e) => setNumWorkers(parseInt(e.target.value) || 2)}
+                                    value={localNumWorkers}
+                                    onChange={(e) => setLocalNumWorkers(e.target.value)}
+                                    onBlur={() => {
+                                        const val = parseInt(localNumWorkers) || 2;
+                                        setNumWorkers(val);
+                                        setLocalNumWorkers(val.toString());
+                                    }}
                                     className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                                 />
                             </div>

@@ -1239,7 +1239,7 @@ function ToolbarPlugin() {
     };
 
     return (
-        <div className="border-b border-slate-200 dark:border-slate-600 p-2 bg-slate-50 dark:bg-slate-700 rounded-t-lg flex flex-wrap gap-1">
+        <div className="editor-toolbar border-b border-slate-200 dark:border-slate-600 p-2 bg-slate-50 dark:bg-slate-700 rounded-t-lg flex flex-wrap gap-1">
             <input
                 type="file"
                 ref={fileInputRef}
@@ -1450,7 +1450,7 @@ function ContentSizePlugin({ onSizeChange }) {
     return null;
 }
 
-export default function RichTextEditor({ value, onChange, placeholder = '내용을 입력하세요...', height = '400px', onSizeChange }) {
+export default function RichTextEditor({ value, onChange, placeholder = '내용을 입력하세요...', height = '700px', onSizeChange }) {
     const initialConfig = {
         namespace: 'RichTextEditor',
         theme,
@@ -1474,6 +1474,24 @@ export default function RichTextEditor({ value, onChange, placeholder = '내용�
     return (
         <div className="lexical-editor border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden">
             <style>{`
+                /* Sticky toolbar styles */
+                .lexical-editor {
+                    display: flex;
+                    flex-direction: column;
+                    height: ${height};
+                    overflow: hidden;
+                }
+                .lexical-editor .editor-toolbar {
+                    position: sticky;
+                    top: 0;
+                    z-index: 10;
+                    flex-shrink: 0;
+                }
+                .lexical-editor .editor-content-wrapper {
+                    flex: 1;
+                    overflow-y: auto;
+                }
+
                 /* Tooltip styles */
                 .editor-tooltip-btn {
                     position: relative;
@@ -1523,7 +1541,6 @@ export default function RichTextEditor({ value, onChange, placeholder = '내용�
 
                 /* Editor content styles */
                 .lexical-editor .editor-input {
-                    min-height: ${height};
                     padding: 1rem;
                     outline: none;
                     background-color: white;
@@ -1577,25 +1594,27 @@ export default function RichTextEditor({ value, onChange, placeholder = '내용�
 
             <LexicalComposer initialConfig={initialConfig}>
                 <ToolbarPlugin />
-                <div className="relative">
-                    <RichTextPlugin
-                        contentEditable={<ContentEditable className="editor-input" />}
-                        placeholder={<div className="editor-placeholder">{placeholder}</div>}
-                        ErrorBoundary={LexicalErrorBoundary}
-                    />
-                    <FloatingLinkEditorPlugin />
+                <div className="editor-content-wrapper">
+                    <div className="relative">
+                        <RichTextPlugin
+                            contentEditable={<ContentEditable className="editor-input" />}
+                            placeholder={<div className="editor-placeholder">{placeholder}</div>}
+                            ErrorBoundary={LexicalErrorBoundary}
+                        />
+                        <FloatingLinkEditorPlugin />
+                    </div>
+                    <HtmlPlugin initialHtml={value} onChange={onChange} />
+                    <HistoryPlugin />
+                    <AutoFocusPlugin />
+                    <ListPlugin />
+                    <LinkPlugin />
+                    <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+                    <CodeBlockExitPlugin />
+                    <CodeHighlightPlugin />
+                    <TabIndentationPlugin />
+                    <KeyboardNavigationPlugin />
+                    {onSizeChange && <ContentSizePlugin onSizeChange={onSizeChange} />}
                 </div>
-                <HtmlPlugin initialHtml={value} onChange={onChange} />
-                <HistoryPlugin />
-                <AutoFocusPlugin />
-                <ListPlugin />
-                <LinkPlugin />
-                <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-                <CodeBlockExitPlugin />
-                <CodeHighlightPlugin />
-                <TabIndentationPlugin />
-                <KeyboardNavigationPlugin />
-                {onSizeChange && <ContentSizePlugin onSizeChange={onSizeChange} />}
             </LexicalComposer>
         </div>
     );

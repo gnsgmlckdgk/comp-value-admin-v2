@@ -186,6 +186,10 @@ export default function BacktestOptimizer() {
     const [detailResult, setDetailResult] = useState(null);
     const [showAllTrials, setShowAllTrials] = useState(false);
 
+    // 삭제 확인 모달
+    const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
+    const [deleteTargetTaskId, setDeleteTargetTaskId] = useState(null);
+
     // Toast auto-hide
     useEffect(() => {
         if (!toast) return;
@@ -345,6 +349,41 @@ export default function BacktestOptimizer() {
         } catch (e) {
             console.error('이력 조회 실패:', e);
             setToast('이력 조회 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 삭제 핸들러
+    const handleDeleteResult = (taskId) => {
+        setDeleteTargetTaskId(taskId);
+        setIsDeleteConfirmModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        setIsDeleteConfirmModalOpen(false);
+        const taskId = deleteTargetTaskId;
+        setDeleteTargetTaskId(null);
+
+        setLoading(true);
+        try {
+            const { data, error } = await send(`/dart/api/backtest/optimizer/result/${taskId}`, {}, 'DELETE');
+
+            if (error) {
+                setToast('삭제 실패: ' + error);
+            } else {
+                setToast('삭제되었습니다.');
+                // 이력 목록 새로고침
+                await fetchHistory();
+                // 상세 보기 중이었다면 닫기
+                if (selectedDetailTaskId === taskId) {
+                    setSelectedDetailTaskId(null);
+                    setDetailResult(null);
+                }
+            }
+        } catch (e) {
+            console.error('삭제 실패:', e);
+            setToast('삭제 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }
@@ -730,69 +769,77 @@ export default function BacktestOptimizer() {
                                     onChange={(e) => handleCoinSelectionModeChange(e.target.value)}
                                     className="w-4 h-4"
                                 />
-                                <span className="text-slate-700 dark:text-slate-300">직접 선택</span>
+                                <span className="text-slate-700 dark:text-slate-300">
+                                    직접 선택
+                                    {coinSelectionMode === 'custom' && selectedCoins.size > 0 && (
+                                        <span className="ml-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                            ({selectedCoins.size}개 선택됨)
+                                        </span>
+                                    )}
+                                </span>
                             </label>
                         </div>
 
-                        {/* 선택된 종목 수 표시 */}
-                        {coinSelectionMode !== 'all' && (
-                            <div className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                                선택된 종목: <span className="font-semibold">{selectedCoins.size}개</span>
+                        {coinSelectionMode === 'active' && (
+                            <div className="text-sm text-slate-600 dark:text-slate-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded">
+                                활성화된 {selectedCoins.size}개 종목이 선택되었습니다.
                             </div>
                         )}
 
-                        {/* 직접 선택 모드일 때 종목 선택 UI */}
                         {coinSelectionMode === 'custom' && (
-                            <div className="space-y-4">
-                                {/* 검색 및 필터 */}
-                                <div className="flex gap-4">
-                                    <input
-                                        type="text"
-                                        placeholder="종목 검색..."
-                                        value={searchText}
-                                        onChange={(e) => setSearchText(e.target.value)}
-                                        className="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
-                                    />
-                                    <select
-                                        value={marketFilter}
-                                        onChange={(e) => setMarketFilter(e.target.value)}
-                                        className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
-                                    >
-                                        <option value="ALL">전체 마켓</option>
-                                        <option value="KRW">KRW</option>
-                                        <option value="BTC">BTC</option>
-                                        <option value="USDT">USDT</option>
-                                    </select>
+                            <>
+                                <div className="flex flex-col md:flex-row gap-4 mb-4">
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setMarketFilter('ALL')}
+                                            className={`px-3 py-1.5 rounded text-sm ${marketFilter === 'ALL' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                        >
+                                            전체
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('KRW')}
+                                            className={`px-3 py-1.5 rounded text-sm ${marketFilter === 'KRW' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                        >
+                                            KRW
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('BTC')}
+                                            className={`px-3 py-1.5 rounded text-sm ${marketFilter === 'BTC' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                        >
+                                            BTC
+                                        </button>
+                                        <button
+                                            onClick={() => setMarketFilter('USDT')}
+                                            className={`px-3 py-1.5 rounded text-sm ${marketFilter === 'USDT' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}
+                                        >
+                                            USDT
+                                        </button>
+                                    </div>
+                                    <div className="flex-1">
+                                        <input
+                                            type="text"
+                                            placeholder="종목코드 또는 종목명 검색..."
+                                            value={searchText}
+                                            onChange={(e) => setSearchText(e.target.value)}
+                                            className="w-full px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button onClick={handleSelectAllFiltered} className="px-4 py-1.5 text-sm">
+                                            전체 선택
+                                        </Button>
+                                        <Button onClick={handleDeselectAllFiltered} className="px-4 py-1.5 text-sm">
+                                            전체 해제
+                                        </Button>
+                                    </div>
                                 </div>
 
-                                {/* 전체 선택/해제 */}
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={handleSelectAllFiltered}
-                                    >
-                                        필터된 항목 전체 선택
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={handleDeselectAllFiltered}
-                                    >
-                                        필터된 항목 전체 해제
-                                    </Button>
-                                </div>
-
-                                {/* 종목 목록 */}
-                                <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-4">
-                                        {filteredCoins.map(coin => (
+                                <div className="max-h-96 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded p-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        {filteredCoins.map((coin) => (
                                             <label
                                                 key={coin.market}
-                                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${selectedCoins.has(coin.market)
-                                                    ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
-                                                    : 'hover:bg-slate-50 dark:hover:bg-slate-700 border border-transparent'
-                                                    }`}
+                                                className="flex items-center gap-2 p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
                                             >
                                                 <input
                                                     type="checkbox"
@@ -800,48 +847,86 @@ export default function BacktestOptimizer() {
                                                     onChange={() => handleCoinToggle(coin.market)}
                                                     className="w-4 h-4"
                                                 />
-                                                <span className={`text-xs px-1.5 py-0.5 rounded ${getMarketBadgeColor(coin.market)}`}>
-                                                    {coin.market.split('-')[0]}
-                                                </span>
-                                                <span className="text-sm text-slate-700 dark:text-slate-300 truncate">
-                                                    {coin.korean_name}
-                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${getMarketBadgeColor(coin.market)}`}>
+                                                            {coin.market.split('-')[0]}
+                                                        </span>
+                                                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                                                            {coin.market}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                                                        {coin.korean_name}
+                                                    </div>
+                                                </div>
                                             </label>
                                         ))}
                                     </div>
                                 </div>
-                            </div>
+
+                                <div className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-blue-50 dark:bg-blue-900/20 p-3 rounded border border-blue-200 dark:border-blue-800">
+                                    ✓ {selectedCoins.size}개 종목 선택됨
+                                </div>
+                            </>
                         )}
                     </div>
 
                     {/* 기간 선택 */}
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                            기간 설정
-                        </h2>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            {[
-                                { key: '1month', label: '1개월' },
-                                { key: '3months', label: '3개월' },
-                                { key: '6months', label: '6개월' },
-                                { key: '1year', label: '1년' },
-                                { key: 'lastyear', label: '작년' }
-                            ].map(preset => (
-                                <button
-                                    key={preset.key}
-                                    onClick={() => handleDatePreset(preset.key)}
-                                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedPreset === preset.key
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                                        }`}
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
+                        <div className="mb-4">
+                            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                                기간 선택
+                            </h2>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                ⚠️ 60일 이상의 기간을 선택해야 정상적으로 동작합니다.
+                            </p>
                         </div>
-                        <div className="flex flex-wrap gap-4 items-center">
-                            <div className="min-w-0">
-                                <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">시작일</label>
+
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            <button
+                                onClick={() => handleDatePreset('3months')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '3months'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                최근 3개월
+                            </button>
+                            <button
+                                onClick={() => handleDatePreset('6months')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '6months'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                최근 6개월
+                            </button>
+                            <button
+                                onClick={() => handleDatePreset('1year')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === '1year'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                최근 1년
+                            </button>
+                            <button
+                                onClick={() => handleDatePreset('lastyear')}
+                                className={`px-3 py-1.5 rounded text-sm ${selectedPreset === 'lastyear'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                    }`}
+                            >
+                                전년도 전체
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    시작일
+                                </label>
                                 <input
                                     type="date"
                                     value={startDate}
@@ -849,12 +934,13 @@ export default function BacktestOptimizer() {
                                         setStartDate(e.target.value);
                                         setSelectedPreset('');
                                     }}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                                 />
                             </div>
-                            <span className="text-slate-400 mt-6 hidden sm:inline">~</span>
-                            <div className="min-w-0">
-                                <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">종료일</label>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    종료일
+                                </label>
                                 <input
                                     type="date"
                                     value={endDate}
@@ -862,7 +948,7 @@ export default function BacktestOptimizer() {
                                         setEndDate(e.target.value);
                                         setSelectedPreset('');
                                     }}
-                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                                 />
                             </div>
                         </div>
@@ -1015,7 +1101,7 @@ export default function BacktestOptimizer() {
                             onClick={handleOpenRunConfirmModal}
                             disabled={loading || (runningTaskId && taskStatus?.status === 'running')}
                         >
-                            {loading ? '처리 중...' : '옵티마이저 실행'}
+                            {loading ? '실행 중...' : '옵티마이저 실행'}
                         </Button>
                     </div>
 
@@ -1377,23 +1463,34 @@ export default function BacktestOptimizer() {
                                                     중단: {item.stop_reason}
                                                 </div>
                                             )}
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="w-full"
-                                                onClick={async () => {
-                                                    setSelectedDetailTaskId(item.task_id);
-                                                    setLoading(true);
-                                                    try {
-                                                        await fetchTaskResult(item.task_id, true);
-                                                    } finally {
-                                                        setLoading(false);
-                                                    }
-                                                }}
-                                                disabled={loading}
-                                            >
-                                                상세 보기
-                                            </Button>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="flex-1"
+                                                    onClick={async () => {
+                                                        setSelectedDetailTaskId(item.task_id);
+                                                        setLoading(true);
+                                                        try {
+                                                            await fetchTaskResult(item.task_id, true);
+                                                        } finally {
+                                                            setLoading(false);
+                                                        }
+                                                    }}
+                                                    disabled={loading}
+                                                >
+                                                    상세 보기
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleDeleteResult(item.task_id)}
+                                                    disabled={loading}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                                >
+                                                    삭제
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -1412,6 +1509,7 @@ export default function BacktestOptimizer() {
                                                 <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">중단</th>
                                                 <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">생성일시</th>
                                                 <th className="px-3 py-3 text-center font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">상세</th>
+                                                <th className="px-3 py-3 text-center font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">삭제</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1466,6 +1564,17 @@ export default function BacktestOptimizer() {
                                                             disabled={loading}
                                                         >
                                                             상세
+                                                        </Button>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleDeleteResult(item.task_id)}
+                                                            disabled={loading}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                                        >
+                                                            삭제
                                                         </Button>
                                                     </td>
                                                 </tr>
@@ -1719,53 +1828,130 @@ export default function BacktestOptimizer() {
 
             {/* 실행 확인 모달 */}
             {isRunConfirmModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full p-6">
-                        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                            옵티마이저 실행 확인
-                        </h3>
-                        <div className="space-y-3 mb-6 text-sm text-slate-600 dark:text-slate-400">
-                            <div className="flex justify-between">
-                                <span>선택된 종목:</span>
-                                <span className="font-medium text-slate-800 dark:text-slate-200">
-                                    {coinSelectionMode === 'all' ? '전체' : `${selectedCoins.size}개`}
-                                </span>
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in overflow-y-auto"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsRunConfirmModalOpen(false);
+                    }}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg my-4">
+                        {/* 헤더 */}
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                옵티마이저 실행 확인
+                            </h3>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="px-6 py-4 space-y-4">
+                            {/* 기본 정보 */}
+                            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">종목 선택</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                        {coinSelectionMode === 'all' && '전체 종목'}
+                                        {coinSelectionMode === 'active' && `활성화된 종목 (${selectedCoins.size}개)`}
+                                        {coinSelectionMode === 'custom' && `직접 선택 (${selectedCoins.size}개)`}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">기간</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                        {startDate} ~ {endDate}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span>기간:</span>
-                                <span className="font-medium text-slate-800 dark:text-slate-200">
-                                    {startDate} ~ {endDate}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>최대 실행 횟수:</span>
-                                <span className="font-medium text-slate-800 dark:text-slate-200">{maxRuns}회</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>최대 실행 시간:</span>
-                                <span className="font-medium text-slate-800 dark:text-slate-200">{maxTimeMinutes}분</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>목표 수익률:</span>
-                                <span className="font-medium text-slate-800 dark:text-slate-200">{targetReturn}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>병렬 작업자:</span>
-                                <span className="font-medium text-slate-800 dark:text-slate-200">{numWorkers}개</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>커스텀 파라미터:</span>
-                                <span className="font-medium text-slate-800 dark:text-slate-200">
-                                    {useCustomParams ? '사용' : '기본값'}
-                                </span>
+
+                            {/* 옵티마이저 설정 */}
+                            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">최대 실행 횟수</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{maxRuns}회</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">최대 실행 시간</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{maxTimeMinutes}분</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">목표 수익률</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{targetReturn}%</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">병렬 작업자</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{numWorkers}개</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">커스텀 파라미터</span>
+                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                        {useCustomParams ? '사용' : '기본값'}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex gap-3 justify-end">
+
+                        {/* 푸터 */}
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end">
                             <Button variant="outline" onClick={() => setIsRunConfirmModalOpen(false)}>
                                 취소
                             </Button>
                             <Button onClick={handleConfirmRun}>
                                 실행
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 삭제 확인 모달 */}
+            {isDeleteConfirmModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsDeleteConfirmModalOpen(false);
+                    }}
+                >
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                        {/* 헤더 */}
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                옵티마이저 결과 삭제
+                            </h3>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="px-6 py-4">
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                이 옵티마이저 결과를 삭제하시겠습니까?
+                            </p>
+                            {deleteTargetTaskId && (
+                                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 mb-4">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Task ID</div>
+                                    <div className="text-sm font-mono text-slate-800 dark:text-slate-200 break-all">
+                                        <TogglableTaskId taskId={deleteTargetTaskId} maxLength={30} />
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-xs text-red-600 dark:text-red-400">
+                                ⚠️ 삭제된 데이터는 복구할 수 없습니다.
+                            </p>
+                        </div>
+
+                        {/* 푸터 */}
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setIsDeleteConfirmModalOpen(false);
+                                    setDeleteTargetTaskId(null);
+                                }}
+                            >
+                                취소
+                            </Button>
+                            <Button
+                                onClick={handleConfirmDelete}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                                삭제
                             </Button>
                         </div>
                     </div>

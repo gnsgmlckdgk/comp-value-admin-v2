@@ -7,6 +7,7 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import BulkQueryModal from '@/pages/trade/popup/BulkQueryModal';
 import MultiSelect from '@/component/common/select/MultiSelect';
+import DualRangeSlider from '@/component/common/input/DualRangeSlider';
 
 // 로컬스토리지 키
 const SCHEDULE_RUN_KEY = 'lastRecommendedStockScheduleRun';
@@ -1305,16 +1306,27 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         isEtf: 'N',
         isFund: 'N',
         isActivelyTrading: 'Y',
-        exchange: [],
+        exchange: ['NASDAQ', 'NYSE'],
         sector: [],
         industry: [],
         country: [],
-        screenerLimit: '',
+        screenerLimit: 10000,
         peRatioMin: '',
         peRatioMax: '',
+        pbRatioMin: '',
         pbRatioMax: '',
         roeMin: '',
+        roeMax: '',
+        debtEquityMin: '',
         debtEquityMax: '',
+        marketCapEnabled: false,
+        priceEnabled: false,
+        betaEnabled: false,
+        volumeEnabled: false,
+        peRatioEnabled: false,
+        pbRatioEnabled: false,
+        roeEnabled: false,
+        debtEquityEnabled: false,
     });
 
     // 프로파일 선택 시
@@ -1323,12 +1335,21 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         // 콤마로 구분된 문자열을 배열로 변환
         const splitToArray = (str) => str ? str.split(',').map(s => s.trim()).filter(s => s) : [];
 
+        const hasValue = (v) => v !== null && v !== undefined && v !== '';
         const formDataWithArrays = {
             ...profile,
             exchange: splitToArray(profile.exchange),
             sector: splitToArray(profile.sector),
             industry: splitToArray(profile.industry),
             country: splitToArray(profile.country),
+            marketCapEnabled: hasValue(profile.marketCapMin) || hasValue(profile.marketCapMax),
+            priceEnabled: hasValue(profile.priceMin) || hasValue(profile.priceMax),
+            betaEnabled: hasValue(profile.betaMin) || hasValue(profile.betaMax),
+            volumeEnabled: hasValue(profile.volumeMin) || hasValue(profile.volumeMax),
+            peRatioEnabled: hasValue(profile.peRatioMin) || hasValue(profile.peRatioMax),
+            pbRatioEnabled: hasValue(profile.pbRatioMin) || hasValue(profile.pbRatioMax),
+            roeEnabled: hasValue(profile.roeMin) || hasValue(profile.roeMax),
+            debtEquityEnabled: hasValue(profile.debtEquityMin) || hasValue(profile.debtEquityMax),
         };
         setFormData(formDataWithArrays);
         setIsCreating(false);
@@ -1407,6 +1428,10 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
             openAlert('프로파일명은 필수 입력 항목입니다.');
             return;
         }
+        if (formData.screenerLimit === '' || formData.screenerLimit === null || formData.screenerLimit === undefined) {
+            openAlert('스크리너 조회 제한 건수를 입력해주세요.');
+            return;
+        }
 
         setIsLoading(true);
         try {
@@ -1419,7 +1444,33 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
                 sector: arrayToString(formData.sector),
                 industry: arrayToString(formData.industry),
                 country: arrayToString(formData.country),
+                // 비활성 지표는 null 전달 (백엔드에서 필터링 생략)
+                marketCapMin: formData.marketCapEnabled ? formData.marketCapMin : null,
+                marketCapMax: formData.marketCapEnabled ? formData.marketCapMax : null,
+                priceMin: formData.priceEnabled ? formData.priceMin : null,
+                priceMax: formData.priceEnabled ? formData.priceMax : null,
+                betaMin: formData.betaEnabled ? formData.betaMin : null,
+                betaMax: formData.betaEnabled ? formData.betaMax : null,
+                volumeMin: formData.volumeEnabled ? formData.volumeMin : null,
+                volumeMax: formData.volumeEnabled ? formData.volumeMax : null,
+                peRatioMin: formData.peRatioEnabled ? formData.peRatioMin : null,
+                peRatioMax: formData.peRatioEnabled ? formData.peRatioMax : null,
+                pbRatioMin: formData.pbRatioEnabled ? formData.pbRatioMin : null,
+                pbRatioMax: formData.pbRatioEnabled ? formData.pbRatioMax : null,
+                roeMin: formData.roeEnabled ? formData.roeMin : null,
+                roeMax: formData.roeEnabled ? formData.roeMax : null,
+                debtEquityMin: formData.debtEquityEnabled ? formData.debtEquityMin : null,
+                debtEquityMax: formData.debtEquityEnabled ? formData.debtEquityMax : null,
             };
+            // enabled 상태 필드는 백엔드에 보내지 않음
+            delete dataToSend.marketCapEnabled;
+            delete dataToSend.priceEnabled;
+            delete dataToSend.betaEnabled;
+            delete dataToSend.volumeEnabled;
+            delete dataToSend.peRatioEnabled;
+            delete dataToSend.pbRatioEnabled;
+            delete dataToSend.roeEnabled;
+            delete dataToSend.debtEquityEnabled;
 
             const endpoint = isCreating ? '/dart/recommend/profile/regi' : '/dart/recommend/profile/modi';
             const { data, error } = await send(endpoint, dataToSend, 'POST');
@@ -1585,6 +1636,36 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
 /**
  * 프로파일 입력 폼 컴포넌트
  */
+// 숫자를 한글 단위로 변환 (슬라이더 표시용)
+const formatKoreanNumber = (num) => {
+    if (num === null || num === undefined || num === '' || isNaN(num)) return '0';
+    const number = Number(num);
+    if (number === 0) return '0';
+
+    const units = [
+        { unit: '조', value: 1000000000000 },
+        { unit: '억', value: 100000000 },
+        { unit: '만', value: 10000 },
+    ];
+
+    const result = [];
+    let remaining = Math.abs(number);
+
+    for (const { unit, value } of units) {
+        const count = Math.floor(remaining / value);
+        if (count > 0) {
+            result.push(`${count.toLocaleString()}${unit}`);
+            remaining = remaining % value;
+        }
+    }
+
+    if (remaining > 0 || result.length === 0) {
+        result.push(remaining.toLocaleString());
+    }
+
+    return (number < 0 ? '-' : '') + result.join(' ');
+};
+
 const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCancel, isLoading, filterOptions, filterOptionsLoading }) => {
     return (
         <div className="space-y-4 md:space-y-6">
@@ -1607,22 +1688,17 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         onChange={(v) => onChange('profileDesc', v)}
                         placeholder="예: 저평가 가치주 중심"
                     />
-                    <FormSelect
+                    <FormToggleSwitch
                         label="활성여부 (isActive)"
                         value={formData.isActive}
                         onChange={(v) => onChange('isActive', v)}
-                        options={[
-                            { value: 'Y', label: 'Y (활성)' },
-                            { value: 'N', label: 'N (비활성)' },
-                        ]}
-                        required
                     />
-                    <FormInput
+                    <FormNumberStepper
                         label="정렬순서 (sortOrder)"
-                        type="number"
                         value={formData.sortOrder}
                         onChange={(v) => onChange('sortOrder', v)}
-                        placeholder="1"
+                        min={1}
+                        max={99}
                         required
                     />
                 </div>
@@ -1634,99 +1710,81 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                     Stock Screener 조건
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                    <FormInput
-                        label="시가총액 최소 (marketCapMin)"
-                        type="number"
-                        value={formData.marketCapMin}
-                        onChange={(v) => onChange('marketCapMin', v)}
-                        placeholder="1000000000 (10억 USD)"
-                        required
+                    <DualRangeSlider
+                        label="시가총액"
+                        description="Market Cap (USD)"
+                        min={0}
+                        max={5000000000000}
+                        step={1000000000}
+                        valueMin={formData.marketCapMin}
+                        valueMax={formData.marketCapMax}
+                        onChangeMin={(v) => onChange('marketCapMin', v)}
+                        onChangeMax={(v) => onChange('marketCapMax', v)}
+                        enabled={formData.marketCapEnabled}
+                        onToggle={() => onChange('marketCapEnabled', !formData.marketCapEnabled)}
+                        formatDisplay={formatKoreanNumber}
                     />
-                    <FormInput
-                        label="시가총액 최대 (marketCapMax)"
-                        type="number"
-                        value={formData.marketCapMax}
-                        onChange={(v) => onChange('marketCapMax', v)}
-                        placeholder="100000000000 (1000억 USD)"
-                        required
+                    <DualRangeSlider
+                        label="주가"
+                        description="Price (USD)"
+                        min={0}
+                        max={1000000}
+                        step={100}
+                        valueMin={formData.priceMin}
+                        valueMax={formData.priceMax}
+                        onChangeMin={(v) => onChange('priceMin', v)}
+                        onChangeMax={(v) => onChange('priceMax', v)}
+                        enabled={formData.priceEnabled}
+                        onToggle={() => onChange('priceEnabled', !formData.priceEnabled)}
+                        formatDisplay={formatKoreanNumber}
                     />
-                    <FormInput
-                        label="주가 최소 (priceMin)"
-                        type="number"
-                        step="0.01"
-                        value={formData.priceMin}
-                        onChange={(v) => onChange('priceMin', v)}
-                        placeholder="1.00"
+                    <DualRangeSlider
+                        label="베타"
+                        description="Beta"
+                        min={0}
+                        max={5}
+                        step={0.01}
+                        valueMin={formData.betaMin}
+                        valueMax={formData.betaMax}
+                        onChangeMin={(v) => onChange('betaMin', v)}
+                        onChangeMax={(v) => onChange('betaMax', v)}
+                        enabled={formData.betaEnabled}
+                        onToggle={() => onChange('betaEnabled', !formData.betaEnabled)}
                     />
-                    <FormInput
-                        label="주가 최대 (priceMax)"
-                        type="number"
-                        step="0.01"
-                        value={formData.priceMax}
-                        onChange={(v) => onChange('priceMax', v)}
-                        placeholder="1000.00"
+                    <DualRangeSlider
+                        label="거래량"
+                        description="Volume"
+                        min={0}
+                        max={100000000}
+                        step={10000}
+                        valueMin={formData.volumeMin}
+                        valueMax={formData.volumeMax}
+                        onChangeMin={(v) => onChange('volumeMin', v)}
+                        onChangeMax={(v) => onChange('volumeMax', v)}
+                        enabled={formData.volumeEnabled}
+                        onToggle={() => onChange('volumeEnabled', !formData.volumeEnabled)}
+                        formatDisplay={formatKoreanNumber}
                     />
-                    <FormInput
-                        label="베타 최소값 (betaMin)"
-                        type="number"
-                        step="0.01"
-                        value={formData.betaMin}
-                        onChange={(v) => onChange('betaMin', v)}
-                        placeholder="0.5"
-                    />
-                    <FormInput
-                        label="베타 최대값 (betaMax)"
-                        type="number"
-                        step="0.01"
-                        value={formData.betaMax}
-                        onChange={(v) => onChange('betaMax', v)}
-                        placeholder="1.5"
-                        required
-                    />
-                    <FormInput
-                        label="거래량 최소 (volumeMin)"
-                        type="number"
-                        value={formData.volumeMin}
-                        onChange={(v) => onChange('volumeMin', v)}
-                        placeholder="100000"
-                        required
-                    />
-                    <FormInput
-                        label="거래량 최대 (volumeMax)"
-                        type="number"
-                        value={formData.volumeMax}
-                        onChange={(v) => onChange('volumeMax', v)}
-                        placeholder="10000000"
-                    />
-                    <FormSelect
+                    <FormToggleSwitch
                         label="ETF 포함여부 (isEtf)"
                         value={formData.isEtf}
                         onChange={(v) => onChange('isEtf', v)}
-                        options={[
-                            { value: 'Y', label: 'Y (포함)' },
-                            { value: 'N', label: 'N (제외)' },
-                        ]}
-                        required
+                        labelOn="포함"
+                        labelOff="제외"
                     />
-                    <FormSelect
+                    <FormToggleSwitch
                         label="펀드 포함여부 (isFund)"
                         value={formData.isFund}
                         onChange={(v) => onChange('isFund', v)}
-                        options={[
-                            { value: 'Y', label: 'Y (포함)' },
-                            { value: 'N', label: 'N (제외)' },
-                        ]}
-                        required
+                        labelOn="포함"
+                        labelOff="제외"
                     />
-                    <FormSelect
+                    <FormToggleSwitch
                         label="활성거래 종목만 (isActivelyTrading)"
                         value={formData.isActivelyTrading}
                         onChange={(v) => onChange('isActivelyTrading', v)}
-                        options={[
-                            { value: 'Y', label: 'Y (활성거래만)' },
-                            { value: 'N', label: 'N (전체)' },
-                        ]}
-                        required
+                        labelOn="활성거래만"
+                        labelOff="전체"
                     />
                     <FormMultiSelect
                         label="국가 (country)"
@@ -1778,50 +1836,57 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                     저평가 필터링 조건
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                    <FormInput
-                        label="PER 최소값 (이익의 몇 배? 예: 10)"
-                        type="number"
-                        step="0.01"
-                        value={formData.peRatioMin}
-                        onChange={(v) => onChange('peRatioMin', v)}
-                        placeholder="10"
-                        required
+                    <DualRangeSlider
+                        label="PER"
+                        description="주가수익비율 (15 = 이익의 15배)"
+                        min={0}
+                        max={100}
+                        step={0.5}
+                        valueMin={formData.peRatioMin}
+                        valueMax={formData.peRatioMax}
+                        onChangeMin={(v) => onChange('peRatioMin', v)}
+                        onChangeMax={(v) => onChange('peRatioMax', v)}
+                        enabled={formData.peRatioEnabled}
+                        onToggle={() => onChange('peRatioEnabled', !formData.peRatioEnabled)}
                     />
-                    <FormInput
-                        label="PER 최대값 (이익의 몇 배? 예: 20)"
-                        type="number"
-                        step="0.01"
-                        value={formData.peRatioMax}
-                        onChange={(v) => onChange('peRatioMax', v)}
-                        placeholder="20"
-                        required
+                    <DualRangeSlider
+                        label="PBR"
+                        description="주가순자산비율 (2.5 = 순자산의 2.5배)"
+                        min={0}
+                        max={10}
+                        step={0.1}
+                        valueMin={formData.pbRatioMin}
+                        valueMax={formData.pbRatioMax}
+                        onChangeMin={(v) => onChange('pbRatioMin', v)}
+                        onChangeMax={(v) => onChange('pbRatioMax', v)}
+                        enabled={formData.pbRatioEnabled}
+                        onToggle={() => onChange('pbRatioEnabled', !formData.pbRatioEnabled)}
                     />
-                    <FormInput
-                        label="PBR 최대값 (자산의 몇 배? 예: 1.5)"
-                        type="number"
-                        step="0.01"
-                        value={formData.pbRatioMax}
-                        onChange={(v) => onChange('pbRatioMax', v)}
-                        placeholder="1.5"
-                        required
+                    <DualRangeSlider
+                        label="ROE"
+                        description="자기자본이익률 (0.1 = 10%)"
+                        min={0}
+                        max={1.0}
+                        step={0.01}
+                        valueMin={formData.roeMin}
+                        valueMax={formData.roeMax}
+                        onChangeMin={(v) => onChange('roeMin', v)}
+                        onChangeMax={(v) => onChange('roeMax', v)}
+                        enabled={formData.roeEnabled}
+                        onToggle={() => onChange('roeEnabled', !formData.roeEnabled)}
                     />
-                    <FormInput
-                        label="ROE 최소값 (소수점 입력, 예: 0.1 -> 10%)"
-                        type="number"
-                        step="0.01"
-                        value={formData.roeMin}
-                        onChange={(v) => onChange('roeMin', v)}
-                        placeholder="0.1"
-                        required
-                    />
-                    <FormInput
-                        label="부채비율 최대값 (소수점 입력, 예: 2.0 -> 200%)"
-                        type="number"
-                        step="0.01"
-                        value={formData.debtEquityMax}
-                        onChange={(v) => onChange('debtEquityMax', v)}
-                        placeholder="2.0"
-                        required
+                    <DualRangeSlider
+                        label="부채비율"
+                        description="D/E Ratio (1.5 = 자기자본 대비 부채 150%)"
+                        min={0}
+                        max={5.0}
+                        step={0.1}
+                        valueMin={formData.debtEquityMin}
+                        valueMax={formData.debtEquityMax}
+                        onChangeMin={(v) => onChange('debtEquityMin', v)}
+                        onChangeMax={(v) => onChange('debtEquityMax', v)}
+                        enabled={formData.debtEquityEnabled}
+                        onToggle={() => onChange('debtEquityEnabled', !formData.debtEquityEnabled)}
                     />
                 </div>
             </section>
@@ -1982,5 +2047,72 @@ const FormMultiSelect = ({ label, value, onChange, options, loading, placeholder
         />
     </div>
 );
+
+/**
+ * 폼 토글 스위치 컴포넌트 (Y/N 값)
+ */
+const FormToggleSwitch = ({ label, value, onChange, labelOn = '활성', labelOff = '비활성' }) => {
+    const isOn = value === 'Y';
+    return (
+        <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                {label}
+            </label>
+            <button
+                type="button"
+                role="switch"
+                aria-checked={isOn}
+                onClick={() => onChange(isOn ? 'N' : 'Y')}
+                className={`relative inline-flex h-8 w-16 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 ${
+                    isOn ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-500'
+                }`}
+            >
+                <span
+                    className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        isOn ? 'translate-x-8' : 'translate-x-0'
+                    }`}
+                />
+            </button>
+            <span className={`ml-2 text-sm font-medium ${isOn ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                {isOn ? labelOn : labelOff}
+            </span>
+        </div>
+    );
+};
+
+/**
+ * 폼 숫자 스테퍼 컴포넌트
+ */
+const FormNumberStepper = ({ label, value, onChange, min = 1, max = 99, required }) => {
+    const numValue = Number(value) || min;
+    return (
+        <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
+            <div className="inline-flex items-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700">
+                <button
+                    type="button"
+                    onClick={() => onChange(Math.max(min, numValue - 1))}
+                    disabled={numValue <= min}
+                    className="px-3 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-l-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                    −
+                </button>
+                <span className="px-4 py-2 text-sm font-medium text-slate-900 dark:text-white min-w-[3rem] text-center border-x border-slate-300 dark:border-slate-600">
+                    {numValue}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => onChange(Math.min(max, numValue + 1))}
+                    disabled={numValue >= max}
+                    className="px-3 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-r-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                    +
+                </button>
+            </div>
+        </div>
+    );
+};
 
 export default AbroadRecommendedStock;

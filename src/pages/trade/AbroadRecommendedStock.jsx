@@ -57,6 +57,8 @@ const FIELD_LABELS = {
     returnOnAssetsTTM: 'ROA (TTM)',
     priceToSalesRatioTTM: 'PSR (TTM)',
     enterpriseValueMultipleTTM: 'EV Multiple (TTM)',
+    avgRevenueGrowth: '매출성장률(3Y)',
+    avgNetIncomeGrowth: '순이익성장률(3Y)',
     trscDt: '조회일자',
     trscTm: '조회시간',
 };
@@ -85,6 +87,8 @@ const formatFieldValue = (key, value) => {
         case 'operatingProfitMarginTTM':
         case 'dividendYieldTTM':
         case 'debtEquityRatioTTM':
+        case 'avgRevenueGrowth':
+        case 'avgNetIncomeGrowth':
             return typeof value === 'number' ? `${(value * 100).toFixed(2)}%` : value;
         case 'trscDt':
             return formatDate(value);
@@ -1319,6 +1323,10 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         roeMax: '',
         debtEquityMin: '',
         debtEquityMax: '',
+        revenueGrowthMin: '',
+        revenueGrowthMax: '',
+        netIncomeGrowthMin: '',
+        netIncomeGrowthMax: '',
         marketCapEnabled: false,
         priceEnabled: false,
         betaEnabled: false,
@@ -1327,6 +1335,8 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         pbRatioEnabled: false,
         roeEnabled: false,
         debtEquityEnabled: false,
+        revenueGrowthEnabled: false,
+        netIncomeGrowthEnabled: false,
     });
 
     // 프로파일 선택 시
@@ -1350,6 +1360,8 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
             pbRatioEnabled: hasValue(profile.pbRatioMin) || hasValue(profile.pbRatioMax),
             roeEnabled: hasValue(profile.roeMin) || hasValue(profile.roeMax),
             debtEquityEnabled: hasValue(profile.debtEquityMin) || hasValue(profile.debtEquityMax),
+            revenueGrowthEnabled: hasValue(profile.revenueGrowthMin) || hasValue(profile.revenueGrowthMax),
+            netIncomeGrowthEnabled: hasValue(profile.netIncomeGrowthMin) || hasValue(profile.netIncomeGrowthMax),
         };
         setFormData(formDataWithArrays);
         setIsCreating(false);
@@ -1461,6 +1473,10 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
                 roeMax: formData.roeEnabled ? formData.roeMax : null,
                 debtEquityMin: formData.debtEquityEnabled ? formData.debtEquityMin : null,
                 debtEquityMax: formData.debtEquityEnabled ? formData.debtEquityMax : null,
+                revenueGrowthMin: formData.revenueGrowthEnabled ? formData.revenueGrowthMin : null,
+                revenueGrowthMax: formData.revenueGrowthEnabled ? formData.revenueGrowthMax : null,
+                netIncomeGrowthMin: formData.netIncomeGrowthEnabled ? formData.netIncomeGrowthMin : null,
+                netIncomeGrowthMax: formData.netIncomeGrowthEnabled ? formData.netIncomeGrowthMax : null,
             };
             // enabled 상태 필드는 백엔드에 보내지 않음
             delete dataToSend.marketCapEnabled;
@@ -1471,6 +1487,8 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
             delete dataToSend.pbRatioEnabled;
             delete dataToSend.roeEnabled;
             delete dataToSend.debtEquityEnabled;
+            delete dataToSend.revenueGrowthEnabled;
+            delete dataToSend.netIncomeGrowthEnabled;
 
             const endpoint = isCreating ? '/dart/recommend/profile/regi' : '/dart/recommend/profile/modi';
             const { data, error } = await send(endpoint, dataToSend, 'POST');
@@ -1887,6 +1905,41 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         onChangeMax={(v) => onChange('debtEquityMax', v)}
                         enabled={formData.debtEquityEnabled}
                         onToggle={() => onChange('debtEquityEnabled', !formData.debtEquityEnabled)}
+                    />
+                </div>
+            </section>
+
+            {/* 성장률 필터링 조건 */}
+            <section>
+                <h3 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white mb-3 md:mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    성장률 필터링 조건
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                    <DualRangeSlider
+                        label="매출 성장률 (3Y 평균)"
+                        description="연평균 매출 증감률 (0.10 = 10%)"
+                        min={-1.0}
+                        max={2.0}
+                        step={0.01}
+                        valueMin={formData.revenueGrowthMin}
+                        valueMax={formData.revenueGrowthMax}
+                        onChangeMin={(v) => onChange('revenueGrowthMin', v)}
+                        onChangeMax={(v) => onChange('revenueGrowthMax', v)}
+                        enabled={formData.revenueGrowthEnabled}
+                        onToggle={() => onChange('revenueGrowthEnabled', !formData.revenueGrowthEnabled)}
+                    />
+                    <DualRangeSlider
+                        label="순이익 성장률 (3Y 평균)"
+                        description="연평균 순이익 증감률 (0.20 = 20%)"
+                        min={-1.0}
+                        max={2.0}
+                        step={0.01}
+                        valueMin={formData.netIncomeGrowthMin}
+                        valueMax={formData.netIncomeGrowthMax}
+                        onChangeMin={(v) => onChange('netIncomeGrowthMin', v)}
+                        onChangeMax={(v) => onChange('netIncomeGrowthMax', v)}
+                        enabled={formData.netIncomeGrowthEnabled}
+                        onToggle={() => onChange('netIncomeGrowthEnabled', !formData.netIncomeGrowthEnabled)}
                     />
                 </div>
             </section>

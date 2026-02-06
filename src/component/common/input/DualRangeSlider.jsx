@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * 듀얼 레인지 슬라이더 컴포넌트
@@ -37,6 +37,17 @@ const DualRangeSlider = ({
     const currentMax = valueMax === '' || valueMax === null || valueMax === undefined
         ? max
         : Number(valueMax);
+
+    useEffect(() => {
+        if (enabled) {
+            if (valueMin === '' || valueMin === null || valueMin === undefined) {
+                onChangeMin?.(min);
+            }
+            if (valueMax === '' || valueMax === null || valueMax === undefined) {
+                onChangeMax?.(max);
+            }
+        }
+    }, [enabled]);
 
     const trackRef = useRef(null);
 

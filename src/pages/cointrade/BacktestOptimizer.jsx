@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
+import ExcelJS from 'exceljs';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -610,6 +611,360 @@ export default function BacktestOptimizer() {
         localStorage.removeItem('optimizer_running_task_id');
     };
 
+    const handleExportExcel = async (resultData, taskId) => {
+        try {
+            const wb = new ExcelJS.Workbook();
+
+            // ===== Sheet 1: 요약 =====
+            const summaryWs = wb.addWorksheet('요약');
+
+            const titleRow = summaryWs.addRow(['백테스트 옵티마이저 결과 요약']);
+            titleRow.font = { size: 16, bold: true };
+            titleRow.height = 25;
+            summaryWs.mergeCells('A1:B1');
+
+            summaryWs.addRow([]);
+
+            // 결과 요약 헤더
+            const headerRow = summaryWs.addRow(['항목', '값']);
+            headerRow.height = 20;
+            [1, 2].forEach(col => {
+                headerRow.getCell(col).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                headerRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+                headerRow.getCell(col).alignment = { vertical: 'middle', horizontal: 'center' };
+            });
+
+            const summaryRows = [
+                ['Task ID', taskId || '-'],
+                ['최고 점수', resultData.best_score?.toFixed(2) ?? '-'],
+                ['최고 수익률 (%)', resultData.best_return?.toFixed(2) ?? '-'],
+                ['총 시행 횟수', resultData.total_trials || 0],
+                ['성공 시행', resultData.completed_trials || 0],
+                ['실패 시행', resultData.failed_trials || 0],
+                ['목표 달성 횟수', resultData.target_met_trials || 0],
+                ['소요 시간 (초)', resultData.elapsed_time_seconds?.toFixed(1) ?? '-'],
+                ['중단 사유', resultData.stop_reason || '-']
+            ];
+
+            summaryRows.forEach(rowData => {
+                const row = summaryWs.addRow(rowData);
+                row.alignment = { vertical: 'middle' };
+                row.getCell(1).font = { bold: true };
+                row.getCell(2).alignment = { horizontal: 'right' };
+
+                if (rowData[0] === '최고 수익률 (%)') {
+                    const val = resultData.best_return;
+                    if (val != null) {
+                        row.getCell(2).font = {
+                            color: { argb: val >= 0 ? 'FF00B050' : 'FFFF0000' },
+                            bold: true
+                        };
+                    }
+                }
+            });
+
+            // 최적 파라미터 섹션
+            if (resultData.best_params) {
+                summaryWs.addRow([]);
+                summaryWs.addRow([]);
+
+                const paramsTitleRow = summaryWs.addRow(['최적 파라미터']);
+                paramsTitleRow.font = { size: 14, bold: true };
+                paramsTitleRow.height = 25;
+                summaryWs.mergeCells(`A${paramsTitleRow.number}:B${paramsTitleRow.number}`);
+
+                summaryWs.addRow([]);
+
+                const paramsHeaderRow = summaryWs.addRow(['파라미터', '값']);
+                paramsHeaderRow.height = 20;
+                [1, 2].forEach(col => {
+                    paramsHeaderRow.getCell(col).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    paramsHeaderRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
+                    paramsHeaderRow.getCell(col).alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                Object.entries(resultData.best_params).forEach(([key, value]) => {
+                    const row = summaryWs.addRow([
+                        `${getParamLabel(key)} (${key})`,
+                        typeof value === 'number' ? value.toFixed(2) : value
+                    ]);
+                    row.getCell(1).font = { bold: true };
+                    row.getCell(2).alignment = { horizontal: 'right' };
+                });
+            }
+
+            // 고정 파라미터 섹션
+            if (resultData.fixed_params) {
+                summaryWs.addRow([]);
+                summaryWs.addRow([]);
+
+                const fixedTitleRow = summaryWs.addRow(['고정 파라미터']);
+                fixedTitleRow.font = { size: 14, bold: true };
+                fixedTitleRow.height = 25;
+                summaryWs.mergeCells(`A${fixedTitleRow.number}:B${fixedTitleRow.number}`);
+
+                summaryWs.addRow([]);
+
+                const fixedHeaderRow = summaryWs.addRow(['파라미터', '값']);
+                fixedHeaderRow.height = 20;
+                [1, 2].forEach(col => {
+                    fixedHeaderRow.getCell(col).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    fixedHeaderRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5B9BD5' } };
+                    fixedHeaderRow.getCell(col).alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                Object.entries(resultData.fixed_params).forEach(([key, value]) => {
+                    const row = summaryWs.addRow([
+                        key,
+                        typeof value === 'number'
+                            ? (key.includes('fee_rate') || Math.abs(value) < 0.01 ? value.toFixed(4) : value.toLocaleString())
+                            : value
+                    ]);
+                    row.getCell(1).font = { bold: true };
+                    row.getCell(2).alignment = { horizontal: 'right' };
+                });
+            }
+
+            // 탐색 파라미터 범위 섹션
+            if (resultData.param_ranges) {
+                summaryWs.addRow([]);
+                summaryWs.addRow([]);
+
+                const rangeTitleRow = summaryWs.addRow(['탐색 파라미터 범위']);
+                rangeTitleRow.font = { size: 14, bold: true };
+                rangeTitleRow.height = 25;
+                summaryWs.mergeCells(`A${rangeTitleRow.number}:D${rangeTitleRow.number}`);
+
+                summaryWs.addRow([]);
+
+                const rangeHeaderRow = summaryWs.addRow(['파라미터', '최소', '최대', '증가값']);
+                rangeHeaderRow.height = 20;
+                [1, 2, 3, 4].forEach(col => {
+                    rangeHeaderRow.getCell(col).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    rangeHeaderRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+                    rangeHeaderRow.getCell(col).alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                Object.entries(resultData.param_ranges).forEach(([key, range]) => {
+                    const row = summaryWs.addRow([
+                        `${getParamLabel(key)} (${key})`,
+                        range.min,
+                        range.max,
+                        range.step
+                    ]);
+                    row.getCell(1).font = { bold: true };
+                    [2, 3, 4].forEach(col => {
+                        row.getCell(col).alignment = { horizontal: 'right' };
+                    });
+                });
+            }
+
+            // 열 너비 조정
+            summaryWs.getColumn(1).width = 40;
+            summaryWs.getColumn(2).width = 30;
+            summaryWs.getColumn(3).width = 15;
+            summaryWs.getColumn(4).width = 15;
+
+            // 테두리 추가
+            summaryWs.eachRow((row, rowNumber) => {
+                if (rowNumber >= 3) {
+                    row.eachCell(cell => {
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                    });
+                }
+            });
+
+            // ===== Sheet 2: 시행 결과 (all_trials가 있을 경우) =====
+            if (resultData.all_trials && resultData.all_trials.length > 0) {
+                const trialsWs = wb.addWorksheet('시행 결과');
+                const sortedTrials = [...resultData.all_trials].sort((a, b) => b.final_score - a.final_score);
+
+                // 파라미터 키 목록 (첫 trial 기준)
+                const paramKeys = sortedTrials[0]?.params ? Object.keys(sortedTrials[0].params) : [];
+
+                // 헤더
+                const trialHeaders = ['#', '수익률(%)', '승률(%)', '거래수', 'MDD(%)', 'Sharpe', '안정성', '점수', ...paramKeys.map(k => getParamLabel(k))];
+                const trialHeaderRow = trialsWs.addRow(trialHeaders);
+                trialHeaderRow.height = 20;
+                trialHeaderRow.eachCell((cell) => {
+                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                });
+
+                // 데이터 행
+                sortedTrials.forEach((trial, index) => {
+                    const paramValues = paramKeys.map(k => {
+                        const v = trial.params?.[k];
+                        return typeof v === 'number' ? v.toFixed(2) : (v ?? '-');
+                    });
+
+                    const row = trialsWs.addRow([
+                        index + 1,
+                        trial.total_return?.toFixed(2) ?? '-',
+                        typeof trial.win_rate === 'number' ? trial.win_rate.toFixed(2) : (trial.win_rate ?? '-'),
+                        trial.total_trades ?? '-',
+                        typeof trial.max_drawdown === 'number' ? trial.max_drawdown.toFixed(2) : (trial.max_drawdown ?? '-'),
+                        trial.sharpe_ratio?.toFixed(2) ?? '-',
+                        trial.stability_score?.toFixed(2) ?? '-',
+                        trial.final_score?.toFixed(2) ?? '-',
+                        ...paramValues
+                    ]);
+
+                    // 1등 행 노란색 배경
+                    if (index === 0) {
+                        row.eachCell(cell => {
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+                        });
+                    }
+
+                    // 수익률 색상 (2번째 셀)
+                    if (trial.total_return != null) {
+                        row.getCell(2).font = {
+                            color: { argb: trial.total_return >= 0 ? 'FF00B050' : 'FFFF0000' },
+                            bold: index === 0
+                        };
+                    }
+
+                    // 숫자 컬럼 오른쪽 정렬
+                    for (let col = 2; col <= row.cellCount; col++) {
+                        row.getCell(col).alignment = { horizontal: 'right' };
+                    }
+                });
+
+                // 열 너비 조정
+                trialsWs.getColumn(1).width = 6;
+                trialsWs.getColumn(2).width = 12;
+                trialsWs.getColumn(3).width = 10;
+                trialsWs.getColumn(4).width = 8;
+                trialsWs.getColumn(5).width = 10;
+                trialsWs.getColumn(6).width = 10;
+                trialsWs.getColumn(7).width = 10;
+                trialsWs.getColumn(8).width = 10;
+                for (let i = 9; i <= 8 + paramKeys.length; i++) {
+                    trialsWs.getColumn(i).width = 14;
+                }
+
+                // 테두리 추가
+                trialsWs.eachRow((row) => {
+                    row.eachCell(cell => {
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                    });
+                });
+            }
+
+            const buf = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+            const shortTaskId = taskId ? taskId.substring(0, 12) : 'unknown';
+            a.download = `optimizer_${shortTaskId}_${timestamp}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('엑셀 내보내기 실패:', e);
+            setToast('엑셀 내보내기 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleExportText = (resultData, taskId) => {
+        try {
+            const lines = [];
+            const now = new Date();
+            const dateStr = now.toLocaleString('ko-KR');
+
+            lines.push(`백테스트 옵티마이저 결과 (${dateStr})`);
+            lines.push('='.repeat(50));
+            lines.push(`Task ID: ${taskId || '-'}`);
+            lines.push('');
+
+            // 결과 요약
+            lines.push('[결과 요약]');
+            lines.push(`최고 점수: ${resultData.best_score?.toFixed(2) ?? '-'}`);
+            lines.push(`최고 수익률: ${resultData.best_return?.toFixed(2) ?? '-'}%`);
+            lines.push(`총 시행 횟수: ${resultData.total_trials || 0} (성공: ${resultData.completed_trials || 0} / 실패: ${resultData.failed_trials || 0})`);
+            lines.push(`목표 달성: ${resultData.target_met_trials || 0}회`);
+            lines.push(`소요 시간: ${resultData.elapsed_time_seconds?.toFixed(1) ?? '-'}초`);
+            lines.push(`중단 사유: ${resultData.stop_reason || '-'}`);
+            lines.push('');
+
+            // 최적 파라미터
+            if (resultData.best_params) {
+                lines.push('[최적 파라미터]');
+                Object.entries(resultData.best_params).forEach(([key, value]) => {
+                    const formatted = typeof value === 'number' ? value.toFixed(2) : value;
+                    lines.push(`${getParamLabel(key)} (${key}): ${formatted}`);
+                });
+                lines.push('');
+            }
+
+            // 고정 파라미터
+            if (resultData.fixed_params) {
+                lines.push('[고정 파라미터]');
+                Object.entries(resultData.fixed_params).forEach(([key, value]) => {
+                    const formatted = typeof value === 'number'
+                        ? (key.includes('fee_rate') || Math.abs(value) < 0.01 ? value.toFixed(4) : value.toLocaleString())
+                        : value;
+                    lines.push(`${key}: ${formatted}`);
+                });
+                lines.push('');
+            }
+
+            // 파라미터 탐색 범위
+            if (resultData.param_ranges) {
+                lines.push('[파라미터 탐색 범위]');
+                Object.entries(resultData.param_ranges).forEach(([key, range]) => {
+                    lines.push(`${getParamLabel(key)} (${key}): ${range.min} ~ ${range.max} (step: ${range.step})`);
+                });
+                lines.push('');
+            }
+
+            // 시행 결과
+            if (resultData.all_trials && resultData.all_trials.length > 0) {
+                const sortedTrials = [...resultData.all_trials].sort((a, b) => b.final_score - a.final_score);
+                lines.push(`[시행 결과 (${sortedTrials.length}개)]`);
+                sortedTrials.forEach((trial, index) => {
+                    const best = index === 0 ? ' [★]' : '';
+                    const params = trial.params
+                        ? Object.entries(trial.params).map(([k, v]) => `${k}=${typeof v === 'number' ? v.toFixed(2) : v}`).join(', ')
+                        : '';
+                    lines.push(`#${index + 1}${best} 수익률:${trial.total_return?.toFixed(2) ?? '-'}% 승률:${typeof trial.win_rate === 'number' ? trial.win_rate.toFixed(2) : (trial.win_rate ?? '-')}% 거래:${trial.total_trades ?? '-'} MDD:${typeof trial.max_drawdown === 'number' ? trial.max_drawdown.toFixed(2) : (trial.max_drawdown ?? '-')}% Sharpe:${trial.sharpe_ratio?.toFixed(2) ?? '-'} 안정성:${trial.stability_score?.toFixed(2) ?? '-'} 점수:${trial.final_score?.toFixed(2) ?? '-'}`);
+                    if (params) {
+                        lines.push(`  파라미터: ${params}`);
+                    }
+                });
+            }
+
+            const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+            const shortTaskId = taskId ? taskId.substring(0, 12) : 'unknown';
+            a.download = `optimizer_${shortTaskId}_${timestamp}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('텍스트 내보내기 실패:', e);
+            setToast('텍스트 내보내기 중 오류가 발생했습니다.');
+        }
+    };
+
     const getFilteredCoins = () => {
         return allCoins.filter(coin => {
             if (marketFilter !== 'ALL') {
@@ -1185,6 +1540,12 @@ export default function BacktestOptimizer() {
                                 <Button size="sm" variant="outline" onClick={handleViewAllTrials}>
                                     모든 시행 결과 보기
                                 </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleExportExcel(taskResult, runningTaskId)}>
+                                    엑셀 저장
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleExportText(taskResult, runningTaskId)}>
+                                    텍스트 저장
+                                </Button>
                             </div>
 
                             {/* 최적 파라미터 */}
@@ -1632,8 +1993,16 @@ export default function BacktestOptimizer() {
                                 <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">
                                     조회 결과
                                 </h3>
-                                <div className="text-sm text-slate-500 dark:text-slate-400 font-mono">
-                                    <TogglableTaskId taskId={detailResult.taskId} maxLength={30} />
+                                <div className="flex items-center gap-2">
+                                    <Button size="sm" variant="outline" onClick={() => handleExportExcel(detailResult.data, detailResult.taskId)}>
+                                        엑셀 저장
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleExportText(detailResult.data, detailResult.taskId)}>
+                                        텍스트 저장
+                                    </Button>
+                                    <div className="text-sm text-slate-500 dark:text-slate-400 font-mono">
+                                        <TogglableTaskId taskId={detailResult.taskId} maxLength={30} />
+                                    </div>
                                 </div>
                             </div>
 

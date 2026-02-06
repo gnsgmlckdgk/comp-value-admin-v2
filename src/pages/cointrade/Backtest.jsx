@@ -45,6 +45,52 @@ function formatProgress(progress) {
 }
 
 /**
+ * 백테스트 진행률 바 컴포넌트
+ */
+function BacktestProgressBar({ currentStep, totalSteps, progress, status }) {
+    // 진행률 계산
+    const isIndeterminate = !totalSteps || totalSteps === 0;
+    const percent = isIndeterminate ? 0 : Math.round((currentStep / totalSteps) * 100);
+
+    // 상태별 색상
+    const getBarColor = () => {
+        if (status === 'completed') return 'bg-green-500';
+        if (status === 'failed') return 'bg-red-500';
+        return 'bg-blue-500';
+    };
+
+    // 완료/실패 상태면 프로그레스 바 숨김
+    if (status === 'completed' || status === 'failed') {
+        return null;
+    }
+
+    return (
+        <div className="space-y-2">
+            {/* 프로그레스 바 */}
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+                {isIndeterminate ? (
+                    // 불확정 상태 (데이터/모델 로드 중)
+                    <div className="h-full bg-blue-500 animate-pulse" style={{ width: '100%' }} />
+                ) : (
+                    // 확정 상태 (시뮬레이션 진행 중)
+                    <div
+                        className={`h-full ${getBarColor()} transition-all duration-300 ease-out`}
+                        style={{ width: `${percent}%` }}
+                    />
+                )}
+            </div>
+            {/* 진행률 텍스트 */}
+            <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                <span>{formatProgress(progress)}</span>
+                {!isIndeterminate && (
+                    <span className="font-medium">{percent}%</span>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/**
  * 토글 가능한 Task ID 표시 컴포넌트
  */
 function TogglableTaskId({ taskId, maxLength = 20, className = '' }) {
@@ -521,6 +567,32 @@ export default function Backtest() {
         } catch (e) {
             console.error('상태 조회 실패:', e);
             setToast('상태 조회 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 백테스트 취소
+    const handleCancelBacktest = async () => {
+        if (!runningTaskId) return;
+
+        if (!confirm('실행 중인 백테스트를 취소하시겠습니까?')) return;
+
+        setLoading(true);
+        try {
+            const { data, error } = await send(`/dart/api/backtest/cancel/${runningTaskId}`, {}, 'POST');
+
+            if (error) {
+                setToast('취소 실패: ' + error);
+            } else if (data?.success) {
+                setToast('백테스트가 취소되었습니다.');
+                setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
+                localStorage.removeItem('backtest_running_task_id');
+                localStorage.removeItem('backtest_total_count');
+            }
+        } catch (e) {
+            console.error('백테스트 취소 실패:', e);
+            setToast('취소 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }
@@ -1319,13 +1391,24 @@ export default function Backtest() {
                                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                                     실행 상태
                                 </h2>
-                                <Button onClick={handleCheckStatus} className="px-4 py-2 text-sm">
-                                    상태 확인
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button onClick={handleCheckStatus} className="px-4 py-2 text-sm">
+                                        상태 확인
+                                    </Button>
+                                    {taskStatus?.status === 'running' && (
+                                        <Button
+                                            onClick={handleCancelBacktest}
+                                            className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white"
+                                            disabled={loading}
+                                        >
+                                            중지
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
 
                             {taskStatus && (
-                                <div className="space-y-3">
+                                <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <span className="text-sm text-slate-600 dark:text-slate-400">Task ID:</span>
@@ -1340,18 +1423,39 @@ export default function Backtest() {
                                                     taskStatus.status === 'failed' ? 'text-red-600 dark:text-red-400' :
                                                         'text-slate-600 dark:text-slate-400'
                                                 }`}>
-                                                {taskStatus.status}
+                                                {taskStatus.status === 'running' ? '실행 중' :
+                                                    taskStatus.status === 'completed' ? '완료' :
+                                                        taskStatus.status === 'failed' ? '실패' : taskStatus.status}
                                             </div>
-                                        </div>
-                                        <div>
-                                            <span className="text-sm text-slate-600 dark:text-slate-400">진행률:</span>
-                                            <div className="text-sm text-slate-900 dark:text-slate-100">{formatProgress(taskStatus.progress)}</div>
                                         </div>
                                         <div>
                                             <span className="text-sm text-slate-600 dark:text-slate-400">생성 시간:</span>
                                             <div className="text-sm text-slate-900 dark:text-slate-100">{taskStatus.created_at}</div>
                                         </div>
+                                        {taskStatus.completed_at && (
+                                            <div>
+                                                <span className="text-sm text-slate-600 dark:text-slate-400">완료 시간:</span>
+                                                <div className="text-sm text-slate-900 dark:text-slate-100">{taskStatus.completed_at}</div>
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {/* 진행률 바 (실행 중일 때만 표시) */}
+                                    {taskStatus.status === 'running' && (
+                                        <BacktestProgressBar
+                                            currentStep={taskStatus.current_step}
+                                            totalSteps={taskStatus.total_steps}
+                                            progress={taskStatus.progress}
+                                            status={taskStatus.status}
+                                        />
+                                    )}
+
+                                    {/* 완료 시 진행률 텍스트 */}
+                                    {taskStatus.status === 'completed' && taskStatus.progress && (
+                                        <div className="text-sm text-green-600 dark:text-green-400 font-medium">
+                                            {formatProgress(taskStatus.progress)}
+                                        </div>
+                                    )}
 
                                     {taskStatus.error_message && (
                                         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">

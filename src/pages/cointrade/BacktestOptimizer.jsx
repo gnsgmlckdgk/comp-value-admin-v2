@@ -511,6 +511,31 @@ export default function BacktestOptimizer() {
         }
     };
 
+    // 옵티마이저 취소
+    const handleCancelOptimizer = async () => {
+        if (!runningTaskId) return;
+
+        if (!confirm('실행 중인 옵티마이저를 취소하시겠습니까?')) return;
+
+        setLoading(true);
+        try {
+            const { data, error } = await send(`/dart/api/backtest/optimizer/cancel/${runningTaskId}`, {}, 'POST');
+
+            if (error) {
+                setToast('취소 실패: ' + error);
+            } else if (data?.success) {
+                setToast('옵티마이저가 취소되었습니다.');
+                setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
+                localStorage.removeItem('optimizer_running_task_id');
+            }
+        } catch (e) {
+            console.error('옵티마이저 취소 실패:', e);
+            setToast('취소 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const fetchTaskResult = async (taskId, includeAllTrials = false) => {
         try {
             const params = includeAllTrials ? '?include_all_trials=true' : '';
@@ -1039,9 +1064,17 @@ export default function BacktestOptimizer() {
                             </div>
 
                             {taskStatus.status === 'running' && (
-                                <div className="flex justify-center">
+                                <div className="flex justify-center gap-2">
                                     <Button size="sm" variant="outline" onClick={handleCheckStatus} disabled={loading}>
                                         상태 새로고침
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        onClick={handleCancelOptimizer}
+                                        disabled={loading}
+                                        className="bg-red-600 hover:bg-red-700 text-white"
+                                    >
+                                        중지
                                     </Button>
                                 </div>
                             )}

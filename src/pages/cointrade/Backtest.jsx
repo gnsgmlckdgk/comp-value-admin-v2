@@ -52,13 +52,6 @@ function BacktestProgressBar({ currentStep, totalSteps, progress, status }) {
     const isIndeterminate = !totalSteps || totalSteps === 0;
     const percent = isIndeterminate ? 0 : Math.round((currentStep / totalSteps) * 100);
 
-    // 상태별 색상
-    const getBarColor = () => {
-        if (status === 'completed') return 'bg-green-500';
-        if (status === 'failed') return 'bg-red-500';
-        return 'bg-blue-500';
-    };
-
     // 완료/실패 상태면 프로그레스 바 숨김
     if (status === 'completed' || status === 'failed') {
         return null;
@@ -67,14 +60,19 @@ function BacktestProgressBar({ currentStep, totalSteps, progress, status }) {
     return (
         <div className="space-y-2">
             {/* 프로그레스 바 */}
-            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden relative">
                 {isIndeterminate ? (
-                    // 불확정 상태 (데이터/모델 로드 중)
-                    <div className="h-full bg-blue-500 animate-pulse" style={{ width: '100%' }} />
+                    // 불확정 상태 (데이터/모델 로드 중) - 좌우 움직이는 애니메이션
+                    <div
+                        className="h-full w-1/3 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-400 rounded-full absolute animate-[shimmer_1.5s_ease-in-out_infinite]"
+                        style={{
+                            animation: 'shimmer 1.5s ease-in-out infinite',
+                        }}
+                    />
                 ) : (
                     // 확정 상태 (시뮬레이션 진행 중)
                     <div
-                        className={`h-full ${getBarColor()} transition-all duration-300 ease-out`}
+                        className="h-full bg-blue-500 transition-all duration-300 ease-out"
                         style={{ width: `${percent}%` }}
                     />
                 )}
@@ -82,10 +80,19 @@ function BacktestProgressBar({ currentStep, totalSteps, progress, status }) {
             {/* 진행률 텍스트 */}
             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                 <span>{formatProgress(progress)}</span>
-                {!isIndeterminate && (
+                {!isIndeterminate ? (
                     <span className="font-medium">{percent}%</span>
+                ) : (
+                    <span className="text-blue-500 animate-pulse">준비 중...</span>
                 )}
             </div>
+            {/* CSS 애니메이션 정의 */}
+            <style>{`
+                @keyframes shimmer {
+                    0% { left: -33%; }
+                    100% { left: 100%; }
+                }
+            `}</style>
         </div>
     );
 }

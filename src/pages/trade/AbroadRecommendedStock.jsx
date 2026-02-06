@@ -1586,15 +1586,15 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
                                         className={`relative rounded-lg transition-colors ${selectedProfile?.id === profile.id
                                                 ? 'bg-blue-50 border-2 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400'
                                                 : 'bg-slate-50 border border-slate-200 hover:bg-slate-100 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600'
-                                            }`}
+                                            } ${profile.isActive !== 'Y' ? 'opacity-50' : ''}`}
                                     >
                                         <button
                                             onClick={() => handleSelectProfile(profile)}
                                             className="w-full px-4 py-3 pr-12 text-left"
                                         >
-                                            <div className="font-medium text-slate-900 dark:text-white">{profile.profileName}</div>
+                                            <div className={`font-medium ${profile.isActive !== 'Y' ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-white'}`}>{profile.profileName}</div>
                                             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                {profile.isActive === 'Y' ? '활성' : '비활성'} | 정렬순서: {profile.sortOrder}
+                                                {profile.isActive === 'Y' ? '활성' : <span className="text-red-400">비활성</span>} | 정렬순서: {profile.sortOrder}
                                             </div>
                                         </button>
                                         <button
@@ -1919,7 +1919,7 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         label="매출 성장률 (3Y 평균)"
                         description="연평균 매출 증감률 (0.10 = 10%)"
                         min={-1.0}
-                        max={2.0}
+                        max={5.0}
                         step={0.01}
                         valueMin={formData.revenueGrowthMin}
                         valueMax={formData.revenueGrowthMax}
@@ -1932,7 +1932,7 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         label="순이익 성장률 (3Y 평균)"
                         description="연평균 순이익 증감률 (0.20 = 20%)"
                         min={-1.0}
-                        max={2.0}
+                        max={5.0}
                         step={0.01}
                         valueMin={formData.netIncomeGrowthMin}
                         valueMax={formData.netIncomeGrowthMax}

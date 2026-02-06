@@ -1230,7 +1230,19 @@ export default function BacktestOptimizer() {
                                     <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
                                         <div className="text-sm text-slate-500 dark:text-slate-400">총 시행 횟수</div>
                                         <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                            {taskResult.completed_trials} / {taskResult.total_trials}
+                                            {taskResult.total_trials || 0}회
+                                        </div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                            성공: {taskResult.completed_trials || 0} / 실패: {taskResult.failed_trials || 0}
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">목표 달성</div>
+                                        <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                            {taskResult.target_met_trials || 0}회
+                                        </div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                            목표 수익률 이상
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
@@ -1463,11 +1475,9 @@ export default function BacktestOptimizer() {
                                                     중단: {item.stop_reason}
                                                 </div>
                                             )}
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="flex-1"
+                                            <div className="flex gap-2 pt-2">
+                                                <button
+                                                    className="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
                                                     onClick={async () => {
                                                         setSelectedDetailTaskId(item.task_id);
                                                         setLoading(true);
@@ -1480,16 +1490,14 @@ export default function BacktestOptimizer() {
                                                     disabled={loading}
                                                 >
                                                     상세 보기
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
+                                                </button>
+                                                <button
+                                                    className="flex-1 px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-red-900/30 text-red-600 dark:text-red-200 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
                                                     onClick={() => handleDeleteResult(item.task_id)}
                                                     disabled={loading}
-                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                                                 >
                                                     삭제
-                                                </Button>
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
@@ -1549,9 +1557,8 @@ export default function BacktestOptimizer() {
                                                         {item.created_at ? new Date(item.created_at).toLocaleString('ko-KR') : '-'}
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
+                                                        <button
+                                                            className="text-blue-600 dark:text-blue-200 hover:text-blue-700 dark:hover:text-white bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
                                                             onClick={async () => {
                                                                 setSelectedDetailTaskId(item.task_id);
                                                                 setLoading(true);
@@ -1564,18 +1571,16 @@ export default function BacktestOptimizer() {
                                                             disabled={loading}
                                                         >
                                                             상세
-                                                        </Button>
+                                                        </button>
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
+                                                        <button
+                                                            className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
                                                             onClick={() => handleDeleteResult(item.task_id)}
                                                             disabled={loading}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                                                         >
                                                             삭제
-                                                        </Button>
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -1671,7 +1676,19 @@ export default function BacktestOptimizer() {
                                 <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
                                     <div className="text-sm text-slate-500 dark:text-slate-400">총 시행 횟수</div>
                                     <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                        {detailResult.data.completed_trials} / {detailResult.data.total_trials}
+                                        {detailResult.data.total_trials || 0}회
+                                    </div>
+                                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                        성공: {detailResult.data.completed_trials || 0} / 실패: {detailResult.data.failed_trials || 0}
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                    <div className="text-sm text-slate-500 dark:text-slate-400">목표 달성</div>
+                                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                        {detailResult.data.target_met_trials || 0}회
+                                    </div>
+                                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                        목표 수익률 이상
                                     </div>
                                 </div>
                                 <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">

@@ -33,7 +33,7 @@ const COL_WIDTHS = {
     trainDataEnd: '100px',
     mseHigh: '100px',
     mseLow: '100px',
-    mseSurgeProb: '100px',
+    lossUpProb: '100px',
     accuracySurgeDay: '100px',
     createdAt: '180px',
     updatedAt: '180px',
@@ -137,10 +137,10 @@ const TABLE_COLUMNS = [
         render: (val) => val?.toFixed(8)
     },
     {
-        key: 'mseUpProb',
-        label: 'MSE(상승확률)',
-        field: 'mseUpProb',
-        width: COL_WIDTHS.mseSurgeProb, // Reuse width variable or add new one
+        key: 'lossUpProb',
+        label: 'Loss(상승확률)',
+        field: 'lossUpProb',
+        width: COL_WIDTHS.lossUpProb,
         sortable: true,
         align: 'right',
         render: (val) => val?.toFixed(8)
@@ -508,9 +508,9 @@ export default function MlModelInfo() {
 
                                 {/* MSE 상승확률 */}
                                 <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
-                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">MSE (상승확률)</div>
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">Loss (상승확률)</div>
                                     <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
-                                        {selectedModel.mseUpProb != null ? selectedModel.mseUpProb.toFixed(8) : '-'}
+                                        {selectedModel.lossUpProb != null ? selectedModel.lossUpProb.toFixed(8) : '-'}
                                     </div>
                                 </div>
                             </div>

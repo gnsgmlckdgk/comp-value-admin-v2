@@ -3,10 +3,8 @@ import ExcelJS from 'exceljs';
 
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 
-// 분할 조회 설정 (FMP API 분당 300건 제한 대응)
-// 30건씩 조회 후 10초 대기 → 분당 약 180건 속도로 안전하게 처리
-const BATCH_SIZE = 30; // 한 번에 처리할 심볼 수
-const BATCH_DELAY_MS = 10000; // 배치 사이 대기 시간 (10초)
+const BATCH_SIZE = 30;
+const BATCH_DELAY_MS = 10000;
 
 /**
  * 대량조회 모달

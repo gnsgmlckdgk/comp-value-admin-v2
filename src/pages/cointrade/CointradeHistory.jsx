@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { send } from '@/util/ClientUtil';
+import useModalAnimation from '@/hooks/useModalAnimation';
+import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
@@ -240,9 +242,11 @@ export default function CointradeHistory() {
     // 상세보기 모달 상태
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
 
     // 필터 설명 모달 상태
     const [isFilterHelpModalOpen, setIsFilterHelpModalOpen] = useState(false);
+    const { shouldRender: renderFilterHelp, isAnimatingOut: isFilterHelpClosing } = useModalAnimation(isFilterHelpModalOpen, 250);
 
     // 검색 필터 (서버 조회용)
     const [filters, setFilters] = useState({
@@ -554,7 +558,7 @@ export default function CointradeHistory() {
 
     // 상세보기 모달 컴포넌트
     const DetailModal = () => {
-        if (!isDetailModalOpen || !selectedRecord) return null;
+        if (!renderDetailModal || !selectedRecord) return null;
 
         const handleBackdropClick = (e) => {
             if (e.target === e.currentTarget) handleCloseDetailModal();
@@ -564,10 +568,11 @@ export default function CointradeHistory() {
 
         return (
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isDetailModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                style={{ animationDuration: '0.25s' }}
                 onClick={handleBackdropClick}
             >
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto flex flex-col">
+                <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto flex flex-col animate__animated ${isDetailModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                     {/* 헤더 */}
                     <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                         <div className="flex items-center gap-2 sm:gap-3">
@@ -1363,21 +1368,16 @@ export default function CointradeHistory() {
             </div>
 
             {/* Toast 메시지 */}
-            {toast && (
-                <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
-                    <div className="bg-slate-800 dark:bg-slate-700 text-white px-6 py-3 rounded-lg shadow-lg max-w-md">
-                        <p className="text-sm whitespace-pre-line">{toast}</p>
-                    </div>
-                </div>
-            )}
+            <Toast message={toast} />
 
             {/* 필터 도움말 모달 */}
-            {isFilterHelpModalOpen && (
+            {renderFilterHelp && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate__animated ${isFilterHelpClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                    style={{ animationDuration: '0.25s' }}
                     onClick={(e) => e.target === e.currentTarget && setIsFilterHelpModalOpen(false)}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate__animated ${isFilterHelpClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">

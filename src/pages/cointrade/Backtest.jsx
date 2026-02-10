@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { send } from '@/util/ClientUtil';
+import Toast from '@/component/common/display/Toast';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
 import ExcelJS from 'exceljs';
@@ -152,6 +154,7 @@ export default function Backtest() {
     const [taskStatus, setTaskStatus] = useState(null);
     const [taskResult, setTaskResult] = useState(null);
     const [isRunConfirmModalOpen, setIsRunConfirmModalOpen] = useState(false);
+    const { shouldRender: renderRunConfirm, isAnimatingOut: isRunConfirmClosing } = useModalAnimation(isRunConfirmModalOpen, 250);
 
     // 백테스트 파라미터 설정
     const [configLoading, setConfigLoading] = useState(false);
@@ -172,8 +175,10 @@ export default function Backtest() {
 
     // 삭제 확인 모달
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
+    const { shouldRender: renderDeleteConfirm, isAnimatingOut: isDeleteConfirmClosing } = useModalAnimation(isDeleteConfirmModalOpen, 250);
     const [deleteTargetTaskId, setDeleteTargetTaskId] = useState(null);
     const [isDeleteSelectedModalOpen, setIsDeleteSelectedModalOpen] = useState(false);
+    const { shouldRender: renderDeleteSelected, isAnimatingOut: isDeleteSelectedClosing } = useModalAnimation(isDeleteSelectedModalOpen, 250);
 
     // 이력 탭 상태
     const [historyList, setHistoryList] = useState([]);
@@ -1752,14 +1757,14 @@ export default function Backtest() {
             )}
 
             {/* 백테스트 실행 확인 모달 */}
-            {isRunConfirmModalOpen && (
+            {renderRunConfirm && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in overflow-y-auto"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate__animated ${isRunConfirmClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setIsRunConfirmModalOpen(false);
                     }}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl my-4">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl my-4 animate__animated ${isRunConfirmClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -1995,14 +2000,14 @@ export default function Backtest() {
             )}
 
             {/* 삭제 확인 모달 */}
-            {isDeleteConfirmModalOpen && (
+            {renderDeleteConfirm && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isDeleteConfirmClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setIsDeleteConfirmModalOpen(false);
                     }}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md animate__animated ${isDeleteConfirmClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -2055,14 +2060,14 @@ export default function Backtest() {
             )}
 
             {/* 선택 삭제 확인 모달 */}
-            {isDeleteSelectedModalOpen && (
+            {renderDeleteSelected && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isDeleteSelectedClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setIsDeleteSelectedModalOpen(false);
                     }}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md animate__animated ${isDeleteSelectedClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -2101,11 +2106,7 @@ export default function Backtest() {
             )}
 
             {/* Toast */}
-            {toast && (
-                <div className="fixed bottom-4 right-4 z-50 animate-fade-in bg-slate-800 text-white px-6 py-3 rounded shadow-lg">
-                    {toast}
-                </div>
-            )}
+            <Toast message={toast} />
         </div>
     );
 }
@@ -2531,10 +2532,10 @@ function DetailView({ result, onClose, onExport }) {
     }, [individual, result.data.params]);
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm animate__animated animate__fadeIn" style={{ animationDuration: '0.25s' }} onClick={onClose}>
             <div className="flex items-center justify-center min-h-screen p-2 sm:p-4 py-8 sm:py-4">
                 <div
-                    className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto"
+                    className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto animate__animated animate__zoomIn" style={{ animationDuration: '0.25s' }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* 헤더 */}

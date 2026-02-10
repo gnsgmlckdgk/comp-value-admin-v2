@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import useModalAnimation from '@/hooks/useModalAnimation';
+import Toast from '@/component/common/display/Toast';
 import StockChartModal from './StockChartModal';
 import CompanyInfoModal from './CompanyInfoModal';
 import InvestmentDetailModal, { FullDetailModal } from './InvestmentDetailModal';
@@ -144,7 +146,9 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
         }
     }, [predictionLoading]);
 
-    if (!isOpen) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+
+    if (!shouldRender) return null;
 
     // 심볼과 회사명 추출
     const getValDeep = (obj, keys) => {
@@ -160,12 +164,13 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
     return (
         <>
             {/* 배경 오버레이 */}
-            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-[100]" onClick={onClose} />
+            <div className={`fixed inset-0 bg-black/50 dark:bg-black/70 z-[100] animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }} onClick={onClose} />
 
             {/* 메인 모달 */}
             <div
                 ref={popupRef}
-                className="fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800"
+                className={`fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[80vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`}
+                style={{ animationDuration: '0.25s' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 <ModalHeader
@@ -239,7 +244,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
             />
 
             {/* Toast 알림 */}
-            {toast && <Toast message={toast} />}
+            <Toast message={toast} />
         </>
     );
 };
@@ -958,15 +963,6 @@ const DetailCard = ({ label, value }) => (
         <div className="text-[12px] font-mono tabular-nums break-words whitespace-pre-wrap dark:text-slate-200">
             {formatDetailValue(value)}
         </div>
-    </div>
-);
-
-/**
- * Toast 컴포넌트
- */
-const Toast = ({ message }) => (
-    <div className="fixed bottom-4 right-4 z-[60] rounded-md bg-slate-900 text-white text-sm px-4 py-2 shadow-lg animate-fade-in dark:bg-slate-700">
-        {message}
     </div>
 );
 

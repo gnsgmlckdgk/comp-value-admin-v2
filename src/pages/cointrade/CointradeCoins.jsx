@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
+import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
@@ -450,13 +451,7 @@ export default function CointradeCoins() {
             )}
 
             {/* Toast 메시지 */}
-            {toast && (
-                <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
-                    <div className="bg-slate-800 dark:bg-slate-700 text-white px-6 py-3 rounded-lg shadow-lg max-w-md">
-                        <p className="text-sm whitespace-pre-line">{toast}</p>
-                    </div>
-                </div>
-            )}
+            <Toast message={toast} />
         </div>
     );
 }

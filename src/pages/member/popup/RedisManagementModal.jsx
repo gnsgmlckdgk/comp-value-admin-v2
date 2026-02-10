@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 /**
  * Redis 관리 모달 컴포넌트
@@ -346,19 +347,23 @@ export default function RedisManagementModal({ isOpen, onClose }) {
         }
     };
 
-    if (!isOpen) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+
+    if (!shouldRender) return null;
 
     return (
         <>
             {/* 배경 오버레이 */}
             <div
-                className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50"
+                className={`fixed inset-0 bg-black/50 dark:bg-black/70 z-50 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                style={{ animationDuration: '0.25s' }}
                 onClick={onClose}
             />
 
             {/* 모달 */}
             <div
-                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 shadow-xl rounded-lg max-h-[90vh] w-[min(1000px,90vw)] overflow-hidden z-50"
+                className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 shadow-xl rounded-lg max-h-[90vh] w-[min(1000px,90vw)] overflow-hidden z-50 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`}
+                style={{ animationDuration: '0.25s' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}

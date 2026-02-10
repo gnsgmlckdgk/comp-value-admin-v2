@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import Button from '@/component/common/button/Button';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 export default function SellCriteriaModal({ isOpen, onClose }) {
     // ESC 키로 모달 닫기
@@ -17,7 +18,9 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
         };
     }, [isOpen, onClose]);
 
-    if (!isOpen) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+
+    if (!shouldRender) return null;
 
     // 배경 클릭 시 닫기
     const handleBackdropClick = (e) => {
@@ -26,10 +29,11 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+            style={{ animationDuration: '0.25s' }}
             onClick={handleBackdropClick}
         >
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg md:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg md:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">

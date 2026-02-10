@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Button from '@/component/common/button/Button';
 import { fmtUsd } from '../utils/formatters';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 /**
  * 매도 정보 입력 모달
@@ -32,7 +33,9 @@ export default function SellModal({
         }
     }, [open, data, fx]);
 
-    if (!open || !data) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(open);
+
+    if (!shouldRender || !data) return null;
 
     const { symbol, companyName, buyPrice, totalQty, currentPrice, buyExchangeRateAtTrade } = data;
     const maxQty = totalQty || 0;
@@ -76,8 +79,8 @@ export default function SellModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}>
+            <div className={`w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                 <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">
                     매도 정보 입력
                 </h2>

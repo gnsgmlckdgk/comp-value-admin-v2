@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { send } from '@/util/ClientUtil';
+import Toast from '@/component/common/display/Toast';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
 import ExcelJS from 'exceljs';
@@ -180,15 +182,18 @@ export default function BacktestOptimizer() {
     const [taskStatus, setTaskStatus] = useState(null);
     const [taskResult, setTaskResult] = useState(null);
     const [isRunConfirmModalOpen, setIsRunConfirmModalOpen] = useState(false);
+    const { shouldRender: renderRunConfirm, isAnimatingOut: isRunConfirmClosing } = useModalAnimation(isRunConfirmModalOpen, 250);
 
     // 이력 탭 상태
     const [historyList, setHistoryList] = useState([]);
     const [selectedDetailTaskId, setSelectedDetailTaskId] = useState(null);
     const [detailResult, setDetailResult] = useState(null);
     const [showAllTrials, setShowAllTrials] = useState(false);
+    const { shouldRender: renderAllTrials, isAnimatingOut: isAllTrialsClosing } = useModalAnimation(showAllTrials, 250);
 
     // 삭제 확인 모달
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
+    const { shouldRender: renderDeleteConfirm, isAnimatingOut: isDeleteConfirmClosing } = useModalAnimation(isDeleteConfirmModalOpen, 250);
     const [deleteTargetTaskId, setDeleteTargetTaskId] = useState(null);
 
     // Toast auto-hide
@@ -1677,9 +1682,9 @@ export default function BacktestOptimizer() {
                     )}
 
                     {/* 모든 시행 결과 모달 */}
-                    {showAllTrials && detailResult?.data?.all_trials && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
-                            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+                    {renderAllTrials && detailResult?.data?.all_trials && (
+                        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4 animate__animated ${isAllTrialsClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}>
+                            <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col animate__animated ${isAllTrialsClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                                 <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-200 dark:border-slate-700">
                                     <h3 className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-200">
                                         모든 시행 결과 ({detailResult.data.all_trials.length}개)
@@ -2213,14 +2218,14 @@ export default function BacktestOptimizer() {
             )}
 
             {/* 실행 확인 모달 */}
-            {isRunConfirmModalOpen && (
+            {renderRunConfirm && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in overflow-y-auto"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate__animated ${isRunConfirmClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setIsRunConfirmModalOpen(false);
                     }}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg my-4">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg my-4 animate__animated ${isRunConfirmClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -2289,14 +2294,14 @@ export default function BacktestOptimizer() {
             )}
 
             {/* 삭제 확인 모달 */}
-            {isDeleteConfirmModalOpen && (
+            {renderDeleteConfirm && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate__animated ${isDeleteConfirmClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setIsDeleteConfirmModalOpen(false);
                     }}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md animate__animated ${isDeleteConfirmClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -2345,11 +2350,7 @@ export default function BacktestOptimizer() {
             )}
 
             {/* Toast */}
-            {toast && (
-                <div className="fixed bottom-4 right-4 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 px-6 py-3 rounded-lg shadow-lg z-50">
-                    {toast}
-                </div>
-            )}
+            <Toast message={toast} />
         </div>
     );
 }

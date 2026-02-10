@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
@@ -17,6 +18,8 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
             fetchCompanyProfile(data.symbol);
         }
     }, [isOpen, data?.symbol]);
+
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
 
     const fetchCompanyProfile = async (symbol) => {
         if (!symbol) return;
@@ -78,7 +81,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
         }
     };
 
-    if (!isOpen) return null;
+    if (!shouldRender) return null;
 
     const sellAmount = data.sellPrice * data.sellQty;
     // 매도당시환율 우선, 없으면 현재환율 사용
@@ -86,8 +89,8 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
 
     return (
         <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}>
+            <div className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                 {/* 헤더 */}
                 <div className="sticky top-0 bg-gradient-to-r from-sky-500 to-indigo-500 px-6 py-4 flex items-center justify-between">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
@@ -227,6 +228,7 @@ const AbroadRecommendedStock = () => {
     const [selectedRows, setSelectedRows] = useState(new Set());
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const { shouldRender: renderScheduleModal, isAnimatingOut: isScheduleModalClosing } = useModalAnimation(showScheduleModal, 250);
     const [maxCountInput, setMaxCountInput] = useState('');
     const [lastScheduleRun, setLastScheduleRun] = useState(null);
     const [profiles, setProfiles] = useState([]);
@@ -1042,11 +1044,11 @@ const AbroadRecommendedStock = () => {
             />
 
             {/* 추천기업 조회 스케줄 모달 (슈퍼관리자 전용) */}
-            {showScheduleModal && (
+            {renderScheduleModal && (
                 <>
-                    <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={() => setShowScheduleModal(false)} />
+                    <div className={`fixed inset-0 z-[70] bg-black/50 dark:bg-black/70 animate__animated ${isScheduleModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }} onClick={() => setShowScheduleModal(false)} />
                     <div
-                        className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(360px,calc(100vw-32px))] rounded-xl bg-white p-5 shadow-2xl dark:bg-slate-800"
+                        className={`fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(360px,calc(100vw-32px))] rounded-xl bg-white p-5 shadow-2xl dark:bg-slate-800 animate__animated ${isScheduleModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">추천기업 조회 실행</h3>
@@ -1139,6 +1141,7 @@ const AbroadRecommendedStock = () => {
  * 상세정보 모달 컴포넌트
  */
 const DetailInfoModal = ({ isOpen, data, onClose, onAnalyze, isAnalyzing }) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 250);
     const modalRef = useRef(null);
 
     // ESC 키 핸들러
@@ -1153,7 +1156,7 @@ const DetailInfoModal = ({ isOpen, data, onClose, onAnalyze, isAnalyzing }) => {
         return () => window.removeEventListener('keydown', handleEscape);
     }, [isOpen, onClose]);
 
-    if (!isOpen || !data) return null;
+    if (!shouldRender || !data) return null;
 
     // 모달에 표시할 데이터 필드들 (순서 지정)
     const displayOrder = [
@@ -1197,12 +1200,12 @@ const DetailInfoModal = ({ isOpen, data, onClose, onAnalyze, isAnalyzing }) => {
     return (
         <>
             {/* 배경 오버레이 */}
-            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-40" onClick={onClose} />
+            <div className={`fixed inset-0 bg-black/50 dark:bg-black/70 z-40 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }} onClick={onClose} />
 
             {/* 모달 */}
             <div
                 ref={modalRef}
-                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-lg max-h-[85vh] w-[min(700px,90vw)] overflow-hidden dark:bg-slate-800"
+                className={`fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-lg max-h-[85vh] w-[min(700px,90vw)] overflow-hidden dark:bg-slate-800 animate__animated ${isAnimatingOut ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
@@ -1288,6 +1291,7 @@ const HighlightCard = ({ label, value }) => (
  * 프로파일 설정 모달 컴포넌트
  */
 const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, isLoading, setIsLoading, send, filterOptions, filterOptionsLoading }) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 250);
     const [selectedProfile, setSelectedProfile] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
     const [formData, setFormData] = useState(null);
@@ -1542,16 +1546,16 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         }
     };
 
-    if (!isOpen) return null;
+    if (!shouldRender) return null;
 
     return (
         <>
             {/* 배경 오버레이 */}
-            <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={onClose} />
+            <div className={`fixed inset-0 z-[70] bg-black/50 dark:bg-black/70 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }} onClick={onClose} />
 
             {/* 모달 */}
             <div
-                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[98vw] md:w-[min(95vw,1200px)] max-h-[95vh] md:max-h-[90vh] rounded-lg md:rounded-xl bg-white shadow-2xl dark:bg-slate-800 flex flex-col"
+                className={`fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[98vw] md:w-[min(95vw,1200px)] max-h-[95vh] md:max-h-[90vh] rounded-lg md:rounded-xl bg-white shadow-2xl dark:bg-slate-800 flex flex-col animate__animated ${isAnimatingOut ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}

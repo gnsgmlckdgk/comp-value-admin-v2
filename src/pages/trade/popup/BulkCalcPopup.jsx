@@ -201,9 +201,9 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 animate__animated animate__fadeIn" style={{ animationDuration: '0.25s' }}>
             <Loading show={isLoading} />
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg w-4/5 max-w-xl relative sm:w-11/12 sm:p-4">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg w-4/5 max-w-xl relative sm:w-11/12 sm:p-4 animate__animated animate__zoomIn" style={{ animationDuration: '0.25s' }}>
 
                 <h2 className="text-slate-900 dark:text-white">기업명 일괄 계산</h2>
                 <p className="text-slate-700 dark:text-slate-300">기업명을 한 줄에 하나씩 입력하세요:</p>

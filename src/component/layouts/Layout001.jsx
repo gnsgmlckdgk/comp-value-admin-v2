@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 import Header from '@/component/layouts/common/Header001';
 import SideBar from '@/component/layouts/common/SideBar001';
@@ -8,6 +9,7 @@ function Layout001() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isPinned, setIsPinned] = useState(false);
     const sidebarTimeoutRef = useRef(null);
+    const { shouldRender: showOverlay, isAnimatingOut: isOverlayFading } = useModalAnimation(isSidebarOpen, 200);
 
     const handleMenuClick = () => {
         if (sidebarTimeoutRef.current) {
@@ -63,9 +65,10 @@ function Layout001() {
             />
 
             {/* 모바일에서 사이드바가 열렸을 때 배경 클릭 시 닫히는 오버레이 */}
-            {isSidebarOpen && (
+            {showOverlay && (
                 <div
-                    className="fixed inset-16 inset-x-0 z-20 bg-black/20 md:hidden"
+                    className={`fixed inset-16 inset-x-0 z-20 bg-black/20 md:hidden animate__animated ${isOverlayFading ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                    style={{ animationDuration: '0.2s' }}
                     onClick={() => {
                         setIsSidebarOpen(false);
                         setIsPinned(false);

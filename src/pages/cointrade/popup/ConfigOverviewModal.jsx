@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import Button from '@/component/common/button/Button';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 export default function ConfigOverviewModal({ 
     isOpen, 
@@ -9,7 +10,9 @@ export default function ConfigOverviewModal({
     getParamDescription,
     paramGroups 
 }) {
-    if (!isOpen) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+
+    if (!shouldRender) return null;
 
     // Flatten all keys from groups to preserve order if needed, or just iterate params
     // Using paramGroups to keep the logical grouping order
@@ -24,7 +27,7 @@ export default function ConfigOverviewModal({
     }
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div className={`fixed inset-0 z-50 overflow-y-auto animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }} aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                 {/* Background overlay */}
                 <div 
@@ -35,7 +38,7 @@ export default function ConfigOverviewModal({
 
                 {/* Modal panel */}
                 <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                <div className="relative z-10 inline-block align-bottom bg-white dark:bg-slate-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
+                <div className={`relative z-10 inline-block align-bottom bg-white dark:bg-slate-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                     
                     {/* Header */}
                     <div className="bg-white dark:bg-slate-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-slate-200 dark:border-slate-700">

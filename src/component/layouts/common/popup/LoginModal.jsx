@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import Input from '@/component/common/input/Input';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import Button from '@/component/common/button/Button';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from './AlertModal';
@@ -43,8 +44,10 @@ export default function LoginModal({
         return () => window.visualViewport?.removeEventListener('resize', handleResize);
     }, []);
 
+    const { shouldRender, isAnimatingOut } = useModalAnimation(show);
+
     // show가 false일 경우 아무것도 렌더링하지 않음
-    if (!show) return null;
+    if (!shouldRender) return null;
 
     const handleOutsideClick = (e) => {
         if (e.target.classList.contains('login-modal-overlay')) {
@@ -54,16 +57,17 @@ export default function LoginModal({
 
     return (
         <div
-            className="login-modal-overlay fixed inset-0 z-50 flex justify-center p-4 overflow-y-auto"
+            className={`login-modal-overlay fixed inset-0 z-50 flex justify-center p-4 overflow-y-auto animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`}
             style={{
                 backgroundColor: 'rgba(15, 23, 42, 0.5)',
                 paddingBottom: keyboardOffset ? keyboardOffset + 16 : 16,
                 alignItems: keyboardOffset ? 'flex-end' : 'center',
+                animationDuration: '0.25s',
             }}
             onClick={handleOutsideClick}
         >
             <Loading show={isLoading} />
-            <div className="relative w-full max-w-md max-h-[85vh] overflow-auto rounded-2xl bg-white p-5 text-slate-900 shadow-xl ring-1 ring-slate-900/5 md:p-6 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+            <div className={`relative w-full max-w-md max-h-[85vh] overflow-auto rounded-2xl bg-white p-5 text-slate-900 shadow-xl ring-1 ring-slate-900/5 md:p-6 dark:bg-slate-800 dark:text-white dark:ring-slate-700 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                 {/* 상단 닫기 버튼 */}
                 <button
                     type="button"

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { send } from '@/util/ClientUtil';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import Input from '@/component/common/input/Input';
@@ -17,6 +18,7 @@ export default function MyProfile() {
 
     // 회원탈퇴 관련 상태
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const { shouldRender: renderDeleteModal, isAnimatingOut: isDeleteModalClosing } = useModalAnimation(showDeleteModal, 250);
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteLoading, setDeleteLoading] = useState(false);
     const deletePasswordRef = useRef(null);
@@ -463,9 +465,9 @@ export default function MyProfile() {
             />
 
             {/* 회원탈퇴 비밀번호 확인 모달 */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4">
-                    <div className="w-full max-w-sm rounded-2xl bg-white p-5 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+            {renderDeleteModal && (
+                <div className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4 animate__animated ${isDeleteModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}>
+                    <div className={`w-full max-w-sm rounded-2xl bg-white p-5 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700 animate__animated ${isDeleteModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         <h2 className="mb-2 text-base font-semibold text-red-600 dark:text-red-400">회원 탈퇴</h2>
                         <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
                             탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.<br />

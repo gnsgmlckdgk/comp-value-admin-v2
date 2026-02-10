@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import ExcelJS from 'exceljs';
 
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
@@ -64,7 +65,9 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
         [input]
     );
 
-    if (!open) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(open);
+
+    if (!shouldRender) return null;
 
     const run = async () => {
         if (symbols.length === 0) {
@@ -107,11 +110,12 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
     return (
         <>
             {/* backdrop */}
-            <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70" onClick={onClose} />
+            <div className={`fixed inset-0 z-[70] bg-black/50 dark:bg-black/70 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }} onClick={onClose} />
 
             {/* modal */}
             <div
-                className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(840px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
+                className={`fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(840px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`}
+                style={{ animationDuration: '0.25s' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { send } from '@/util/ClientUtil';
 import { useAuth } from '@/context/AuthContext';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import RoleManagementModal from '@/component/layouts/common/popup/RoleManagementModal';
@@ -45,17 +46,20 @@ export default function MemberManagement() {
     });
 
     const [showSearchForm, setShowSearchForm] = useState(false);
+    const { shouldRender: showSearch, isAnimatingOut: isSearchClosing } = useModalAnimation(showSearchForm, 200);
     const [roles, setRoles] = useState([]);
     const [roleModalOpen, setRoleModalOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
 
     // 회원 탈퇴 확인 모달 상태
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const { shouldRender: renderDeleteModal, isAnimatingOut: isDeleteModalClosing } = useModalAnimation(deleteModalOpen, 250);
     const [deleteTargetMember, setDeleteTargetMember] = useState(null);
     const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
 
     // 회원 수정 모달 상태
     const [editModalOpen, setEditModalOpen] = useState(false);
+    const { shouldRender: renderEditModal, isAnimatingOut: isEditModalClosing } = useModalAnimation(editModalOpen, 250);
     const [editTargetMember, setEditTargetMember] = useState(null);
     const [editEmail, setEditEmail] = useState('');
     const [editNickname, setEditNickname] = useState('');
@@ -423,8 +427,8 @@ export default function MemberManagement() {
                 </div>
 
                 {/* 검색 폼 */}
-                {showSearchForm && (
-                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                {showSearch && (
+                    <div className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 animate__animated ${isSearchClosing ? 'animate__fadeOutUp' : 'animate__fadeInDown'}`} style={{ animationDuration: '0.2s' }}>
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">검색 조건</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
@@ -775,9 +779,9 @@ export default function MemberManagement() {
             />
 
             {/* 회원 탈퇴 확인 모달 */}
-            {deleteModalOpen && deleteTargetMember && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+            {renderDeleteModal && deleteTargetMember && (
+                <div className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4 animate__animated ${isDeleteModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}>
+                    <div className={`w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700 animate__animated ${isDeleteModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         <h2 className="mb-4 text-lg font-semibold text-red-600 dark:text-red-400">회원 강제탈퇴 확인</h2>
 
                         <div className="mb-4 rounded-lg bg-slate-50 dark:bg-slate-700/50 p-4">
@@ -844,9 +848,9 @@ export default function MemberManagement() {
             )}
 
             {/* 회원 정보 수정 모달 */}
-            {editModalOpen && editTargetMember && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+            {renderEditModal && editTargetMember && (
+                <div className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4 animate__animated ${isEditModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}>
+                    <div className={`w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700 animate__animated ${isEditModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">회원 정보 수정</h2>
 
                         <div className="mb-4 rounded-lg bg-slate-50 dark:bg-slate-700/50 p-4">

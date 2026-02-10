@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { send } from '@/util/ClientUtil';
+import useModalAnimation from '@/hooks/useModalAnimation';
+import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 
 // 날짜 포맷 (YYYY-MM-DD HH:MM:SS)
@@ -173,9 +175,11 @@ export default function MlModelInfo() {
     // 상세보기 모달 상태
     const [selectedModel, setSelectedModel] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
 
     // 재학습 확인 모달 상태
     const [isTrainConfirmModalOpen, setIsTrainConfirmModalOpen] = useState(false);
+    const { shouldRender: renderTrainConfirm, isAnimatingOut: isTrainConfirmClosing } = useModalAnimation(isTrainConfirmModalOpen, 250);
     const [trainCoinCode, setTrainCoinCode] = useState('');
 
     // 테이블 필터/정렬 상태
@@ -374,7 +378,7 @@ export default function MlModelInfo() {
 
     // 상세보기 모달 컴포넌트
     const DetailModal = () => {
-        if (!isDetailModalOpen || !selectedModel) return null;
+        if (!renderDetailModal || !selectedModel) return null;
 
         const handleBackdropClick = (e) => {
             if (e.target === e.currentTarget) handleCloseDetailModal();
@@ -382,10 +386,11 @@ export default function MlModelInfo() {
 
         return (
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isDetailModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                style={{ animationDuration: '0.25s' }}
                 onClick={handleBackdropClick}
             >
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] sm:max-h-[85vh] overflow-y-auto flex flex-col">
+                <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] sm:max-h-[85vh] overflow-y-auto flex flex-col animate__animated ${isDetailModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                     {/* 헤더 */}
                     <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                         <div className="flex items-center gap-2 sm:gap-3">
@@ -749,19 +754,16 @@ export default function MlModelInfo() {
                 )}
             </div>
 
-            {toast && (
-                <div className="fixed bottom-4 right-4 z-50 animate-fade-in bg-slate-800 text-white px-6 py-3 rounded shadow-lg">
-                    {toast}
-                </div>
-            )}
+            <Toast message={toast} />
 
             {/* 재학습 확인 모달 */}
-            {isTrainConfirmModalOpen && (
+            {renderTrainConfirm && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isTrainConfirmClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                    style={{ animationDuration: '0.25s' }}
                     onClick={handleBackdropClick}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md animate__animated ${isTrainConfirmClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">

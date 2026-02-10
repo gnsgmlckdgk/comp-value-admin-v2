@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import useModalAnimation from '@/hooks/useModalAnimation';
 import { send } from '@/util/ClientUtil';
 
 export default function CompanyInfoModal({ isOpen, onClose, symbol, zIndex = 70 }) {
@@ -11,6 +12,8 @@ export default function CompanyInfoModal({ isOpen, onClose, symbol, zIndex = 70 
             fetchCompanyInfo();
         }
     }, [isOpen, symbol]);
+
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
 
     const fetchCompanyInfo = async () => {
         setLoading(true);
@@ -45,7 +48,7 @@ export default function CompanyInfoModal({ isOpen, onClose, symbol, zIndex = 70 
         }
     };
 
-    if (!isOpen) return null;
+    if (!shouldRender) return null;
 
     const handleOverlayClick = (e) => {
         if (e.target === e.currentTarget) {
@@ -66,11 +69,11 @@ export default function CompanyInfoModal({ isOpen, onClose, symbol, zIndex = 70 
 
     return (
         <div
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
-            style={{ zIndex }}
+            className={`fixed inset-0 z-[120] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+            style={{ zIndex, animationDuration: '0.25s' }}
             onClick={handleOverlayClick}
         >
-            <div className="relative w-full max-w-4xl max-h-[90vh] overflow-auto rounded-lg bg-white shadow-xl dark:bg-slate-800">
+            <div className={`relative w-full max-w-4xl max-h-[90vh] overflow-auto rounded-lg bg-white shadow-xl dark:bg-slate-800 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                 {/* 헤더 */}
                 <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-700 dark:bg-slate-800">
                     <h2 className="text-xl font-semibold text-slate-900 dark:text-white">기업 정보</h2>

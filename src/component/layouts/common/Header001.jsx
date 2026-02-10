@@ -307,7 +307,7 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
                                 {sessionTTL != null && (
                                     <div className={`flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2 py-1 text-xs font-medium ${
                                         sessionTTL <= 300
-                                            ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                            ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 animate__animated animate__headShake'
                                             : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
                                     }`}>
                                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

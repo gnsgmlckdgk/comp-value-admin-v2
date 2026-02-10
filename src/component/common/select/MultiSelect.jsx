@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 /**
  * 다중 선택 가능한 드롭다운 컴포넌트
@@ -39,6 +40,7 @@ function MultiSelect({
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const dropdownRef = useRef(null);
+    const { shouldRender: showDropdown, isAnimatingOut: isDropdownClosing } = useModalAnimation(isOpen && !loading, 150);
 
     // 외부 클릭 감지하여 드롭다운 닫기
     useEffect(() => {
@@ -166,8 +168,8 @@ function MultiSelect({
             </button>
 
             {/* 드롭다운 패널 */}
-            {isOpen && !loading && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg dark:bg-slate-700 dark:border-slate-600 max-h-80 overflow-hidden">
+            {showDropdown && (
+                <div className={`absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-lg shadow-lg dark:bg-slate-700 dark:border-slate-600 max-h-80 overflow-hidden animate__animated ${isDropdownClosing ? 'animate__fadeOutUp' : 'animate__fadeInDown'}`} style={{ animationDuration: '0.15s' }}>
                     {/* 검색 입력 */}
                     {searchable && (
                         <div className="p-2 border-b border-slate-200 dark:border-slate-600">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { send } from '@/util/ClientUtil';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 /**
  * CommonLogManagementModal
@@ -246,11 +247,13 @@ export default function CommonLogManagementModal({
         }
     }, [isOpen, activeTab]);
 
-    if (!isOpen) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+
+    if (!shouldRender) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-0 sm:px-4">
-            <div className="w-full max-w-5xl h-[85vh] sm:rounded-2xl bg-white dark:bg-slate-800 shadow-xl ring-1 ring-slate-900/5 dark:ring-slate-700 overflow-hidden flex flex-col">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-0 sm:px-4 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}>
+            <div className={`w-full max-w-5xl h-[85vh] sm:rounded-2xl bg-white dark:bg-slate-800 shadow-xl ring-1 ring-slate-900/5 dark:ring-slate-700 overflow-hidden flex flex-col animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                 <div className={`flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r ${currentTheme.headerGradient} shrink-0`}>
                     <h2 className="text-base sm:text-lg font-semibold text-white truncate pr-4">{title}</h2>
                     <button onClick={onClose} className="text-white/80 hover:text-white transition-colors p-1">

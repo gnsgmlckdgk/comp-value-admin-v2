@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 /**
  * 가격 비교 차트 컴포넌트
@@ -169,7 +170,9 @@ export default function TransactionDetailModal({
         }
     };
 
-    if (!isOpen || !row) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen);
+
+    if (!shouldRender || !row) return null;
 
     const handleChange = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -234,10 +237,11 @@ export default function TransactionDetailModal({
 
     return (
         <div
-            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
+            className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+            style={{ animationDuration: '0.25s' }}
             onClick={handleOverlayClick}
         >
-            <div className="relative w-full max-w-2xl max-h-[90vh] overflow-auto rounded-xl bg-white shadow-2xl dark:bg-slate-800">
+            <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-auto rounded-xl bg-white shadow-2xl dark:bg-slate-800 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                 {/* 헤더 */}
                 <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-4 dark:border-slate-700 dark:from-slate-800 dark:to-slate-800">
                     <div className="flex items-center justify-between">

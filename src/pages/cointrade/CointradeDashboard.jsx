@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { send } from '@/util/ClientUtil';
+import useModalAnimation from '@/hooks/useModalAnimation';
+import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
 import UpbitCandleChart from '@/pages/cointrade/UpbitCandleChart';
@@ -442,11 +444,14 @@ export default function CointradeDashboard() {
     // 상세보기 모달 상태
     const [selectedHolding, setSelectedHolding] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
 
     // 매도 관련 상태
     const [selectedCoins, setSelectedCoins] = useState([]);
     const [showSellModal, setShowSellModal] = useState(false);
+    const { shouldRender: renderSellModal, isAnimatingOut: isSellModalClosing } = useModalAnimation(showSellModal, 250);
     const [sellResult, setSellResult] = useState(null);
+    const { shouldRender: renderSellResult, isAnimatingOut: isSellResultClosing } = useModalAnimation(!!sellResult, 250);
     const [isSelling, setIsSelling] = useState(false);
 
     // 테이블 필터/정렬 상태
@@ -455,6 +460,7 @@ export default function CointradeDashboard() {
 
     // 필터 도움말 모달 상태
     const [isFilterHelpModalOpen, setIsFilterHelpModalOpen] = useState(false);
+    const { shouldRender: renderFilterHelp, isAnimatingOut: isFilterHelpClosing } = useModalAnimation(isFilterHelpModalOpen, 250);
 
     // 보유 종목 테이블 필터/정렬 상태
     const [holdingsColumnFilters, setHoldingsColumnFilters] = useState({});
@@ -1551,21 +1557,16 @@ export default function CointradeDashboard() {
             </div>
 
             {/* Toast 메시지 */}
-            {toast && (
-                <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
-                    <div className="bg-slate-800 dark:bg-slate-700 text-white px-6 py-3 rounded-lg shadow-lg max-w-md">
-                        <p className="text-sm whitespace-pre-line">{toast}</p>
-                    </div>
-                </div>
-            )}
+            <Toast message={toast} />
 
             {/* 필터 도움말 모달 */}
-            {isFilterHelpModalOpen && (
+            {renderFilterHelp && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate__animated ${isFilterHelpClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                    style={{ animationDuration: '0.25s' }}
                     onClick={(e) => e.target === e.currentTarget && setIsFilterHelpModalOpen(false)}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate__animated ${isFilterHelpClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -1718,12 +1719,13 @@ export default function CointradeDashboard() {
             />
 
             {/* 매도 확인 모달 */}
-            {showSellModal && (
+            {renderSellModal && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate__animated ${isSellModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                    style={{ animationDuration: '0.25s' }}
                     onClick={(e) => e.target === e.currentTarget && handleSellCancel()}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col animate__animated ${isSellModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -1801,12 +1803,13 @@ export default function CointradeDashboard() {
             )}
 
             {/* 매도 결과 모달 */}
-            {sellResult && (
+            {renderSellResult && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in"
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate__animated ${isSellResultClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                    style={{ animationDuration: '0.25s' }}
                     onClick={(e) => e.target === e.currentTarget && handleSellResultClose()}
                 >
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate__animated ${isSellResultClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className={`flex items-center justify-between px-6 py-4 ${
                             sellResult.success || sellResult.response?.status === 'success'
@@ -1873,6 +1876,8 @@ export default function CointradeDashboard() {
 
 // 상세보기 모달 컴포넌트 (외부로 분리)
 const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 250);
+
     // ESC 키로 모달 닫기 및 스크롤 잠금
     useEffect(() => {
         if (!isOpen) return;
@@ -1890,7 +1895,7 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
         };
     }, [isOpen, onClose]);
 
-    if (!isOpen || !selectedHolding) return null;
+    if (!shouldRender || !selectedHolding) return null;
 
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) onClose();
@@ -1902,10 +1907,11 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate-fade-in"
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+            style={{ animationDuration: '0.25s' }}
             onClick={handleBackdropClick}
         >
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto flex flex-col animate__animated ${isAnimatingOut ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
                     <div className="flex items-center gap-2 sm:gap-3">

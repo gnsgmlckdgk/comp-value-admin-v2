@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 const ToggleSection = ({ title = '상세', children }) => {
     const [open, setOpen] = useState(false);
+    const { shouldRender, isAnimatingOut } = useModalAnimation(open, 150);
 
     return (
         <div className="mt-4">
@@ -11,8 +13,8 @@ const ToggleSection = ({ title = '상세', children }) => {
             >
                 {title} {open ? '▲' : '▼'}
             </button>
-            {open && (
-                <div className="mt-2 px-4 py-3 border border-t-0 border-gray-300 rounded-b bg-white text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+            {shouldRender && (
+                <div className={`mt-2 px-4 py-3 border border-t-0 border-gray-300 rounded-b bg-white text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 animate__animated ${isAnimatingOut ? 'animate__fadeOutUp' : 'animate__fadeInDown'}`} style={{ animationDuration: '0.15s' }}>
                     {children}
                 </div>
             )}

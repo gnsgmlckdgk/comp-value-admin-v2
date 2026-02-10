@@ -20,12 +20,12 @@ export default function Home() {
             <div className="max-w-7xl mx-auto">
                 {/* 로그아웃/인증만료 알림 */}
                 {reason === 'logout' && (
-                    <div className="mb-6 w-full max-w-xl mx-auto rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs text-emerald-700 shadow-sm dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-300 text-center">
+                    <div className="mb-6 w-full max-w-xl mx-auto rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs text-emerald-700 shadow-sm dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-300 text-center animate__animated animate__fadeInDown" style={{ animationDuration: '0.5s' }}>
                         안전하게 로그아웃되었습니다. 다시 이용하시려면 상단의 로그인 버튼을 눌러주세요.
                     </div>
                 )}
                 {reason === '401' && (
-                    <div className="mb-6 w-full max-w-xl mx-auto rounded-2xl border border-amber-100 bg-amber-50 px-4 py-2.5 text-xs text-amber-800 shadow-sm dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 text-center">
+                    <div className="mb-6 w-full max-w-xl mx-auto rounded-2xl border border-amber-100 bg-amber-50 px-4 py-2.5 text-xs text-amber-800 shadow-sm dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 text-center animate__animated animate__fadeInDown" style={{ animationDuration: '0.5s' }}>
                         인증 정보가 만료되었습니다. 보안을 위해 자동으로 로그아웃되었어요. 다시 로그인해 주세요.
                     </div>
                 )}

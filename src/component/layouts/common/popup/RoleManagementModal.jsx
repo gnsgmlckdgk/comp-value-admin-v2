@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Button from '@/component/common/button/Button';
+import useModalAnimation from '@/hooks/useModalAnimation';
 
 export default function RoleManagementModal({ open, member, allRoles, onClose, onSave }) {
     const [selectedRoles, setSelectedRoles] = useState([]);
@@ -10,7 +11,9 @@ export default function RoleManagementModal({ open, member, allRoles, onClose, o
         }
     }, [member]);
 
-    if (!open || !member) return null;
+    const { shouldRender, isAnimatingOut } = useModalAnimation(open);
+
+    if (!shouldRender || !member) return null;
 
     const toggleRole = (roleName) => {
         if (selectedRoles.includes(roleName)) {
@@ -37,8 +40,8 @@ export default function RoleManagementModal({ open, member, allRoles, onClose, o
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 px-4 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}>
+            <div className={`w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl ring-1 ring-slate-900/5 dark:bg-slate-800 dark:text-white dark:ring-slate-700 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
                 <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">
                     권한 관리
                 </h2>

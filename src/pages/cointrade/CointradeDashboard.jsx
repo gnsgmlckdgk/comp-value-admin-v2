@@ -991,6 +991,15 @@ export default function CointradeDashboard() {
                     <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
                         {renderFormattedPrice(Math.floor(status.totalValuation), '원')}
                     </div>
+                    {status.totalInvestment > 0 && (() => {
+                        const diff = Math.floor(status.totalValuation - status.totalInvestment);
+                        const isPositive = diff >= 0;
+                        return (
+                            <div className={`text-xs font-medium mt-1 ${isPositive ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`}>
+                                {isPositive ? '+' : ''}{renderFormattedPrice(diff, '원')}
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* 총 수익률 */}

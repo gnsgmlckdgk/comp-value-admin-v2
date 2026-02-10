@@ -55,30 +55,34 @@ export default function Home() {
                     </p>
                 </div>
 
-                {/* 환율 정보 */}
-                <div className="flex justify-center mb-12">
-                    <div className="inline-flex items-center gap-3 px-5 py-3 bg-white rounded-xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
-                        <span className="text-2xl">💱</span>
-                        <div>
-                            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                {fxRate
-                                    ? `1 USD = ${Number(fxRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원`
-                                    : '환율 정보 로딩 중...'
-                                }
-                            </div>
-                            {fxUpdatedAt && (
-                                <div className="text-xs text-slate-400 dark:text-slate-500">
-                                    {fxUpdatedAt.toLocaleString('ko-KR')} 기준
+                {isLoggedIn && (
+                    <>
+                        {/* 환율 정보 */}
+                        <div className="flex justify-center mb-12">
+                            <div className="inline-flex items-center gap-3 px-5 py-3 bg-white rounded-xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                <span className="text-2xl">💱</span>
+                                <div>
+                                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        {fxRate
+                                            ? `1 USD = ${Number(fxRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}원`
+                                            : '환율 정보 로딩 중...'
+                                        }
+                                    </div>
+                                    {fxUpdatedAt && (
+                                        <div className="text-xs text-slate-400 dark:text-slate-500">
+                                            {fxUpdatedAt.toLocaleString('ko-KR')} 기준
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* 미국 3대 지수 차트 */}
-                <div className="mb-12">
-                    <MarketIndexCharts />
-                </div>
+                        {/* 미국 3대 지수 차트 */}
+                        <div className="mb-12">
+                            <MarketIndexCharts />
+                        </div>
+                    </>
+                )}
 
                 {/* 소개 섹션 */}
                 <div className="max-w-3xl mx-auto">

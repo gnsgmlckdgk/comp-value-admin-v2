@@ -4,13 +4,13 @@ import { fetchFxRate } from '../services/TransactionService';
 /**
  * 환율 정보 관리 커스텀 훅
  */
-export function useFxRate() {
+export function useFxRate({ enabled = true } = {}) {
     const [fxRate, setFxRate] = useState(null);
     const [fxUpdatedAt, setFxUpdatedAt] = useState(null);
 
     useEffect(() => {
-        loadFxRate();
-    }, []);
+        if (enabled) loadFxRate();
+    }, [enabled]);
 
     const loadFxRate = async () => {
         try {

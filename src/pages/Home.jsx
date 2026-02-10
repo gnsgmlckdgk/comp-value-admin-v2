@@ -7,7 +7,7 @@ import { useFxRate } from '@/pages/transaction/hooks/useFxRate';
 export default function Home() {
     const location = useLocation();
     const { isLoggedIn } = useAuth();
-    const { fxRate, fxUpdatedAt } = useFxRate();
+    const { fxRate, fxUpdatedAt } = useFxRate({ enabled: isLoggedIn });
 
     useEffect(() => {
         document.title = 'CompValue — 기업가치 분석';

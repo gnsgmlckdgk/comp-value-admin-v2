@@ -430,6 +430,9 @@ export default function CointradeDashboard() {
         predictionDays: 7 // 기본값 7일
     });
 
+    // KRW 잔액
+    const [krwBalance, setKrwBalance] = useState(0);
+
     // 보유 종목
     const [holdings, setHoldings] = useState([]);
 
@@ -514,7 +517,20 @@ export default function CointradeDashboard() {
                 });
             }
 
-            // 3. 보유 종목 조회
+            // 3. KRW 잔액 조회
+            try {
+                const balanceResponse = await send('/dart/api/cointrade/account/balance', {}, 'GET');
+                if (balanceResponse.data?.success && balanceResponse.data?.response) {
+                    const resp = balanceResponse.data.response;
+                    if (resp.status === 'success' && resp.data?.krw_balance != null) {
+                        setKrwBalance(resp.data.krw_balance);
+                    }
+                }
+            } catch (balanceError) {
+                console.error('KRW 잔액 조회 실패:', balanceError);
+            }
+
+            // 4. 보유 종목 조회
             const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
             if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
                 let initialHoldings = holdingsResponse.data.response;
@@ -583,7 +599,7 @@ export default function CointradeDashboard() {
                 }));
             }
 
-            // 4. 최근 거래 내역 조회 (서버 사이드 페이징)
+            // 5. 최근 거래 내역 조회 (서버 사이드 페이징)
             await fetchRecentTrades(0, itemsPerPage, isBackground);
         } catch (e) {
             console.error('데이터 조회 실패:', e);
@@ -919,7 +935,7 @@ export default function CointradeDashboard() {
             </div>
 
             {/* 상단 카드 영역 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
                 {/* 스케줄러 상태 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">스케줄러 상태</div>
@@ -942,6 +958,14 @@ export default function CointradeDashboard() {
                                 {status.sellSchedulerEnabled ? 'ON' : 'OFF'}
                             </span>
                         </div>
+                    </div>
+                </div>
+
+                {/* KRW 잔액 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">KRW 잔액</div>
+                    <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
+                        {renderFormattedPrice(Math.floor(krwBalance), '원')}
                     </div>
                 </div>
 

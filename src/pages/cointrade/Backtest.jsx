@@ -1576,6 +1576,7 @@ export default function Backtest() {
                                                         <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-20">종목 수</th>
                                                         <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 min-w-[240px]">기간</th>
                                                         <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-24">총 수익률</th>
+                                                        <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-24">매수금 수익률</th>
                                                         <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-20">승률</th>
                                                         <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-24">거래 횟수</th>
                                                         <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-20">MDD</th>
@@ -1605,6 +1606,9 @@ export default function Backtest() {
                                                             <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100 text-xs whitespace-nowrap">{item.start_date} ~ {item.end_date}</td>
                                                             <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                                 {item.total_return.toFixed(2)}%
+                                                            </td>
+                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.invested_return != null ? (item.invested_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
+                                                                {item.invested_return != null ? `${item.invested_return.toFixed(2)}%` : '-'}
                                                             </td>
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100 whitespace-nowrap">{item.win_rate.toFixed(2)}%</td>
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.total_trades}</td>
@@ -1660,6 +1664,14 @@ export default function Backtest() {
                                                             </div>
                                                             <div className={`text-lg font-bold ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                                 {item.total_return.toFixed(2)}%
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                                                매수금 수익률
+                                                            </div>
+                                                            <div className={`text-lg font-bold ${item.invested_return != null ? (item.invested_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
+                                                                {item.invested_return != null ? `${item.invested_return.toFixed(2)}%` : '-'}
                                                             </div>
                                                         </div>
                                                         <div>
@@ -2101,6 +2113,10 @@ export default function Backtest() {
 // 결과 요약 컴포넌트
 function ResultSummary({ result, onExport }) {
     const portfolio = result.portfolio;
+    const totalInvested = Object.values(result.individual || {})
+        .reduce((sum, coin) => sum + (coin.initial_capital || 0), 0);
+    const profitLoss = portfolio.final_capital - portfolio.initial_capital;
+    const investedReturn = totalInvested > 0 ? (profitLoss / totalInvested * 100) : null;
 
     return (
         <div className="mt-6 space-y-4">
@@ -2111,11 +2127,17 @@ function ResultSummary({ result, onExport }) {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
                     <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">총 수익률</div>
                     <div className={`text-2xl font-bold ${portfolio.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {portfolio.total_return.toFixed(2)}%
+                    </div>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">매수금 수익률</div>
+                    <div className={`text-2xl font-bold ${investedReturn != null ? (investedReturn >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
+                        {investedReturn != null ? `${investedReturn.toFixed(2)}%` : '-'}
                     </div>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">

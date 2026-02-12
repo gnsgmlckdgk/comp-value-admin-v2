@@ -45,7 +45,7 @@ export function TransactionRow({
     // 행 배경색 결정
     const getRowBg = () => {
         if (isHit) {
-            return 'bg-amber-50/80 hover:bg-amber-100/80 dark:bg-amber-900/20 dark:hover:bg-amber-900/30';
+            return 'bg-amber-300 hover:bg-amber-200 dark:bg-amber-900/20 dark:hover:bg-amber-900/30';
         }
         if (isEven) {
             return 'bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-750';
@@ -56,7 +56,7 @@ export function TransactionRow({
     // sticky 셀 배경색 (행 배경과 동기화 - 불투명)
     const getStickyBg = () => {
         if (isHit) {
-            return 'bg-amber-50 group-hover:bg-amber-100 dark:bg-amber-950 dark:group-hover:bg-amber-900';
+            return 'bg-amber-300 group-hover:bg-amber-200 dark:bg-amber-950 dark:group-hover:bg-amber-900';
         }
         if (isEven) {
             return 'bg-white group-hover:bg-slate-50 dark:bg-slate-800 dark:group-hover:bg-slate-700';

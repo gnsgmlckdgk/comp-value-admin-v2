@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
-import { Check, Calendar, User } from 'lucide-react';
+import { Check, Calendar, User, Image, Paperclip } from 'lucide-react';
 
 const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, moveViewPage }, ref) => {
     const [selectedRows, setSelectedRows] = useState(new Set());
@@ -127,6 +127,12 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                         </svg>
                                     )}
                                     <span className="flex-1">{row.title}</span>
+                                    {/<img\s/i.test(row.content || '') && (
+                                        <Image size={16} className="mt-0.5 flex-shrink-0 text-emerald-500 dark:text-emerald-400" />
+                                    )}
+                                    {(row.attachments?.length > 0) && (
+                                        <Paperclip size={16} className="mt-0.5 flex-shrink-0 text-slate-400 dark:text-slate-500" />
+                                    )}
                                 </h3>
 
                                 {/* 작성자 및 날짜 */}

@@ -386,13 +386,19 @@ async function exportToExcel(items) {
                Number.isFinite(purchasePrice) && purchasePrice > cur &&
                Number.isFinite(grahamPassCount) && grahamPassCount >= 4));
 
+        // 투자 고려: 분석 지표 조건 충족, 매수적정가 미충족
+        const green = hasValidMetrics && !yellow && (is매출기반
+            ? (Number.isFinite(psr) && psr > 0 && psr < 2)
+            : (peg < 1.0 &&
+               Number.isFinite(grahamPassCount) && grahamPassCount >= 4));
+
         const closePct =
             Number.isFinite(cur) && Number.isFinite(future) && cur > future
                 ? Math.abs((cur - future) / cur)
                 : NaN;
 
         const sky =
-            hasValidMetrics && !yellow && (
+            hasValidMetrics && !yellow && !green && (
                 ((Number.isFinite(closePct) && closePct <= pctCloseThreshold) && peg < 1.0) ||
                 (cur < future && peg >= 1.0 && peg <= 1.5)
             );
@@ -408,9 +414,11 @@ async function exportToExcel(items) {
         });
 
         const fillYellow = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE68A' } }; // amber-200
+        const fillGreen = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBBF7D0' } }; // green-200
         const fillSky = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } }; // sky-100
 
         if (yellow) row.eachCell((c) => (c.fill = fillYellow));
+        else if (green) row.eachCell((c) => (c.fill = fillGreen));
         else if (sky) row.eachCell((c) => (c.fill = fillSky));
 
         row.getCell('현재가격').numFmt = '#,##0.00';

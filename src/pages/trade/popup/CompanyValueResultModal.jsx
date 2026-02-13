@@ -352,7 +352,7 @@ const CompanySummary = ({ data }) => {
  * 지표 배지들
  */
 const MetricBadges = ({ metrics, data }) => {
-    const { per, perAdj, peg, eps, isRecommended, psr, 매출기반평가, grahamGrade } = metrics;
+    const { per, perAdj, peg, eps, isRecommended, isConsider, psr, 매출기반평가, grahamGrade } = metrics;
 
     // 데이터에서 플래그 확인 (중첩 객체 포함)
     const getValDeep = (obj, keys) => {
@@ -385,6 +385,11 @@ const MetricBadges = ({ metrics, data }) => {
         return formatNumber(value, 2);
     };
 
+    // PSR/PEG 뱃지 하이라이트 색상 결정
+    const metricHighlight = isRecommended ? 'emerald' : isConsider ? 'amber' : false;
+    const metricLabel = isRecommended ? '(투자 권장)' : isConsider ? '(투자 고려)' : null;
+    const metricLabelColor = isRecommended ? 'text-emerald-600' : 'text-amber-600';
+
     return (
         <div className="flex gap-2 flex-wrap">
             {per !== null && (
@@ -393,10 +398,10 @@ const MetricBadges = ({ metrics, data }) => {
                 </Badge>
             )}
             {매출기반평가 && psr !== null && (
-                <Badge title="Price / Sales Ratio" highlighted={isRecommended}>
+                <Badge title="Price / Sales Ratio" highlighted={metricHighlight}>
                     PSR {formatNumber(psr, 2)}
-                    {isRecommended && (
-                        <span className="ml-1 text-[11px] text-emerald-600">(투자 권장)</span>
+                    {metricLabel && (
+                        <span className={`ml-1 text-[11px] ${metricLabelColor}`}>{metricLabel}</span>
                     )}
                 </Badge>
             )}
@@ -408,11 +413,11 @@ const MetricBadges = ({ metrics, data }) => {
             {peg !== null && (
                 <Badge
                     title="Price / Earnings to Growth (PEG)"
-                    highlighted={isRecommended}
+                    highlighted={metricHighlight}
                 >
                     PEG {formatPEG(peg)}
-                    {isRecommended && (
-                        <span className="ml-1 text-[11px] text-emerald-600">(투자 권장)</span>
+                    {metricLabel && (
+                        <span className={`ml-1 text-[11px] ${metricLabelColor}`}>{metricLabel}</span>
                     )}
                 </Badge>
             )}
@@ -436,17 +441,22 @@ const MetricBadges = ({ metrics, data }) => {
 /**
  * 배지 컴포넌트
  */
-const Badge = ({ children, title, highlighted = false }) => (
-    <span
-        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${highlighted
+const Badge = ({ children, title, highlighted = false }) => {
+    const colorClass = highlighted === 'amber'
+        ? 'text-amber-700 border-amber-300 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-900/30'
+        : highlighted
             ? 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-900/30'
-            : 'text-slate-700 bg-slate-50 dark:text-slate-300 dark:bg-slate-700 dark:border-slate-600'
-            }`}
-        title={title}
-    >
-        {children}
-    </span>
-);
+            : 'text-slate-700 bg-slate-50 dark:text-slate-300 dark:bg-slate-700 dark:border-slate-600';
+
+    return (
+        <span
+            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${colorClass}`}
+            title={title}
+        >
+            {children}
+        </span>
+    );
+};
 
 /**
  * 지표 설명 섹션 (PEG 또는 PSR)
@@ -477,15 +487,26 @@ const MetricExplanation = ({ onOpenGuide, 매출기반평가 }) => (
 const RecommendationBanner = ({ data }) => {
     const metrics = useCompanyMetrics(data);
 
-    if (!metrics.isRecommended) return null;
+    if (!metrics.isRecommended && !metrics.isConsider) return null;
 
+    if (metrics.isRecommended) {
+        const message = metrics.매출기반평가
+            ? '📈 조건 충족: PSR < 2 이고 매수적정가 > 현재가 — '
+            : '📈 조건 충족: PEG ≤ 1 이고 매수적정가 > 현재가 이고 그레이엄 ≥ 4/5 — ';
+        return (
+            <div className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                {message}<span className="font-semibold">투자 권장</span>
+            </div>
+        );
+    }
+
+    // 투자 고려
     const message = metrics.매출기반평가
-        ? '📈 조건 충족: PSR < 2 이고 매수적정가 > 현재가 — '
-        : '📈 조건 충족: PEG ≤ 1 이고 매수적정가 > 현재가 이고 그레이엄 ≥ 4/5 — ';
-
+        ? '🔍 조건 일부 충족: PSR < 2 (매수적정가 미충족) — '
+        : '🔍 조건 일부 충족: PEG ≤ 1 이고 그레이엄 ≥ 4/5 (매수적정가 미충족) — ';
     return (
-        <div className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-            {message}<span className="font-semibold">투자 권장</span>
+        <div className="mt-2 w-full rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+            {message}<span className="font-semibold">투자 고려</span>
         </div>
     );
 };
@@ -948,6 +969,44 @@ const GuideOverlay = ({ onClose, data }) => {
                             </>
                         )}
                     </div>
+
+                    {/* V7 투자 권장 조건 요약 */}
+                    <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 dark:border-emerald-800 dark:bg-emerald-900/20">
+                        <div className="text-[12px] font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
+                            📋 투자 권장 (V7)
+                        </div>
+                        {매출기반평가 ? (
+                            <ul className="text-[11px] text-emerald-700 dark:text-emerald-400 list-disc pl-4 space-y-0.5">
+                                <li>PSR {'<'} 2 (매출 대비 저평가)</li>
+                                <li>매수적정가 {'>'} 현재가</li>
+                            </ul>
+                        ) : (
+                            <ul className="text-[11px] text-emerald-700 dark:text-emerald-400 list-disc pl-4 space-y-0.5">
+                                <li>PEG ≤ 1 (성장 대비 저평가)</li>
+                                <li>매수적정가 {'>'} 현재가</li>
+                                <li>그레이엄 스크리닝 통과 ≥ 4/5</li>
+                            </ul>
+                        )}
+                    </div>
+
+                    {/* V7 투자 고려 조건 요약 */}
+                    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-900/20">
+                        <div className="text-[12px] font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                            📋 투자 고려 (V7)
+                        </div>
+                        {매출기반평가 ? (
+                            <ul className="text-[11px] text-amber-700 dark:text-amber-400 list-disc pl-4 space-y-0.5">
+                                <li>PSR {'<'} 2 (매출 대비 저평가)</li>
+                                <li className="text-amber-500 dark:text-amber-500">매수적정가 조건 미충족</li>
+                            </ul>
+                        ) : (
+                            <ul className="text-[11px] text-amber-700 dark:text-amber-400 list-disc pl-4 space-y-0.5">
+                                <li>PEG ≤ 1 (성장 대비 저평가)</li>
+                                <li>그레이엄 스크리닝 통과 ≥ 4/5</li>
+                                <li className="text-amber-500 dark:text-amber-500">매수적정가 조건 미충족</li>
+                            </ul>
+                        )}
+                    </div>
                 </div>
             </div>
         </>
@@ -1158,6 +1217,13 @@ const useCompanyMetrics = (data) => {
                 !Number.isNaN(priceNum) && !Number.isNaN(purchasePriceNum) && purchasePriceNum > priceNum &&
                 Number.isFinite(grahamPassCount) && grahamPassCount >= 4);
 
+        // 투자 고려: 분석 지표 조건 충족 but 매수적정가 미충족
+        const isConsider = !isRecommended && (매출기반평가
+            ? (Number.isFinite(psrNum) && psrNum > 0 && psrNum < 2)
+            : (Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
+               Number.isFinite(perNum) && perNum > 0 &&
+               Number.isFinite(grahamPassCount) && grahamPassCount >= 4));
+
         return {
             symbol,
             name,
@@ -1167,6 +1233,7 @@ const useCompanyMetrics = (data) => {
             psr: Number.isNaN(psrNum) ? null : psrNum,
             eps: Number.isNaN(toNum(eps)) ? null : toNum(eps),
             isRecommended,
+            isConsider,
             매출기반평가,
             grahamPassCount: Number.isFinite(grahamPassCount) ? grahamPassCount : 0,
             grahamGrade

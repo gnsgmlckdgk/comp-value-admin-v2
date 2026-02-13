@@ -77,6 +77,10 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
                         '주식코드': '',
                         '주당가치': '',
                         '현재가격': '',
+                        '매수적정가': '',
+                        '목표매도가': '',
+                        '그레이엄등급': '',
+                        '그레이엄통과수': 0,
                         '확인시간': formatDate(new Date()),
                         '비고': error || (data ? data.결과메시지 : ''),
                     });
@@ -85,6 +89,8 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
                     // 그 경우 비고에 결과메시지(실제 응답 메시지)를 기록
                     const origMessage = data.결과메시지 || '';
                     const actualName = data.기업명 || name;
+                    const details = Array.isArray(data.주당가치결과상세) ? data.주당가치결과상세 : [];
+                    const latestDetail = details.length > 0 ? details[details.length - 1] : {};
                     results.push({
                         '결과메시지': origMessage,
                         '기업명': actualName,
@@ -92,6 +98,10 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
                         '주식코드': data.주식코드 || '',
                         '주당가치': data.주당가치 || '',
                         '현재가격': data.현재가격 || '',
+                        '매수적정가': data.매수적정가 || '',
+                        '목표매도가': data.목표매도가 || '',
+                        '그레이엄등급': latestDetail.그레이엄_등급 || '',
+                        '그레이엄통과수': latestDetail.그레이엄_통과수 ?? 0,
                         '확인시간': data.확인시간 || formatDate(new Date()),
                         '비고': origMessage,
                     });
@@ -104,6 +114,10 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
                     '주식코드': '',
                     '주당가치': '',
                     '현재가격': '',
+                    '매수적정가': '',
+                    '목표매도가': '',
+                    '그레이엄등급': '',
+                    '그레이엄통과수': 0,
                     '확인시간': formatDate(new Date()),
                     '비고': '요청 중 오류 발생',
                 });
@@ -140,7 +154,9 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
             '주식코드',
             '주당가치',
             '현재가격',
+            '매수적정가',
             '비교',
+            '그레이엄등급',
             '확인시간',
             '비고',
         ];
@@ -169,24 +185,33 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
             { wch: 11 }, // 주식코드
             { wch: 12 }, // 주당가치
             { wch: 12 }, // 현재가격
+            { wch: 12 }, // 매수적정가
             { wch: 12 }, // 비교
+            { wch: 12 }, // 그레이엄등급
             { wch: 20 }, // 확인시간
             { wch: 20 }, // 비고
         ];
 
-        // 데이터 행에서 "주당가치"가 "현재가격"보다 높으면 해당 셀에 스타일 적용 (빨간색, 굵게)
-        const perValueColIndex = headerOrder.indexOf('주당가치');
+        // V7: 매수적정가 > 현재가격 && 그레이엄통과수 >= 4 → 행 전체 노란색 배경
+        const purchasePriceColIndex = headerOrder.indexOf('매수적정가');
         const currentPriceColIndex = headerOrder.indexOf('현재가격');
-        if (perValueColIndex !== -1 && currentPriceColIndex !== -1) {
-            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-                const perCellAddr = XLSX.utils.encode_cell({ r: R, c: perValueColIndex });
-                const curCellAddr = XLSX.utils.encode_cell({ r: R, c: currentPriceColIndex });
-                const perCell = worksheet[perCellAddr];
-                const curCell = worksheet[curCellAddr];
-                const perVal = perCell && perCell.v ? Number(perCell.v) : 0;
-                const curVal = curCell && curCell.v ? Number(curCell.v) : 0;
-                if (perVal > curVal && perCell) {
-                    perCell.s = { font: { bold: true, color: { rgb: 'FF0000' } } };
+        const grahamGradeColIndex = headerOrder.indexOf('그레이엄등급');
+        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+            const purchaseCellAddr = XLSX.utils.encode_cell({ r: R, c: purchasePriceColIndex });
+            const curCellAddr = XLSX.utils.encode_cell({ r: R, c: currentPriceColIndex });
+            const purchaseCell = worksheet[purchaseCellAddr];
+            const curCell = worksheet[curCellAddr];
+            const purchaseVal = purchaseCell && purchaseCell.v ? Number(purchaseCell.v) : 0;
+            const curVal = curCell && curCell.v ? Number(curCell.v) : 0;
+            const grahamPassCount = transformedResults[R - 1]?.['그레이엄통과수'] ?? 0;
+
+            if (purchaseVal > 0 && curVal > 0 && curVal < purchaseVal && grahamPassCount >= 4) {
+                // 행 전체 노란색 배경 + 굵게
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
+                    if (worksheet[cellAddr]) {
+                        worksheet[cellAddr].s = { font: { bold: true }, fill: { fgColor: { rgb: 'FFFF00' } } };
+                    }
                 }
             }
         }

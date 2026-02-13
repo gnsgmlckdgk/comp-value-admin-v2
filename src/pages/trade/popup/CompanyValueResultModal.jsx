@@ -309,6 +309,7 @@ const ModalContent = ({
             <CompanySummary data={compValueData} />
             <MetricExplanation onOpenGuide={onOpenGuide} 매출기반평가={metrics.매출기반평가} />
             <RecommendationBanner data={compValueData} />
+            <GrahamScreeningSection data={compValueData} />
             <HighlightCards data={compValueData} />
             <AIPredictionSection
                 data={compValueData}
@@ -351,7 +352,7 @@ const CompanySummary = ({ data }) => {
  * 지표 배지들
  */
 const MetricBadges = ({ metrics, data }) => {
-    const { per, perAdj, peg, eps, isRecommended, psr, 매출기반평가 } = metrics;
+    const { per, perAdj, peg, eps, isRecommended, psr, 매출기반평가, grahamGrade } = metrics;
 
     // 데이터에서 플래그 확인 (중첩 객체 포함)
     const getValDeep = (obj, keys) => {
@@ -420,6 +421,14 @@ const MetricBadges = ({ metrics, data }) => {
                     EPS(TTM) {formatNumber(eps, 2)}
                 </Badge>
             )}
+            {grahamGrade && grahamGrade !== 'N/A' && (
+                <Badge
+                    title="그레이엄 스크리닝 등급"
+                    highlighted={grahamGrade === '강력매수' || grahamGrade === '매수'}
+                >
+                    그레이엄 {grahamGrade}
+                </Badge>
+            )}
         </div>
     );
 };
@@ -471,12 +480,76 @@ const RecommendationBanner = ({ data }) => {
     if (!metrics.isRecommended) return null;
 
     const message = metrics.매출기반평가
-        ? '📈 조건 충족: PSR < 2 이고 적정가 > 현재가 — '
-        : '📈 조건 충족: PEG ≤ 1 이고 적정가 > 현재가 — ';
+        ? '📈 조건 충족: PSR < 2 이고 매수적정가 > 현재가 — '
+        : '📈 조건 충족: PEG ≤ 1 이고 매수적정가 > 현재가 이고 그레이엄 ≥ 4/5 — ';
 
     return (
         <div className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
             {message}<span className="font-semibold">투자 권장</span>
+        </div>
+    );
+};
+
+/**
+ * 그레이엄 스크리닝 결과 섹션
+ */
+const GrahamScreeningSection = ({ data }) => {
+    const getValDeep = (obj, keys) => {
+        if (!obj || typeof obj !== 'object') return undefined;
+        for (const key of keys) {
+            if (obj[key] != null) return obj[key];
+        }
+        const containers = ['상세', '상세정보', 'detail', 'details'];
+        for (const container of containers) {
+            if (obj[container] && typeof obj[container] === 'object') {
+                for (const key of keys) {
+                    if (obj[container][key] != null) return obj[container][key];
+                }
+            }
+        }
+        return undefined;
+    };
+
+    const grade = getValDeep(data, ['그레이엄_등급']);
+    const passCount = getValDeep(data, ['그레이엄_통과수']);
+    if (grade == null || grade === 'N/A') return null;
+
+    const perPass = getValDeep(data, ['그레이엄_PER통과']) === true;
+    const pbrPass = getValDeep(data, ['그레이엄_PBR통과']) === true;
+    const compositePass = getValDeep(data, ['그레이엄_복합통과']) === true;
+    const crPass = getValDeep(data, ['그레이엄_유동비율통과']) === true;
+    const profitPass = getValDeep(data, ['그레이엄_연속흑자통과']) === true;
+
+    const gradeColors = {
+        '강력매수': 'text-emerald-700 bg-emerald-50 border-emerald-300 dark:text-emerald-400 dark:bg-emerald-900/30 dark:border-emerald-800',
+        '매수': 'text-blue-700 bg-blue-50 border-blue-300 dark:text-blue-400 dark:bg-blue-900/30 dark:border-blue-800',
+        '관망': 'text-amber-700 bg-amber-50 border-amber-300 dark:text-amber-400 dark:bg-amber-900/30 dark:border-amber-800',
+        '위험': 'text-red-700 bg-red-50 border-red-300 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800',
+    };
+
+    const FilterBadge = ({ label, pass }) => (
+        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
+            pass
+                ? 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-900/30'
+                : 'text-red-700 border-red-300 bg-red-50 dark:text-red-400 dark:border-red-800 dark:bg-red-900/30'
+        }`}>
+            {pass ? '✅' : '❌'} {label}
+        </span>
+    );
+
+    return (
+        <div className={`mt-2 w-full rounded-md border px-3 py-2 ${gradeColors[grade] || gradeColors['관망']}`}>
+            <div className="flex items-center justify-between mb-2">
+                <span className="text-[13px] font-semibold">그레이엄 스크리닝 ({passCount}/5)</span>
+                <span className="text-[13px] font-bold">{grade}</span>
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+                <FilterBadge label="PER" pass={perPass} />
+                <FilterBadge label="PBR" pass={pbrPass} />
+                <FilterBadge label="PER×PBR" pass={compositePass} />
+                <FilterBadge label="유동비율" pass={crPass} />
+                <FilterBadge label="연속흑자" pass={profitPass} />
+            </div>
         </div>
     );
 };
@@ -601,7 +674,7 @@ const AIPredictionSection = ({ data, predictionData, predictionLoading, onFetchP
  * 하이라이트 카드들
  */
 const HighlightCards = ({ data }) => {
-    const { price, target, calculatedTarget, upside } = usePriceMetrics(data);
+    const { price, target, calculatedTarget, purchasePrice, sellTarget, upside } = usePriceMetrics(data);
 
     // 계산된 주당가치가 적정가와 다를 때만 표시
     const showCalculatedTarget = (() => {
@@ -612,7 +685,7 @@ const HighlightCards = ({ data }) => {
     })();
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <MetricCard label="현재가" value={formatUSD(price)} />
             <MetricCard
                 label="적정가"
@@ -621,9 +694,14 @@ const HighlightCards = ({ data }) => {
                 subLabel="계산된 주당가치"
             />
             <MetricCard
-                label="상승여력"
-                value={upside === null ? '-' : formatPercent(upside)}
-                valueClassName={upside !== null && upside < 0 ? 'text-red-600' : 'text-emerald-600'}
+                label="매수적정가"
+                value={formatUSD(purchasePrice)}
+                valueClassName="text-emerald-600 dark:text-emerald-400"
+            />
+            <MetricCard
+                label="목표매도가"
+                value={formatUSD(sellTarget)}
+                valueClassName="text-blue-600 dark:text-blue-400"
             />
         </div>
     );
@@ -1063,16 +1141,22 @@ const useCompanyMetrics = (data) => {
         // 매출기반평가 플래그 확인
         const 매출기반평가 = getValDeep(data, ['매출기반평가', 'revenueBased', 'isRevenueBased']) === true;
 
-        // 투자 권장 조건:
-        // 매출기반평가 = true: PSR < 2 AND 적정가 > 현재가
-        // 매출기반평가 = false: PEG <= 1 (양수) AND PER > 0 AND 성장률보정PER > 0 (있는 경우) AND 적정가 > 현재가
+        // V7: 매수적정가, 그레이엄 통과수
+        const purchasePrice = getValDeep(data, ['매수적정가', 'purchasePrice']);
+        const purchasePriceNum = toNum(purchasePrice);
+        const grahamPassCount = toNum(getValDeep(data, ['그레이엄_통과수']));
+        const grahamGrade = getValDeep(data, ['그레이엄_등급']);
+
+        // 투자 권장 조건 (V7 강화):
+        // 매출기반평가 = true: PSR < 2 AND 매수적정가 > 현재가
+        // 매출기반평가 = false: PEG <= 1 AND PER > 0 AND 매수적정가 > 현재가 AND 그레이엄 통과수 >= 4
         const isRecommended = 매출기반평가
             ? (Number.isFinite(psrNum) && psrNum > 0 && psrNum < 2 &&
-                !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum)
+                !Number.isNaN(priceNum) && !Number.isNaN(purchasePriceNum) && purchasePriceNum > priceNum)
             : (Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
                 Number.isFinite(perNum) && perNum > 0 &&
-                (!Number.isFinite(perAdjNum) || perAdjNum > 0) &&
-                !Number.isNaN(priceNum) && !Number.isNaN(targetNum) && targetNum > priceNum);
+                !Number.isNaN(priceNum) && !Number.isNaN(purchasePriceNum) && purchasePriceNum > priceNum &&
+                Number.isFinite(grahamPassCount) && grahamPassCount >= 4);
 
         return {
             symbol,
@@ -1083,7 +1167,9 @@ const useCompanyMetrics = (data) => {
             psr: Number.isNaN(psrNum) ? null : psrNum,
             eps: Number.isNaN(toNum(eps)) ? null : toNum(eps),
             isRecommended,
-            매출기반평가
+            매출기반평가,
+            grahamPassCount: Number.isFinite(grahamPassCount) ? grahamPassCount : 0,
+            grahamGrade
         };
     }, [data]);
 };
@@ -1127,6 +1213,8 @@ const usePriceMetrics = (data) => {
         const price = getValDeep(data, ['currentPrice', 'price', 'close', '현재가격', '현재가', '종가']);
         const target = getValDeep(data, ['fairValue', 'perValue', 'estimatedValue', 'targetPrice', '적정가', '주당가치', '적정가(추정)']);
         const calculatedTarget = getValDeep(data, ['계산된주당가치', 'calculatedPerShareValue', 'calculatedFairValue']);
+        const purchasePrice = getValDeep(data, ['매수적정가', 'purchasePrice']);
+        const sellTarget = getValDeep(data, ['목표매도가', 'sellTarget']);
 
         const priceNum = toNum(price);
         const targetNum = toNum(target);
@@ -1139,6 +1227,8 @@ const usePriceMetrics = (data) => {
             price,
             target,
             calculatedTarget: Number.isNaN(calculatedTargetNum) ? null : calculatedTargetNum,
+            purchasePrice,
+            sellTarget,
             upside
         };
     }, [data]);

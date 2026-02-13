@@ -97,6 +97,16 @@ const RESULT_DETAIL_LABELS = {
     'peg': 'PEG',
     'psr': 'PSR',
     'calFairValue': '계산된 주당가치',
+    '급락종목할인': '급락종목 할인',
+    '분기적자전환': '분기 적자전환',
+    'PBR': 'PBR',
+    '그레이엄_PER통과': '그레이엄 PER',
+    '그레이엄_PBR통과': '그레이엄 PBR',
+    '그레이엄_복합통과': '그레이엄 PER×PBR',
+    '그레이엄_유동비율통과': '그레이엄 유동비율',
+    '그레이엄_연속흑자통과': '그레이엄 연속흑자',
+    '그레이엄_통과수': '그레이엄 통과수',
+    '그레이엄_등급': '그레이엄 등급',
 };
 
 // resultDetail 값 포맷팅
@@ -400,6 +410,16 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                             label="적정가치"
                             value={data.fairValue ? `$${data.fairValue}` : '-'}
                             subValue={(() => {
+                                const parts = [];
+                                if (data.resultDetail?.매수적정가 || data['매수적정가']) {
+                                    const bp = data.resultDetail?.매수적정가 || data['매수적정가'];
+                                    if (bp) parts.push(`매수: $${bp}`);
+                                }
+                                if (data.resultDetail?.목표매도가 || data['목표매도가']) {
+                                    const st = data.resultDetail?.목표매도가 || data['목표매도가'];
+                                    if (st) parts.push(`매도: $${st}`);
+                                }
+                                if (parts.length > 0) return parts.join(' / ');
                                 const calculated = data.calFairValue;
                                 if (calculated != null) {
                                     const calcNum = parseFloat(calculated);
@@ -410,7 +430,7 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                                 }
                                 return null;
                             })()}
-                            subLabel="계산된 주당가치"
+                            subLabel={data.resultDetail?.매수적정가 || data['매수적정가'] ? '매수/매도 목표' : '계산된 주당가치'}
                         />
                     </div>
 
@@ -418,6 +438,21 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                     <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
                         <div className="text-sm font-medium text-blue-800 dark:text-blue-200">{data.recommendation || '-'}</div>
                     </div>
+
+                    {/* 그레이엄 등급 배지 */}
+                    {data.resultDetail?.그레이엄_등급 && data.resultDetail.그레이엄_등급 !== 'N/A' && (
+                        <div className="mb-4 flex items-center gap-2">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">그레이엄:</span>
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${
+                                data.resultDetail.그레이엄_등급 === '강력매수' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                                data.resultDetail.그레이엄_등급 === '매수' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                data.resultDetail.그레이엄_등급 === '관망' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}>
+                                {data.resultDetail.그레이엄_등급} ({data.resultDetail.그레이엄_통과수}/5)
+                            </span>
+                        </div>
+                    )}
 
                     {/* 가격 정보 */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">

@@ -117,6 +117,40 @@ export const send = async (url, params, method = "GET") => {
 };
 
 /**
+ * Multipart 통신 (FormData 전송, 파일 업로드 등)
+ * @param {string} url
+ * @param {FormData} formData
+ * @param {string} [method="POST"] POST 또는 PUT
+ * @returns {Promise<{ data: any, error: string|null }>}
+ */
+export const sendMultipart = async (url, formData, method = 'POST') => {
+    url = getUrl(url);
+    try {
+        const config = { withCredentials: true };
+        let response;
+        if (method === 'PUT') {
+            response = await axios.put(url, formData, config);
+        } else {
+            response = await axios.post(url, formData, config);
+        }
+
+        const responseData = response.data;
+        if (responseData && responseData.success === false) {
+            return { data: null, error: responseData.message || '요청 처리 중 오류가 발생했습니다.' };
+        }
+
+        const sessionTTL = responseData?.response?.sessionTTL;
+        window.dispatchEvent(new CustomEvent('session:activity', {
+            detail: { sessionTTL }
+        }));
+
+        return { data: response.data, error: null };
+    } catch (error) {
+        return handleError(error);
+    }
+};
+
+/**
  * 비동기 통신 (Promise 체인 방식)
  * @param {string} url 
  * @param {object} params 

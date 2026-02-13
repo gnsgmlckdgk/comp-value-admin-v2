@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import Update001 from '@/component/feature/board/Update001';
-import { send } from '@/util/ClientUtil';
+import { send, sendMultipart } from '@/util/ClientUtil';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useAuth } from '@/context/AuthContext';
 
@@ -66,12 +66,22 @@ function Update() {
         }
     };
 
-    const updateData = async (title, content, notice = false, secret = false) => {
-        const sendUrl = `/dart/freeboard/modi`;
+    const updateData = async (title, content, notice = false, secret = false, newFiles = [], deletedAttachmentIds = []) => {
+        const formData = new FormData();
+        formData.append('board', new Blob([JSON.stringify({
+            ...boardData, title, content, notice, secret
+        })], { type: 'application/json' }));
 
-        const updateBoardData = { ...boardData, title, content, notice, secret };
+        if (newFiles.length > 0) {
+            newFiles.forEach(f => formData.append('files', f));
+        }
 
-        const { data, error } = await send(sendUrl, updateBoardData, 'PUT');
+        if (deletedAttachmentIds.length > 0) {
+            formData.append('deleteAttachmentIds',
+                new Blob([JSON.stringify(deletedAttachmentIds)], { type: 'application/json' }));
+        }
+
+        const { data, error } = await sendMultipart('/dart/freeboard/modi', formData, 'PUT');
 
         if (error) {
             openAlert(error || '수정 중 문제가 발생했습니다.\n잠시 후 다시 시도해 주세요.');

@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import Register001 from '@/component/feature/board/Register001';
 
-import { send } from '@/util/ClientUtil';
+import { sendMultipart } from '@/util/ClientUtil';
 import { useAuth } from '@/context/AuthContext';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useState } from 'react';
@@ -48,19 +48,21 @@ const Register = () => {
         if (onConfirm) onConfirm();
     };
 
-    const onRegister = async (title, content, notice = false, secret = false) => {
-        const sendUrl = `/dart/freeboard/regi`;
-        const { data, error } = await send(
-            sendUrl,
-            {
-                title,
-                author: currentAuthor,
-                content,
-                notice,
-                secret,
-            },
-            'POST'
-        );
+    const onRegister = async (title, content, notice = false, secret = false, files = []) => {
+        const formData = new FormData();
+        formData.append('board', new Blob([JSON.stringify({
+            title,
+            author: currentAuthor,
+            content,
+            notice,
+            secret,
+        })], { type: 'application/json' }));
+
+        if (files.length > 0) {
+            files.forEach(f => formData.append('files', f));
+        }
+
+        const { data, error } = await sendMultipart('/dart/freeboard/regi', formData, 'POST');
 
         if (error) {
             openAlert(error || '게시글 등록중 문제가 발생했습니다.\n잠시 후 다시 시도해 주세요.');

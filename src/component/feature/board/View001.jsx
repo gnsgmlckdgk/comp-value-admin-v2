@@ -251,6 +251,44 @@ function View001({
                     </div>
                 </div>
 
+                {/* 첨부파일 */}
+                {boardData.attachments && boardData.attachments.length > 0 && (
+                    <div className="border-t border-slate-200 px-3 sm:px-4 py-4 dark:border-slate-700">
+                        <div className="flex items-center gap-1.5 mb-3">
+                            <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                첨부파일 ({boardData.attachments.length})
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            {boardData.attachments.map((att) => (
+                                <a
+                                    key={att.id}
+                                    href={`/dart/freeboard/attachment/${att.id}/download`}
+                                    className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg hover:bg-slate-100 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors group"
+                                >
+                                    <svg className="w-4 h-4 flex-shrink-0 text-slate-400 group-hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    <span className="text-sm text-slate-700 group-hover:text-blue-600 dark:text-slate-300 dark:group-hover:text-blue-400 truncate">
+                                        {att.originalFilename}
+                                    </span>
+                                    <span className="text-xs text-slate-500 flex-shrink-0 dark:text-slate-400">
+                                        ({att.fileSize < 1024 ? att.fileSize + ' B'
+                                            : att.fileSize < 1024 * 1024 ? Math.round(att.fileSize / 1024 * 100) / 100 + ' KB'
+                                            : Math.round(att.fileSize / (1024 * 1024) * 100) / 100 + ' MB'})
+                                    </span>
+                                    <svg className="w-4 h-4 flex-shrink-0 text-slate-400 group-hover:text-blue-500 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* 버튼들 */}
                 <div className="border-t border-slate-200 px-3 sm:px-4 py-4 dark:border-slate-700">
                     <div className="flex justify-between items-center gap-2">

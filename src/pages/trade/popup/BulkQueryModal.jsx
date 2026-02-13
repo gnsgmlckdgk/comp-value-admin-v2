@@ -367,15 +367,24 @@ async function exportToExcel(items) {
         const perAdj = it.json?.상세정보?.성장률보정PER ? toNum(it.json.상세정보.성장률보정PER) :
             it.json?.성장률보정PER ? toNum(it.json.성장률보정PER) : NaN;
 
+        // V7 투자 권장 조건 필드 추출
+        const purchasePrice = toNum(it.json?.매수적정가);
+        const grahamPassCount = toNum(it.json?.상세정보?.그레이엄_통과수);
+        const is매출기반 = it.json?.상세정보?.매출기반평가 === true;
+        const psr = toNum(it.json?.상세정보?.PSR);
+
         // 하이라이트 조건: PEG, PER, 성장률보정PER 중 하나라도 음수이면 제외
         const hasValidMetrics =
             Number.isFinite(peg) && peg > 0 &&
             (!Number.isFinite(per) || per > 0) &&
             (!Number.isFinite(perAdj) || perAdj > 0);
 
-        const yellow =
-            hasValidMetrics &&
-            Number.isFinite(cur) && Number.isFinite(future) && cur < future && peg < 1.0;
+        const yellow = hasValidMetrics && (is매출기반
+            ? (Number.isFinite(psr) && psr > 0 && psr < 2 &&
+               Number.isFinite(purchasePrice) && purchasePrice > cur)
+            : (peg < 1.0 &&
+               Number.isFinite(purchasePrice) && purchasePrice > cur &&
+               Number.isFinite(grahamPassCount) && grahamPassCount >= 4));
 
         const closePct =
             Number.isFinite(cur) && Number.isFinite(future) && cur > future

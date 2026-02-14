@@ -941,7 +941,7 @@ export default function CointradeDashboard() {
             </div>
 
             {/* 상단 카드 영역 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
                 {/* 스케줄러 상태 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">스케줄러 상태</div>
@@ -1006,6 +1006,22 @@ export default function CointradeDashboard() {
                             </div>
                         );
                     })()}
+                </div>
+
+                {/* KRW 잔액 + 총 평가금액 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">잔액 + 총 평가</div>
+                    <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
+                        {renderFormattedPrice(Math.floor(krwBalance + status.totalValuation), '원')}
+                    </div>
+                </div>
+
+                {/* KRW 잔액 + 총 투자금액 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">잔액 + 총 투자</div>
+                    <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
+                        {renderFormattedPrice(Math.floor(krwBalance + status.totalInvestment), '원')}
+                    </div>
                 </div>
 
                 {/* 총 수익률 */}

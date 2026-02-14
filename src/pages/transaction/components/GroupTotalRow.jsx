@@ -1,18 +1,18 @@
-import { Td, CombinedPriceCell } from './TableCells';
-import { toNum, fmtNum, fmtUsd } from '../utils/formatters';
+import { Td } from './TableCells';
+import { fmtNum, fmtUsd } from '../utils/formatters';
 
 /**
- * 그룹 합계 행
+ * 그룹 합계 행 (8컬럼)
  */
-export function GroupTotalRow({ data, fx, onSell, saving, onRowClick }) {
-    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, targetAvgUSD, buyExchangeRateAtTrade, hasNextGroupDivider, companyName, groupRows } = data;
+export function GroupTotalRow({ data, fx, onRowClick }) {
+    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, buyExchangeRateAtTrade, hasNextGroupDivider, companyName, groupRows, targetAvgUSD } = data;
 
-    // 행 더블클릭 핸들러
-    const handleRowDoubleClick = (e) => {
-        // 버튼 클릭은 무시
-        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+    const hasTarget = targetAvgUSD > 0 && buyAvgUSD > 0 && targetAvgUSD > buyAvgUSD;
+    const progress = hasTarget
+        ? Math.max(0, ((curUSD - buyAvgUSD) / (targetAvgUSD - buyAvgUSD)) * 100)
+        : 0;
 
-        // 상세정보 모달 열기
+    const handleRowClick = () => {
         if (onRowClick) {
             onRowClick({
                 symbol,
@@ -20,181 +20,154 @@ export function GroupTotalRow({ data, fx, onSell, saving, onRowClick }) {
                 buyPrice: buyAvgUSD,
                 totalQty: qtySum,
                 currentPrice: curUSD,
-                targetPrice: targetAvgUSD,
+                targetPrice: data.targetAvgUSD,
                 buyExchangeRateAtTrade: buyExchangeRateAtTrade,
                 __type: 'groupTotal',
+                groupRows,
             });
         }
     };
 
-    // 가격차 렌더링 헬퍼
-    const renderDiff = (d, baseValue) => {
-        const pos = d >= 0;
-        const cls = pos
-            ? 'text-rose-600 dark:text-rose-400'
-            : 'text-blue-600 dark:text-blue-400';
-        const dKrw = fx ? Math.round(d * fx) : 0;
-        const pct = baseValue > 0 ? (d / baseValue) * 100 : 0;
-
-        return (
-            <div className="leading-tight text-center">
-                <div className={`${cls} font-bold`}>
-                    {(pos ? '+' : '') + '$ ' + fmtUsd(d)}
-                </div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {dKrw ? `₩ ${dKrw.toLocaleString()}` : ''}
-                </div>
-                <div className={`${cls} text-[12px] font-semibold`}>
-                    {(pos ? '+' : '') + pct.toFixed(2)}%
-                </div>
-            </div>
-        );
-    };
+    const pct = buySumUSD > 0 ? (diffUSD / buySumUSD) * 100 : 0;
+    const pos = diffUSD >= 0;
+    const pnlCls = pos
+        ? 'text-rose-600 dark:text-rose-400'
+        : 'text-blue-600 dark:text-blue-400';
 
     return (
         <tr
             className={`
-                font-semibold border-t-0 transition-colors cursor-pointer
+                group font-semibold border-t-0 transition-colors cursor-pointer
                 ${hasNextGroupDivider ? 'border-b-0' : 'border-b-2 border-slate-300 dark:border-slate-600'}
                 bg-gradient-to-r from-indigo-50 via-slate-50 to-indigo-50
                 hover:from-indigo-100 hover:via-slate-100 hover:to-indigo-100
-                dark:from-indigo-900/20 dark:via-slate-800 dark:to-indigo-900/20
-                dark:hover:from-indigo-900/30 dark:hover:via-slate-700 dark:hover:to-indigo-900/30
+                dark:bg-none dark:bg-[#222a49] dark:hover:bg-[#2b3355]
             `}
-            onDoubleClick={handleRowDoubleClick}
-            title="더블클릭하여 상세정보 보기"
+            onClick={handleRowClick}
+            title="클릭하여 상세정보 보기"
         >
-            {/* No */}
-            <Td className="sticky left-0 z-10 bg-indigo-50 dark:bg-slate-800" />
-
-            {/* 티커 합계 */}
-            <Td className="sticky left-12 z-10 bg-indigo-50 dark:bg-slate-800">
-                <div className="flex items-center gap-1.5">
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-800/50">
-                        <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                    </span>
-                    <span className="font-bold text-slate-800 dark:text-slate-100">{symbol}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">합계</span>
+            {/* 종목 */}
+            <Td className="sticky left-0 z-10 bg-indigo-50 group-hover:bg-indigo-100 dark:bg-[#222a49] dark:group-hover:bg-[#2b3355]">
+                <div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-800/50">
+                            <svg className="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </span>
+                        <span className="font-bold text-slate-800 dark:text-slate-100">{symbol}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">합계</span>
+                    </div>
+                    {hasTarget && (
+                        <div className="mt-1 flex items-center gap-1.5">
+                            <div className="flex-1 h-1 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all ${
+                                        progress >= 100
+                                            ? 'bg-amber-400 dark:bg-amber-400'
+                                            : progress >= 75
+                                                ? 'bg-yellow-400 dark:bg-yellow-400'
+                                                : progress >= 40
+                                                    ? 'bg-emerald-400 dark:bg-emerald-400'
+                                                    : 'bg-sky-400 dark:bg-sky-400'
+                                    }`}
+                                    style={{ width: `${Math.min(progress, 100)}%` }}
+                                />
+                            </div>
+                            <span className={`text-[10px] font-semibold tabular-nums whitespace-nowrap ${
+                                progress >= 100
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-slate-500 dark:text-slate-400'
+                            }`}>
+                                {Math.round(progress)}%
+                            </span>
+                        </div>
+                    )}
                 </div>
             </Td>
 
-            {/* 기업명 */}
-            <Td />
-
-            {/* 매수일자 */}
-            <Td />
-
-            {/* 평균 매수가격 */}
+            {/* 평균 매수가($) */}
             <Td>
-                <div className="h-9 flex items-center text-slate-700 dark:text-slate-200">
-                    {buyAvgUSD ? `$ ${fmtUsd(buyAvgUSD)}` : ''}
+                <div className="leading-tight text-right">
+                    <div className="text-slate-700 dark:text-slate-200 tabular-nums">
+                        {buyAvgUSD ? `$ ${fmtUsd(buyAvgUSD)}` : ''}
+                    </div>
+                    {buyAvgUSD && fx ? (
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+                            ₩ {Math.round(buyAvgUSD * fx).toLocaleString()}
+                        </div>
+                    ) : null}
                 </div>
             </Td>
 
-            {/* 평균 매수가격 (원화) */}
+            {/* 현재가($) */}
             <Td>
-                <div className="h-9 flex items-center justify-end text-slate-600 dark:text-slate-300">
-                    {buyAvgUSD && (buyExchangeRateAtTrade || fx) ? `₩ ${Math.round(buyAvgUSD * (buyExchangeRateAtTrade || fx)).toLocaleString()}` : ''}
+                <div className="leading-tight text-right">
+                    <div className="text-slate-700 dark:text-slate-200 tabular-nums">
+                        {curUSD ? `$ ${fmtUsd(curUSD)}` : ''}
+                    </div>
+                    {curUSD && fx ? (
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+                            ₩ {Math.round(curUSD * fx).toLocaleString()}
+                        </div>
+                    ) : null}
                 </div>
-            </Td>
-
-            {/* 매수당시환율 평균 */}
-            <Td className="text-center text-slate-700 dark:text-slate-300 text-sm">
-                {buyExchangeRateAtTrade ? `₩${buyExchangeRateAtTrade.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
             </Td>
 
             {/* 수량 합계 */}
             <Td>
-                <div className="h-9 flex items-center font-bold text-slate-800 dark:text-slate-100">
+                <div className="h-9 flex items-center justify-end font-bold text-slate-800 dark:text-slate-100 tabular-nums">
                     {qtySum ? fmtNum(qtySum, 0) : ''}
                 </div>
             </Td>
 
-            {/* 총매수금액 */}
-            <CombinedPriceCell usdValue={buySumUSD} fx={buyExchangeRateAtTrade || fx} bold />
-
-            {/* 총현재가치 */}
-            <CombinedPriceCell usdValue={curSumUSD} fx={fx} bold />
-
-            {/* 현재가격 */}
-            <CombinedPriceCell usdValue={curUSD} fx={fx} />
-
-            {/* 매도목표가 (평균) */}
+            {/* 총매수금액($) */}
             <Td>
-                <div className="leading-tight text-center">
-                    <div className="text-slate-700 dark:text-slate-200">
-                        {targetAvgUSD ? `$ ${fmtUsd(targetAvgUSD)}` : ''}
+                <div className="leading-tight text-right">
+                    <div className="text-slate-700 dark:text-slate-200 tabular-nums font-bold">
+                        {buySumUSD ? `$ ${fmtUsd(buySumUSD)}` : ''}
                     </div>
-                    {(() => {
-                        const cur = toNum(curUSD);
-                        const tgt = toNum(targetAvgUSD);
-                        if (!(cur || tgt)) return null;
-                        const d = cur - tgt;
-                        const pos = d >= 0;
-                        const cls = pos
-                            ? 'text-rose-600 dark:text-rose-400'
-                            : 'text-blue-600 dark:text-blue-400';
-                        return (
-                            <div className={`${cls} text-[11px]`}>
-                                {`(${pos ? '+' : ''}$ ${fmtUsd(d)})`}
-                            </div>
-                        );
-                    })()}
+                    {buySumUSD && fx ? (
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+                            ₩ {Math.round(buySumUSD * fx).toLocaleString()}
+                        </div>
+                    ) : null}
                 </div>
             </Td>
 
-            {/* 단일가격차 */}
+            {/* 총평가금액($) */}
             <Td>
-                {(() => {
-                    const qty = toNum(qtySum);
-                    const cur = toNum(curUSD);
-                    const buyAvg = qty > 0 ? toNum(buySumUSD) / qty : 0;
-                    const d = cur - buyAvg;
-                    if (!(cur || buyAvg)) return null;
-                    return renderDiff(d, buyAvg);
-                })()}
-            </Td>
-
-            {/* 총 가격차 */}
-            <Td>
-                {(() => {
-                    const d = toNum(diffUSD);
-                    return renderDiff(d, toNum(buySumUSD));
-                })()}
-            </Td>
-
-            {/* 비고 */}
-            <Td />
-
-            {/* 작업 */}
-            <Td>
-                {onSell && (
-                    <div className="flex justify-center">
-                        <button
-                            onClick={() => onSell({
-                                symbol,
-                                companyName,
-                                buyPrice: buyAvgUSD,
-                                totalQty: qtySum,
-                                currentPrice: curUSD,
-                                buyExchangeRateAtTrade: buyExchangeRateAtTrade,
-                                groupRows,
-                            })}
-                            className="px-3 py-1.5 rounded-md text-xs font-medium transition-all
-                                bg-blue-100 text-blue-700 border border-blue-200
-                                hover:bg-blue-200 hover:border-blue-300
-                                dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700
-                                dark:hover:bg-blue-900/60 dark:hover:border-blue-600
-                                disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={saving}
-                        >
-                            매도
-                        </button>
+                <div className="leading-tight text-right">
+                    <div className="text-slate-700 dark:text-slate-200 tabular-nums font-bold">
+                        {curSumUSD ? `$ ${fmtUsd(curSumUSD)}` : ''}
                     </div>
-                )}
+                    {curSumUSD && fx ? (
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+                            ₩ {Math.round(curSumUSD * fx).toLocaleString()}
+                        </div>
+                    ) : null}
+                </div>
             </Td>
+
+            {/* 손익 */}
+            <td className="px-3 py-2.5 align-middle">
+                <div className="leading-tight text-right">
+                    <div className={`${pnlCls} font-bold tabular-nums`}>
+                        {(pos ? '+' : '') + '$ ' + fmtUsd(diffUSD)}
+                    </div>
+                    {fx ? (
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                            {(pos ? '+' : '') + '₩ ' + Math.round(diffUSD * fx).toLocaleString()}
+                        </div>
+                    ) : null}
+                    <div className={`${pnlCls} text-[12px] font-semibold tabular-nums`}>
+                        {(pos ? '+' : '') + pct.toFixed(2)}%
+                    </div>
+                </div>
+            </td>
+
+            {/* 매수일자 (비워둠) */}
+            <Td />
         </tr>
     );
 }

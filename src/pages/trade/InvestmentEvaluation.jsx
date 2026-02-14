@@ -113,29 +113,6 @@ const TABLE_COLUMNS = [
         },
     },
     {
-        key: 'grahamGrade',
-        label: '그레이엄',
-        width: '90px',
-        sortable: true,
-        hasDropdown: true,
-        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
-        render: (value) => {
-            if (!value || value === 'N/A') return '-';
-            const colorMap = {
-                '강력매수': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
-                '매수': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-                '관망': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-                '위험': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-            };
-            return (
-                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${colorMap[value] || 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>
-                    {value}
-                </span>
-            );
-        },
-    },
-    {
         key: 'sector',
         label: '섹터',
         width: '150px',

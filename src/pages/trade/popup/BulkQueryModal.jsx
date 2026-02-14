@@ -386,8 +386,9 @@ async function exportToExcel(items) {
                Number.isFinite(purchasePrice) && purchasePrice > cur &&
                Number.isFinite(grahamPassCount) && grahamPassCount >= 4));
 
-        // 투자 고려: 분석 지표 조건 충족, 매수적정가 미충족
-        const green = hasValidMetrics && !yellow && (is매출기반
+        // 투자 고려: 분석 지표 조건 충족 + 적정가 > 현재가 (상승여력 있음), 매수적정가 미충족
+        const hasUpside = Number.isFinite(future) && Number.isFinite(cur) && future > cur;
+        const green = hasValidMetrics && !yellow && hasUpside && (is매출기반
             ? (Number.isFinite(psr) && psr > 0 && psr < 2)
             : (peg < 1.0 &&
                Number.isFinite(grahamPassCount) && grahamPassCount >= 4));

@@ -1217,8 +1217,9 @@ const useCompanyMetrics = (data) => {
                 !Number.isNaN(priceNum) && !Number.isNaN(purchasePriceNum) && purchasePriceNum > priceNum &&
                 Number.isFinite(grahamPassCount) && grahamPassCount >= 4);
 
-        // 투자 고려: 분석 지표 조건 충족 but 매수적정가 미충족
-        const isConsider = !isRecommended && (매출기반평가
+        // 투자 고려: 분석 지표 조건 충족 + 적정가 > 현재가 (상승여력 있음) but 매수적정가 미충족
+        const hasUpside = !Number.isNaN(targetNum) && !Number.isNaN(priceNum) && targetNum > priceNum;
+        const isConsider = !isRecommended && hasUpside && (매출기반평가
             ? (Number.isFinite(psrNum) && psrNum > 0 && psrNum < 2)
             : (Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
                Number.isFinite(perNum) && perNum > 0 &&

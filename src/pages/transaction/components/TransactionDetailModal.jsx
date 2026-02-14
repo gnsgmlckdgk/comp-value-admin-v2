@@ -118,6 +118,9 @@ export default function TransactionDetailModal({
     fx,
     onSave,
     onAnalyze,
+    onSell,
+    onRemove,
+    onOpenAlert,
     saving,
     isGroupRow = false, // 그룹 합계 행 여부
 }) {
@@ -338,18 +341,33 @@ export default function TransactionDetailModal({
                             <div className="font-semibold text-slate-900 dark:text-white">
                                 ${buyPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </div>
+                            {buyPriceRate > 0 && buyPrice > 0 && (
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    ₩{Math.round(buyPrice * buyPriceRate).toLocaleString()}
+                                </div>
+                            )}
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">현재가</div>
                             <div className={`font-semibold ${isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                 ${curPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </div>
+                            {fxRate > 0 && curPrice > 0 && (
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    ₩{Math.round(curPrice * fxRate).toLocaleString()}
+                                </div>
+                            )}
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">목표가</div>
                             <div className={`font-semibold ${isTargetHit ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
                                 {targetPrice > 0 ? `$${targetPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
                             </div>
+                            {fxRate > 0 && targetPrice > 0 && (
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    ₩{Math.round(targetPrice * fxRate).toLocaleString()}
+                                </div>
+                            )}
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">보유수량</div>
@@ -570,28 +588,60 @@ export default function TransactionDetailModal({
                     >
                         닫기
                     </button>
-                    <button
-                        onClick={handleAnalyzeClick}
-                        disabled={!formData.symbol || isAnalyzing}
-                        className="px-5 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {isAnalyzing ? (
-                            <>
-                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                분석 중...
-                            </>
-                        ) : (
-                            <>
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                </svg>
-                                기업가치 분석
-                            </>
+                    <div className="flex items-center gap-2">
+                        {!isGroupRow && onRemove && (
+                            <button
+                                onClick={() => {
+                                    if (onOpenAlert) {
+                                        onOpenAlert('정말 삭제하시겠습니까?', async () => {
+                                            const success = await onRemove(row.id);
+                                            if (success) {
+                                                onClose();
+                                            }
+                                        });
+                                    }
+                                }}
+                                disabled={saving}
+                                className="px-4 py-2 text-sm border border-rose-300 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors
+                                    dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-900/30
+                                    disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                삭제
+                            </button>
                         )}
-                    </button>
+                        {onSell && (
+                            <button
+                                onClick={() => onSell(row)}
+                                disabled={saving}
+                                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors
+                                    disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                                매도
+                            </button>
+                        )}
+                        <button
+                            onClick={handleAnalyzeClick}
+                            disabled={!formData.symbol || isAnalyzing}
+                            className="px-5 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {isAnalyzing ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    분석 중...
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    기업가치 분석
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

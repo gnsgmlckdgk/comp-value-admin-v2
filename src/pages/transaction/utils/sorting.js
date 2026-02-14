@@ -92,15 +92,35 @@ function compareGroupValues(groupA, groupB, columnIndex, direction) {
     let aVal, bVal;
 
     switch (columnIndex) {
-        case 1: // 티커 - 첫 번째 행 기준
+        case 0: // 종목 - 첫 번째 행 기준
             aVal = String(groupA[0].symbol || '').toUpperCase();
             bVal = String(groupB[0].symbol || '').toUpperCase();
             break;
-        case 2: // 기업명 - 첫 번째 행 기준
-            aVal = String(groupA[0].companyName || '');
-            bVal = String(groupB[0].companyName || '');
+        case 1: // 매수가($) - 평균
+            aVal = groupA.reduce((sum, row) => sum + toNum(row.buyPrice), 0) / groupA.length;
+            bVal = groupB.reduce((sum, row) => sum + toNum(row.buyPrice), 0) / groupB.length;
             break;
-        case 3: // 매수일자 - 가장 빠른 날짜
+        case 2: // 현재가($) - 평균
+            aVal = groupA.reduce((sum, row) => sum + toNum(row.currentPrice), 0) / groupA.length;
+            bVal = groupB.reduce((sum, row) => sum + toNum(row.currentPrice), 0) / groupB.length;
+            break;
+        case 3: // 수량 - 합계
+            aVal = groupA.reduce((sum, row) => sum + toNum(row.totalBuyAmount), 0);
+            bVal = groupB.reduce((sum, row) => sum + toNum(row.totalBuyAmount), 0);
+            break;
+        case 4: // 매수금액($) - 합계
+            aVal = groupA.reduce((sum, row) => sum + toNum(row.buyPrice) * toNum(row.totalBuyAmount), 0);
+            bVal = groupB.reduce((sum, row) => sum + toNum(row.buyPrice) * toNum(row.totalBuyAmount), 0);
+            break;
+        case 5: // 평가금액($) - 합계
+            aVal = groupA.reduce((sum, row) => sum + toNum(row.currentPrice) * toNum(row.totalBuyAmount), 0);
+            bVal = groupB.reduce((sum, row) => sum + toNum(row.currentPrice) * toNum(row.totalBuyAmount), 0);
+            break;
+        case 6: // 손익 - 합계
+            aVal = groupA.reduce((sum, row) => sum + (toNum(row.currentPrice) - toNum(row.buyPrice)) * toNum(row.totalBuyAmount), 0);
+            bVal = groupB.reduce((sum, row) => sum + (toNum(row.currentPrice) - toNum(row.buyPrice)) * toNum(row.totalBuyAmount), 0);
+            break;
+        case 7: // 매수일자 - 가장 빠른 날짜
             aVal = groupA.reduce((earliest, row) => {
                 const date = row.buyDate || '';
                 return !earliest || date < earliest ? date : earliest;
@@ -109,34 +129,6 @@ function compareGroupValues(groupA, groupB, columnIndex, direction) {
                 const date = row.buyDate || '';
                 return !earliest || date < earliest ? date : earliest;
             }, '');
-            break;
-        case 4: // 매수가격 - 평균
-            aVal = groupA.reduce((sum, row) => sum + toNum(row.buyPrice), 0) / groupA.length;
-            bVal = groupB.reduce((sum, row) => sum + toNum(row.buyPrice), 0) / groupB.length;
-            break;
-        case 7: // 총매수금액 - 합계
-            aVal = groupA.reduce((sum, row) => sum + toNum(row.buyPrice) * toNum(row.totalBuyAmount), 0);
-            bVal = groupB.reduce((sum, row) => sum + toNum(row.buyPrice) * toNum(row.totalBuyAmount), 0);
-            break;
-        case 8: // 총현재가치 - 합계
-            aVal = groupA.reduce((sum, row) => sum + toNum(row.currentPrice) * toNum(row.totalBuyAmount), 0);
-            bVal = groupB.reduce((sum, row) => sum + toNum(row.currentPrice) * toNum(row.totalBuyAmount), 0);
-            break;
-        case 9: // 현재가격 - 평균
-            aVal = groupA.reduce((sum, row) => sum + toNum(row.currentPrice), 0) / groupA.length;
-            bVal = groupB.reduce((sum, row) => sum + toNum(row.currentPrice), 0) / groupB.length;
-            break;
-        case 10: // 매도목표가 - 평균
-            aVal = groupA.reduce((sum, row) => sum + toNum(row.targetPrice), 0) / groupA.length;
-            bVal = groupB.reduce((sum, row) => sum + toNum(row.targetPrice), 0) / groupB.length;
-            break;
-        case 11: // 단일가격차 - 평균
-            aVal = groupA.reduce((sum, row) => sum + (toNum(row.currentPrice) - toNum(row.buyPrice)), 0) / groupA.length;
-            bVal = groupB.reduce((sum, row) => sum + (toNum(row.currentPrice) - toNum(row.buyPrice)), 0) / groupB.length;
-            break;
-        case 12: // 총가격차 - 합계
-            aVal = groupA.reduce((sum, row) => sum + (toNum(row.currentPrice) - toNum(row.buyPrice)) * toNum(row.totalBuyAmount), 0);
-            bVal = groupB.reduce((sum, row) => sum + (toNum(row.currentPrice) - toNum(row.buyPrice)) * toNum(row.totalBuyAmount), 0);
             break;
         default:
             return 0;
@@ -159,45 +151,37 @@ function compareValues(a, b, columnIndex, direction) {
     let aVal, bVal;
 
     switch (columnIndex) {
-        case 1: // 티커
+        case 0: // 종목
             aVal = String(a.symbol || '').toUpperCase();
             bVal = String(b.symbol || '').toUpperCase();
             break;
-        case 2: // 기업명
-            aVal = String(a.companyName || '');
-            bVal = String(b.companyName || '');
-            break;
-        case 3: // 매수일자
-            aVal = a.buyDate || '';
-            bVal = b.buyDate || '';
-            break;
-        case 4: // 매수가격
+        case 1: // 매수가($)
             aVal = toNum(a.buyPrice);
             bVal = toNum(b.buyPrice);
             break;
-        case 7: // 총매수금액
-            aVal = toNum(a.buyPrice) * toNum(a.totalBuyAmount);
-            bVal = toNum(b.buyPrice) * toNum(b.totalBuyAmount);
-            break;
-        case 8: // 총현재가치
-            aVal = toNum(a.currentPrice) * toNum(a.totalBuyAmount);
-            bVal = toNum(b.currentPrice) * toNum(b.totalBuyAmount);
-            break;
-        case 9: // 현재가격
+        case 2: // 현재가($)
             aVal = toNum(a.currentPrice);
             bVal = toNum(b.currentPrice);
             break;
-        case 10: // 매도목표가
-            aVal = toNum(a.targetPrice);
-            bVal = toNum(b.targetPrice);
+        case 3: // 수량
+            aVal = toNum(a.totalBuyAmount);
+            bVal = toNum(b.totalBuyAmount);
             break;
-        case 11: // 단일가격차
-            aVal = toNum(a.currentPrice) - toNum(a.buyPrice);
-            bVal = toNum(b.currentPrice) - toNum(b.buyPrice);
+        case 4: // 매수금액($)
+            aVal = toNum(a.buyPrice) * toNum(a.totalBuyAmount);
+            bVal = toNum(b.buyPrice) * toNum(b.totalBuyAmount);
             break;
-        case 12: // 총가격차
+        case 5: // 평가금액($)
+            aVal = toNum(a.currentPrice) * toNum(a.totalBuyAmount);
+            bVal = toNum(b.currentPrice) * toNum(b.totalBuyAmount);
+            break;
+        case 6: // 손익
             aVal = (toNum(a.currentPrice) - toNum(a.buyPrice)) * toNum(a.totalBuyAmount);
             bVal = (toNum(b.currentPrice) - toNum(b.buyPrice)) * toNum(b.totalBuyAmount);
+            break;
+        case 7: // 매수일자
+            aVal = a.buyDate || '';
+            bVal = b.buyDate || '';
             break;
         default:
             return 0;

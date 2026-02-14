@@ -1,19 +1,16 @@
-import { TABLE_HEADERS } from '../constants';
+import { TABLE_HEADERS, SORTABLE_COLUMNS } from '../constants';
 
 /**
  * 거래 테이블 헤더
  */
 export function TransactionTableHeader({ sortConfig, onSort }) {
-    // 정렬 가능한 컬럼 인덱스 (No와 작업 제외)
-    const sortableColumns = [1, 2, 3, 4, 7, 8, 9, 10, 11, 12]; // 티커, 기업명, 매수일자, 매수가격, 총매수금액, 총현재가치, 현재가격, 매도목표가, 단일가격차, 총가격차
-
     const handleHeaderClick = (idx) => {
-        if (!sortableColumns.includes(idx)) return;
+        if (!SORTABLE_COLUMNS.includes(idx)) return;
         onSort(idx);
     };
 
     const getSortIcon = (idx) => {
-        if (!sortableColumns.includes(idx)) return null;
+        if (!SORTABLE_COLUMNS.includes(idx)) return null;
         if (sortConfig.column !== idx) {
             return (
                 <span className="ml-1.5 opacity-40 group-hover:opacity-70 transition-opacity">
@@ -38,10 +35,8 @@ export function TransactionTableHeader({ sortConfig, onSort }) {
         );
     };
 
-    // sticky 컬럼 배경 스타일
-    const getStickyBg = (idx) => {
+    const getStickyStyle = (idx) => {
         if (idx === 0) return 'left-0 z-30';
-        if (idx === 1) return 'left-12 z-30';
         return 'z-20';
     };
 
@@ -55,29 +50,16 @@ export function TransactionTableHeader({ sortConfig, onSort }) {
                         className={`
                             group px-3 py-3.5 text-center font-medium tracking-wide whitespace-nowrap sticky top-0
                             border-b border-slate-600 dark:border-slate-700
-                            ${getStickyBg(idx)} bg-slate-800 dark:bg-slate-900
-                            ${sortableColumns.includes(idx)
+                            ${getStickyStyle(idx)} bg-slate-800 dark:bg-slate-900
+                            ${SORTABLE_COLUMNS.includes(idx)
                                 ? 'cursor-pointer hover:bg-slate-700 dark:hover:bg-slate-800 select-none transition-colors'
                                 : ''
                             }
                         `}
-                        title={sortableColumns.includes(idx) ? '클릭하여 정렬' : ''}
+                        title={SORTABLE_COLUMNS.includes(idx) ? '클릭하여 정렬' : ''}
                     >
                         <div className="flex items-center justify-center">
-                            {typeof h === 'string' && h.includes('\n') ? (
-                                <div className="leading-snug">
-                                    {h.split('\n').map((line, i2) => (
-                                        <div
-                                            key={i2}
-                                            className={i2 === 1 ? 'text-[10px] font-normal text-slate-400 dark:text-slate-500 mt-0.5' : ''}
-                                        >
-                                            {line}
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <span>{h}</span>
-                            )}
+                            <span>{h}</span>
                             {getSortIcon(idx)}
                         </div>
                     </th>

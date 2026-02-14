@@ -2340,7 +2340,7 @@ function CustomProfitTooltip({ active, payload, label }) {
                 </p>
                 {data.profit !== undefined && (
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                        수익/손실: {data.profit >= 0 ? '+' : ''}<NumberWithBoldInteger value={Math.abs(data.profit)} decimals={0} suffix=" KRW" />
+                        수익/손실: {data.profit >= 0 ? '+' : '-'}<NumberWithBoldInteger value={Math.abs(data.profit)} decimals={0} suffix=" KRW" />
                         {data.dailyReturnPct !== undefined && (
                             <span className={`ml-2 ${data.dailyReturnPct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 (<span className="font-bold">{data.dailyReturnPct >= 0 ? '+' : ''}{data.dailyReturnPct.toFixed(2)}%</span>)
@@ -2350,7 +2350,7 @@ function CustomProfitTooltip({ active, payload, label }) {
                 )}
                 {data.cumulativeProfit !== undefined && (
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                        누적: {data.cumulativeProfit >= 0 ? '+' : ''}<NumberWithBoldInteger value={Math.abs(data.cumulativeProfit)} decimals={0} suffix=" KRW" />
+                        누적: {data.cumulativeProfit >= 0 ? '+' : '-'}<NumberWithBoldInteger value={Math.abs(data.cumulativeProfit)} decimals={0} suffix=" KRW" />
                         {data.cumulativeReturnPct !== undefined && (
                             <span className={`ml-2 ${data.cumulativeReturnPct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 (<span className="font-bold">{data.cumulativeReturnPct >= 0 ? '+' : ''}{data.cumulativeReturnPct.toFixed(2)}%</span>)

@@ -509,18 +509,15 @@ export default function CointradeDashboard() {
                 });
             }
 
-            // 2. 상태 조회
+            // 2. 상태 조회 (스케줄러 상태만 즉시 반영, 금액/수익률은 보유종목 계산 후 반영)
             const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
             if (statusResponse.data?.success && statusResponse.data?.response) {
                 const resp = statusResponse.data.response;
-                setStatus({
+                setStatus(prev => ({
+                    ...prev,
                     buySchedulerEnabled: resp.buySchedulerEnabled || false,
                     sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
-                    totalInvestment: resp.totalInvestment || 0,
-                    totalValuation: resp.totalValuation || 0,
-                    totalProfitRate: resp.totalProfitRate || 0,
-                    holdingsCount: resp.holdings?.length || 0
-                });
+                }));
             }
 
             // 3. KRW 잔액 조회
@@ -941,7 +938,7 @@ export default function CointradeDashboard() {
             </div>
 
             {/* 상단 카드 영역 */}
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
                 {/* 스케줄러 상태 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">스케줄러 상태</div>
@@ -1008,19 +1005,14 @@ export default function CointradeDashboard() {
                     })()}
                 </div>
 
-                {/* KRW 잔액 + 총 평가금액 */}
+                {/* 잔액 + 투자금 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">잔액 + 총 평가</div>
-                    <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
-                        {renderFormattedPrice(Math.floor(krwBalance + status.totalValuation), '원')}
-                    </div>
-                </div>
-
-                {/* KRW 잔액 + 총 투자금액 */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">잔액 + 총 투자</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">잔액 + 투자금</div>
                     <div className="text-xl font-medium text-slate-800 dark:text-slate-200">
                         {renderFormattedPrice(Math.floor(krwBalance + status.totalInvestment), '원')}
+                    </div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                        <span className="text-[10px]">잔액+평가</span> ({renderFormattedPrice(Math.floor(krwBalance + status.totalValuation), '원')})
                     </div>
                 </div>
 

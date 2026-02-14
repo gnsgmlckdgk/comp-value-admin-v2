@@ -53,6 +53,7 @@ const FIELD_LABELS = {
     step2Score: '2단계 점수',
     step3Score: '3단계 점수',
     step4Score: '4단계 점수',
+    step5Score: '5단계 점수',
 };
 
 // resultDetail 필드 레이블 매핑
@@ -434,6 +435,24 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                         />
                     </div>
 
+                    {/* 고평가 경고 배너 */}
+                    {(() => {
+                        const current = parseFloat(data.currentPrice);
+                        const fair = parseFloat(data.fairValue);
+                        if (!isNaN(current) && !isNaN(fair) && fair > 0 && current > fair) {
+                            const overPct = ((current - fair) / fair * 100).toFixed(1);
+                            return (
+                                <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-800 flex items-center gap-2">
+                                    <span className="text-xl leading-none">🔴</span>
+                                    <div className="text-sm text-red-800 dark:text-red-200">
+                                        현재가(<span className="font-semibold">${data.currentPrice}</span>)가 적정가(<span className="font-semibold">${data.fairValue}</span>)보다 <span className="font-bold text-red-600 dark:text-red-300">{overPct}%</span> 높음 — <span className="font-bold">고평가 주의</span>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
+
                     {/* 추천 */}
                     <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
                         <div className="text-sm font-medium text-blue-800 dark:text-blue-200">{data.recommendation || '-'}</div>
@@ -637,11 +656,12 @@ export const FullDetailModal = ({ isOpen, data, onClose, zIndex = 70 }) => {
                             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                             단계별 점수
                         </h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <InfoCard label="1단계 (위험신호)" value={`${data.step1Score ?? '-'} / 20`} />
-                            <InfoCard label="2단계 (신뢰도)" value={`${data.step2Score ?? '-'} / 25`} />
-                            <InfoCard label="3단계 (밸류에이션)" value={`${data.step3Score ?? '-'} / 40`} />
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            <InfoCard label="1단계 (위험신호)" value={`${data.step1Score ?? '-'} / 15`} />
+                            <InfoCard label="2단계 (신뢰도)" value={`${data.step2Score ?? '-'} / 20`} />
+                            <InfoCard label="3단계 (밸류에이션)" value={`${data.step3Score ?? '-'} / 30`} />
                             <InfoCard label="4단계 (영업이익추세)" value={`${data.step4Score ?? '-'} / 15`} />
+                            <InfoCard label="5단계 (투자적합성)" value={`${data.step5Score ?? '-'} / 20`} />
                         </div>
                     </div>
 

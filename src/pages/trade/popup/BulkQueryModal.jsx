@@ -274,7 +274,22 @@ async function defaultBulkFetcher(symbols, onProgress, abortRef) {
 
         try {
             const sendUrl = API_ENDPOINTS.ABROAD_COMP_VALUE_ARR(batchSymbols);
-            const { data, error } = await send(sendUrl, {}, "GET");
+
+            // 기업분석 + 투자판단 API 병렬 호출
+            const [compResult, evalResult] = await Promise.all([
+                send(sendUrl, {}, "GET"),
+                send('/dart/main/evaluate/stocks', { symbols: batch }, 'POST').catch(() => ({ data: null, error: true }))
+            ]);
+
+            const { data, error } = compResult;
+
+            // 투자판단 등급 매핑 (symbol → grade)
+            const evalMap = {};
+            if (!evalResult.error && evalResult.data?.response) {
+                for (const item of evalResult.data.response) {
+                    if (item.symbol) evalMap[item.symbol] = item.grade;
+                }
+            }
 
             if (error == null && data && data.response) {
                 // 응답이 배열인지 단일 객체인지 확인
@@ -290,6 +305,7 @@ async function defaultBulkFetcher(symbols, onProgress, abortRef) {
                         현재가격: responseData.현재가격,
                         주당가치: responseData.주당가치,
                         peg: responseData.상세정보?.peg,
+                        evaluationGrade: evalMap[symbolValue] || null,
                         json: responseData,
                     };
                     results.push(resData);
@@ -348,8 +364,6 @@ async function exportToExcel(items) {
         { header: 'JSON', key: 'json', width: 50 },
     ];
 
-    const pctCloseThreshold = 0.05; // 5%
-
     const toNum = (v) =>
         v == null ? NaN : typeof v === 'number' ? v : Number(String(v).replace(/[,\\s]/g, ''));
 
@@ -358,51 +372,11 @@ async function exportToExcel(items) {
         const future = toNum(it.주당가치);
         const peg = toNum(it.peg);
 
-        // PER 정보 추출 (있는 경우)
-        const per = it.json?.상세정보?.per ? toNum(it.json.상세정보.per) :
-            it.json?.per ? toNum(it.json.per) :
-                it.json?.PER ? toNum(it.json.PER) : NaN;
-
-        // 성장률보정PER 정보 추출 (있는 경우)
-        const perAdj = it.json?.상세정보?.성장률보정PER ? toNum(it.json.상세정보.성장률보정PER) :
-            it.json?.성장률보정PER ? toNum(it.json.성장률보정PER) : NaN;
-
-        // V7 투자 권장 조건 필드 추출
-        const purchasePrice = toNum(it.json?.매수적정가);
-        const grahamPassCount = toNum(it.json?.상세정보?.그레이엄_통과수);
-        const is매출기반 = it.json?.상세정보?.매출기반평가 === true;
-        const psr = toNum(it.json?.상세정보?.PSR);
-
-        // 하이라이트 조건: PEG, PER, 성장률보정PER 중 하나라도 음수이면 제외
-        const hasValidMetrics =
-            Number.isFinite(peg) && peg > 0 &&
-            (!Number.isFinite(per) || per > 0) &&
-            (!Number.isFinite(perAdj) || perAdj > 0);
-
-        const yellow = hasValidMetrics && (is매출기반
-            ? (Number.isFinite(psr) && psr > 0 && psr < 2 &&
-               Number.isFinite(purchasePrice) && purchasePrice > cur)
-            : (peg < 1.0 &&
-               Number.isFinite(purchasePrice) && purchasePrice > cur &&
-               Number.isFinite(grahamPassCount) && grahamPassCount >= 4));
-
-        // 투자 고려: 분석 지표 조건 충족 + 적정가 > 현재가 (상승여력 있음), 매수적정가 미충족
-        const hasUpside = Number.isFinite(future) && Number.isFinite(cur) && future > cur;
-        const green = hasValidMetrics && !yellow && hasUpside && (is매출기반
-            ? (Number.isFinite(psr) && psr > 0 && psr < 2)
-            : (peg < 1.0 &&
-               Number.isFinite(grahamPassCount) && grahamPassCount >= 4));
-
-        const closePct =
-            Number.isFinite(cur) && Number.isFinite(future) && cur > future
-                ? Math.abs((cur - future) / cur)
-                : NaN;
-
-        const sky =
-            hasValidMetrics && !yellow && !green && (
-                ((Number.isFinite(closePct) && closePct <= pctCloseThreshold) && peg < 1.0) ||
-                (cur < future && peg >= 1.0 && peg <= 1.5)
-            );
+        // 투자판단 등급 기반 하이라이트
+        const evalGrade = it.evaluationGrade;
+        const yellow = evalGrade === 'S' || evalGrade === 'A';
+        const green = !yellow && evalGrade === 'B';
+        const sky = !yellow && !green && evalGrade === 'C';
 
         const row = ws.addRow({
             no: idx + 1,

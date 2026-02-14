@@ -36,12 +36,42 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
         return () => clearTimeout(timer);
     }, [toast]);
 
-    // 모달이 열릴 때 예측 데이터 초기화
+    // 모달이 닫힐 때 데이터 초기화
     useEffect(() => {
         if (!isOpen) {
             setPredictionData(null);
+            setInvestmentData(null);
         }
     }, [isOpen]);
+
+    // 모달이 열릴 때 투자판단 데이터 자동 조회
+    useEffect(() => {
+        if (!isOpen || !data || investmentData) return;
+
+        const getValDeep = (obj, keys) => {
+            if (!obj || typeof obj !== 'object') return undefined;
+            for (const key of keys) {
+                if (obj[key] != null) return obj[key];
+            }
+            return undefined;
+        };
+        const sym = getValDeep(data, ['symbol', 'ticker', 'code', '주식코드', '주식심볼', '기업심볼']);
+        if (!sym) return;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const { data: responseData, error } = await send('/dart/main/evaluate/stocks', { symbols: [sym] }, 'POST');
+                if (!cancelled && !error && responseData?.response?.length > 0) {
+                    setInvestmentData(responseData.response[0]);
+                }
+            } catch {
+                // 자동 조회 실패는 무시
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [isOpen, data, investmentData]);
 
     // ESC key handler
     useEffect(() => {
@@ -97,9 +127,14 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
         setOverlays(prev => ({ ...prev, companyInfo: true }));
     }, []);
 
-    // 투자 판단 모달 열기 (API 호출)
+    // 투자 판단 모달 열기 (이미 데이터가 있으면 바로 열기, 없으면 API 호출)
     const handleOpenInvestmentDetail = useCallback(async (symbol) => {
         if (!symbol || investmentLoading) return;
+
+        if (investmentData) {
+            setOverlays(prev => ({ ...prev, investmentDetail: true }));
+            return;
+        }
 
         setInvestmentLoading(true);
         try {
@@ -116,7 +151,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
         } finally {
             setInvestmentLoading(false);
         }
-    }, [investmentLoading]);
+    }, [investmentLoading, investmentData]);
 
     // 투자 판단 전체 상세 모달 열기
     const handleOpenInvestmentFullDetail = useCallback((detailData) => {
@@ -191,6 +226,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
                     predictionData={predictionData}
                     predictionLoading={predictionLoading}
                     onFetchPrediction={handleFetchPrediction}
+                    investmentData={investmentData}
                 />
             </div>
 
@@ -289,7 +325,8 @@ const ModalContent = ({
     fromInvestmentDetail = false,
     predictionData,
     predictionLoading,
-    onFetchPrediction
+    onFetchPrediction,
+    investmentData
 }) => {
     const compValueData = data || {};
     const hasData = Object.keys(compValueData).length > 0;
@@ -302,15 +339,16 @@ const ModalContent = ({
         );
     }
 
-    const metrics = useCompanyMetrics(compValueData);
+    const metrics = useCompanyMetrics(compValueData, investmentData);
 
     return (
         <div className="p-4 space-y-4">
-            <CompanySummary data={compValueData} />
+            <CompanySummary data={compValueData} investmentData={investmentData} />
             <MetricExplanation onOpenGuide={onOpenGuide} 매출기반평가={metrics.매출기반평가} />
-            <RecommendationBanner data={compValueData} />
+            <RecommendationBanner data={compValueData} investmentData={investmentData} />
             <GrahamScreeningSection data={compValueData} />
             <HighlightCards data={compValueData} />
+            <OvervaluationBanner data={compValueData} />
             <AIPredictionSection
                 data={compValueData}
                 predictionData={predictionData}
@@ -334,8 +372,8 @@ const ModalContent = ({
 /**
  * 기업 요약 정보
  */
-const CompanySummary = ({ data }) => {
-    const metrics = useCompanyMetrics(data);
+const CompanySummary = ({ data, investmentData }) => {
+    const metrics = useCompanyMetrics(data, investmentData);
 
     return (
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -349,21 +387,17 @@ const CompanySummary = ({ data }) => {
 };
 
 /**
- * 지표 배지들
+ * 지표 배지들 (지표값만 표시, 투자 권장/고려 라벨 제거)
  */
 const MetricBadges = ({ metrics, data }) => {
-    const { per, perAdj, peg, eps, isRecommended, isConsider, psr, 매출기반평가, grahamGrade } = metrics;
+    const { per, perAdj, peg, eps, psr, 매출기반평가, grahamGrade } = metrics;
 
     // 데이터에서 플래그 확인 (중첩 객체 포함)
     const getValDeep = (obj, keys) => {
         if (!obj || typeof obj !== 'object') return undefined;
-
-        // 먼저 현재 레벨에서 검색
         for (const key of keys) {
             if (obj[key] != null) return obj[key];
         }
-
-        // 상세정보 등 중첩 객체에서 검색
         const containers = ['상세', '상세정보', 'detail', 'details', 'metric', 'metrics', 'valuation', 'summary', 'data'];
         for (const container of containers) {
             if (obj[container] && typeof obj[container] === 'object') {
@@ -372,7 +406,6 @@ const MetricBadges = ({ metrics, data }) => {
                 }
             }
         }
-
         return undefined;
     };
 
@@ -385,11 +418,6 @@ const MetricBadges = ({ metrics, data }) => {
         return formatNumber(value, 2);
     };
 
-    // PSR/PEG 뱃지 하이라이트 색상 결정
-    const metricHighlight = isRecommended ? 'emerald' : isConsider ? 'amber' : false;
-    const metricLabel = isRecommended ? '(투자 권장)' : isConsider ? '(투자 고려)' : null;
-    const metricLabelColor = isRecommended ? 'text-emerald-600' : 'text-amber-600';
-
     return (
         <div className="flex gap-2 flex-wrap">
             {per !== null && (
@@ -398,11 +426,8 @@ const MetricBadges = ({ metrics, data }) => {
                 </Badge>
             )}
             {매출기반평가 && psr !== null && (
-                <Badge title="Price / Sales Ratio" highlighted={metricHighlight}>
+                <Badge title="Price / Sales Ratio">
                     PSR {formatNumber(psr, 2)}
-                    {metricLabel && (
-                        <span className={`ml-1 text-[11px] ${metricLabelColor}`}>{metricLabel}</span>
-                    )}
                 </Badge>
             )}
             {!매출기반평가 && !수익가치계산불가 && perAdj !== null && (
@@ -411,14 +436,8 @@ const MetricBadges = ({ metrics, data }) => {
                 </Badge>
             )}
             {peg !== null && (
-                <Badge
-                    title="Price / Earnings to Growth (PEG)"
-                    highlighted={metricHighlight}
-                >
+                <Badge title="Price / Earnings to Growth (PEG)">
                     PEG {formatPEG(peg)}
-                    {metricLabel && (
-                        <span className={`ml-1 text-[11px] ${metricLabelColor}`}>{metricLabel}</span>
-                    )}
                 </Badge>
             )}
             {eps !== null && (
@@ -482,31 +501,29 @@ const MetricExplanation = ({ onOpenGuide, 매출기반평가 }) => (
 );
 
 /**
- * 투자 권장 배너
+ * 투자 권장 배너 (투자판단 등급 기반 단일 판단)
  */
-const RecommendationBanner = ({ data }) => {
-    const metrics = useCompanyMetrics(data);
+const RecommendationBanner = ({ data, investmentData }) => {
+    const metrics = useCompanyMetrics(data, investmentData);
 
+    // 투자판단 데이터 로딩 전에는 배너 미표시
+    if (!metrics.evalGrade) return null;
     if (!metrics.isRecommended && !metrics.isConsider) return null;
 
+    const scoreText = metrics.evalScore != null ? ` (${Number(metrics.evalScore).toFixed(1)}점)` : '';
+
     if (metrics.isRecommended) {
-        const message = metrics.매출기반평가
-            ? '📈 조건 충족: PSR < 2 이고 매수적정가 > 현재가 — '
-            : '📈 조건 충족: PEG ≤ 1 이고 매수적정가 > 현재가 이고 그레이엄 ≥ 4/5 — ';
         return (
             <div className="mt-2 w-full rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-                {message}<span className="font-semibold">투자 권장</span>
+                {`📊 투자판단 ${metrics.evalGrade}등급${scoreText} — `}<span className="font-semibold">투자 권장</span>
             </div>
         );
     }
 
-    // 투자 고려
-    const message = metrics.매출기반평가
-        ? '🔍 조건 일부 충족: PSR < 2 (매수적정가 미충족) — '
-        : '🔍 조건 일부 충족: PEG ≤ 1 이고 그레이엄 ≥ 4/5 (매수적정가 미충족) — ';
+    // 투자 고려 (B등급)
     return (
         <div className="mt-2 w-full rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-            {message}<span className="font-semibold">투자 고려</span>
+            {`📊 투자판단 ${metrics.evalGrade}등급${scoreText} — `}<span className="font-semibold">투자 고려</span>
         </div>
     );
 };
@@ -724,6 +741,28 @@ const HighlightCards = ({ data }) => {
                 value={formatUSD(sellTarget)}
                 valueClassName="text-blue-600 dark:text-blue-400"
             />
+        </div>
+    );
+};
+
+/**
+ * 고평가 경고 배너
+ */
+const OvervaluationBanner = ({ data }) => {
+    const { price, target } = usePriceMetrics(data);
+    const current = toNumber(price);
+    const fair = toNumber(target);
+
+    if (isNaN(current) || isNaN(fair) || fair <= 0 || current <= fair) return null;
+
+    const overPct = ((current - fair) / fair * 100).toFixed(1);
+
+    return (
+        <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-800 flex items-center gap-2">
+            <span className="text-xl leading-none">🔴</span>
+            <div className="text-sm text-red-800 dark:text-red-200">
+                현재가(<span className="font-semibold">${formatNumber(current, 2)}</span>)가 적정가(<span className="font-semibold">${formatNumber(fair, 2)}</span>)보다 <span className="font-bold text-red-600 dark:text-red-300">{overPct}%</span> 높음 — <span className="font-bold">고평가 주의</span>
+            </div>
         </div>
     );
 };
@@ -970,42 +1009,84 @@ const GuideOverlay = ({ onClose, data }) => {
                         )}
                     </div>
 
-                    {/* V7 투자 권장 조건 요약 */}
+                    {/* 투자판단 5단계 통합 시스템 */}
                     <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 dark:border-emerald-800 dark:bg-emerald-900/20">
-                        <div className="text-[12px] font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
-                            📋 투자 권장 (V7)
+                        <div className="text-[12px] font-semibold text-emerald-800 dark:text-emerald-300 mb-1.5">
+                            📋 투자판단 5단계 통합 시스템
                         </div>
-                        {매출기반평가 ? (
-                            <ul className="text-[11px] text-emerald-700 dark:text-emerald-400 list-disc pl-4 space-y-0.5">
-                                <li>PSR {'<'} 2 (매출 대비 저평가)</li>
-                                <li>매수적정가 {'>'} 현재가</li>
+                        <div className="text-[11px] text-emerald-700 dark:text-emerald-400 space-y-1">
+                            <div className="font-medium">투자판단 등급에 따른 단일 판단:</div>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                                <li><span className="font-semibold">S/A 등급 (90+/80+점)</span> → 투자 권장</li>
+                                <li><span className="font-semibold">B 등급 (70+점)</span> → 투자 고려</li>
+                                <li><span className="font-semibold">C/D/F 등급</span> → 신중 검토 필요</li>
                             </ul>
-                        ) : (
-                            <ul className="text-[11px] text-emerald-700 dark:text-emerald-400 list-disc pl-4 space-y-0.5">
-                                <li>PEG ≤ 1 (성장 대비 저평가)</li>
-                                <li>매수적정가 {'>'} 현재가</li>
-                                <li>그레이엄 스크리닝 통과 ≥ 4/5</li>
-                            </ul>
-                        )}
+                        </div>
                     </div>
 
-                    {/* V7 투자 고려 조건 요약 */}
-                    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-900/20">
-                        <div className="text-[12px] font-semibold text-amber-800 dark:text-amber-300 mb-1">
-                            📋 투자 고려 (V7)
+                    {/* 5단계 평가 항목 */}
+                    <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2.5 dark:border-blue-800 dark:bg-blue-900/20">
+                        <div className="text-[12px] font-semibold text-blue-800 dark:text-blue-300 mb-1.5">
+                            📋 5단계 평가 항목 (100점)
                         </div>
-                        {매출기반평가 ? (
-                            <ul className="text-[11px] text-amber-700 dark:text-amber-400 list-disc pl-4 space-y-0.5">
-                                <li>PSR {'<'} 2 (매출 대비 저평가)</li>
-                                <li className="text-amber-500 dark:text-amber-500">매수적정가 조건 미충족</li>
+                        <div className="text-[11px] text-blue-700 dark:text-blue-400">
+                            <ul className="list-disc pl-4 space-y-0.5">
+                                <li>1단계: 위험 신호 확인 (15점) — 수익가치계산불가, 적자, 매출기반</li>
+                                <li>2단계: 신뢰도 확인 (20점) — PER, 순부채, 영업이익 안정성</li>
+                                <li>3단계: 밸류에이션 (30점) — PEG, 가격차이, 성장률</li>
+                                <li>4단계: 영업이익 추세 (15점) — 3년간 추세, 성장률 크기</li>
+                                <li>5단계: 투자 적합성 (20점) — 매수적정가, PEG/PSR 이진, 그레이엄</li>
                             </ul>
-                        ) : (
-                            <ul className="text-[11px] text-amber-700 dark:text-amber-400 list-disc pl-4 space-y-0.5">
-                                <li>PEG ≤ 1 (성장 대비 저평가)</li>
-                                <li>그레이엄 스크리닝 통과 ≥ 4/5</li>
-                                <li className="text-amber-500 dark:text-amber-500">매수적정가 조건 미충족</li>
-                            </ul>
-                        )}
+                        </div>
+                    </div>
+
+                    {/* 엑셀 대량조회 색상 기준 */}
+                    <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-600 dark:bg-slate-700/30">
+                        <div className="text-[12px] font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                            📊 엑셀 대량조회 색상 기준
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                            투자판단 등급 기반
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                                <span className="inline-block w-3 h-3 mt-0.5 rounded-sm flex-shrink-0" style={{ backgroundColor: '#FDE68A' }} />
+                                <div>
+                                    <span className="font-medium text-[11px] text-slate-700 dark:text-slate-300">노란색 — 투자 권장</span>
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                        S 또는 A 등급
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                                <span className="inline-block w-3 h-3 mt-0.5 rounded-sm flex-shrink-0" style={{ backgroundColor: '#BBF7D0' }} />
+                                <div>
+                                    <span className="font-medium text-[11px] text-slate-700 dark:text-slate-300">초록색 — 투자 고려</span>
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                        B 등급
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                                <span className="inline-block w-3 h-3 mt-0.5 rounded-sm flex-shrink-0" style={{ backgroundColor: '#E0F2FE' }} />
+                                <div>
+                                    <span className="font-medium text-[11px] text-slate-700 dark:text-slate-300">하늘색 — 관심</span>
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                        C 등급
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                                <span className="inline-block w-3 h-3 mt-0.5 rounded-sm border border-slate-300 dark:border-slate-500 flex-shrink-0" />
+                                <div>
+                                    <span className="font-medium text-[11px] text-slate-700 dark:text-slate-300">없음</span>
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">D 또는 F 등급</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-400 dark:text-slate-500">
+                            우선순위: 노란색 {'>'} 초록색 {'>'} 하늘색 {'>'} 없음
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1135,8 +1216,9 @@ const AnalysisIcon = () => (
 
 /**
  * 기업 지표 계산 Hook
+ * 투자판단 등급 기반 단일 판단 (5단계 통합 시스템)
  */
-const useCompanyMetrics = (data) => {
+const useCompanyMetrics = (data, evaluationData) => {
     return useMemo(() => {
         const getValDeep = (obj, keys) => {
             if (!obj || typeof obj !== 'object') return undefined;
@@ -1169,8 +1251,6 @@ const useCompanyMetrics = (data) => {
 
         const symbol = getValDeep(data, ['symbol', 'ticker', 'code', '주식코드', '주식심볼', '기업심볼']);
         const name = getValDeep(data, ['companyName', 'name', 'company', '기업명']);
-        const price = getValDeep(data, ['currentPrice', 'price', 'close', '현재가격', '현재가', '종가']);
-        const target = getValDeep(data, ['fairValue', 'perValue', 'estimatedValue', 'targetPrice', '적정가', '주당가치', '적정가(추정)']);
         const per = getValDeep(data, ['per', 'PER', 'pe', 'peRatio', 'perTTM', 'PER(TTM)']);
         const perAdj = getValDeep(data, ['성장률보정PER', 'growthAdjustedPER', 'perGrowthAdjusted']);
         const pegBackend = getValDeep(data, ['PEG', 'peg', 'pegRatio', 'pegTTM', '성장률보정PEG']);
@@ -1192,38 +1272,19 @@ const useCompanyMetrics = (data) => {
             : NaN;
 
         const pegToShow = !Number.isNaN(pegBackendNum) ? pegBackendNum : pegCalc;
-        const priceNum = toNum(price);
-        const targetNum = toNum(target);
         const perAdjNum = toNum(perAdj);
         const psrNum = toNum(psr);
 
         // 매출기반평가 플래그 확인
         const 매출기반평가 = getValDeep(data, ['매출기반평가', 'revenueBased', 'isRevenueBased']) === true;
 
-        // V7: 매수적정가, 그레이엄 통과수
-        const purchasePrice = getValDeep(data, ['매수적정가', 'purchasePrice']);
-        const purchasePriceNum = toNum(purchasePrice);
-        const grahamPassCount = toNum(getValDeep(data, ['그레이엄_통과수']));
         const grahamGrade = getValDeep(data, ['그레이엄_등급']);
 
-        // 투자 권장 조건 (V7 강화):
-        // 매출기반평가 = true: PSR < 2 AND 매수적정가 > 현재가
-        // 매출기반평가 = false: PEG <= 1 AND PER > 0 AND 매수적정가 > 현재가 AND 그레이엄 통과수 >= 4
-        const isRecommended = 매출기반평가
-            ? (Number.isFinite(psrNum) && psrNum > 0 && psrNum < 2 &&
-                !Number.isNaN(priceNum) && !Number.isNaN(purchasePriceNum) && purchasePriceNum > priceNum)
-            : (Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
-                Number.isFinite(perNum) && perNum > 0 &&
-                !Number.isNaN(priceNum) && !Number.isNaN(purchasePriceNum) && purchasePriceNum > priceNum &&
-                Number.isFinite(grahamPassCount) && grahamPassCount >= 4);
-
-        // 투자 고려: 분석 지표 조건 충족 + 적정가 > 현재가 (상승여력 있음) but 매수적정가 미충족
-        const hasUpside = !Number.isNaN(targetNum) && !Number.isNaN(priceNum) && targetNum > priceNum;
-        const isConsider = !isRecommended && hasUpside && (매출기반평가
-            ? (Number.isFinite(psrNum) && psrNum > 0 && psrNum < 2)
-            : (Number.isFinite(pegToShow) && pegToShow > 0 && pegToShow <= 1 &&
-               Number.isFinite(perNum) && perNum > 0 &&
-               Number.isFinite(grahamPassCount) && grahamPassCount >= 4));
+        // 투자판단 등급 기반 단일 판단
+        const evalGrade = evaluationData?.grade;
+        const evalScore = evaluationData?.totalScore;
+        const isRecommended = evalGrade === 'S' || evalGrade === 'A';
+        const isConsider = evalGrade === 'B';
 
         return {
             symbol,
@@ -1236,10 +1297,11 @@ const useCompanyMetrics = (data) => {
             isRecommended,
             isConsider,
             매출기반평가,
-            grahamPassCount: Number.isFinite(grahamPassCount) ? grahamPassCount : 0,
-            grahamGrade
+            grahamGrade,
+            evalGrade: evalGrade || null,
+            evalScore: evalScore ?? null,
         };
-    }, [data]);
+    }, [data, evaluationData]);
 };
 
 /**

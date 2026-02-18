@@ -54,6 +54,7 @@ const FIELD_LABELS = {
     step3Score: '3단계 점수',
     step4Score: '4단계 점수',
     step5Score: '5단계 점수',
+    step6Score: '6단계 점수',
 };
 
 // resultDetail 필드 레이블 매핑
@@ -657,11 +658,12 @@ export const FullDetailModal = ({ isOpen, data, onClose, zIndex = 70 }) => {
                             단계별 점수
                         </h4>
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                            <InfoCard label="1단계 (위험신호)" value={`${data.step1Score ?? '-'} / 15`} />
-                            <InfoCard label="2단계 (신뢰도)" value={`${data.step2Score ?? '-'} / 20`} />
-                            <InfoCard label="3단계 (밸류에이션)" value={`${data.step3Score ?? '-'} / 30`} />
+                            <InfoCard label="1단계 (위험신호)" value={`${data.step1Score ?? '-'} / 12`} />
+                            <InfoCard label="2단계 (신뢰도)" value={`${data.step2Score ?? '-'} / 18`} />
+                            <InfoCard label="3단계 (밸류에이션)" value={`${data.step3Score ?? '-'} / 20`} />
                             <InfoCard label="4단계 (영업이익추세)" value={`${data.step4Score ?? '-'} / 15`} />
-                            <InfoCard label="5단계 (투자적합성)" value={`${data.step5Score ?? '-'} / 20`} />
+                            <InfoCard label="5단계 (투자적합성)" value={`${data.step5Score ?? '-'} / 17`} />
+                            <InfoCard label="6단계 (모멘텀)" value={`${data.step6Score ?? '-'} / 18`} />
                         </div>
                     </div>
 

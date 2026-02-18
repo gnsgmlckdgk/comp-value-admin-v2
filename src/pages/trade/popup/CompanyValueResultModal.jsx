@@ -1009,10 +1009,10 @@ const GuideOverlay = ({ onClose, data }) => {
                         )}
                     </div>
 
-                    {/* 투자판단 5단계 통합 시스템 */}
+                    {/* 투자판단 6단계 통합 시스템 */}
                     <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 dark:border-emerald-800 dark:bg-emerald-900/20">
                         <div className="text-[12px] font-semibold text-emerald-800 dark:text-emerald-300 mb-1.5">
-                            📋 투자판단 5단계 통합 시스템
+                            📋 투자판단 6단계 통합 시스템
                         </div>
                         <div className="text-[11px] text-emerald-700 dark:text-emerald-400 space-y-1">
                             <div className="font-medium">투자판단 등급에 따른 단일 판단:</div>
@@ -1024,18 +1024,19 @@ const GuideOverlay = ({ onClose, data }) => {
                         </div>
                     </div>
 
-                    {/* 5단계 평가 항목 */}
+                    {/* 6단계 평가 항목 */}
                     <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2.5 dark:border-blue-800 dark:bg-blue-900/20">
                         <div className="text-[12px] font-semibold text-blue-800 dark:text-blue-300 mb-1.5">
-                            📋 5단계 평가 항목 (100점)
+                            📋 6단계 평가 항목 (100점)
                         </div>
                         <div className="text-[11px] text-blue-700 dark:text-blue-400">
                             <ul className="list-disc pl-4 space-y-0.5">
-                                <li>1단계: 위험 신호 확인 (15점) — 수익가치계산불가, 적자, 매출기반</li>
-                                <li>2단계: 신뢰도 확인 (20점) — PER, 순부채, 영업이익 안정성</li>
-                                <li>3단계: 밸류에이션 (30점) — PEG, 가격차이, 성장률</li>
+                                <li>1단계: 위험 신호 확인 (12점) — 수익가치계산불가, 적자, 매출기반</li>
+                                <li>2단계: 신뢰도 확인 (18점) — PER, 순부채, 영업이익 안정성</li>
+                                <li>3단계: 밸류에이션 (20점) — PEG, 가격차이, 성장률</li>
                                 <li>4단계: 영업이익 추세 (15점) — 3년간 추세, 성장률 크기</li>
-                                <li>5단계: 투자 적합성 (20점) — 매수적정가, PEG/PSR 이진, 그레이엄</li>
+                                <li>5단계: 투자 적합성 (17점) — 매수적정가, PEG/PSR 이진, 그레이엄</li>
+                                <li>6단계: 모멘텀 분석 (18점) — SMA50/200, RSI, 거래량 추세</li>
                             </ul>
                         </div>
                     </div>
@@ -1216,7 +1217,7 @@ const AnalysisIcon = () => (
 
 /**
  * 기업 지표 계산 Hook
- * 투자판단 등급 기반 단일 판단 (5단계 통합 시스템)
+ * 투자판단 등급 기반 단일 판단 (6단계 통합 시스템)
  */
 const useCompanyMetrics = (data, evaluationData) => {
     return useMemo(() => {

@@ -280,9 +280,17 @@ export default function CointradeHistory() {
         sellCount: 0,
         sellAmount: 0,
         totalProfit: 0,
+        realizedProfitRate: 0,
         takeProfitCount: 0,
         stopLossCount: 0,
-        expiredCount: 0
+        expiredCount: 0,
+        // 보유 종목 수익 정보
+        holdingsProfit: 0,
+        holdingsInvestment: 0,
+        holdingsProfitRate: 0,
+        holdingsCount: 0,
+        // 합산 수익률
+        combinedProfitRate: 0
     });
 
     // Toast auto-hide
@@ -399,7 +407,7 @@ export default function CointradeHistory() {
     };
 
     // 요약 정보 계산
-    const calculateSummary = (data) => {
+    const calculateSummary = async (data) => {
         const buyRecords = data.filter(r => r.tradeType === 'BUY');
         const sellRecords = data.filter(r => r.tradeType === 'SELL');
 
@@ -407,9 +415,62 @@ export default function CointradeHistory() {
         const sellAmount = sellRecords.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
         const totalProfit = sellRecords.reduce((sum, r) => sum + (r.profitLoss || 0), 0);
 
+        // 실현 수익률: 매도 원금 = 매도금액 - 손익, 수익률 = 손익 / 원금 * 100
+        const sellCostBasis = sellAmount - totalProfit;
+        const realizedProfitRate = sellCostBasis > 0 ? (totalProfit / sellCostBasis * 100) : 0;
+
         const takeProfitCount = sellRecords.filter(r => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(r.reason)).length;
         const stopLossCount = sellRecords.filter(r => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(r.reason)).length;
         const expiredCount = sellRecords.filter(r => ['7DAY_PROFIT', 'PARTIAL_7DAY_PROFIT', 'EXPIRED'].includes(r.reason)).length;
+
+        // 보유 종목 수익 정보 조회
+        let holdingsProfit = 0;
+        let holdingsInvestment = 0;
+        let holdingsProfitRate = 0;
+        let holdingsCount = 0;
+
+        try {
+            const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
+            if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
+                let holdingsData = holdingsResponse.data.response;
+                holdingsCount = holdingsData.length;
+
+                if (holdingsData.length > 0) {
+                    // 현재가 조회 (업비트 API)
+                    try {
+                        const marketCodes = holdingsData.map(h => h.coinCode).join(',');
+                        const tickerResponse = await fetch(`https://api.upbit.com/v1/ticker?markets=${marketCodes}`);
+                        if (tickerResponse.ok) {
+                            const tickerData = await tickerResponse.json();
+                            const tickerMap = {};
+                            tickerData.forEach(t => { tickerMap[t.market] = t.trade_price; });
+
+                            holdingsData = holdingsData.map(h => ({
+                                ...h,
+                                currentPrice: tickerMap[h.coinCode] || h.currentPrice
+                            }));
+                        }
+                    } catch (tickerError) {
+                        console.error('현재가 조회 실패:', tickerError);
+                    }
+
+                    holdingsInvestment = holdingsData.reduce((sum, h) => sum + (h.totalAmount || 0), 0);
+                    const holdingsValuation = holdingsData.reduce((sum, h) => {
+                        const valuation = h.currentPrice ? h.currentPrice * h.quantity : (h.totalAmount || 0);
+                        return sum + valuation;
+                    }, 0);
+                    holdingsProfit = holdingsValuation - holdingsInvestment;
+                    holdingsProfitRate = holdingsInvestment > 0 ? (holdingsProfit / holdingsInvestment * 100) : 0;
+                }
+            }
+        } catch (e) {
+            console.error('보유 종목 조회 실패:', e);
+        }
+
+        // 합산 수익률: (실현 손익 + 보유 평가손익) / (실현 원금 + 보유 투자금) * 100
+        const totalCombinedProfit = totalProfit + holdingsProfit;
+        const totalCombinedInvestment = sellCostBasis + holdingsInvestment;
+        const combinedProfitRate = totalCombinedInvestment > 0 ? (totalCombinedProfit / totalCombinedInvestment * 100) : 0;
 
         setSummary({
             buyCount: buyRecords.length,
@@ -417,9 +478,15 @@ export default function CointradeHistory() {
             sellCount: sellRecords.length,
             sellAmount,
             totalProfit,
+            realizedProfitRate,
             takeProfitCount,
             stopLossCount,
-            expiredCount
+            expiredCount,
+            holdingsProfit,
+            holdingsInvestment,
+            holdingsProfitRate,
+            holdingsCount,
+            combinedProfitRate
         });
     };
 
@@ -1124,6 +1191,48 @@ export default function CointradeHistory() {
                                     <div className="text-xs text-red-700 dark:text-red-400 mb-1">손절</div>
                                     <div className="text-xl font-bold text-red-800 dark:text-red-300">
                                         {summary.stopLossCount}건
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 수익률 요약 */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                {/* 실현 수익률 */}
+                                <div className={`p-4 rounded-lg border ${summary.realizedProfitRate >= 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'}`}>
+                                    <div className={`text-xs mb-1 ${summary.realizedProfitRate >= 0 ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                                        실현 수익률
+                                    </div>
+                                    <div className={`text-xl font-bold ${summary.realizedProfitRate >= 0 ? 'text-red-800 dark:text-red-300' : 'text-blue-800 dark:text-blue-300'}`}>
+                                        {summary.realizedProfitRate >= 0 ? '+' : ''}{summary.realizedProfitRate.toFixed(2)}%
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                                        매도 실현 손익 / 매도 원금
+                                    </div>
+                                </div>
+
+                                {/* 보유 종목 수익률 */}
+                                <div className={`p-4 rounded-lg border ${summary.holdingsProfitRate >= 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'}`}>
+                                    <div className={`text-xs mb-1 ${summary.holdingsProfitRate >= 0 ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                                        보유 수익률 ({summary.holdingsCount}종목)
+                                    </div>
+                                    <div className={`text-xl font-bold ${summary.holdingsProfitRate >= 0 ? 'text-red-800 dark:text-red-300' : 'text-blue-800 dark:text-blue-300'}`}>
+                                        {summary.holdingsProfitRate >= 0 ? '+' : ''}{summary.holdingsProfitRate.toFixed(2)}%
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                                        평가손익: {summary.holdingsProfit >= 0 ? '+' : ''}{formatNumberWithComma(Math.floor(summary.holdingsProfit))}원
+                                    </div>
+                                </div>
+
+                                {/* 합산 수익률 */}
+                                <div className={`p-4 rounded-lg border-2 ${summary.combinedProfitRate >= 0 ? 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700' : 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700'}`}>
+                                    <div className={`text-xs mb-1 font-semibold ${summary.combinedProfitRate >= 0 ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                                        합산 수익률
+                                    </div>
+                                    <div className={`text-2xl font-bold ${summary.combinedProfitRate >= 0 ? 'text-red-800 dark:text-red-300' : 'text-blue-800 dark:text-blue-300'}`}>
+                                        {summary.combinedProfitRate >= 0 ? '+' : ''}{summary.combinedProfitRate.toFixed(2)}%
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                                        (실현 + 보유 평가) / 총 투자금
                                     </div>
                                 </div>
                             </div>

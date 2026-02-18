@@ -712,7 +712,7 @@ const AIPredictionSection = ({ data, predictionData, predictionLoading, onFetchP
  * 하이라이트 카드들
  */
 const HighlightCards = ({ data }) => {
-    const { price, target, calculatedTarget, purchasePrice, sellTarget, upside } = usePriceMetrics(data);
+    const { price, target, calculatedTarget, purchasePrice, sellTarget, stopLossPrice, upside } = usePriceMetrics(data);
 
     // 계산된 주당가치가 적정가와 다를 때만 표시
     const showCalculatedTarget = (() => {
@@ -723,7 +723,7 @@ const HighlightCards = ({ data }) => {
     })();
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <MetricCard label="현재가" value={formatUSD(price)} />
             <MetricCard
                 label="적정가"
@@ -740,6 +740,11 @@ const HighlightCards = ({ data }) => {
                 label="목표매도가"
                 value={formatUSD(sellTarget)}
                 valueClassName="text-blue-600 dark:text-blue-400"
+            />
+            <MetricCard
+                label="손절매가"
+                value={formatUSD(stopLossPrice)}
+                valueClassName="text-red-600 dark:text-red-400"
             />
         </div>
     );
@@ -1346,6 +1351,7 @@ const usePriceMetrics = (data) => {
         const calculatedTarget = getValDeep(data, ['계산된주당가치', 'calculatedPerShareValue', 'calculatedFairValue']);
         const purchasePrice = getValDeep(data, ['매수적정가', 'purchasePrice']);
         const sellTarget = getValDeep(data, ['목표매도가', 'sellTarget']);
+        const stopLossPrice = getValDeep(data, ['손절매가', 'stopLossPrice']);
 
         const priceNum = toNum(price);
         const targetNum = toNum(target);
@@ -1360,6 +1366,7 @@ const usePriceMetrics = (data) => {
             calculatedTarget: Number.isNaN(calculatedTargetNum) ? null : calculatedTargetNum,
             purchasePrice,
             sellTarget,
+            stopLossPrice,
             upside
         };
     }, [data]);

@@ -26,6 +26,7 @@ import CointradeHistory from '@/pages/cointrade/CointradeHistory'
 import MlModelInfo from '@/pages/cointrade/MlModelInfo'
 import Backtest from '@/pages/cointrade/Backtest'
 import BacktestOptimizer from '@/pages/cointrade/BacktestOptimizer'
+import ExcelViewer from '@/pages/util/excel-viewer'
 
 const routes = {
 
@@ -131,6 +132,14 @@ const routes = {
         path: '/cointrade/backtest-optimizer',
         element: <BacktestOptimizer />,
         accessRoles: ['ROLE_SUPER_ADMIN']
+    },
+
+    /* 유틸 */
+    "ExcelViewer": {
+        section: '유틸',
+        label: '엑셀 보기',
+        path: '/util/excel-viewer',
+        element: <ExcelViewer />
     }
 }
 

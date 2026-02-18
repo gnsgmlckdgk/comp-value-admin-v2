@@ -275,11 +275,9 @@ async function defaultBulkFetcher(symbols, onProgress, abortRef) {
         try {
             const sendUrl = API_ENDPOINTS.ABROAD_COMP_VALUE_ARR(batchSymbols);
 
-            // 기업분석 + 투자판단 API 병렬 호출
-            const [compResult, evalResult] = await Promise.all([
-                send(sendUrl, {}, "GET"),
-                send('/dart/main/evaluate/stocks', { symbols: batch }, 'POST').catch(() => ({ data: null, error: true }))
-            ]);
+            // 기업분석 먼저 호출 (Redis 캐시 저장) → 투자판단 순차 호출 (캐시 활용, FMP 추가호출 없음)
+            const compResult = await send(sendUrl, {}, "GET");
+            const evalResult = await send('/dart/main/evaluate/stocks', { symbols: batch }, 'POST').catch(() => ({ data: null, error: true }));
 
             const { data, error } = compResult;
 

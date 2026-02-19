@@ -34,7 +34,7 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
     const targetPrice = toNum(row.targetPrice);
     const hasTarget = targetPrice > 0 && buyPrice > 0 && targetPrice > buyPrice;
     const progress = hasTarget
-        ? Math.max(0, ((curPrice - buyPrice) / (targetPrice - buyPrice)) * 100)
+        ? ((curPrice - buyPrice) / (targetPrice - buyPrice)) * 100
         : 0;
 
     return (
@@ -73,7 +73,9 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
                             <span className={`text-[10px] font-semibold tabular-nums whitespace-nowrap ${
                                 progress >= 100
                                     ? 'text-amber-600 dark:text-amber-400'
-                                    : 'text-slate-500 dark:text-slate-400'
+                                    : progress < 0
+                                        ? 'text-rose-600 dark:text-rose-400'
+                                        : 'text-slate-500 dark:text-slate-400'
                             }`}>
                                 {Math.round(progress)}%
                             </span>

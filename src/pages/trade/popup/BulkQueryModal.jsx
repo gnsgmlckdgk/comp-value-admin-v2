@@ -22,7 +22,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [stopping, setStopping] = useState(false); // 중지 중 상태
-    const [progress, setProgress] = useState({ current: 0, total: 0, currentSymbol: '' });
+    const [progress, setProgress] = useState({ current: 0, total: 0, currentSymbol: '', waiting: false, waitSeconds: 0 });
     const [internalAlert, setInternalAlert] = useState({ open: false, message: '' });
 
     // 중지 플래그
@@ -56,7 +56,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
     // 모달 닫힐 때 상태 초기화
     useEffect(() => {
         if (!open) {
-            setProgress({ current: 0, total: 0, currentSymbol: '' });
+            setProgress({ current: 0, total: 0, currentSymbol: '', waiting: false, waitSeconds: 0 });
         }
     }, [open]);
 
@@ -79,13 +79,13 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
             return;
         }
         setLoading(true);
-        setProgress({ current: 0, total: symbols.length, currentSymbol: '' });
+        setProgress({ current: 0, total: symbols.length, currentSymbol: '', waiting: false, waitSeconds: 0 });
         abortRef.current = false; // 중지 플래그 초기화
 
         try {
             const fn = fetcher || defaultBulkFetcher;
-            const items = await fn(symbols, (current, total, currentSymbol) => {
-                setProgress({ current, total, currentSymbol });
+            const items = await fn(symbols, (current, total, currentSymbol, waiting = false, waitSeconds = 0) => {
+                setProgress({ current, total, currentSymbol, waiting, waitSeconds });
             }, abortRef); // 중지 플래그 전달
 
             if (abortRef.current) {
@@ -106,7 +106,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
         } finally {
             setLoading(false);
             setStopping(false);
-            setProgress({ current: 0, total: 0, currentSymbol: '' });
+            setProgress({ current: 0, total: 0, currentSymbol: '', waiting: false, waitSeconds: 0 });
             abortRef.current = false;
         }
     };
@@ -156,19 +156,46 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
                     {loading && progress.total > 0 && (
                         <div className="space-y-2">
                             <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                                <span>
-                                    진행 중: <span className="font-medium text-slate-800 dark:text-white">{progress.currentSymbol}</span>
+                                <span className="flex items-center gap-1.5">
+                                    {progress.waiting ? (
+                                        <>
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                                                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                                            </span>
+                                            <span className="text-amber-600 dark:text-amber-400">
+                                                다음 배치 대기 중 <span className="font-semibold tabular-nums">{progress.waitSeconds}초</span>
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                                                <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+                                            </span>
+                                            <span>
+                                                조회 중: <span className="font-medium text-slate-800 dark:text-white">{progress.currentSymbol}</span>
+                                            </span>
+                                        </>
+                                    )}
                                 </span>
-                                <span>
+                                <span className="font-medium tabular-nums">
                                     {progress.current} / {progress.total} ({Math.round((progress.current / progress.total) * 100)}%)
                                 </span>
                             </div>
-                            <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden dark:bg-slate-600">
+                            <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden dark:bg-slate-600">
                                 <div
-                                    className="h-full bg-indigo-600 rounded-full transition-all duration-300 ease-out"
-                                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                                    className="h-full rounded-full transition-all duration-500 ease-out bg-[length:20px_20px] animate-[barber-pole_0.8s_linear_infinite]"
+                                    style={{
+                                        width: `${(progress.current / progress.total) * 100}%`,
+                                        backgroundImage: progress.waiting
+                                            ? 'linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%)'
+                                            : 'linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%)',
+                                        backgroundColor: progress.waiting ? '#f59e0b' : '#4f46e5',
+                                    }}
                                 />
                             </div>
+                            <style>{`@keyframes barber-pole { from { background-position: 0 0 } to { background-position: 20px 0 } }`}</style>
                         </div>
                     )}
 
@@ -245,9 +272,28 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
 }
 
 /**
- * 딜레이 함수
+ * 딜레이 함수 (카운트다운 콜백 지원)
+ * @param {number} ms - 대기 시간 (밀리초)
+ * @param {Function} [onTick] - 매초 호출되는 콜백 (남은 초)
+ * @param {Object} [abortRef] - 중지 플래그
  */
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms, onTick, abortRef) => new Promise((resolve) => {
+    if (!onTick) {
+        setTimeout(resolve, ms);
+        return;
+    }
+    let remaining = Math.ceil(ms / 1000);
+    onTick(remaining);
+    const id = setInterval(() => {
+        remaining--;
+        if (remaining <= 0 || abortRef?.current) {
+            clearInterval(id);
+            resolve();
+        } else {
+            onTick(remaining);
+        }
+    }, 1000);
+});
 
 /**
  * 다건 조회 API를 사용하여 심볼 배열을 서버에 보내고 결과를 받음
@@ -337,9 +383,17 @@ async function defaultBulkFetcher(symbols, onProgress, abortRef) {
             onProgress(processed, total, `배치 ${batchIdx + 1}/${batches.length} 완료`);
         }
 
-        // 마지막 배치가 아니고 중지되지 않았으면 대기
+        // 마지막 배치가 아니고 중지되지 않았으면 대기 (카운트다운 표시)
         if (batchIdx < batches.length - 1 && !abortRef?.current) {
-            await delay(BATCH_DELAY_MS);
+            await delay(BATCH_DELAY_MS, (remainSec) => {
+                if (onProgress) {
+                    onProgress(processed, total, `배치 ${batchIdx + 1}/${batches.length} 완료`, true, remainSec);
+                }
+            }, abortRef);
+            // 대기 끝나면 waiting 상태 해제
+            if (onProgress) {
+                onProgress(processed, total, `배치 ${batchIdx + 2}/${batches.length} 준비 중...`);
+            }
         }
     }
 

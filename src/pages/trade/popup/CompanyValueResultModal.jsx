@@ -714,38 +714,150 @@ const AIPredictionSection = ({ data, predictionData, predictionLoading, onFetchP
 const HighlightCards = ({ data }) => {
     const { price, target, calculatedTarget, purchasePrice, sellTarget, stopLossPrice, upside } = usePriceMetrics(data);
 
+    const priceNum = toNumber(price);
+    const targetNum = toNumber(target);
+    const purchaseNum = toNumber(purchasePrice);
+    const sellNum = toNumber(sellTarget);
+    const stopLossNum = toNumber(stopLossPrice);
+
     // 계산된 주당가치가 적정가와 다를 때만 표시
     const showCalculatedTarget = (() => {
         if (calculatedTarget === null) return false;
-        const targetNum = typeof target === 'number' ? target : parseFloat(target);
         if (isNaN(targetNum)) return true;
         return Math.abs(calculatedTarget - targetNum) > 0.01;
     })();
 
+    // 상승여력 색상
+    const upsidePct = upside !== null ? (upside * 100).toFixed(1) : null;
+    const upsideColor = upside !== null
+        ? (upside >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')
+        : '';
+
+    // 현재가 대비 % 차이
+    const pctDiff = (val) => {
+        const v = toNumber(val);
+        if (isNaN(v) || isNaN(priceNum) || priceNum === 0) return null;
+        return ((v - priceNum) / priceNum * 100).toFixed(1);
+    };
+
+    // 프로그레스 바: min=손절매가, max=적정가
+    const barMin = stopLossNum;
+    const barMax = targetNum;
+    const barRange = barMax - barMin;
+    const toBarPct = (v) => {
+        if (isNaN(v) || isNaN(barMin) || isNaN(barMax) || barRange <= 0) return null;
+        return Math.max(0, Math.min(100, ((v - barMin) / barRange) * 100));
+    };
+
+    const currentPct = toBarPct(priceNum);
+    const purchaseBarPct = toBarPct(purchaseNum);
+    const sellBarPct = toBarPct(sellNum);
+    const hasBar = currentPct !== null;
+
+    // 트레이딩 가이드 항목
+    const guideItems = [
+        { label: '손절매가', value: stopLossPrice, color: 'text-red-600 dark:text-red-400', dotColor: 'bg-red-500' },
+        { label: '매수적정가', value: purchasePrice, color: 'text-emerald-600 dark:text-emerald-400', dotColor: 'bg-emerald-500' },
+        { label: '목표매도가', value: sellTarget, color: 'text-blue-600 dark:text-blue-400', dotColor: 'bg-blue-500' },
+    ];
+
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <MetricCard label="현재가" value={formatUSD(price)} />
-            <MetricCard
-                label="적정가"
-                value={formatUSD(target)}
-                subValue={showCalculatedTarget ? formatUSD(calculatedTarget) : null}
-                subLabel="계산된 주당가치"
-            />
-            <MetricCard
-                label="매수적정가"
-                value={formatUSD(purchasePrice)}
-                valueClassName="text-emerald-600 dark:text-emerald-400"
-            />
-            <MetricCard
-                label="목표매도가"
-                value={formatUSD(sellTarget)}
-                valueClassName="text-blue-600 dark:text-blue-400"
-            />
-            <MetricCard
-                label="손절매가"
-                value={formatUSD(stopLossPrice)}
-                valueClassName="text-red-600 dark:text-red-400"
-            />
+        <div className="flex flex-col gap-3">
+            {/* 섹션 1: 가치 평가 */}
+            <div className="rounded-lg border bg-white p-4 shadow-sm dark:bg-slate-700 dark:border-slate-600">
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">가치 평가</div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    {/* 현재가 */}
+                    <div className="flex-1 text-center sm:text-left">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">현재가</div>
+                        <div className="mt-1 text-xl font-bold dark:text-white">{formatUSD(price)}</div>
+                    </div>
+                    {/* 상승여력 화살표 */}
+                    <div className="flex-shrink-0 text-center">
+                        {upsidePct !== null && (
+                            <div className={`text-lg font-bold ${upsideColor}`}>
+                                {upside >= 0 ? '▲' : '▼'} {upside >= 0 ? '+' : ''}{upsidePct}%
+                            </div>
+                        )}
+                    </div>
+                    {/* 적정가 */}
+                    <div className="flex-1 text-center sm:text-right">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">적정가</div>
+                        <div className="mt-1 text-xl font-bold dark:text-white">{formatUSD(target)}</div>
+                        {showCalculatedTarget && (
+                            <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                                계산된 주당가치: <span className="font-medium text-slate-600 dark:text-slate-300">{formatUSD(calculatedTarget)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* 섹션 2: 트레이딩 가이드 */}
+            <div className="rounded-lg border bg-white p-4 shadow-sm dark:bg-slate-700 dark:border-slate-600">
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">트레이딩 가이드</div>
+                {/* 가격 리스트 */}
+                <div className="space-y-2">
+                    {guideItems.map(({ label, value, color, dotColor }) => {
+                        const diff = pctDiff(value);
+                        return (
+                            <div key={label} className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                    <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} />
+                                    <span className="text-slate-600 dark:text-slate-300">{label}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={`font-semibold ${color}`}>{formatUSD(value)}</span>
+                                    {diff !== null && (
+                                        <span className={`text-xs ${Number(diff) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                            ({Number(diff) >= 0 ? '+' : ''}{diff}%)
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+                {/* 프로그레스 바 */}
+                {hasBar && (
+                    <div className="mt-4">
+                        <div className="relative h-2 rounded-full bg-slate-200 dark:bg-slate-600">
+                            {/* 바 배경 그라데이션 */}
+                            <div
+                                className="absolute inset-0 rounded-full"
+                                style={{ background: 'linear-gradient(to right, #ef4444, #f59e0b, #22c55e)' }}
+                            />
+                            {/* 매수적정가 마커 */}
+                            {purchaseBarPct !== null && (
+                                <div
+                                    className="absolute top-1/2 -translate-y-1/2 w-1 h-4 bg-emerald-500 rounded-sm"
+                                    style={{ left: `${purchaseBarPct}%` }}
+                                    title={`매수적정가: ${formatUSD(purchasePrice)}`}
+                                />
+                            )}
+                            {/* 목표매도가 마커 */}
+                            {sellBarPct !== null && (
+                                <div
+                                    className="absolute top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-sm"
+                                    style={{ left: `${sellBarPct}%` }}
+                                    title={`목표매도가: ${formatUSD(sellTarget)}`}
+                                />
+                            )}
+                            {/* 현재가 마커 (점) */}
+                            <div
+                                className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-800 dark:border-white dark:bg-slate-800 shadow"
+                                style={{ left: `${currentPct}%`, transform: 'translate(-50%, -50%)' }}
+                                title={`현재가: ${formatUSD(price)}`}
+                            />
+                        </div>
+                        {/* 바 라벨 */}
+                        <div className="flex justify-between mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
+                            <span>손절매가</span>
+                            <span>적정가</span>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

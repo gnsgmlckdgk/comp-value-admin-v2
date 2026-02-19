@@ -79,10 +79,10 @@ function PrivateRoute({ children }) {
 
     const isPublic = isPublicRoute(location.pathname);
 
-    // 검사 전/검사 중: 보호 라우트는 잠시 막고, 공개 페이지는 항상 렌더
-    if (!hasChecked || checking) {
+    // 최초 검사 전: 보호 라우트는 스피너 표시, 공개 페이지는 항상 렌더
+    // 재검증(탭 복귀, 페이지 이동 등)에서는 기존 화면을 유지한 채 백그라운드 체크
+    if (!hasChecked) {
         if (isPublic) return children;
-        // 보호 라우트: 빈 화면 대신 최소한의 레이아웃 유지
         return (
             <div className="flex min-h-[calc(100vh-120px)] items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" />

@@ -1,4 +1,4 @@
-import { Td } from './TableCells';
+import { Td, FmtAmount } from './TableCells';
 import { fmtNum, fmtUsd } from '../utils/formatters';
 
 /**
@@ -90,7 +90,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
             <Td>
                 <div className="leading-tight text-right">
                     <div className="text-slate-700 dark:text-slate-200 tabular-nums">
-                        {buyAvgUSD ? `$ ${fmtUsd(buyAvgUSD)}` : ''}
+                        {buyAvgUSD ? <FmtAmount text={`$ ${fmtUsd(buyAvgUSD)}`} /> : ''}
                     </div>
                     {buyAvgUSD && fx ? (
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
@@ -104,7 +104,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
             <Td>
                 <div className="leading-tight text-right">
                     <div className="text-slate-700 dark:text-slate-200 tabular-nums">
-                        {curUSD ? `$ ${fmtUsd(curUSD)}` : ''}
+                        {curUSD ? <FmtAmount text={`$ ${fmtUsd(curUSD)}`} /> : ''}
                     </div>
                     {curUSD && fx ? (
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
@@ -125,7 +125,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
             <Td>
                 <div className="leading-tight text-right">
                     <div className="text-slate-700 dark:text-slate-200 tabular-nums font-bold">
-                        {buySumUSD ? `$ ${fmtUsd(buySumUSD)}` : ''}
+                        {buySumUSD ? <FmtAmount text={`$ ${fmtUsd(buySumUSD)}`} /> : ''}
                     </div>
                     {buySumUSD && fx ? (
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
@@ -139,7 +139,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
             <Td>
                 <div className="leading-tight text-right">
                     <div className="text-slate-700 dark:text-slate-200 tabular-nums font-bold">
-                        {curSumUSD ? `$ ${fmtUsd(curSumUSD)}` : ''}
+                        {curSumUSD ? <FmtAmount text={`$ ${fmtUsd(curSumUSD)}`} /> : ''}
                     </div>
                     {curSumUSD && fx ? (
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
@@ -153,7 +153,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
             <td className="px-3 py-2.5 align-middle">
                 <div className="leading-tight text-right">
                     <div className={`${pnlCls} font-bold tabular-nums`}>
-                        {(pos ? '+' : '') + '$ ' + fmtUsd(diffUSD)}
+                        <FmtAmount text={(pos ? '+' : '') + '$ ' + fmtUsd(diffUSD)} />
                     </div>
                     {fx ? (
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">

@@ -1,4 +1,4 @@
-import { Td, PnlCell } from './TableCells';
+import { Td, PnlCell, FmtAmount } from './TableCells';
 import { toNum, fmtUsd, fmtDate } from '../utils/formatters';
 
 /**
@@ -85,8 +85,8 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
             {/* 매수가($) */}
             <Td>
                 <div className="leading-tight text-right">
-                    <div className="text-slate-700 dark:text-slate-200 tabular-nums">
-                        {buyPrice ? `$ ${fmtUsd(buyPrice)}` : ''}
+                    <div className="text-slate-700 dark:text-slate-200 font-medium tabular-nums">
+                        {buyPrice ? <FmtAmount text={`$ ${fmtUsd(buyPrice)}`} /> : ''}
                     </div>
                     {buyPrice && fx ? (
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
@@ -99,8 +99,8 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
             {/* 현재가($) */}
             <Td>
                 <div className="leading-tight text-right">
-                    <div className="text-slate-700 dark:text-slate-200 tabular-nums">
-                        {curPrice ? `$ ${fmtUsd(curPrice)}` : ''}
+                    <div className="text-slate-700 dark:text-slate-200 font-medium tabular-nums">
+                        {curPrice ? <FmtAmount text={`$ ${fmtUsd(curPrice)}`} /> : ''}
                     </div>
                     {curPrice && fx ? (
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
@@ -121,7 +121,7 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
             <Td>
                 <div className="leading-tight text-right">
                     <div className="text-slate-700 dark:text-slate-200 tabular-nums font-medium">
-                        {buyPrice && qty ? `$ ${fmtUsd(buyPrice * qty)}` : ''}
+                        {buyPrice && qty ? <FmtAmount text={`$ ${fmtUsd(buyPrice * qty)}`} /> : ''}
                     </div>
                     {buyPrice && qty && fx ? (
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
@@ -135,7 +135,7 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
             <Td>
                 <div className="leading-tight text-right">
                     <div className="text-slate-700 dark:text-slate-200 tabular-nums font-medium">
-                        {curPrice && qty ? `$ ${fmtUsd(curPrice * qty)}` : ''}
+                        {curPrice && qty ? <FmtAmount text={`$ ${fmtUsd(curPrice * qty)}`} /> : ''}
                     </div>
                     {curPrice && qty && fx ? (
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Button from '@/component/common/button/Button';
 import { fmtUsd } from '../utils/formatters';
+import { FmtAmount } from './TableCells';
 import useModalAnimation from '@/hooks/useModalAnimation';
 
 /**
@@ -99,7 +100,7 @@ export default function SellModal({
                         <div>
                             <span className="text-slate-500 dark:text-slate-400">매수가격</span>
                             <p className="font-medium dark:text-white">
-                                $ {fmtUsd(buyPrice)}
+                                <FmtAmount text={`$ ${fmtUsd(buyPrice)}`} />
                                 {buyPriceRate && <span className="text-xs text-slate-400 ml-1">(₩{Math.round(buyPrice * buyPriceRate).toLocaleString()})</span>}
                             </p>
                         </div>
@@ -110,7 +111,7 @@ export default function SellModal({
                         <div className="col-span-2">
                             <span className="text-slate-500 dark:text-slate-400">현재가격</span>
                             <p className="font-medium dark:text-white">
-                                $ {fmtUsd(currentPrice)}
+                                <FmtAmount text={`$ ${fmtUsd(currentPrice)}`} />
                                 {fx && <span className="text-xs text-slate-400 ml-1">(₩{Math.round(currentPrice * fx).toLocaleString()})</span>}
                             </p>
                         </div>
@@ -208,7 +209,7 @@ export default function SellModal({
                             const sellRate = parseFloat(sellExchangeRate) || fx;
                             return (
                                 <p className={`text-lg font-bold ${isPositive ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                                    {isPositive ? '+' : ''}$ {fmtUsd(pnl)}
+                                    <FmtAmount text={`${isPositive ? '+' : ''}$ ${fmtUsd(pnl)}`} />
                                     {sellRate && (
                                         <span className="text-sm font-normal ml-2">
                                             (₩{Math.round(pnl * sellRate).toLocaleString()})

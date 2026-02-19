@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { fmtUsd } from '../utils/formatters';
+import { FmtAmount } from './TableCells';
 
 /**
  * 포트폴리오 요약 대시보드 (테이블 상단 배치)
@@ -16,7 +17,7 @@ export function PortfolioDashboard({ buySum, curSum, diff, diffPct, fx, fxUpdate
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
                     <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">총 투자금액</div>
                     <div className="text-lg font-bold text-slate-800 dark:text-white tabular-nums">
-                        $ {fmtUsd(buySum)}
+                        <FmtAmount text={`$ ${fmtUsd(buySum)}`} />
                     </div>
                     {fx > 0 && (
                         <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
@@ -29,7 +30,7 @@ export function PortfolioDashboard({ buySum, curSum, diff, diffPct, fx, fxUpdate
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
                     <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">총 평가금액</div>
                     <div className="text-lg font-bold text-slate-800 dark:text-white tabular-nums">
-                        $ {fmtUsd(curSum)}
+                        <FmtAmount text={`$ ${fmtUsd(curSum)}`} />
                     </div>
                     {fx > 0 && (
                         <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
@@ -46,7 +47,7 @@ export function PortfolioDashboard({ buySum, curSum, diff, diffPct, fx, fxUpdate
                 }`}>
                     <div className="text-xs font-medium mb-1 text-slate-600 dark:text-slate-400">총 손익</div>
                     <div className={`text-lg font-bold tabular-nums ${isProfit ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                        {isProfit ? '+' : ''}$ {fmtUsd(diff)}
+                        <FmtAmount text={`${isProfit ? '+' : ''}$ ${fmtUsd(diff)}`} />
                     </div>
                     {fx > 0 && (
                         <div className={`text-xs tabular-nums mt-0.5 ${isProfit ? 'text-rose-600/80 dark:text-rose-400/80' : 'text-blue-600/80 dark:text-blue-400/80'}`}>

@@ -3,6 +3,21 @@ import { send } from '@/util/ClientUtil';
 import useModalAnimation from '@/hooks/useModalAnimation';
 
 /**
+ * 금액 표시 – 정수부분 볼드, 소수부분 연하게
+ */
+function BoldInt({ text }) {
+    if (!text) return null;
+    const dotIdx = text.indexOf('.');
+    if (dotIdx === -1) return <span className="font-bold">{text}</span>;
+    return (
+        <>
+            <span className="font-bold">{text.substring(0, dotIdx)}</span>
+            <span className="font-normal opacity-50">{text.substring(dotIdx)}</span>
+        </>
+    );
+}
+
+/**
  * 가격 비교 차트 컴포넌트
  * 매수가, 현재가, 목표가를 시각적으로 비교
  */
@@ -300,8 +315,8 @@ export default function TransactionDetailModal({
                         <div className="grid grid-cols-3 gap-4 text-center">
                             <div>
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수금액</div>
-                                <div className="font-semibold text-slate-900 dark:text-white">
-                                    ${totalBuy.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <div className="text-slate-900 dark:text-white">
+                                    <BoldInt text={`$${totalBuy.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
                                 </div>
                                 {buyPriceRate > 0 && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -311,8 +326,8 @@ export default function TransactionDetailModal({
                             </div>
                             <div>
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">평가금액</div>
-                                <div className="font-semibold text-slate-900 dark:text-white">
-                                    ${totalCurrent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <div className="text-slate-900 dark:text-white">
+                                    <BoldInt text={`$${totalCurrent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
                                 </div>
                                 {fxRate > 0 && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -322,8 +337,8 @@ export default function TransactionDetailModal({
                             </div>
                             <div>
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">손익금액</div>
-                                <div className={`font-semibold ${isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                                    {isProfit ? '+' : ''}${diff.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <div className={`${isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                    <BoldInt text={`${isProfit ? '+' : ''}$${diff.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
                                 </div>
                                 {fxRate > 0 && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -338,8 +353,8 @@ export default function TransactionDetailModal({
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수가</div>
-                            <div className="font-semibold text-slate-900 dark:text-white">
-                                ${buyPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            <div className="text-slate-900 dark:text-white">
+                                <BoldInt text={`$${buyPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} />
                             </div>
                             {buyPriceRate > 0 && buyPrice > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -349,8 +364,8 @@ export default function TransactionDetailModal({
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">현재가</div>
-                            <div className={`font-semibold ${isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                                ${curPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            <div className={`${isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                <BoldInt text={`$${curPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} />
                             </div>
                             {fxRate > 0 && curPrice > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -360,8 +375,8 @@ export default function TransactionDetailModal({
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">목표가</div>
-                            <div className={`font-semibold ${isTargetHit ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
-                                {targetPrice > 0 ? `$${targetPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                            <div className={`${isTargetHit ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
+                                {targetPrice > 0 ? <BoldInt text={`$${targetPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} /> : '-'}
                             </div>
                             {fxRate > 0 && targetPrice > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -375,8 +390,8 @@ export default function TransactionDetailModal({
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 col-span-2">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수당시환율</div>
-                            <div className="font-semibold text-slate-900 dark:text-white">
-                                {buyExchangeRate > 0 ? `₩${buyExchangeRate.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
+                            <div className="text-slate-900 dark:text-white">
+                                {buyExchangeRate > 0 ? <BoldInt text={`₩${buyExchangeRate.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}`} /> : '-'}
                             </div>
                         </div>
                     </div>
@@ -523,8 +538,8 @@ export default function TransactionDetailModal({
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-slate-500 dark:text-slate-400">매수당시환율</span>
-                                            <span className="text-slate-900 dark:text-white font-medium">
-                                                {formData.buyExchangeRateAtTrade ? `₩${parseFloat(formData.buyExchangeRateAtTrade).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
+                                            <span className="text-slate-900 dark:text-white">
+                                                {formData.buyExchangeRateAtTrade ? <BoldInt text={`₩${parseFloat(formData.buyExchangeRateAtTrade).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}`} /> : '-'}
                                             </span>
                                         </div>
                                         <div className="flex justify-between col-span-2">

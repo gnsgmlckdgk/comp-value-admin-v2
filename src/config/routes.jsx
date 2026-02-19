@@ -28,12 +28,14 @@ import Backtest from '@/pages/cointrade/Backtest'
 import BacktestOptimizer from '@/pages/cointrade/BacktestOptimizer'
 import ExcelViewer from '@/pages/util/excel-viewer'
 
+import { SECTIONS } from '@/component/layouts/common/SideBar001';
+
 const routes = {
 
     /** SideBar001.jsx 에 SECTIONS 도 같이 수정 필요 */
 
     "Home": {
-        section: '시작하기', label: 'Home', path: '/', element: <Home />
+        section: SECTIONS[0], label: 'Home', path: '/', element: <Home />
     },
     "NotFound": {
         section: 'None', show: false, label: 'NotFound', path: '*', element: <NotFound />
@@ -47,87 +49,87 @@ const routes = {
     "MemberManagement": { section: '회원정보', show: false, label: '회원 관리 (관리자)', path: '/member/management', element: <MemberManagement /> },
 
     /* 기업분석(국내) */
-    "CompList": { section: '기업분석(국내)', label: '기업목록', path: '/complist', element: <CompList /> },
-    "CompValue": { section: '기업분석(국내)', label: '기업분석', path: '/compvalue', element: <CompValue /> },
-    "CompValueCustom": { section: '기업분석(국내)', label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
+    "CompList": { section: SECTIONS[1], label: '기업목록', path: '/complist', element: <CompList /> },
+    "CompValue": { section: SECTIONS[1], label: '기업분석', path: '/compvalue', element: <CompValue /> },
+    "CompValueCustom": { section: SECTIONS[1], label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
 
     /* 기업분석(미국) */
-    "AbroadCompanyList": { section: '기업분석(미국)', label: '기업목록', path: '/complist/abroad', element: <AbroadCompanyList /> },
-    "AbroadRecommendedStock": { section: '기업분석(미국)', label: '기업추천', path: '/recommended/abroad', element: <AbroadRecommendedStock /> },
-    "AbroadCompValue": { section: '기업분석(미국)', label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
+    "AbroadCompanyList": { section: SECTIONS[2], label: '기업목록', path: '/complist/abroad', element: <AbroadCompanyList /> },
+    "AbroadRecommendedStock": { section: SECTIONS[2], label: '기업추천', path: '/recommended/abroad', element: <AbroadRecommendedStock /> },
+    "AbroadCompValue": { section: SECTIONS[2], label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
 
     /* 거래 */
-    "InvestmentEvaluation": { section: '거래', label: '투자판단', path: '/trade/evaluation', element: <InvestmentEvaluation /> },
-    "TransactionOverview": { section: '거래', label: '보유종목관리', path: '/transaction/overview', element: <TransactionOverview /> },
-    "SellRecordHistory": { section: '거래', label: '매도현황기록', path: '/trade/sellrecord', element: <SellRecordHistory /> },
+    "InvestmentEvaluation": { section: SECTIONS[3], label: '투자판단', path: '/trade/evaluation', element: <InvestmentEvaluation /> },
+    "TransactionOverview": { section: SECTIONS[3], label: '보유종목관리', path: '/transaction/overview', element: <TransactionOverview /> },
+    "SellRecordHistory": { section: SECTIONS[3], label: '매도현황기록', path: '/trade/sellrecord', element: <SellRecordHistory /> },
 
     /* 게시판 */
     "FreeBoard": {
-        section: '게시판',
+        section: SECTIONS[4],
         label: '자유게시판',
         path: '/freeboard/',
         element: <FreeBoard />,
         children: [
-            { section: '게시판', show: false, label: '게시글목록', path: '', element: <FreeBoardList /> },
-            { section: '게시판', show: false, label: '게시글등록', path: 'regi', element: <Register /> },
-            { section: '게시판', show: false, label: '게시글삭제', path: 'delete' },
-            { section: '게시판', show: false, label: '게시글상세', path: 'view/:id', element: <FreeBoardView /> },
-            { section: '게시판', show: false, label: '게시글수정', path: 'modi/:id', element: <FreeBoardUpdate /> },
+            { section: SECTIONS[4], show: false, label: '게시글목록', path: '', element: <FreeBoardList /> },
+            { section: SECTIONS[4], show: false, label: '게시글등록', path: 'regi', element: <Register /> },
+            { section: SECTIONS[4], show: false, label: '게시글삭제', path: 'delete' },
+            { section: SECTIONS[4], show: false, label: '게시글상세', path: 'view/:id', element: <FreeBoardView /> },
+            { section: SECTIONS[4], show: false, label: '게시글수정', path: 'modi/:id', element: <FreeBoardUpdate /> },
         ]
     },
 
     /* 코인 */
     "CointradeDashboard": {
-        section: '코인',
+        section: SECTIONS[5],
         label: '자동매매 대시보드',
         path: '/cointrade/dashboard',
         element: <CointradeDashboard />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeConfig": {
-        section: '코인',
+        section: SECTIONS[5],
         label: '자동매매 파라미터 설정',
         path: '/cointrade/config',
         element: <CointradeConfig />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeCoins": {
-        section: '코인',
+        section: SECTIONS[5],
         label: '대상 종목 설정',
         path: '/cointrade/coins',
         element: <CointradeCoins />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeScheduler": {
-        section: '코인',
+        section: SECTIONS[5],
         label: '스케줄러 관리',
         path: '/cointrade/scheduler',
         element: <CointradeScheduler />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeHistory": {
-        section: '코인',
+        section: SECTIONS[5],
         label: '거래기록 조회',
         path: '/cointrade/history',
         element: <CointradeHistory />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "MlModelInfo": {
-        section: '코인',
+        section: SECTIONS[5],
         label: '모델 예측정보 조회',
         path: '/cointrade/ml-models',
         element: <MlModelInfo />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "Backtest": {
-        section: '코인',
+        section: SECTIONS[5],
         label: '백테스트',
         path: '/cointrade/backtest',
         element: <Backtest />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "BacktestOptimizer": {
-        section: '코인',
+        section: SECTIONS[5],
         label: '백테스트 옵티마이저',
         path: '/cointrade/backtest-optimizer',
         element: <BacktestOptimizer />,
@@ -136,7 +138,7 @@ const routes = {
 
     /* 유틸 */
     "ExcelViewer": {
-        section: '유틸',
+        section: SECTIONS[6],
         label: '엑셀 보기',
         path: '/util/excel-viewer',
         element: <ExcelViewer />

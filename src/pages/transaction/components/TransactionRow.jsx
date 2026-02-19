@@ -74,7 +74,7 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
                                 progress >= 100
                                     ? 'text-amber-600 dark:text-amber-400'
                                     : progress < 0
-                                        ? 'text-rose-600 dark:text-rose-400'
+                                        ? 'text-blue-600 dark:text-blue-400'
                                         : 'text-slate-500 dark:text-slate-400'
                             }`}>
                                 {Math.round(progress)}%

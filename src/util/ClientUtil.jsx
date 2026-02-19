@@ -33,16 +33,27 @@ const getUrl = (url) => {
  */
 /**
  * 강제 로그아웃 브로드캐스트 (401 등 세션 만료 시)
+ * - 이전에 로그인 상태였을 때만 로그아웃 이벤트 발생 (미로그인 상태에서 401은 무시)
+ * - 중복 호출 방지: 이미 로그아웃 처리 중이면 무시
  */
+let _forceLogoutFired = false;
 const forceClientLogout = () => {
+    if (_forceLogoutFired) return;
+    // 로그인한 적이 없으면 (userName 없으면) 조용히 무시
+    const wasLoggedIn = !!localStorage.getItem('userName');
+    _forceLogoutFired = true;
     try {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userName');
         localStorage.removeItem('nickName');
         localStorage.removeItem('roles');
         sessionStorage.clear();
-        window.dispatchEvent(new CustomEvent('auth:logout', { detail: { reason: '401' } }));
+        // 이전에 로그인 상태였을 때만 로그아웃 알림 (세션 만료 시)
+        if (wasLoggedIn) {
+            window.dispatchEvent(new CustomEvent('auth:logout', { detail: { reason: '401' } }));
+        }
     } catch (e) { /* noop */ }
+    setTimeout(() => { _forceLogoutFired = false; }, 2000);
 };
 
 const handleError = (error) => {

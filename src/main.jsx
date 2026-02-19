@@ -8,17 +8,20 @@ import 'animate.css';
 import { AuthProvider } from './context/AuthContext';
 import { SessionProvider } from './context/SessionContext';
 import { ThemeProvider } from './context/ThemeContext';
+import ErrorBoundary from './component/common/ErrorBoundary';
 
 createRoot(document.getElementById('root')).render(
-  <AuthProvider>
-    <SessionProvider>
-      <ThemeProvider>
-        <StrictMode>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </StrictMode>
-      </ThemeProvider>
-    </SessionProvider>
-  </AuthProvider>
+  <ErrorBoundary>
+    <AuthProvider>
+      <SessionProvider>
+        <ThemeProvider>
+          <StrictMode>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </StrictMode>
+        </ThemeProvider>
+      </SessionProvider>
+    </AuthProvider>
+  </ErrorBoundary>
 )

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { send } from '@/util/ClientUtil';
+import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
@@ -195,6 +196,10 @@ const InvestmentEvaluation = () => {
     const [symbolInput, setSymbolInput] = useState(symbolFromUrl || initialData.symbolInput);
     const [resultData, setResultData] = useState(initialData.resultData);
     const [isLoading, setIsLoading] = useState(false);
+
+    // 대량조회 중 세션 유지
+    useSessionKeepAlive(isLoading);
+
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
     const [sortConfig, setSortConfig] = useState({ key: 'totalScore', direction: 'desc' });
     const [columnFilters, setColumnFilters] = useState({});

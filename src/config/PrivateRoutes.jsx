@@ -1,6 +1,6 @@
 import { useAuth } from '@/context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { send } from '@/util/ClientUtil';
 import routes from '@/config/routes';
 import { hasAnyRole } from '@/util/RoleUtil';
@@ -41,36 +41,53 @@ function PrivateRoute({ children }) {
     // Guard for stale async results when effect re-runs
     const runIdRef = useRef(0);
 
-    useEffect(() => {
+    const checkAuth = useCallback(async () => {
         const myId = ++runIdRef.current;
-        const run = async () => {
-            setChecking(true);
-            try {
-                const { data } = await send('/dart/member/me', {}, 'GET');
-                if (runIdRef.current !== myId) return; // newer run exists
+        setChecking(true);
+        try {
+            const { data } = await send('/dart/member/me', {}, 'GET');
+            if (runIdRef.current !== myId) return;
 
-                const ok = !!(data && data.success);
-                setIsLoggedIn(ok);
-                setHasChecked(true);
-            } catch (e) {
-                if (runIdRef.current !== myId) return; // newer run exists
-                setIsLoggedIn(false);
-                setHasChecked(true);
-            } finally {
-                if (runIdRef.current === myId) setChecking(false);
+            const ok = !!(data && data.success);
+            setIsLoggedIn(ok);
+            setHasChecked(true);
+        } catch (e) {
+            if (runIdRef.current !== myId) return;
+            setIsLoggedIn(false);
+            setHasChecked(true);
+        } finally {
+            if (runIdRef.current === myId) setChecking(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // 페이지 이동 시 인증 체크
+    useEffect(() => {
+        checkAuth();
+    }, [location.pathname, checkAuth]);
+
+    // 브라우저 탭 복귀 시 세션 재검증 (오래 방치 후 돌아온 경우 대응)
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') {
+                checkAuth();
             }
         };
-
-        run();
-        // no cleanup: runIdRef guards staleness
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.pathname]);
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [checkAuth]);
 
     const isPublic = isPublicRoute(location.pathname);
 
     // 검사 전/검사 중: 보호 라우트는 잠시 막고, 공개 페이지는 항상 렌더
     if (!hasChecked || checking) {
-        return isPublic ? children : null;
+        if (isPublic) return children;
+        // 보호 라우트: 빈 화면 대신 최소한의 레이아웃 유지
+        return (
+            <div className="flex min-h-[calc(100vh-120px)] items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" />
+            </div>
+        );
     }
 
     // 미로그인: 보호 라우트만 막고, 공개 페이지는 렌더

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import useModalAnimation from '@/hooks/useModalAnimation';
+import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
 import ExcelJS from 'exceljs';
 
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
@@ -26,6 +27,9 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
 
     // 중지 플래그
     const abortRef = useRef(false);
+
+    // 대량조회 중 세션 유지
+    useSessionKeepAlive(loading);
 
     // 내부 알림 함수 (z-index 문제 해결)
     const showAlert = (message) => {
@@ -110,7 +114,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
     return (
         <>
             {/* backdrop */}
-            <div className={`fixed inset-0 z-[70] bg-black/50 dark:bg-black/70 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }} onClick={onClose} />
+            <div className={`fixed inset-0 z-[70] bg-black/50 dark:bg-black/70 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }} onClick={loading ? undefined : onClose} />
 
             {/* modal */}
             <div
@@ -120,7 +124,11 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
             >
                 <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">
                     <div className="text-sm font-semibold text-slate-800 dark:text-white">대량 조회</div>
-                    <button className="text-xs rounded border px-2 py-1 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700" onClick={onClose}>
+                    <button
+                        className="text-xs rounded border px-2 py-1 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={onClose}
+                        disabled={loading}
+                    >
                         닫기 (Esc)
                     </button>
                 </div>

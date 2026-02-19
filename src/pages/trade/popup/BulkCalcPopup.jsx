@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Loading from '@/component/common/display/Loading';
+import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
 import { send } from '@/util/ClientUtil';
 import * as XLSX from 'xlsx'; // default export 없이 전체 import
 
@@ -43,6 +44,9 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
     // 개별 항목 진행도 (0~100)
     const [itemProgress, setItemProgress] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
+
+    // 대량조회 중 세션 유지
+    useSessionKeepAlive(isLoading);
 
     const handleSubmit = async () => {
         setIsLoading(true);
@@ -254,8 +258,9 @@ const BulkCalcPopup = ({ onClose, year = new Date().getFullYear(), openAlert = (
                 </div>
                 <div className="mt-2 text-right sm:text-center">
                     <button
-                        className="mr-2 px-4 py-2 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-slate-700 dark:to-slate-800 text-white rounded cursor-pointer sm:px-3 sm:text-sm sm:mr-1"
+                        className="mr-2 px-4 py-2 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-slate-700 dark:to-slate-800 text-white rounded cursor-pointer sm:px-3 sm:text-sm sm:mr-1 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={onClose}
+                        disabled={isLoading}
                     >
                         취소
                     </button>

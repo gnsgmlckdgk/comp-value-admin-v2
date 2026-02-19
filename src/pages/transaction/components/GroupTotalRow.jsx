@@ -9,7 +9,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
 
     const hasTarget = targetAvgUSD > 0 && buyAvgUSD > 0 && targetAvgUSD > buyAvgUSD;
     const progress = hasTarget
-        ? Math.max(0, ((curUSD - buyAvgUSD) / (targetAvgUSD - buyAvgUSD)) * 100)
+        ? ((curUSD - buyAvgUSD) / (targetAvgUSD - buyAvgUSD)) * 100
         : 0;
 
     const handleRowClick = () => {
@@ -77,7 +77,9 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
                             <span className={`text-[10px] font-semibold tabular-nums whitespace-nowrap ${
                                 progress >= 100
                                     ? 'text-amber-600 dark:text-amber-400'
-                                    : 'text-slate-500 dark:text-slate-400'
+                                    : progress < 0
+                                        ? 'text-blue-600 dark:text-blue-400'
+                                        : 'text-slate-500 dark:text-slate-400'
                             }`}>
                                 {Math.round(progress)}%
                             </span>

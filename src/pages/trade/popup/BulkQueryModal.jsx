@@ -144,6 +144,27 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
                         )}
                     </p>
 
+                    {/* 엑셀 행 색상 범례 */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span className="font-medium text-slate-600 dark:text-slate-300">엑셀 행 색상 (투자판단 등급):</span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: '#fde68a' }} />
+                            S · A등급
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: '#bbf7d0' }} />
+                            B등급
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: '#e0f2fe' }} />
+                            C등급
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block h-3 w-3 rounded-sm border border-slate-300 dark:border-slate-500" />
+                            D · F등급
+                        </span>
+                    </div>
+
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}

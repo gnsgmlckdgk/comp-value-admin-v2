@@ -13,6 +13,7 @@ if [ "$current_branch" = "feature-ai" ]; then
     git add .
     git commit -m "$1"
     git checkout main
+    git pull origin main
     git merge feature-ai
     git push origin main
     git checkout feature-ai

@@ -27,6 +27,7 @@ import MlModelInfo from '@/pages/cointrade/MlModelInfo'
 import Backtest from '@/pages/cointrade/Backtest'
 import BacktestOptimizer from '@/pages/cointrade/BacktestOptimizer'
 import ExcelViewer from '@/pages/util/excel-viewer'
+import MonitoringDashboard from '@/pages/monitoring/MonitoringDashboard'
 
 import { SECTIONS } from '@/component/layouts/common/SideBar001';
 
@@ -142,6 +143,15 @@ const routes = {
         label: '엑셀 보기',
         path: '/util/excel-viewer',
         element: <ExcelViewer />
+    },
+
+    /* 모니터링 */
+    "MonitoringDashboard": {
+        section: SECTIONS[7],
+        label: '실시간 대시보드',
+        path: '/monitoring',
+        element: <MonitoringDashboard />,
+        accessRoles: ['ROLE_SUPER_ADMIN']
     }
 }
 

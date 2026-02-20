@@ -1,4 +1,4 @@
-name: Build and Push Multi-Arch Image to GHCR
+name: Build and Push Image to GHCR
 
 on:
   push:
@@ -11,51 +11,78 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: gnsgmlckdgk/comp-value-admin-v2
-  VERSION: latest
 
 jobs:
   build:
-    # self-hosted ARM64 runner (ex. Mac M1)
-    #runs-on: self-hosted
     runs-on: ubuntu-latest
 
     steps:
-      # (1) 소스코드 체크아웃
       - uses: actions/checkout@v4
 
-      # (2) QEMU 설정 (멀티 아키텍처 빌드를 위한 가상화)
-      - name: Set up QEMU (for cross-build)
-        uses: docker/setup-qemu-action@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      # (3) GHCR 로그인 (GITHUB_TOKEN 사용)
-      - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-
-      # (3) 불필요한 캐시 정리 (self-hosted 러너 사용해서 필요없을듯)
-      # - name: Free disk space
-      #   run: |
-      #     sudo rm -rf /usr/share/dotnet
-      #     sudo rm -rf /usr/local/lib/android
-      #     sudo rm -rf /opt/ghc
-
-      # (4) Docker Buildx 설정 (멀티 플랫폼 빌드를 위해 필요)
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
         with:
-          driver-opts: network=host  # 네트워크 이슈 방지 (e.g., timeout)
-          use: true
+          driver-opts: network=host
 
-      # (5) Docker 이미지 빌드 및 푸시 (linux/amd64 + linux/arm64 => self-host-runner와 minikube 환경이 같은 arm64 라 멀티플랫폼설정 빼도 될듯), latest 태그 포함
-      # --platform linux/amd64,linux/arm64 \ (멀티 아키텍처 빌드 필요시 활성화, build \ 밑에 추가)
-      - name: Build and Push Multi-Arch Image (amd64 + arm64)
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  update-manifest:
+    name: Update GitOps Manifest
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout infra repo
+        uses: actions/checkout@v4
+        with:
+          repository: gnsgmlckdgk/comp-value-gos
+          token: ${{ secrets.GOS_DEPLOY_PAT }}
+          ref: main
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Update image tag
         run: |
-          docker buildx build \
-            -f docker/Dockerfile \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            --push .
-      
-      # (6) 사용하지 않는 Docker 리소스 삭제
-      - name: Clean up Docker (optional)
-        if: always()
-        run: docker system prune -af
+          cd ncloud/frontend
+          kustomize edit set image ghcr.io/gnsgmlckdgk/comp-value-admin-v2=ghcr.io/gnsgmlckdgk/comp-value-admin-v2:sha-${GITHUB_SHA::7}
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ncloud/frontend/kustomization.yaml
+          git diff --staged --quiet && echo "No changes" && exit 0
+          MAX_RETRIES=3
+          for i in $(seq 1 $MAX_RETRIES); do
+            git commit -m "deploy(admin-v2): update image to sha-${GITHUB_SHA::7}"
+            git push && exit 0
+            git pull --rebase
+          done
+          exit 1

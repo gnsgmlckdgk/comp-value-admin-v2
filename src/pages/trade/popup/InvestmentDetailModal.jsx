@@ -41,6 +41,9 @@ const FIELD_LABELS = {
     totalScore: '총점',
     grade: '등급',
     recommendation: '추천',
+    purchasePrice: '매수적정가',
+    sellTarget: '목표매도가',
+    stopLossPrice: '손절매가',
     peg: 'PEG',
     per: 'PER',
     sector: '섹터',
@@ -240,6 +243,342 @@ const StepDetailCard = ({ step }) => {
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{step.description}</p>
             <p className="text-sm text-slate-700 dark:text-slate-300">{step.details}</p>
+        </div>
+    );
+};
+
+/**
+ * 시그널 배지 색상
+ */
+const getSignalBadgeStyle = (color) => {
+    const styles = {
+        green: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-700',
+        yellow: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200 dark:border-amber-700',
+        red: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700',
+        gray: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600',
+    };
+    return styles[color] || styles.gray;
+};
+
+const getSignalIcon = (color) => {
+    const icons = { green: '\u{1F7E2}', yellow: '\u{1F7E1}', red: '\u{1F534}', gray: '\u26AA' };
+    return icons[color] || icons.gray;
+};
+
+/**
+ * 진입 타이밍 분석 섹션
+ */
+const EntryTimingSection = ({ entryTiming }) => {
+    const [showDetail, setShowDetail] = useState(false);
+
+    if (!entryTiming) return null;
+
+    return (
+        <div className="mb-4 rounded-lg border bg-white shadow-sm dark:bg-slate-700 dark:border-slate-600">
+            <div className="p-4">
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">진입 타이밍 분석</div>
+
+                {/* 시그널 + 점수 */}
+                <div className="flex items-center gap-3 mb-3">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border ${getSignalBadgeStyle(entryTiming.signalColor)}`}>
+                        <span>{getSignalIcon(entryTiming.signalColor)}</span>
+                        {entryTiming.signal}
+                    </span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                        타이밍 점수: <span className="font-bold">{entryTiming.timingScore}</span><span className="text-slate-400">/100</span>
+                    </span>
+                </div>
+
+                {/* 단기추세 + MACD */}
+                <div className="space-y-1.5 mb-3 text-sm text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-2">
+                        <span className="text-slate-500 dark:text-slate-400">단기추세:</span>
+                        <span className={`font-medium ${
+                            entryTiming.shortTermTrend === '상승' ? 'text-emerald-600 dark:text-emerald-400' :
+                            entryTiming.shortTermTrend === '하락' ? 'text-red-600 dark:text-red-400' :
+                            'text-slate-600 dark:text-slate-300'
+                        }`}>{entryTiming.shortTermTrend}</span>
+                        {entryTiming.trendDetail && (
+                            <span className="text-xs text-slate-400 dark:text-slate-500">({entryTiming.trendDetail})</span>
+                        )}
+                    </div>
+                </div>
+
+                {/* 예상 지지/저항 */}
+                {(entryTiming.estimatedSupport > 0 || entryTiming.estimatedResistance > 0) && (
+                    <div className="flex items-center gap-4 mb-3 text-sm">
+                        <div>
+                            <span className="text-slate-500 dark:text-slate-400">예상 지지선: </span>
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">${entryTiming.estimatedSupport?.toFixed(2)}</span>
+                        </div>
+                        <span className="text-slate-300 dark:text-slate-600">|</span>
+                        <div>
+                            <span className="text-slate-500 dark:text-slate-400">예상 저항선: </span>
+                            <span className="font-semibold text-red-600 dark:text-red-400">${entryTiming.estimatedResistance?.toFixed(2)}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* 상세 보기 토글 */}
+                <button
+                    type="button"
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+                    onClick={() => setShowDetail(!showDetail)}
+                >
+                    {showDetail ? '상세 접기' : '지표 상세 보기'}
+                    <svg className={`w-3 h-3 transition-transform ${showDetail ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                {/* 상세 지표 (접기/펼치기) */}
+                {showDetail && (
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border dark:border-slate-600">
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">SMA5: </span>
+                            <span className="font-medium dark:text-slate-200">${entryTiming.sma5?.toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">SMA20: </span>
+                            <span className="font-medium dark:text-slate-200">${entryTiming.sma20?.toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">MACD: </span>
+                            <span className="font-medium dark:text-slate-200">{entryTiming.macdLine?.toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">Signal: </span>
+                            <span className="font-medium dark:text-slate-200">{entryTiming.macdSignal?.toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">Histogram: </span>
+                            <span className={`font-medium ${entryTiming.macdHistogram >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {entryTiming.macdHistogram?.toFixed(2)}
+                            </span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">Stoch %K: </span>
+                            <span className="font-medium dark:text-slate-200">{entryTiming.stochasticK?.toFixed(1)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">Stoch %D: </span>
+                            <span className="font-medium dark:text-slate-200">{entryTiming.stochasticD?.toFixed(1)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">ATR: </span>
+                            <span className="font-medium dark:text-slate-200">${entryTiming.atr?.toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">볼린저 상단: </span>
+                            <span className="font-medium dark:text-slate-200">${entryTiming.bollingerUpper?.toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">볼린저 중단: </span>
+                            <span className="font-medium dark:text-slate-200">${entryTiming.bollingerMiddle?.toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">볼린저 하단: </span>
+                            <span className="font-medium dark:text-slate-200">${entryTiming.bollingerLower?.toFixed(2)}</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+/**
+ * 트레이딩 가이드 섹션
+ */
+const TradingGuideSection = ({ data }) => {
+    const currentPrice = parseFloat(data.currentPrice);
+
+    const getVal = (...keys) => {
+        for (const key of keys) {
+            const v = data[key] ?? data.resultDetail?.[key];
+            if (v != null && v !== '') {
+                const n = parseFloat(v);
+                if (!isNaN(n)) return n;
+            }
+        }
+        return NaN;
+    };
+
+    const stopLoss = getVal('stopLossPrice', '손절매가');
+    const purchasePrice = getVal('purchasePrice', '매수적정가');
+    const sellTarget = getVal('sellTarget', '목표매도가');
+
+    // 진입 타이밍에서 지지/저항선
+    const estimatedSupport = data.entryTiming?.estimatedSupport || NaN;
+    const estimatedResistance = data.entryTiming?.estimatedResistance || NaN;
+
+    // 유효한 가격이 하나도 없으면 표시하지 않음
+    if (isNaN(currentPrice) || (isNaN(stopLoss) && isNaN(purchasePrice) && isNaN(sellTarget))) return null;
+
+    const formatUSD = (v) => isNaN(v) ? '-' : `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const pctDiff = (v) => {
+        if (isNaN(v) || isNaN(currentPrice) || currentPrice === 0) return null;
+        return ((v - currentPrice) / currentPrice * 100).toFixed(1);
+    };
+
+    const guideItems = [
+        { label: '손절매가', value: stopLoss, color: 'text-red-600 dark:text-red-400', dotColor: 'bg-red-500' },
+        { label: '매수적정가', value: purchasePrice, color: 'text-emerald-600 dark:text-emerald-400', dotColor: 'bg-emerald-500' },
+        { label: '목표매도가', value: sellTarget, color: 'text-blue-600 dark:text-blue-400', dotColor: 'bg-blue-500' },
+    ].filter(item => !isNaN(item.value));
+
+    const supportResistanceItems = [
+        { label: '예상 지지선', value: estimatedSupport, color: 'text-teal-600 dark:text-teal-400', dotColor: 'bg-teal-500' },
+        { label: '예상 저항선', value: estimatedResistance, color: 'text-orange-600 dark:text-orange-400', dotColor: 'bg-orange-500' },
+    ].filter(item => !isNaN(item.value) && item.value > 0);
+
+    // 프로그레스 바 계산
+    const barMin = isNaN(stopLoss) ? currentPrice * 0.85 : stopLoss;
+    const fairValue = parseFloat(data.fairValue);
+    const barMax = !isNaN(fairValue) ? fairValue : (!isNaN(sellTarget) ? sellTarget : currentPrice * 1.15);
+    const barRange = barMax - barMin;
+    const toBarPct = (v) => {
+        if (isNaN(v) || barRange <= 0) return null;
+        return Math.max(0, Math.min(100, ((v - barMin) / barRange) * 100));
+    };
+    const currentPct = toBarPct(currentPrice);
+    const purchaseBarPct = toBarPct(purchasePrice);
+    const sellBarPct = toBarPct(sellTarget);
+    const supportBarPct = toBarPct(estimatedSupport);
+    const resistanceBarPct = toBarPct(estimatedResistance);
+    const hasBar = currentPct !== null;
+
+    return (
+        <div className="mb-4 rounded-lg border bg-white shadow-sm dark:bg-slate-700 dark:border-slate-600">
+            <div className="p-4">
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">트레이딩 가이드</div>
+
+                {/* 가격 리스트 */}
+                <div className="space-y-2">
+                    {guideItems.map(({ label, value, color, dotColor }) => {
+                        const diff = pctDiff(value);
+                        return (
+                            <div key={label} className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                    <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} />
+                                    <span className="text-slate-600 dark:text-slate-300">{label}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={`font-semibold ${color}`}>{formatUSD(value)}</span>
+                                    {diff !== null && (
+                                        <span className={`text-xs ${Number(diff) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                            ({Number(diff) >= 0 ? '+' : ''}{diff}%)
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* 예상 지지/저항선 */}
+                {supportResistanceItems.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-600 space-y-2">
+                        {supportResistanceItems.map(({ label, value, color, dotColor }) => {
+                            const diff = pctDiff(value);
+                            return (
+                                <div key={label} className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} />
+                                        <span className="text-slate-600 dark:text-slate-300">{label}</span>
+                                        <span className="text-[10px] text-slate-400 dark:text-slate-500">(볼린저)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`font-semibold ${color}`}>{formatUSD(value)}</span>
+                                        {diff !== null && (
+                                            <span className={`text-xs ${Number(diff) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                ({Number(diff) >= 0 ? '+' : ''}{diff}%)
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* 프로그레스 바 */}
+                {hasBar && (
+                    <div className="mt-6 mb-2">
+                        <div className="relative h-2.5 rounded-full bg-slate-200 dark:bg-slate-600">
+                            <div
+                                className="absolute inset-0 rounded-full"
+                                style={{ background: 'linear-gradient(to right, #ef4444, #f59e0b, #22c55e)' }}
+                            />
+                            {/* 예상 지지선 마커 (◆ 다이아몬드) */}
+                            {supportBarPct !== null && (
+                                <div className="group/s absolute cursor-pointer" style={{ left: `${supportBarPct}%`, top: '50%', transform: 'translate(-50%, -50%)', width: '16px', height: '16px' }}>
+                                    <div className="absolute inset-0.5 transition-transform group-hover/s:scale-125" style={{ background: '#2dd4bf', transform: 'rotate(45deg)', boxShadow: '0 0 5px rgba(45,212,191,0.6)', border: '1.5px solid rgba(255,255,255,0.5)' }} />
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 bg-teal-700 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/s:opacity-100 group-hover/s:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                                        예상 지지선: {formatUSD(estimatedSupport)}{' '}
+                                        <span className={`${pctDiff(estimatedSupport) !== null && Number(pctDiff(estimatedSupport)) >= 0 ? 'text-teal-200' : 'text-red-200'}`}>
+                                            {pctDiff(estimatedSupport) !== null ? `(${Number(pctDiff(estimatedSupport)) >= 0 ? '+' : ''}${pctDiff(estimatedSupport)}%)` : ''}
+                                        </span>
+                                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-teal-700" />
+                                    </div>
+                                </div>
+                            )}
+                            {/* 예상 저항선 마커 (◆ 다이아몬드) */}
+                            {resistanceBarPct !== null && (
+                                <div className="group/r absolute cursor-pointer" style={{ left: `${resistanceBarPct}%`, top: '50%', transform: 'translate(-50%, -50%)', width: '16px', height: '16px' }}>
+                                    <div className="absolute inset-0.5 transition-transform group-hover/r:scale-125" style={{ background: '#fb923c', transform: 'rotate(45deg)', boxShadow: '0 0 5px rgba(251,146,60,0.6)', border: '1.5px solid rgba(255,255,255,0.5)' }} />
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 bg-orange-700 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/r:opacity-100 group-hover/r:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                                        예상 저항선: {formatUSD(estimatedResistance)}{' '}
+                                        <span className={`${pctDiff(estimatedResistance) !== null && Number(pctDiff(estimatedResistance)) >= 0 ? 'text-orange-200' : 'text-red-200'}`}>
+                                            {pctDiff(estimatedResistance) !== null ? `(${Number(pctDiff(estimatedResistance)) >= 0 ? '+' : ''}${pctDiff(estimatedResistance)}%)` : ''}
+                                        </span>
+                                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-orange-700" />
+                                    </div>
+                                </div>
+                            )}
+                            {/* 매수적정가 마커 */}
+                            {purchaseBarPct !== null && (
+                                <div className="group/m absolute cursor-pointer" style={{ left: `${purchaseBarPct}%`, top: '-5px', bottom: '-5px', width: '10px', transform: 'translateX(-50%)' }}>
+                                    <div className="absolute rounded-sm transition-all group-hover/m:scale-x-150" style={{ left: '3px', right: '3px', top: 0, bottom: 0, background: '#10b981', boxShadow: '0 0 4px rgba(16,185,129,0.6)' }} />
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 bg-emerald-700 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/m:opacity-100 group-hover/m:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                                        매수적정가: {formatUSD(purchasePrice)}{' '}
+                                        <span className={`${pctDiff(purchasePrice) !== null && Number(pctDiff(purchasePrice)) >= 0 ? 'text-emerald-200' : 'text-red-200'}`}>
+                                            {pctDiff(purchasePrice) !== null ? `(${Number(pctDiff(purchasePrice)) >= 0 ? '+' : ''}${pctDiff(purchasePrice)}%)` : ''}
+                                        </span>
+                                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-emerald-700" />
+                                    </div>
+                                </div>
+                            )}
+                            {/* 목표매도가 마커 */}
+                            {sellBarPct !== null && (
+                                <div className="group/m absolute cursor-pointer" style={{ left: `${sellBarPct}%`, top: '-5px', bottom: '-5px', width: '10px', transform: 'translateX(-50%)' }}>
+                                    <div className="absolute rounded-sm transition-all group-hover/m:scale-x-150" style={{ left: '3px', right: '3px', top: 0, bottom: 0, background: '#3b82f6', boxShadow: '0 0 4px rgba(59,130,246,0.6)' }} />
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 bg-blue-700 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/m:opacity-100 group-hover/m:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                                        목표매도가: {formatUSD(sellTarget)}{' '}
+                                        <span className={`${pctDiff(sellTarget) !== null && Number(pctDiff(sellTarget)) >= 0 ? 'text-blue-200' : 'text-red-200'}`}>
+                                            {pctDiff(sellTarget) !== null ? `(${Number(pctDiff(sellTarget)) >= 0 ? '+' : ''}${pctDiff(sellTarget)}%)` : ''}
+                                        </span>
+                                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-700" />
+                                    </div>
+                                </div>
+                            )}
+                            {/* 현재가 마커 */}
+                            <div className="group/m absolute cursor-pointer" style={{ left: `${currentPct}%`, top: '50%', transform: 'translate(-50%, -50%)', width: '18px', height: '18px' }}>
+                                <div className="w-full h-full rounded-full bg-white border-2 border-slate-800 dark:border-white dark:bg-slate-800 shadow transition-transform group-hover/m:scale-125" />
+                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 px-2.5 py-1.5 bg-slate-800 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/m:opacity-100 group-hover/m:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                                    현재가: {formatUSD(currentPrice)}
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-between mt-2.5 text-[10px] text-slate-400 dark:text-slate-500">
+                            <span>손절매가</span>
+                            <span>현재가</span>
+                            <span>적정가</span>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -474,6 +813,12 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                         </div>
                     )}
 
+                    {/* 진입 타이밍 분석 */}
+                    <EntryTimingSection entryTiming={data.entryTiming} />
+
+                    {/* 트레이딩 가이드 */}
+                    <TradingGuideSection data={data} />
+
                     {/* 가격 정보 */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                         <InfoCard label="가격차이" value={data.priceDifference ? `$${data.priceDifference}` : '-'} />
@@ -700,6 +1045,56 @@ export const FullDetailModal = ({ isOpen, data, onClose, zIndex = 70 }) => {
                             </div>
                         </div>
                     </div>
+
+                    {/* 진입 타이밍 분석 */}
+                    {data.entryTiming && (
+                        <div className="mb-6">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
+                                <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
+                                진입 타이밍 분석
+                            </h4>
+                            <div className="rounded-lg border bg-slate-50 dark:bg-slate-700 dark:border-slate-600 p-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-[13px]">
+                                    {Object.entries({
+                                        signal: '시그널',
+                                        signalColor: '시그널 색상',
+                                        timingScore: '타이밍 점수',
+                                        shortTermTrend: '단기 추세',
+                                        trendDetail: '추세 상세',
+                                        description: '설명',
+                                        estimatedSupport: '예상 지지선',
+                                        estimatedResistance: '예상 저항선',
+                                        sma5: 'SMA5',
+                                        sma20: 'SMA20',
+                                        macdLine: 'MACD Line',
+                                        macdSignal: 'MACD Signal',
+                                        macdHistogram: 'MACD Histogram',
+                                        bollingerUpper: '볼린저 상단',
+                                        bollingerMiddle: '볼린저 중단',
+                                        bollingerLower: '볼린저 하단',
+                                        stochasticK: 'Stochastic %K',
+                                        stochasticD: 'Stochastic %D',
+                                        atr: 'ATR',
+                                    }).map(([key, label]) => {
+                                        const value = data.entryTiming[key];
+                                        if (value == null) return null;
+                                        const displayValue = typeof value === 'number' ? value.toFixed(2) : String(value);
+                                        return (
+                                            <div
+                                                key={key}
+                                                className="flex items-start justify-between gap-3 border-b last:border-b-0 py-1.5 dark:border-slate-600"
+                                            >
+                                                <div className="text-slate-500 whitespace-nowrap dark:text-slate-400">{label}</div>
+                                                <div className="text-right font-medium dark:text-slate-200 truncate max-w-[150px]" title={displayValue}>
+                                                    {displayValue}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* 단계별 상세 설명 */}
                     {data.stepDetails && data.stepDetails.length > 0 && (

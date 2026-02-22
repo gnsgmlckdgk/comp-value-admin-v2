@@ -1,31 +1,25 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 
-/**
- * SVG 기반 서비스 토폴로지 맵
- * 6개 서비스 노드 + 연결선 + 파티클 + 거래 시 multi-node pulse + edge flash
- *
- * viewBox 340x220 — 노드 r=24, 폰트 9px로 확대
- */
-
-const R = 24; // 노드 반지름
+const R = 24;
 
 const NODES = [
-    { id: 'comp-value-admin',   label: 'Web',         x: 170, y: 32 },
-    { id: 'comp-value-service', label: 'Backend',      x: 170, y: 100 },
-    { id: 'cointrader',         label: 'Cointrader',   x: 52,  y: 180 },
-    { id: 'stock-predictor',    label: 'ML Predict',   x: 131, y: 180 },
-    { id: 'postgresql',         label: 'PostgreSQL',   x: 210, y: 180 },
-    { id: 'redis',              label: 'Redis',        x: 289, y: 180 },
+    { id: 'comp-value-admin',   label: 'Web',         x: 200, y: 40 },
+    { id: 'comp-value-service', label: 'Backend',      x: 200, y: 130 },
+    { id: 'cointrader',         label: 'Cointrader',   x: 60,  y: 240 },
+    { id: 'postgresql',         label: 'PostgreSQL',   x: 160, y: 240 },
+    { id: 'stock-predictor',    label: 'ML Predict',   x: 260, y: 240 },
+    { id: 'redis',              label: 'Redis',        x: 365, y: 240 },
 ];
 
 const EDGES = [
     { from: 'comp-value-admin',   to: 'comp-value-service' },
     { from: 'comp-value-service', to: 'cointrader' },
-    { from: 'comp-value-service', to: 'stock-predictor' },
     { from: 'comp-value-service', to: 'postgresql' },
+    { from: 'comp-value-service', to: 'stock-predictor' },
     { from: 'comp-value-service', to: 'redis' },
     { from: 'cointrader',         to: 'postgresql' },
+    { from: 'stock-predictor',    to: 'postgresql' },
 ];
 
 const TRADE_EDGES = [
@@ -33,39 +27,162 @@ const TRADE_EDGES = [
     'comp-value-service->cointrader',
     'comp-value-service->postgresql',
 ];
-
 const TRADE_PULSE_NODES = ['cointrader', 'postgresql', 'comp-value-service'];
 
-export default function ServiceTopology({ services = [], trades = [] }) {
+const TRAFFIC_EDGE_MAP = {
+    http:       ['comp-value-admin->comp-value-service'],
+    db:         ['comp-value-service->postgresql'],
+    redis:      ['comp-value-service->redis'],
+    cointrader: ['comp-value-service->cointrader'],
+    ml:         ['comp-value-service->stock-predictor', 'stock-predictor->postgresql'],
+};
+
+// 엣지 key → CSS animation name 매핑 + 각도
+const EDGE_ANIM = {};
+const EDGE_ANGLE = {};
+EDGES.forEach((edge, idx) => {
+    const key = `${edge.from}->${edge.to}`;
+    EDGE_ANIM[key] = `comet-e${idx}`;
+    const from = NODES.find(n => n.id === edge.from);
+    const to = NODES.find(n => n.id === edge.to);
+    EDGE_ANGLE[key] = Math.atan2(to.y - from.y, to.x - from.x) * (180 / Math.PI);
+});
+
+// 코멧 설정 — [rx, ry, opacity]: 머리는 원형, 꼬리는 이동 방향으로 늘어난 타원
+const COMET_DURATION = 1.2;
+const COMET_LIFETIME = 2200;
+// [rx, ry, fillOpacity, strokeOpacity]
+const COMET_TRAIL = [
+    [3.5, 3.5, 0.25, 0.6],
+    [6, 2, 0.15, 0.4],
+    [8, 1.5, 0.1, 0.3],
+    [10, 1.2, 0.06, 0.2],
+    [12, 1, 0.03, 0.12],
+    [14, 0.8, 0.015, 0.06],
+    [15, 0.6, 0.01, 0.03],
+];
+const COMET_TRAIL_GAP = 0.06;
+const MAX_TOTAL_COMETS = 200;
+
+const PRESSURE_COLORS = ['#7dd3fc', '#fbbf24', '#f87171'];
+
+/* CSS keyframes — 컴포넌트 마운트 시 1회 주입 */
+const STYLE_ID = 'topology-anim-styles';
+function injectStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    let css = `
+        @keyframes topo-pulse-ring {
+            0%   { transform: scale(1); opacity: 0.9; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+        @keyframes topo-pulse-ring2 {
+            0%   { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+        @keyframes topo-edge-flash {
+            0%   { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        @keyframes topo-label-fade {
+            0%   { opacity: 1; }
+            70%  { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    `;
+
+    // 각 엣지별 코멧 이동 keyframes (CSS transform 기반 — 요소 삽입 시점 기준)
+    EDGES.forEach((edge, idx) => {
+        const from = NODES.find(n => n.id === edge.from);
+        const to = NODES.find(n => n.id === edge.to);
+        css += `
+            @keyframes comet-e${idx} {
+                0%   { transform: translate(${from.x}px, ${from.y}px); opacity: 1; }
+                85%  { transform: translate(${to.x}px, ${to.y}px); opacity: 1; }
+                100% { transform: translate(${to.x}px, ${to.y}px); opacity: 0; }
+            }
+        `;
+    });
+
+    style.textContent = css;
+    document.head.appendChild(style);
+}
+
+export default function ServiceTopology({ services = [], trades = [], traffic = {}, pressureLevel = 0 }) {
     const { isDark } = useTheme();
     const [pulseNodes, setPulseNodes] = useState(new Set());
     const [flashEdges, setFlashEdges] = useState(new Set());
     const [tradeFlash, setTradeFlash] = useState(null);
+    const [animKey, setAnimKey] = useState(0);
     const prevTradeCountRef = useRef(0);
+
+    const [comets, setComets] = useState([]);
+    const cometIdRef = useRef(0);
+
+    const cometColor = PRESSURE_COLORS[pressureLevel];
 
     const lineColor = isDark ? '#334155' : '#cbd5e1';
     const statusTextColor = isDark ? '#94a3b8' : '#64748b';
     const particleColor = isDark ? '#22d3ee' : '#0891b2';
 
+    useEffect(() => { injectStyles(); }, []);
+
     const statusMap = useMemo(() => {
         const map = {};
-        for (const svc of services) {
-            map[svc.name] = svc.status;
-        }
+        for (const svc of services) map[svc.name] = svc.status;
         return map;
     }, [services]);
 
+    const activeTrafficEdges = useMemo(() => {
+        const edges = new Set();
+        for (const c of comets) edges.add(c.edgeId);
+        return edges;
+    }, [comets]);
+
+    // 만료 코멧 주기 정리
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = Date.now();
+            setComets(prev => prev.filter(c => now - c.createdAt < COMET_LIFETIME));
+        }, 1500);
+        return () => clearInterval(interval);
+    }, []);
+
+    // 트래픽 코멧 생성
+    useEffect(() => {
+        const now = Date.now();
+        const newComets = [];
+        for (const [key, edgeList] of Object.entries(TRAFFIC_EDGE_MAP)) {
+            const count = traffic[key] || 0;
+            if (count <= 0) continue;
+            const numComets = count;
+            for (let i = 0; i < numComets; i++) {
+                for (const edgeId of edgeList) {
+                    cometIdRef.current++;
+                    newComets.push({ edgeId, id: cometIdRef.current, delay: Math.random() * 0.1, createdAt: now });
+                }
+            }
+        }
+        if (newComets.length === 0) return;
+        setComets(prev => {
+            const alive = prev.filter(c => now - c.createdAt < COMET_LIFETIME);
+            const combined = [...alive, ...newComets];
+            return combined.length > MAX_TOTAL_COMETS ? combined.slice(-MAX_TOTAL_COMETS) : combined;
+        });
+    }, [traffic]);
+
+    // 코인 거래 애니메이션
     const triggerTradeAnimation = useCallback((trade) => {
         setPulseNodes(new Set(TRADE_PULSE_NODES));
         setFlashEdges(new Set(TRADE_EDGES));
-        if (trade) {
-            setTradeFlash(`${trade.tradeType} ${trade.coinCode}`);
-        }
+        setAnimKey(prev => prev + 1);
+        if (trade) setTradeFlash(`${trade.tradeType} ${trade.coinCode}`);
         const timer = setTimeout(() => {
             setPulseNodes(new Set());
             setFlashEdges(new Set());
             setTradeFlash(null);
-        }, 2000);
+        }, 2200);
         return timer;
     }, []);
 
@@ -91,7 +208,7 @@ export default function ServiceTopology({ services = [], trades = [] }) {
 
     return (
         <div className="w-full">
-            <svg viewBox="0 0 340 220" className="w-full h-auto">
+            <svg viewBox="0 0 425 300" className="w-full h-auto">
                 <defs>
                     <radialGradient id="particleGrad">
                         <stop offset="0%" stopColor={particleColor} stopOpacity="1" />
@@ -99,21 +216,19 @@ export default function ServiceTopology({ services = [], trades = [] }) {
                     </radialGradient>
                     <filter id="glow">
                         <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                        <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
+                        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
                     <filter id="glowStrong">
                         <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
-                        <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
+                        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <filter id="cometGlow">
+                        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
                 </defs>
 
-                {/* Edges */}
+                {/* ── Edges ── */}
                 {EDGES.map(edge => {
                     const from = getNode(edge.from);
                     const to = getNode(edge.to);
@@ -121,50 +236,72 @@ export default function ServiceTopology({ services = [], trades = [] }) {
                     const pathId = `path-${edge.from}-${edge.to}`;
                     const key = edgeKey(edge.from, edge.to);
                     const isFlashing = flashEdges.has(key);
+                    const hasComet = activeTrafficEdges.has(key);
 
                     return (
                         <g key={pathId}>
                             {isFlashing && (
                                 <line
+                                    key={`flash-${key}-${animKey}`}
                                     x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                                    stroke="#22d3ee" strokeWidth="4" filter="url(#glowStrong)"
-                                >
-                                    <animate attributeName="opacity" from="1" to="0" dur="2s" fill="freeze" />
-                                </line>
+                                    stroke="#22d3ee" strokeWidth="5" filter="url(#glowStrong)"
+                                    style={{ animation: 'topo-edge-flash 2s ease-out forwards' }}
+                                />
                             )}
 
                             <line
                                 x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                                stroke={isFlashing ? '#22d3ee' : lineColor}
+                                stroke={isFlashing ? '#22d3ee' : hasComet ? cometColor : lineColor}
                                 strokeWidth={isFlashing ? 2.5 : 1.5}
-                                strokeDasharray={isFlashing ? undefined : '4 4'}
-                                style={isFlashing ? { transition: 'all 0.3s' } : undefined}
+                                strokeDasharray={isFlashing || hasComet ? undefined : '4 4'}
+                                opacity={hasComet ? 0.5 : 1}
+                                style={{ transition: 'all 0.3s' }}
                             />
 
-                            <path
-                                id={pathId}
-                                d={`M ${from.x} ${from.y} L ${to.x} ${to.y}`}
-                                fill="none" stroke="none"
-                            />
-                            <circle r="3" fill="url(#particleGrad)" filter="url(#glow)">
-                                <animateMotion dur="3s" repeatCount="indefinite">
-                                    <mpath href={`#${pathId}`} />
-                                </animateMotion>
-                            </circle>
-
-                            {isFlashing && (
-                                <circle r="6" fill="#22d3ee" filter="url(#glowStrong)">
-                                    <animateMotion dur="0.8s" repeatCount="1" fill="freeze">
+                            {/* 유휴 파티클 (animateMotion — 페이지 로드 시 시작, 무한 반복이라 문제 없음) */}
+                            <path id={pathId} d={`M ${from.x} ${from.y} L ${to.x} ${to.y}`} fill="none" stroke="none" />
+                            {!hasComet && (
+                                <circle r="2.5" fill="url(#particleGrad)" filter="url(#glow)" opacity="0.5">
+                                    <animateMotion dur="3.5s" repeatCount="indefinite">
                                         <mpath href={`#${pathId}`} />
                                     </animateMotion>
-                                    <animate attributeName="opacity" from="1" to="0" dur="0.8s" fill="freeze" />
                                 </circle>
                             )}
                         </g>
                     );
                 })}
 
-                {/* Nodes */}
+                {/* ── 트래픽 코멧 (CSS animation — 요소 삽입 시점 기준) ── */}
+                {comets.map(comet => {
+                    const animName = EDGE_ANIM[comet.edgeId];
+                    const angle = EDGE_ANGLE[comet.edgeId] || 0;
+                    if (!animName) return null;
+                    return (
+                        <g key={`comet-${comet.id}`}>
+                            {COMET_TRAIL.map(([rx, ry, fillOp, strokeOp], idx) => (
+                                <g
+                                    key={idx}
+                                    style={{
+                                        animation: `${animName} ${COMET_DURATION}s linear ${comet.delay + idx * COMET_TRAIL_GAP}s both`,
+                                    }}
+                                >
+                                    <ellipse
+                                        cx="0" cy="0" rx={rx} ry={ry}
+                                        fill={cometColor}
+                                        fillOpacity={fillOp}
+                                        stroke={cometColor}
+                                        strokeWidth={idx === 0 ? 1 : 0.5}
+                                        strokeOpacity={strokeOp}
+                                        transform={`rotate(${angle})`}
+                                        filter={idx === 0 ? 'url(#cometGlow)' : undefined}
+                                    />
+                                </g>
+                            ))}
+                        </g>
+                    );
+                })}
+
+                {/* ── Nodes ── */}
                 {NODES.map(node => {
                     const colors = getNodeColor(node.id);
                     const isPulsing = pulseNodes.has(node.id);
@@ -173,14 +310,24 @@ export default function ServiceTopology({ services = [], trades = [] }) {
                         <g key={node.id}>
                             {isPulsing && (
                                 <>
-                                    <circle cx={node.x} cy={node.y} fill="none" stroke="#22d3ee" strokeWidth="3">
-                                        <animate attributeName="r" from={R} to={R + 30} dur="1.5s" fill="freeze" />
-                                        <animate attributeName="opacity" from="0.9" to="0" dur="1.5s" fill="freeze" />
-                                    </circle>
-                                    <circle cx={node.x} cy={node.y} fill="none" stroke="#22d3ee" strokeWidth="2">
-                                        <animate attributeName="r" from={R} to={R + 18} dur="1s" fill="freeze" />
-                                        <animate attributeName="opacity" from="0.6" to="0" dur="1s" fill="freeze" />
-                                    </circle>
+                                    <circle
+                                        key={`pulse1-${node.id}-${animKey}`}
+                                        cx={node.x} cy={node.y} r={R}
+                                        fill="none" stroke="#22d3ee" strokeWidth="3"
+                                        style={{
+                                            transformOrigin: `${node.x}px ${node.y}px`,
+                                            animation: 'topo-pulse-ring 1.5s ease-out forwards',
+                                        }}
+                                    />
+                                    <circle
+                                        key={`pulse2-${node.id}-${animKey}`}
+                                        cx={node.x} cy={node.y} r={R}
+                                        fill="none" stroke="#22d3ee" strokeWidth="2"
+                                        style={{
+                                            transformOrigin: `${node.x}px ${node.y}px`,
+                                            animation: 'topo-pulse-ring2 1s ease-out forwards',
+                                        }}
+                                    />
                                 </>
                             )}
 
@@ -203,35 +350,26 @@ export default function ServiceTopology({ services = [], trades = [] }) {
                                 }}
                             />
 
-                            <text
-                                x={node.x} y={node.y + 3}
-                                textAnchor="middle" fontSize="9" fontWeight="600" fill="white"
-                            >
+                            <text x={node.x} y={node.y + 3} textAnchor="middle" fontSize="9" fontWeight="600" fill="white">
                                 {node.label}
                             </text>
-
-                            <text
-                                x={node.x} y={node.y + R + 14}
-                                textAnchor="middle" fontSize="8" fill={statusTextColor}
-                            >
+                            <text x={node.x} y={node.y + R + 14} textAnchor="middle" fontSize="8" fill={statusTextColor}>
                                 {statusMap[node.id] || '...'}
                             </text>
                         </g>
                     );
                 })}
 
-                {/* 거래 flash 라벨 */}
                 {tradeFlash && (
-                    <g>
+                    <g key={`trade-label-${animKey}`}
+                       style={{ animation: 'topo-label-fade 2s ease-out forwards' }}>
                         <rect x="100" y="125" width="140" height="26" rx="6"
-                            fill={isDark ? 'rgba(8,145,178,0.9)' : 'rgba(6,182,212,0.9)'}
+                            fill={isDark ? 'rgba(8,145,178,0.95)' : 'rgba(6,182,212,0.95)'}
+                            stroke="#22d3ee" strokeWidth="1"
                             filter="url(#glowStrong)"
-                        >
-                            <animate attributeName="opacity" from="1" to="0" dur="2s" fill="freeze" />
-                        </rect>
+                        />
                         <text x="170" y="143" textAnchor="middle" fontSize="11" fontWeight="700" fill="white">
                             {tradeFlash}
-                            <animate attributeName="opacity" from="1" to="0" dur="2s" fill="freeze" />
                         </text>
                     </g>
                 )}

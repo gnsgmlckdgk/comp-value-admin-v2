@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import useMonitoringSSE from './hooks/useMonitoringSSE';
 import ServiceStatusCard from './components/ServiceStatusCard';
 import ProcessStatusPanel from './components/ProcessStatusPanel';
@@ -11,10 +12,24 @@ import ResourceTimeSeries from './components/ResourceTimeSeries';
  * 라이트/다크 모드 연계 — 사이트 ThemeContext 기반
  */
 export default function MonitoringDashboard() {
-    const { snapshot, trades, isConnected, isPaused, togglePause, resourceHistory } = useMonitoringSSE();
+    const { snapshot, trades, isConnected, isPaused, togglePause, resourceHistory, traffic } = useMonitoringSSE();
 
     const services = snapshot?.services || [];
     const resources = snapshot?.resources || null;
+
+    // 리소스 압박 수준: 0=정상, 1=경고(>70%), 2=위험(>90%)
+    const pressureLevel = useMemo(() => {
+        if (!resources?.containers?.length) return 0;
+        const maxCpu = Math.max(...resources.containers.map(c => c.cpuPercent || 0));
+        const memPercents = resources.containers.map(c =>
+            c.memoryLimitMB > 0 ? (c.memoryMB / c.memoryLimitMB) * 100 : 0
+        );
+        const maxMem = Math.max(...memPercents);
+        const peak = Math.max(maxCpu, maxMem);
+        if (peak > 90) return 2;
+        if (peak > 70) return 1;
+        return 0;
+    }, [resources]);
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 p-4 md:p-6">
@@ -48,9 +63,9 @@ export default function MonitoringDashboard() {
             {/* Main grid */}
             <div className="grid grid-cols-12 gap-4">
                 {/* Row 1: Service Topology | Resource Gauges | Trade Feed */}
-                <div className="col-span-12 lg:col-span-4">
+                <div className="col-span-12 lg:col-span-5">
                     <DashCard title="Service Topology">
-                        <ServiceTopology services={services} trades={trades} />
+                        <ServiceTopology services={services} trades={trades} traffic={traffic} pressureLevel={pressureLevel} />
                     </DashCard>
                 </div>
                 <div className="col-span-12 md:col-span-6 lg:col-span-3">
@@ -58,7 +73,7 @@ export default function MonitoringDashboard() {
                         <ResourceGauges resources={resources} />
                     </DashCard>
                 </div>
-                <div className="col-span-12 md:col-span-6 lg:col-span-5">
+                <div className="col-span-12 md:col-span-6 lg:col-span-4">
                     <DashCard title="Trade Activity">
                         <TradeActivityFeed trades={trades} />
                     </DashCard>

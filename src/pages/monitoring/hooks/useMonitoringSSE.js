@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
  * SSE 기반 실시간 모니터링 훅
- * LogStreamPopup.jsx 패턴 활용 — named events (snapshot / trade)
+ * named events: snapshot / trade / traffic
  */
 export default function useMonitoringSSE() {
     const [snapshot, setSnapshot] = useState(null);
@@ -10,11 +10,13 @@ export default function useMonitoringSSE() {
     const [isConnected, setIsConnected] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [resourceHistory, setResourceHistory] = useState([]);
+    // 서비스별 트래픽: { http, db, redis, cointrader, ml }
+    const [traffic, setTraffic] = useState({ http: 0, db: 0, redis: 0, cointrader: 0, ml: 0 });
 
     const eventSourceRef = useRef(null);
     const isPausedRef = useRef(false);
     const MAX_TRADES = 100;
-    const MAX_RESOURCE_HISTORY = 360; // 30분 * 10초 간격 ≈ 180, 여유분 포함
+    const MAX_RESOURCE_HISTORY = 360;
 
     const connectSSE = useCallback(() => {
         try {
@@ -25,14 +27,13 @@ export default function useMonitoringSSE() {
                 setIsConnected(true);
             };
 
-            // named event: snapshot
+            // named event: snapshot (3초 간격)
             eventSource.addEventListener('snapshot', (event) => {
                 if (isPausedRef.current) return;
                 try {
                     const data = JSON.parse(event.data);
                     setSnapshot(data);
 
-                    // 리소스 히스토리 누적
                     if (data.resources && data.resources.containers && data.resources.containers.length > 0) {
                         setResourceHistory(prev => {
                             const next = [...prev, { ...data.resources, ts: Date.now() }];
@@ -60,11 +61,21 @@ export default function useMonitoringSSE() {
                 }
             });
 
+            // named event: traffic (1초 간격 — 서비스별 트래픽 카운트)
+            eventSource.addEventListener('traffic', (event) => {
+                if (isPausedRef.current) return;
+                try {
+                    const data = JSON.parse(event.data);
+                    setTraffic(data);
+                } catch (e) {
+                    console.error('traffic parse error:', e);
+                }
+            });
+
             eventSource.onerror = () => {
                 setIsConnected(false);
                 eventSource.close();
 
-                // 자동 재연결 (3초 후)
                 setTimeout(() => {
                     if (eventSourceRef.current?.readyState === EventSource.CLOSED) {
                         connectSSE();
@@ -77,7 +88,6 @@ export default function useMonitoringSSE() {
         }
     }, []);
 
-    // visibilityState 기반 일시정지
     useEffect(() => {
         const handleVisibility = () => {
             if (document.visibilityState === 'hidden') {
@@ -92,7 +102,6 @@ export default function useMonitoringSSE() {
         return () => document.removeEventListener('visibilitychange', handleVisibility);
     }, []);
 
-    // 연결/해제
     useEffect(() => {
         connectSSE();
         return () => {
@@ -115,5 +124,6 @@ export default function useMonitoringSSE() {
         isPaused,
         togglePause,
         resourceHistory,
+        traffic,
     };
 }

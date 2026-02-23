@@ -28,9 +28,13 @@ export default function ResourceGauges({ resources }) {
 
 function PodResourceRow({ pod }) {
     const cpuPercent = Math.min(Math.max(pod.cpuPercent || 0, 0), 100);
-    const memPercent = pod.memoryLimitMB > 0
+    const hasMemLimit = pod.memoryLimitMB > 0;
+    const memPercent = hasMemLimit
         ? Math.min((pod.memoryMB / pod.memoryLimitMB) * 100, 100)
         : 0;
+    const memText = hasMemLimit
+        ? `${pod.memoryMB}/${pod.memoryLimitMB} MB`
+        : `${pod.memoryMB} MB`;
 
     return (
         <div className="space-y-1.5">
@@ -45,7 +49,8 @@ function PodResourceRow({ pod }) {
             <ProgressBar
                 label="MEM"
                 percent={memPercent}
-                text={`${pod.memoryMB}/${pod.memoryLimitMB} MB`}
+                text={memText}
+                noLimit={!hasMemLimit}
             />
         </div>
     );
@@ -74,19 +79,23 @@ function GpuRow({ gpu }) {
     );
 }
 
-function ProgressBar({ label, percent, text }) {
+function ProgressBar({ label, percent, text, noLimit }) {
     const { isDark } = useTheme();
-    const color = getColor(percent);
+    const color = noLimit ? (isDark ? '#475569' : '#94a3b8') : getColor(percent);
     const trackColor = isDark ? '#1e293b' : '#e2e8f0';
 
     return (
         <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 w-7 shrink-0">{label}</span>
             <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: trackColor }}>
-                <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{ width: `${percent}%`, backgroundColor: color }}
-                />
+                {noLimit ? (
+                    <div className="h-full w-full opacity-30" style={{ backgroundColor: color }} />
+                ) : (
+                    <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${percent}%`, backgroundColor: color }}
+                    />
+                )}
             </div>
             <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 w-24 text-right shrink-0">{text}</span>
         </div>

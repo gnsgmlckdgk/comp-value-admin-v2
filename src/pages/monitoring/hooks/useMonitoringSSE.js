@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export default function useMonitoringSSE() {
     const [snapshot, setSnapshot] = useState(null);
     const [trades, setTrades] = useState([]);
+    const [apiLogs, setApiLogs] = useState([]);
     const [isConnected, setIsConnected] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [resourceHistory, setResourceHistory] = useState([]);
@@ -16,6 +17,7 @@ export default function useMonitoringSSE() {
     const eventSourceRef = useRef(null);
     const isPausedRef = useRef(false);
     const MAX_TRADES = 100;
+    const MAX_API_LOGS = 50;
     const MAX_RESOURCE_HISTORY = 360;
 
     const connectSSE = useCallback(() => {
@@ -72,6 +74,20 @@ export default function useMonitoringSSE() {
                 }
             });
 
+            // named event: api-log (1초 간격 — 개별 API 요청 로그 배치)
+            eventSource.addEventListener('api-log', (event) => {
+                if (isPausedRef.current) return;
+                try {
+                    const batch = JSON.parse(event.data);
+                    setApiLogs(prev => {
+                        const next = [...batch.reverse(), ...prev];
+                        return next.length > MAX_API_LOGS ? next.slice(0, MAX_API_LOGS) : next;
+                    });
+                } catch (e) {
+                    console.error('api-log parse error:', e);
+                }
+            });
+
             eventSource.onerror = () => {
                 setIsConnected(false);
                 eventSource.close();
@@ -120,6 +136,7 @@ export default function useMonitoringSSE() {
     return {
         snapshot,
         trades,
+        apiLogs,
         isConnected,
         isPaused,
         togglePause,

@@ -4,6 +4,7 @@ import ServiceStatusCard from './components/ServiceStatusCard';
 import ProcessStatusPanel from './components/ProcessStatusPanel';
 import TradeActivityFeed from './components/TradeActivityFeed';
 import ServiceTopology from './components/ServiceTopology';
+import ServiceActivityLog from './components/ServiceActivityLog';
 import ResourceGauges from './components/ResourceGauges';
 import ResourceTimeSeries from './components/ResourceTimeSeries';
 
@@ -12,7 +13,7 @@ import ResourceTimeSeries from './components/ResourceTimeSeries';
  * 라이트/다크 모드 연계 — 사이트 ThemeContext 기반
  */
 export default function MonitoringDashboard() {
-    const { snapshot, trades, isConnected, isPaused, togglePause, resourceHistory, traffic } = useMonitoringSSE();
+    const { snapshot, trades, apiLogs, isConnected, isPaused, togglePause, resourceHistory, traffic } = useMonitoringSSE();
 
     const services = snapshot?.services || [];
     const resources = snapshot?.resources || null;
@@ -62,15 +63,18 @@ export default function MonitoringDashboard() {
 
             {/* Main grid */}
             <div className="grid grid-cols-12 gap-4">
-                {/* Row 1: Service Topology */}
-                <div className="col-span-12 lg:col-span-5">
+                {/* Left column: Service Topology + Activity */}
+                <div className="col-span-12 lg:col-span-5 self-start space-y-4">
                     <DashCard title="Service Topology">
                         <ServiceTopology services={services} trades={trades} traffic={traffic} pressureLevel={pressureLevel} />
                     </DashCard>
+                    <DashCard title="Service Activity">
+                        <ServiceActivityLog apiLogs={apiLogs} />
+                    </DashCard>
                 </div>
 
-                {/* Row 1 right: 서비스 & 자원 모니터링 */}
-                <div className="col-span-12 lg:col-span-7">
+                {/* Right column: 서비스 & 자원 모니터링 */}
+                <div className="col-span-12 lg:col-span-7 self-start">
                     <GroupCard title="서비스 & 자원">
                         <div className="space-y-3">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

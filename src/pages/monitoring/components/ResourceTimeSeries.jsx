@@ -41,6 +41,10 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
             }
             if (entry.gpu) {
                 point.gpu = Number((entry.gpu.utilPercent || 0).toFixed(1));
+                const vramPct = entry.gpu.memTotalMB > 0
+                    ? (entry.gpu.memUsedMB / entry.gpu.memTotalMB) * 100
+                    : 0;
+                point.gpu_vram = Number(vramPct.toFixed(1));
             }
             return point;
         });
@@ -159,7 +163,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                                 hide={hiddenKeys.has(`${name}_mem`)}
                             />
                         ))}
-                        {/* GPU line */}
+                        {/* GPU util line (CPU 필터) */}
                         {hasGpu && showCpu && (
                             <Line
                                 type="monotone"
@@ -171,6 +175,20 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                                 dot={false}
                                 connectNulls
                                 hide={hiddenKeys.has('gpu')}
+                            />
+                        )}
+                        {/* GPU VRAM line (Memory 필터) */}
+                        {hasGpu && showMem && (
+                            <Line
+                                type="monotone"
+                                dataKey="gpu_vram"
+                                name="GPU VRAM"
+                                stroke="#34d399"
+                                strokeWidth={1.5}
+                                strokeDasharray="4 3"
+                                dot={false}
+                                connectNulls
+                                hide={hiddenKeys.has('gpu_vram')}
                             />
                         )}
                     </LineChart>

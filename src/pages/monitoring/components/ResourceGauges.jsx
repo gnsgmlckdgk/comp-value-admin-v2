@@ -17,7 +17,7 @@ export default function ResourceGauges({ resources }) {
     }
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {containers.map((pod, i) => (
                 <PodResourceRow key={pod.name || i} pod={pod} />
             ))}
@@ -37,7 +37,7 @@ function PodResourceRow({ pod }) {
         : `${pod.memoryMB} MB`;
 
     return (
-        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/40 p-2.5 space-y-1.5">
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/40 p-2.5 space-y-1.5 overflow-hidden">
             <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
                 {pod.name}
             </div>
@@ -63,7 +63,7 @@ function GpuRow({ gpu }) {
         : 0;
 
     return (
-        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/40 p-2.5 space-y-1.5">
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/40 p-2.5 space-y-1.5 overflow-hidden">
             <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">GPU</div>
             <ProgressBar
                 label="UTIL"
@@ -85,9 +85,9 @@ function ProgressBar({ label, percent, text, noLimit }) {
     const trackColor = isDark ? '#1e293b' : '#e2e8f0';
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 w-7 shrink-0">{label}</span>
-            <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: trackColor }}>
+            <div className="flex-1 h-2.5 rounded-full overflow-hidden min-w-4" style={{ backgroundColor: trackColor }}>
                 {noLimit ? (
                     <div className="h-full w-full opacity-30" style={{ backgroundColor: color }} />
                 ) : (
@@ -97,7 +97,7 @@ function ProgressBar({ label, percent, text, noLimit }) {
                     />
                 )}
             </div>
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 w-24 text-right shrink-0">{text}</span>
+            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 text-right truncate shrink-0 max-w-[5.5rem]">{text}</span>
         </div>
     );
 }

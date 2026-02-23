@@ -17,7 +17,7 @@ export default function ResourceGauges({ resources }) {
     }
 
     return (
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {containers.map((pod, i) => (
                 <PodResourceRow key={pod.name || i} pod={pod} />
             ))}
@@ -37,7 +37,7 @@ function PodResourceRow({ pod }) {
         : `${pod.memoryMB} MB`;
 
     return (
-        <div className="space-y-1.5">
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/40 p-2.5 space-y-1.5">
             <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
                 {pod.name}
             </div>
@@ -63,7 +63,7 @@ function GpuRow({ gpu }) {
         : 0;
 
     return (
-        <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-700/50">
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/40 p-2.5 space-y-1.5">
             <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">GPU</div>
             <ProgressBar
                 label="UTIL"

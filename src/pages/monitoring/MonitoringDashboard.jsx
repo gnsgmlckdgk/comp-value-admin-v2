@@ -82,18 +82,12 @@ export default function MonitoringDashboard() {
                                     <ServiceStatusCard key={svc.name || i} service={svc} />
                                 ))}
                             </div>
-                            <div className="grid grid-cols-12 gap-3">
-                                <div className="col-span-12 md:col-span-4">
-                                    <DashCard title="Resources">
-                                        <ResourceGauges resources={resources} />
-                                    </DashCard>
-                                </div>
-                                <div className="col-span-12 md:col-span-8">
-                                    <DashCard title="Resource Metrics (30min)">
-                                        <ResourceTimeSeries resourceHistory={resourceHistory} />
-                                    </DashCard>
-                                </div>
-                            </div>
+                            <DashCard title="Resource Metrics (30min)">
+                                <ResourceTimeSeries resourceHistory={resourceHistory} />
+                            </DashCard>
+                            <DashCard title="Resources">
+                                <ResourceGauges resources={resources} />
+                            </DashCard>
                         </div>
                     </GroupCard>
                 </div>

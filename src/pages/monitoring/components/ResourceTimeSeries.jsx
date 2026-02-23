@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -7,9 +7,11 @@ const POD_COLORS = ['#3b82f6', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#eab
 /**
  * Recharts LineChart — 파드별 CPU% 시계열 (최근 30분)
  * 10초 간격 데이터 누적 (hook에서 360개 유지)
+ * 범례 클릭으로 라인 표시/숨김 토글
  */
 export default function ResourceTimeSeries({ resourceHistory = [] }) {
     const { isDark } = useTheme();
+    const [hiddenKeys, setHiddenKeys] = useState(new Set());
 
     // 파드 이름 목록 추출 (출현 순서 유지)
     const podNames = useMemo(() => {
@@ -44,6 +46,15 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
         [resourceHistory]
     );
 
+    const handleLegendClick = useCallback((entry) => {
+        const key = entry.dataKey;
+        setHiddenKeys(prev => {
+            const next = new Set(prev);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
+    }, []);
+
     if (chartData.length < 2) {
         return (
             <div className="flex items-center justify-center h-48 text-slate-400 dark:text-slate-600 text-sm">
@@ -63,6 +74,9 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
     const tooltipBg = isDark ? '#0f172a' : '#ffffff';
     const tooltipBorder = isDark ? '#334155' : '#e2e8f0';
     const tooltipText = isDark ? '#e2e8f0' : '#1e293b';
+
+    // 모든 dataKey (pods + gpu) — 색상 매핑 고정
+    const allKeys = [...podNames, ...(hasGpu ? ['gpu'] : [])];
 
     return (
         <div style={{ width: '100%', height: '220px' }}>
@@ -94,9 +108,21 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                         formatter={(value, name) => [`${value}%`, name]}
                     />
                     <Legend
-                        wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }}
+                        onClick={handleLegendClick}
+                        wrapperStyle={{ fontSize: '10px', paddingTop: '4px', cursor: 'pointer' }}
                         iconType="plainline"
                         iconSize={12}
+                        formatter={(value, entry) => {
+                            const isHidden = hiddenKeys.has(entry.dataKey);
+                            return (
+                                <span style={{
+                                    color: isHidden ? '#9ca3af' : entry.color,
+                                    textDecoration: isHidden ? 'line-through' : 'none',
+                                }}>
+                                    {value}
+                                </span>
+                            );
+                        }}
                     />
                     {podNames.map((name, i) => (
                         <Line
@@ -108,6 +134,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                             strokeWidth={2}
                             dot={false}
                             connectNulls
+                            hide={hiddenKeys.has(name)}
                         />
                     ))}
                     {hasGpu && (
@@ -120,6 +147,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                             strokeDasharray="5 3"
                             dot={false}
                             connectNulls
+                            hide={hiddenKeys.has('gpu')}
                         />
                     )}
                 </LineChart>

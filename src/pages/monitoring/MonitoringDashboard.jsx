@@ -62,46 +62,58 @@ export default function MonitoringDashboard() {
 
             {/* Main grid */}
             <div className="grid grid-cols-12 gap-4">
-                {/* Row 1: Service Topology | Resource Gauges | Trade Feed */}
+                {/* Row 1: Service Topology */}
                 <div className="col-span-12 lg:col-span-5">
                     <DashCard title="Service Topology">
                         <ServiceTopology services={services} trades={trades} traffic={traffic} pressureLevel={pressureLevel} />
                     </DashCard>
                 </div>
-                <div className="col-span-12 md:col-span-6 lg:col-span-3">
-                    <DashCard title="Resources">
-                        <ResourceGauges resources={resources} />
-                    </DashCard>
-                </div>
-                <div className="col-span-12 md:col-span-6 lg:col-span-4">
-                    <DashCard title="Trade Activity">
-                        <TradeActivityFeed trades={trades} />
-                    </DashCard>
-                </div>
 
-                {/* Row 2: Resource Time Series | Process Status */}
-                <div className="col-span-12 lg:col-span-8">
-                    <DashCard title="Resource Metrics (30min)">
-                        <ResourceTimeSeries resourceHistory={resourceHistory} />
-                    </DashCard>
-                </div>
-                <div className="col-span-12 lg:col-span-4">
-                    <DashCard title="Process Status">
-                        <ProcessStatusPanel buyProcess={snapshot?.buyProcess} sellProcess={snapshot?.sellProcess} />
-                        <div className="mt-4 grid grid-cols-2 gap-3">
-                            <StatCard label="Holdings" value={snapshot?.holdingsCount ?? '-'} />
-                            <StatCard label="Today Trades" value={snapshot?.todayTradeCount ?? '-'} />
+                {/* Row 1 right: 서비스 & 자원 모니터링 */}
+                <div className="col-span-12 lg:col-span-7">
+                    <GroupCard title="서비스 & 자원">
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {services.map((svc, i) => (
+                                    <ServiceStatusCard key={svc.name || i} service={svc} />
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-12 gap-3">
+                                <div className="col-span-12 md:col-span-4">
+                                    <DashCard title="Resources">
+                                        <ResourceGauges resources={resources} />
+                                    </DashCard>
+                                </div>
+                                <div className="col-span-12 md:col-span-8">
+                                    <DashCard title="Resource Metrics (30min)">
+                                        <ResourceTimeSeries resourceHistory={resourceHistory} />
+                                    </DashCard>
+                                </div>
+                            </div>
                         </div>
-                    </DashCard>
+                    </GroupCard>
                 </div>
 
-                {/* Row 3: Service Status Cards */}
+                {/* Row 3: 코인거래 모니터링 */}
                 <div className="col-span-12">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {services.map((svc, i) => (
-                            <ServiceStatusCard key={svc.name || i} service={svc} />
-                        ))}
-                    </div>
+                    <GroupCard title="코인거래 모니터링">
+                        <div className="grid grid-cols-12 gap-3">
+                            <div className="col-span-12 md:col-span-7">
+                                <DashCard title="Trade Activity">
+                                    <TradeActivityFeed trades={trades} />
+                                </DashCard>
+                            </div>
+                            <div className="col-span-12 md:col-span-5">
+                                <DashCard title="Process Status">
+                                    <ProcessStatusPanel buyProcess={snapshot?.buyProcess} sellProcess={snapshot?.sellProcess} />
+                                    <div className="mt-4 grid grid-cols-2 gap-3">
+                                        <StatCard label="Holdings" value={snapshot?.holdingsCount ?? '-'} />
+                                        <StatCard label="Today Trades" value={snapshot?.todayTradeCount ?? '-'} />
+                                    </div>
+                                </DashCard>
+                            </div>
+                        </div>
+                    </GroupCard>
                 </div>
             </div>
         </div>
@@ -126,6 +138,17 @@ function DashCard({ title, children }) {
         <div className="rounded-xl border border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 p-4 shadow-lg h-full">
             {title && (
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">{title}</div>
+            )}
+            {children}
+        </div>
+    );
+}
+
+function GroupCard({ title, children }) {
+    return (
+        <div className="rounded-xl border border-slate-300 bg-slate-100/50 dark:border-slate-700 dark:bg-slate-800/30 p-3 h-full">
+            {title && (
+                <div className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3">{title}</div>
             )}
             {children}
         </div>

@@ -124,7 +124,7 @@ export default function ServiceTopology({ services = [], trades = [], traffic = 
 
     const lineColor = isDark ? '#334155' : '#cbd5e1';
     const statusTextColor = isDark ? '#94a3b8' : '#64748b';
-    const particleColor = isDark ? '#22d3ee' : '#0891b2';
+    const particleColor = isDark ? '#06b6d4' : '#0e7490';
 
     useEffect(() => { injectStyles(); }, []);
 

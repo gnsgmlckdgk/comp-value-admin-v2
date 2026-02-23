@@ -56,12 +56,12 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                 <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                     <defs>
                         <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                         </linearGradient>
                         <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#a78bfa" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                         </linearGradient>
                         <linearGradient id="gpuGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#34d399" stopOpacity={0.3}/>
@@ -95,12 +95,12 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                     />
                     <Area
                         type="monotone" dataKey="cpu" name="cpu"
-                        stroke="#22d3ee" strokeWidth={2}
+                        stroke="#3b82f6" strokeWidth={2}
                         fill="url(#cpuGrad)" dot={false}
                     />
                     <Area
                         type="monotone" dataKey="memory" name="memory"
-                        stroke="#a78bfa" strokeWidth={2}
+                        stroke="#f97316" strokeWidth={2}
                         fill="url(#memGrad)" dot={false}
                     />
                     <Area

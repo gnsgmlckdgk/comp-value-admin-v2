@@ -1,83 +1,100 @@
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useTheme } from '@/context/ThemeContext';
 
 /**
- * Recharts PieChart 도넛 게이지
- * CPU / Memory / GPU — 색상 전환 (green → yellow → red)
+ * 파드별 리소스 게이지 — CPU / Memory 프로그레스 바
+ * 색상: 정상(emerald) → 경고(amber, >70%) → 위험(rose, >90%)
  */
 export default function ResourceGauges({ resources }) {
     const containers = resources?.containers || [];
-    const hasData = containers.length > 0 || resources?.gpu;
+    const gpu = resources?.gpu;
 
-    if (!hasData) {
+    if (!containers.length && !gpu) {
         return (
             <div className="flex items-center justify-center h-48 text-slate-400 dark:text-slate-600 text-sm">
                 {resources ? 'Prometheus not connected' : 'No resource data'}
             </div>
         );
     }
-    const avgCpu = containers.length > 0
-        ? containers.reduce((sum, c) => sum + (c.cpuPercent || 0), 0) / containers.length
-        : 0;
-    const totalMemMB = containers.reduce((sum, c) => sum + (c.memoryMB || 0), 0);
-    const totalMemLimitMB = containers.reduce((sum, c) => sum + (c.memoryLimitMB || 0), 0);
-    const memPercent = totalMemLimitMB > 0 ? (totalMemMB / totalMemLimitMB) * 100 : 0;
-
-    const gpu = resources.gpu;
-    const gpuPercent = gpu?.utilPercent ?? 0;
 
     return (
-        <div className="space-y-4">
-            <GaugeRing label="CPU" value={avgCpu} unit="%" />
-            <GaugeRing label="Memory" value={memPercent} unit="%" subtitle={`${totalMemMB}/${totalMemLimitMB} MB`} />
-            {gpu && <GaugeRing label="GPU" value={gpuPercent} unit="%" subtitle={`${gpu.memUsedMB}/${gpu.memTotalMB} MB`} />}
+        <div className="space-y-3">
+            {containers.map((pod, i) => (
+                <PodResourceRow key={pod.name || i} pod={pod} />
+            ))}
+            {gpu && <GpuRow gpu={gpu} />}
         </div>
     );
 }
 
-function GaugeRing({ label, value, unit = '%', subtitle }) {
+function PodResourceRow({ pod }) {
+    const cpuPercent = Math.min(Math.max(pod.cpuPercent || 0, 0), 100);
+    const memPercent = pod.memoryLimitMB > 0
+        ? Math.min((pod.memoryMB / pod.memoryLimitMB) * 100, 100)
+        : 0;
+
+    return (
+        <div className="space-y-1.5">
+            <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+                {pod.name}
+            </div>
+            <ProgressBar
+                label="CPU"
+                percent={cpuPercent}
+                text={`${cpuPercent.toFixed(1)}%`}
+            />
+            <ProgressBar
+                label="MEM"
+                percent={memPercent}
+                text={`${pod.memoryMB}/${pod.memoryLimitMB} MB`}
+            />
+        </div>
+    );
+}
+
+function GpuRow({ gpu }) {
+    const utilPercent = Math.min(Math.max(gpu.utilPercent || 0, 0), 100);
+    const memPercent = gpu.memTotalMB > 0
+        ? Math.min((gpu.memUsedMB / gpu.memTotalMB) * 100, 100)
+        : 0;
+
+    return (
+        <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-700/50">
+            <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">GPU</div>
+            <ProgressBar
+                label="UTIL"
+                percent={utilPercent}
+                text={`${utilPercent.toFixed(1)}%`}
+            />
+            <ProgressBar
+                label="VRAM"
+                percent={memPercent}
+                text={`${gpu.memUsedMB}/${gpu.memTotalMB} MB`}
+            />
+        </div>
+    );
+}
+
+function ProgressBar({ label, percent, text }) {
     const { isDark } = useTheme();
-    const percent = Math.min(Math.max(value, 0), 100);
     const color = getColor(percent);
     const trackColor = isDark ? '#1e293b' : '#e2e8f0';
 
-    const data = [
-        { value: percent },
-        { value: 100 - percent },
-    ];
-
     return (
-        <div className="flex items-center gap-3">
-            <div className="w-16 h-16 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={data}
-                            cx="50%" cy="50%"
-                            innerRadius={22} outerRadius={30}
-                            startAngle={90} endAngle={-270}
-                            dataKey="value"
-                            strokeWidth={0}
-                        >
-                            <Cell fill={color} />
-                            <Cell fill={trackColor} />
-                        </Pie>
-                    </PieChart>
-                </ResponsiveContainer>
+        <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 w-7 shrink-0">{label}</span>
+            <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: trackColor }}>
+                <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${percent}%`, backgroundColor: color }}
+                />
             </div>
-            <div>
-                <div className="text-xs text-slate-500 uppercase tracking-wide">{label}</div>
-                <div className="text-lg font-bold transition-all duration-500" style={{ color }}>
-                    {percent.toFixed(1)}{unit}
-                </div>
-                {subtitle && <div className="text-[10px] text-slate-500 dark:text-slate-600">{subtitle}</div>}
-            </div>
+            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 w-24 text-right shrink-0">{text}</span>
         </div>
     );
 }
 
 function getColor(percent) {
-    if (percent >= 90) return '#ef4444'; // red
-    if (percent >= 70) return '#f59e0b'; // amber
-    return '#22c55e'; // green
+    if (percent >= 90) return '#ef4444';
+    if (percent >= 70) return '#f59e0b';
+    return '#22c55e';
 }

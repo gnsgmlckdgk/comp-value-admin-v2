@@ -1,33 +1,48 @@
 import { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useTheme } from '@/context/ThemeContext';
 
+const POD_COLORS = ['#3b82f6', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#eab308'];
+
 /**
- * Recharts AreaChart — 최근 30분 시계열
+ * Recharts LineChart — 파드별 CPU% 시계열 (최근 30분)
  * 10초 간격 데이터 누적 (hook에서 360개 유지)
  */
 export default function ResourceTimeSeries({ resourceHistory = [] }) {
     const { isDark } = useTheme();
 
+    // 파드 이름 목록 추출 (출현 순서 유지)
+    const podNames = useMemo(() => {
+        const seen = new Set();
+        const names = [];
+        resourceHistory.forEach(entry => {
+            (entry.containers || []).forEach(c => {
+                if (c.name && !seen.has(c.name)) {
+                    seen.add(c.name);
+                    names.push(c.name);
+                }
+            });
+        });
+        return names;
+    }, [resourceHistory]);
+
     const chartData = useMemo(() => {
         return resourceHistory.map(entry => {
-            const containers = entry.containers || [];
-            const avgCpu = containers.length > 0
-                ? containers.reduce((sum, c) => sum + (c.cpuPercent || 0), 0) / containers.length
-                : 0;
-            const totalMemMB = containers.reduce((sum, c) => sum + (c.memoryMB || 0), 0);
-            const totalMemLimitMB = containers.reduce((sum, c) => sum + (c.memoryLimitMB || 0), 0);
-            const memPercent = totalMemLimitMB > 0 ? (totalMemMB / totalMemLimitMB) * 100 : 0;
-            const gpuPercent = entry.gpu?.utilPercent ?? 0;
-
-            return {
-                time: entry.ts,
-                cpu: Number(avgCpu.toFixed(1)),
-                memory: Number(memPercent.toFixed(1)),
-                gpu: Number(gpuPercent.toFixed(1)),
-            };
+            const point = { time: entry.ts };
+            for (const c of entry.containers || []) {
+                point[c.name] = Number((c.cpuPercent || 0).toFixed(1));
+            }
+            if (entry.gpu) {
+                point.gpu = Number((entry.gpu.utilPercent || 0).toFixed(1));
+            }
+            return point;
         });
     }, [resourceHistory]);
+
+    const hasGpu = useMemo(() =>
+        resourceHistory.some(e => e.gpu?.utilPercent != null),
+        [resourceHistory]
+    );
 
     if (chartData.length < 2) {
         return (
@@ -42,7 +57,6 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     };
 
-    // 테마별 차트 색상
     const gridColor = isDark ? '#1e293b' : '#e2e8f0';
     const axisColor = isDark ? '#334155' : '#cbd5e1';
     const tickColor = isDark ? '#475569' : '#94a3b8';
@@ -53,21 +67,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
     return (
         <div style={{ width: '100%', height: '220px' }}>
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                    <defs>
-                        <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="gpuGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#34d399" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#34d399" stopOpacity={0}/>
-                        </linearGradient>
-                    </defs>
+                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis
                         dataKey="time"
@@ -78,7 +78,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                     />
                     <YAxis
                         tick={{ fontSize: 10, fill: tickColor }}
-                        domain={[0, 100]}
+                        domain={[0, 'auto']}
                         tickFormatter={v => `${v}%`}
                         stroke={axisColor}
                     />
@@ -91,24 +91,38 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                             color: tooltipText,
                         }}
                         labelFormatter={formatTime}
-                        formatter={(value, name) => [`${value}%`, name.toUpperCase()]}
+                        formatter={(value, name) => [`${value}%`, name]}
                     />
-                    <Area
-                        type="monotone" dataKey="cpu" name="cpu"
-                        stroke="#3b82f6" strokeWidth={2}
-                        fill="url(#cpuGrad)" dot={false}
+                    <Legend
+                        wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }}
+                        iconType="plainline"
+                        iconSize={12}
                     />
-                    <Area
-                        type="monotone" dataKey="memory" name="memory"
-                        stroke="#f97316" strokeWidth={2}
-                        fill="url(#memGrad)" dot={false}
-                    />
-                    <Area
-                        type="monotone" dataKey="gpu" name="gpu"
-                        stroke="#34d399" strokeWidth={2}
-                        fill="url(#gpuGrad)" dot={false}
-                    />
-                </AreaChart>
+                    {podNames.map((name, i) => (
+                        <Line
+                            key={name}
+                            type="monotone"
+                            dataKey={name}
+                            name={name}
+                            stroke={POD_COLORS[i % POD_COLORS.length]}
+                            strokeWidth={2}
+                            dot={false}
+                            connectNulls
+                        />
+                    ))}
+                    {hasGpu && (
+                        <Line
+                            type="monotone"
+                            dataKey="gpu"
+                            name="GPU"
+                            stroke="#34d399"
+                            strokeWidth={2}
+                            strokeDasharray="5 3"
+                            dot={false}
+                            connectNulls
+                        />
+                    )}
+                </LineChart>
             </ResponsiveContainer>
         </div>
     );

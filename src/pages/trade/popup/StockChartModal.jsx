@@ -23,18 +23,54 @@ const PERIOD_OPTIONS = [
 
 // 지표 정의
 const OVERLAY_INDICATORS = [
-    { key: 'sma20', label: 'SMA 20', color: '#f59e0b', desc: '20일 단순이동평균. 단기 추세 파악에 사용' },
-    { key: 'sma50', label: 'SMA 50', color: '#10b981', desc: '50일 단순이동평균. 중기 추세의 방향과 지지/저항선 역할' },
-    { key: 'sma200', label: 'SMA 200', color: '#ef4444', desc: '200일 단순이동평균. 장기 추세 판단의 핵심 지표' },
-    { key: 'ema12', label: 'EMA 12', color: '#8b5cf6', desc: '12일 지수이동평균. 최근 가격에 가중치를 두어 빠른 반응' },
-    { key: 'ema26', label: 'EMA 26', color: '#ec4899', desc: '26일 지수이동평균. EMA 12와 함께 MACD의 기초' },
-    { key: 'bollinger', label: '볼린저', color: '#6366f1', desc: '볼린저 밴드(20일, 2σ). 상단/하단 밴드로 과매수·과매도 및 변동성 판단' },
+    {
+        key: 'sma20', label: 'SMA 20', color: '#f59e0b',
+        desc: '최근 20일 종가의 평균선 (단기)',
+        tip: '주가가 이 선 위에 있으면 단기 상승 추세, 아래면 하락 추세. 이 선이 지지선/저항선 역할을 자주 함',
+    },
+    {
+        key: 'sma50', label: 'SMA 50', color: '#10b981',
+        desc: '최근 50일 종가의 평균선 (중기)',
+        tip: 'SMA 20이 SMA 50을 위로 뚫으면 "골든크로스"(매수 신호), 아래로 뚫으면 "데드크로스"(매도 신호)',
+    },
+    {
+        key: 'sma200', label: 'SMA 200', color: '#ef4444',
+        desc: '최근 200일 종가의 평균선 (장기)',
+        tip: '투자자들이 가장 많이 보는 장기 지표. 주가가 이 선 위면 장기 상승장, 아래면 장기 하락장으로 판단',
+    },
+    {
+        key: 'ema12', label: 'EMA 12', color: '#8b5cf6',
+        desc: '12일 지수이동평균 (최근 가격에 가중치)',
+        tip: 'SMA보다 최근 움직임에 민감하게 반응. EMA 12가 EMA 26 위에 있으면 상승세',
+    },
+    {
+        key: 'ema26', label: 'EMA 26', color: '#ec4899',
+        desc: '26일 지수이동평균',
+        tip: 'EMA 12와 함께 사용. 두 선의 간격이 벌어지면 추세가 강하고, 좁아지면 추세 전환 가능성',
+    },
+    {
+        key: 'bollinger', label: '볼린저', color: '#6366f1',
+        desc: '중심선(SMA 20) + 상단/하단 밴드 (표준편차 2배)',
+        tip: '밴드 폭이 좁아지면 큰 움직임 예고. 주가가 상단 밴드 터치 → 과매수, 하단 밴드 터치 → 과매도 가능성',
+    },
 ];
 
 const OSCILLATOR_INDICATORS = [
-    { key: 'rsi', label: 'RSI', desc: 'RSI(14). 0~100 범위에서 70 이상 과매수, 30 이하 과매도 신호' },
-    { key: 'macd', label: 'MACD', desc: 'MACD(12,26,9). MACD선과 시그널선의 교차로 매수/매도 타이밍 포착' },
-    { key: 'stochastic', label: '스토캐스틱', desc: '스토캐스틱(14,3). 현재 가격의 상대적 위치로 과매수(80↑)·과매도(20↓) 판단' },
+    {
+        key: 'rsi', label: 'RSI',
+        desc: '가격의 상승/하락 강도를 0~100으로 표시',
+        tip: '70 이상 → 과매수(너무 올라서 조정 가능성)\n30 이하 → 과매도(너무 내려서 반등 가능성)\n50 근처 → 중립',
+    },
+    {
+        key: 'macd', label: 'MACD',
+        desc: '두 이동평균의 차이로 추세 변화를 포착',
+        tip: '파란선이 빨간선 위로 교차 → 매수 타이밍\n파란선이 빨간선 아래로 교차 → 매도 타이밍\n히스토그램: 초록 막대=상승세 강화, 빨강 막대=하락세 강화',
+    },
+    {
+        key: 'stochastic', label: '스토캐스틱',
+        desc: '일정 기간 내 현재 가격의 상대적 위치 (0~100)',
+        tip: '80 이상 → 과매수 구간 (고점 근처)\n20 이하 → 과매도 구간 (저점 근처)\n%K가 %D를 위로 교차 → 매수, 아래로 교차 → 매도',
+    },
 ];
 
 const DEFAULT_INDICATORS = {
@@ -676,29 +712,64 @@ const IndicatorToggle = ({ indicators, onToggle }) => {
             </div>
             {/* 지표 설명 패널 */}
             {showHelp && (
-                <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-700/50 dark:border-slate-600 space-y-2">
-                    <div>
-                        <div className="font-semibold text-slate-600 dark:text-slate-300 mb-1">오버레이 지표 — 가격 차트 위에 표시</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-                            {OVERLAY_INDICATORS.map(ind => (
-                                <div key={ind.key} className="flex gap-1.5">
-                                    <span className="font-medium shrink-0" style={{ color: ind.color }}>{ind.label}</span>
-                                    <span className="text-slate-500 dark:text-slate-400">{ind.desc}</span>
-                                </div>
-                            ))}
+                <div className="mt-2 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-700/50 dark:border-slate-600 overflow-hidden">
+                    {/* 오버레이 섹션 */}
+                    <HelpSection
+                        title="오버레이 지표"
+                        subtitle="가격 차트 위에 겹쳐서 표시"
+                        items={OVERLAY_INDICATORS}
+                        columns={2}
+                    />
+                    {/* 오실레이터 섹션 */}
+                    <HelpSection
+                        title="오실레이터 지표"
+                        subtitle="가격 차트 아래에 별도 패널로 표시"
+                        items={OSCILLATOR_INDICATORS}
+                        columns={1}
+                        defaultColor="#3b82f6"
+                    />
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
+ * 설명 섹션 (아코디언)
+ */
+const HelpSection = ({ title, subtitle, items, columns = 1, defaultColor }) => {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <div className="border-b last:border-b-0 border-slate-200 dark:border-slate-600">
+            <button
+                onClick={() => setOpen(prev => !prev)}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-slate-100 dark:hover:bg-slate-600/50 transition-colors"
+            >
+                <div className="flex items-baseline gap-2">
+                    <span className="font-semibold text-xs text-slate-700 dark:text-slate-200">{title}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">{subtitle}</span>
+                </div>
+                <span className={`text-slate-400 dark:text-slate-500 text-xs transition-transform ${open ? 'rotate-180' : ''}`}>
+                    ▼
+                </span>
+            </button>
+            {open && (
+                <div className={`px-3 pb-3 grid gap-2 ${columns === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                    {items.map(ind => (
+                        <div key={ind.key} className="rounded-md border border-slate-200 dark:border-slate-600 p-2 bg-white dark:bg-slate-700">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span
+                                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: ind.color || defaultColor }}
+                                />
+                                <span className="font-semibold text-xs text-slate-700 dark:text-slate-200">{ind.label}</span>
+                                <span className="text-slate-400 dark:text-slate-500">—</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">{ind.desc}</span>
+                            </div>
+                            <div className="text-xs text-slate-600 dark:text-slate-300 pl-4 leading-relaxed whitespace-pre-line">{ind.tip}</div>
                         </div>
-                    </div>
-                    <div className="border-t border-slate-200 dark:border-slate-600 pt-2">
-                        <div className="font-semibold text-slate-600 dark:text-slate-300 mb-1">오실레이터 지표 — 별도 패널에 표시</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-                            {OSCILLATOR_INDICATORS.map(ind => (
-                                <div key={ind.key} className="flex gap-1.5">
-                                    <span className="font-medium text-blue-600 dark:text-blue-400 shrink-0">{ind.label}</span>
-                                    <span className="text-slate-500 dark:text-slate-400">{ind.desc}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    ))}
                 </div>
             )}
         </div>

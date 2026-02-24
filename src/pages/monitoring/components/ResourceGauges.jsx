@@ -27,7 +27,7 @@ export default function ResourceGauges({ resources }) {
 }
 
 function PodResourceRow({ pod }) {
-    const cpuPercent = Math.min(Math.max(pod.cpuPercent || 0, 0), 100);
+    const cpuPercent = Math.max(pod.cpuPercent || 0, 0);
     const hasMemLimit = pod.memoryLimitMB > 0;
     const memPercent = hasMemLimit
         ? Math.min((pod.memoryMB / pod.memoryLimitMB) * 100, 100)
@@ -43,7 +43,7 @@ function PodResourceRow({ pod }) {
             </div>
             <ProgressBar
                 label="CPU"
-                percent={cpuPercent}
+                percent={Math.min(cpuPercent, 100)}
                 text={`${cpuPercent.toFixed(1)}%`}
             />
             <ProgressBar

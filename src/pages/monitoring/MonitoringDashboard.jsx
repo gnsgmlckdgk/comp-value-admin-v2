@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
 import useMonitoringSSE from './hooks/useMonitoringSSE';
 import ServiceStatusCard from './components/ServiceStatusCard';
@@ -20,19 +19,6 @@ export default function MonitoringDashboard() {
     const services = snapshot?.services || [];
     const resources = snapshot?.resources || null;
 
-    // 리소스 압박 수준: 0=정상, 1=경고(>70%), 2=위험(>90%)
-    const pressureLevel = useMemo(() => {
-        if (!resources?.containers?.length) return 0;
-        const maxCpu = Math.max(...resources.containers.map(c => c.cpuPercent || 0));
-        const memPercents = resources.containers.map(c =>
-            c.memoryLimitMB > 0 ? (c.memoryMB / c.memoryLimitMB) * 100 : 0
-        );
-        const maxMem = Math.max(...memPercents);
-        const peak = Math.max(maxCpu, maxMem);
-        if (peak > 90) return 2;
-        if (peak > 70) return 1;
-        return 0;
-    }, [resources]);
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 p-4 md:p-6">
@@ -68,7 +54,7 @@ export default function MonitoringDashboard() {
                 {/* Left column: Service Topology + Activity */}
                 <div className="col-span-12 lg:col-span-5 self-start space-y-4">
                     <DashCard title="Service Topology">
-                        <ServiceTopology services={services} trades={trades} traffic={traffic} pressureLevel={pressureLevel} />
+                        <ServiceTopology services={services} trades={trades} traffic={traffic} />
                     </DashCard>
                     <DashCard title="Service Activity">
                         <ServiceActivityLog apiLogs={apiLogs} />

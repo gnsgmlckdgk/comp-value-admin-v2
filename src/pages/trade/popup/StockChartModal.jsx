@@ -1,7 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import useModalAnimation from '@/hooks/useModalAnimation';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+    ComposedChart, Line, BarChart, Bar, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+} from 'recharts';
 import { fetchStockPriceVolume } from '@/util/ChartApi';
+import {
+    calcSMA, calcEMA, calcBollingerBands, calcRSI, calcMACD, calcStochastic, getMaxLookback,
+} from '@/util/technicalIndicators';
 
 // 기간 옵션
 const PERIOD_OPTIONS = [
@@ -15,29 +21,104 @@ const PERIOD_OPTIONS = [
     { value: 3650, label: '10년' },
 ];
 
+// 지표 정의
+const OVERLAY_INDICATORS = [
+    { key: 'sma20', label: 'SMA 20', color: '#f59e0b', desc: '20일 단순이동평균. 단기 추세 파악에 사용' },
+    { key: 'sma50', label: 'SMA 50', color: '#10b981', desc: '50일 단순이동평균. 중기 추세의 방향과 지지/저항선 역할' },
+    { key: 'sma200', label: 'SMA 200', color: '#ef4444', desc: '200일 단순이동평균. 장기 추세 판단의 핵심 지표' },
+    { key: 'ema12', label: 'EMA 12', color: '#8b5cf6', desc: '12일 지수이동평균. 최근 가격에 가중치를 두어 빠른 반응' },
+    { key: 'ema26', label: 'EMA 26', color: '#ec4899', desc: '26일 지수이동평균. EMA 12와 함께 MACD의 기초' },
+    { key: 'bollinger', label: '볼린저', color: '#6366f1', desc: '볼린저 밴드(20일, 2σ). 상단/하단 밴드로 과매수·과매도 및 변동성 판단' },
+];
+
+const OSCILLATOR_INDICATORS = [
+    { key: 'rsi', label: 'RSI', desc: 'RSI(14). 0~100 범위에서 70 이상 과매수, 30 이하 과매도 신호' },
+    { key: 'macd', label: 'MACD', desc: 'MACD(12,26,9). MACD선과 시그널선의 교차로 매수/매도 타이밍 포착' },
+    { key: 'stochastic', label: '스토캐스틱', desc: '스토캐스틱(14,3). 현재 가격의 상대적 위치로 과매수(80↑)·과매도(20↓) 판단' },
+];
+
+const DEFAULT_INDICATORS = {
+    sma20: false, sma50: false, sma200: false,
+    ema12: false, ema26: false,
+    bollinger: false,
+    rsi: false, macd: false, stochastic: false,
+};
+
+// 공통 XAxis 날짜 포매터
+const dateTickFormatter = (date) => {
+    const d = new Date(date);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+};
+
+// 공통 Tooltip 날짜 포매터
+const dateLabelFormatter = (date) =>
+    new Date(date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' });
+
+// 공통 Tooltip 스타일
+const tooltipStyle = {
+    backgroundColor: 'white',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    fontSize: '12px',
+    padding: '8px 12px',
+};
+
 /**
  * 주식 가격 및 거래량 차트 모달
  */
 const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 }) => {
 
-    const [chartData, setChartData] = useState([]);
+    const [rawData, setRawData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [period, setPeriod] = useState(30); // 기본값 30일
+    const [period, setPeriod] = useState(30);
+    const [indicators, setIndicators] = useState(DEFAULT_INDICATORS);
+
+    // 활성 지표 중 가장 긴 lookback
+    const maxLookback = useMemo(() => getMaxLookback(indicators), [indicators]);
+
+    // 실제 API 요청 기간 (표시 기간 + lookback 여유분)
+    const fetchDays = useMemo(() => {
+        // 주말/공휴일 보정: 거래일 기준 약 1.5배
+        return period + Math.ceil(maxLookback * 1.5);
+    }, [period, maxLookback]);
+
+    // 이미 fetch한 일수 추적 — 지표 토글 시 불필요한 재요청 방지
+    const fetchedDaysRef = useRef(0);
+    const prevPeriodRef = useRef(period);
+    const prevSymbolRef = useRef(symbol);
 
     useEffect(() => {
         if (!isOpen || !symbol) return;
 
-        loadChartData();
-    }, [isOpen, symbol, period]);
+        // 모달 열림, 심볼 변경, 기간 변경 → 전체 로딩
+        const needFullReload =
+            prevSymbolRef.current !== symbol ||
+            prevPeriodRef.current !== period ||
+            rawData.length === 0;
 
-    const loadChartData = async () => {
-        setLoading(true);
+        prevPeriodRef.current = period;
+        prevSymbolRef.current = symbol;
+
+        if (needFullReload) {
+            fetchedDaysRef.current = 0;
+            loadChartData(true);
+            return;
+        }
+
+        // 지표 토글로 인한 fetchDays 증가 → 이미 충분하면 skip
+        if (fetchedDaysRef.current >= fetchDays) return;
+
+        // 추가 데이터 필요 → 기존 차트 유지한 채 백그라운드 fetch
+        loadChartData(false);
+    }, [isOpen, symbol, fetchDays]);
+
+    const loadChartData = async (showLoading = true) => {
+        if (showLoading) setLoading(true);
         setError(null);
 
-        // 선택된 기간에 따라 데이터 조회
         const to = new Date().toISOString().split('T')[0];
-        const from = new Date(Date.now() - period * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const from = new Date(Date.now() - fetchDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         try {
             const result = await fetchStockPriceVolume(symbol, from, to);
@@ -48,11 +129,11 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
             }
 
             if (result.data?.success && result.data?.response) {
-                // 날짜 기준 오름차순 정렬
                 const sortedData = [...result.data.response].sort((a, b) =>
                     new Date(a.date) - new Date(b.date)
                 );
-                setChartData(sortedData);
+                setRawData(sortedData);
+                fetchedDaysRef.current = fetchDays;
             } else {
                 setError('차트 데이터를 불러올 수 없습니다.');
             }
@@ -60,18 +141,48 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
             setError('차트 데이터 조회 중 오류가 발생했습니다.');
             console.error(err);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
+    };
+
+    // 지표 계산 + 표시 기간으로 slice
+    const enrichedData = useMemo(() => {
+        if (rawData.length === 0) return [];
+
+        let result = rawData;
+
+        // 오버레이 지표
+        if (indicators.sma20) result = calcSMA(result, 20);
+        if (indicators.sma50) result = calcSMA(result, 50);
+        if (indicators.sma200) result = calcSMA(result, 200);
+        if (indicators.ema12) result = calcEMA(result, 12);
+        if (indicators.ema26) result = calcEMA(result, 26);
+        if (indicators.bollinger) result = calcBollingerBands(result, 20, 2);
+
+        // 오실레이터 지표
+        if (indicators.rsi) result = calcRSI(result, 14);
+        if (indicators.macd) result = calcMACD(result, 12, 26, 9);
+        if (indicators.stochastic) result = calcStochastic(result, 14, 3);
+
+        // 표시 기간만큼만 slice (뒤에서 period개)
+        if (maxLookback > 0 && result.length > period) {
+            return result.slice(-period);
+        }
+
+        return result;
+    }, [rawData, indicators, period, maxLookback]);
+
+    // 지표 토글
+    const toggleIndicator = (key) => {
+        setIndicators(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     // ESC 키로 닫기
     useEffect(() => {
         if (!isOpen) return;
-
         const handleEscape = (e) => {
             if (e.key === 'Escape') onClose();
         };
-
         window.addEventListener('keydown', handleEscape);
         return () => window.removeEventListener('keydown', handleEscape);
     }, [isOpen, onClose]);
@@ -80,6 +191,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
 
     if (!shouldRender) return null;
 
+    const chartData = enrichedData;
     const latestData = chartData[chartData.length - 1];
     const previousData = chartData[chartData.length - 2];
     const change = latestData && previousData ? latestData.close - previousData.close : 0;
@@ -87,6 +199,8 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
         ? ((change / previousData.close) * 100)
         : 0;
     const isPositive = change >= 0;
+
+    const periodLabel = PERIOD_OPTIONS.find(o => o.value === period)?.label || `${period}일`;
 
     return (
         <>
@@ -137,6 +251,8 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                     <div className="w-full sm:w-auto overflow-x-auto scrollbar-always min-w-0 p-0 m-0 border-none">
                         <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
                     </div>
+                    {/* 지표 토글 */}
+                    <IndicatorToggle indicators={indicators} onToggle={toggleIndicator} />
                 </div>
 
                 {/* 콘텐츠 */}
@@ -157,17 +273,14 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                         <div className="space-y-6">
                             {/* 가격 차트 */}
                             <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
-                                <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">주식 가격 (최근 30일)</h3>
+                                <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">주식 가격 (최근 {periodLabel})</h3>
                                 <ResponsiveContainer width="100%" height={300}>
-                                    <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                    <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                         <XAxis
                                             dataKey="date"
                                             tick={{ fontSize: 11, fill: '#64748b' }}
-                                            tickFormatter={(date) => {
-                                                const d = new Date(date);
-                                                return `${d.getMonth() + 1}/${d.getDate()}`;
-                                            }}
+                                            tickFormatter={dateTickFormatter}
                                             interval="preserveStartEnd"
                                         />
                                         <YAxis
@@ -176,64 +289,59 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                             tickFormatter={(value) => `$${value.toFixed(0)}`}
                                         />
                                         <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #e2e8f0',
-                                                borderRadius: '8px',
-                                                fontSize: '12px',
-                                                padding: '8px 12px',
-                                            }}
+                                            contentStyle={tooltipStyle}
                                             formatter={(value, name) => {
-                                                if (name === 'close') return [`$${value.toFixed(2)}`, '종가'];
-                                                if (name === 'high') return [`$${value.toFixed(2)}`, '고가'];
-                                                if (name === 'low') return [`$${value.toFixed(2)}`, '저가'];
-                                                if (name === 'open') return [`$${value.toFixed(2)}`, '시가'];
-                                                return [value, name];
+                                                if (value === null || value === undefined) return ['-', name];
+                                                const fmt = `$${Number(value).toFixed(2)}`;
+                                                const labels = {
+                                                    close: '종가', high: '고가', low: '저가', open: '시가',
+                                                    sma20: 'SMA 20', sma50: 'SMA 50', sma200: 'SMA 200',
+                                                    ema12: 'EMA 12', ema26: 'EMA 26',
+                                                    bbUpper: 'BB 상단', bbMiddle: 'BB 중간', bbLower: 'BB 하단',
+                                                };
+                                                return [fmt, labels[name] || name];
                                             }}
-                                            labelFormatter={(date) =>
-                                                new Date(date).toLocaleDateString('ko-KR', {
-                                                    year: 'numeric',
-                                                    month: 'short',
-                                                    day: 'numeric'
-                                                })
-                                            }
+                                            labelFormatter={dateLabelFormatter}
                                         />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="high"
-                                            stroke="#94a3b8"
-                                            strokeWidth={1}
-                                            dot={false}
-                                            strokeDasharray="3 3"
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="low"
-                                            stroke="#94a3b8"
-                                            strokeWidth={1}
-                                            dot={false}
-                                            strokeDasharray="3 3"
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="close"
-                                            stroke="#3b82f6"
-                                            strokeWidth={2.5}
-                                            dot={false}
-                                            activeDot={{ r: 5 }}
-                                        />
-                                    </LineChart>
+
+                                        {/* 고가/저가 */}
+                                        <Line type="monotone" dataKey="high" stroke="#94a3b8" strokeWidth={1} dot={false} strokeDasharray="3 3" />
+                                        <Line type="monotone" dataKey="low" stroke="#94a3b8" strokeWidth={1} dot={false} strokeDasharray="3 3" />
+
+                                        {/* 종가 */}
+                                        <Line type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+
+                                        {/* SMA */}
+                                        {indicators.sma20 && (
+                                            <Line type="monotone" dataKey="sma20" stroke="#f59e0b" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                                        )}
+                                        {indicators.sma50 && (
+                                            <Line type="monotone" dataKey="sma50" stroke="#10b981" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                                        )}
+                                        {indicators.sma200 && (
+                                            <Line type="monotone" dataKey="sma200" stroke="#ef4444" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                                        )}
+
+                                        {/* EMA */}
+                                        {indicators.ema12 && (
+                                            <Line type="monotone" dataKey="ema12" stroke="#8b5cf6" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls={false} isAnimationActive={false} />
+                                        )}
+                                        {indicators.ema26 && (
+                                            <Line type="monotone" dataKey="ema26" stroke="#ec4899" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls={false} isAnimationActive={false} />
+                                        )}
+
+                                        {/* 볼린저 밴드 선 */}
+                                        {indicators.bollinger && (
+                                            <>
+                                                <Line type="monotone" dataKey="bbUpper" stroke="#6366f1" strokeWidth={1} dot={false} strokeDasharray="4 2" connectNulls={false} isAnimationActive={false} />
+                                                <Line type="monotone" dataKey="bbMiddle" stroke="#6366f1" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                                                <Line type="monotone" dataKey="bbLower" stroke="#6366f1" strokeWidth={1} dot={false} strokeDasharray="4 2" connectNulls={false} isAnimationActive={false} />
+                                            </>
+                                        )}
+                                    </ComposedChart>
                                 </ResponsiveContainer>
-                                <div className="flex justify-center gap-4 mt-3 text-xs text-slate-600 dark:text-slate-400">
-                                    <div className="flex items-center gap-1">
-                                        <div className="w-3 h-0.5 bg-blue-500"></div>
-                                        <span>종가</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <div className="w-3 h-0.5 bg-slate-400 border-dashed border-t"></div>
-                                        <span>고가/저가</span>
-                                    </div>
-                                </div>
+                                {/* 범례 */}
+                                <PriceChartLegend indicators={indicators} />
                             </div>
 
                             {/* 거래량 차트 */}
@@ -245,10 +353,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                         <XAxis
                                             dataKey="date"
                                             tick={{ fontSize: 11, fill: '#64748b' }}
-                                            tickFormatter={(date) => {
-                                                const d = new Date(date);
-                                                return `${d.getMonth() + 1}/${d.getDate()}`;
-                                            }}
+                                            tickFormatter={dateTickFormatter}
                                             interval="preserveStartEnd"
                                         />
                                         <YAxis
@@ -261,30 +366,147 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                             }}
                                         />
                                         <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #e2e8f0',
-                                                borderRadius: '8px',
-                                                fontSize: '12px',
-                                                padding: '8px 12px',
-                                            }}
+                                            contentStyle={tooltipStyle}
                                             formatter={(value) => [value.toLocaleString(), '거래량']}
-                                            labelFormatter={(date) =>
-                                                new Date(date).toLocaleDateString('ko-KR', {
-                                                    year: 'numeric',
-                                                    month: 'short',
-                                                    day: 'numeric'
-                                                })
-                                            }
+                                            labelFormatter={dateLabelFormatter}
                                         />
-                                        <Bar
-                                            dataKey="volume"
-                                            fill="#8b5cf6"
-                                            radius={[4, 4, 0, 0]}
-                                        />
+                                        <Bar dataKey="volume" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
+
+                            {/* RSI 패널 */}
+                            {indicators.rsi && (
+                                <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
+                                    <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">RSI (14)</h3>
+                                    <ResponsiveContainer width="100%" height={120}>
+                                        <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                            <XAxis
+                                                dataKey="date"
+                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                tickFormatter={dateTickFormatter}
+                                                interval="preserveStartEnd"
+                                            />
+                                            <YAxis
+                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                domain={[0, 100]}
+                                                ticks={[0, 30, 50, 70, 100]}
+                                            />
+                                            <Tooltip
+                                                contentStyle={tooltipStyle}
+                                                formatter={(value) => [value !== null ? value.toFixed(2) : '-', 'RSI']}
+                                                labelFormatter={dateLabelFormatter}
+                                            />
+                                            <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.7} />
+                                            <ReferenceLine y={30} stroke="#10b981" strokeDasharray="3 3" strokeOpacity={0.7} />
+                                            <Line type="monotone" dataKey="rsi" stroke="#f59e0b" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                    <div className="flex justify-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                        <span className="text-red-500">--- 과매수 (70)</span>
+                                        <span className="text-emerald-500">--- 과매도 (30)</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* MACD 패널 */}
+                            {indicators.macd && (
+                                <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
+                                    <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">MACD (12, 26, 9)</h3>
+                                    <ResponsiveContainer width="100%" height={150}>
+                                        <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                            <XAxis
+                                                dataKey="date"
+                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                tickFormatter={dateTickFormatter}
+                                                interval="preserveStartEnd"
+                                            />
+                                            <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <Tooltip
+                                                contentStyle={tooltipStyle}
+                                                formatter={(value, name) => {
+                                                    if (value === null || value === undefined) return ['-', name];
+                                                    const labels = { macd: 'MACD', macdSignal: '시그널', macdHist: '히스토그램' };
+                                                    return [Number(value).toFixed(4), labels[name] || name];
+                                                }}
+                                                labelFormatter={dateLabelFormatter}
+                                            />
+                                            <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
+                                            <Bar dataKey="macdHist" isAnimationActive={false}>
+                                                {chartData.map((entry, index) => (
+                                                    <Cell key={index} fill={entry.macdHist >= 0 ? '#10b981' : '#ef4444'} />
+                                                ))}
+                                            </Bar>
+                                            <Line type="monotone" dataKey="macd" stroke="#3b82f6" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                                            <Line type="monotone" dataKey="macdSignal" stroke="#ef4444" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                    <div className="flex justify-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-3 h-0.5 bg-blue-500"></div>
+                                            <span>MACD</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-3 h-0.5 bg-red-500"></div>
+                                            <span>시그널</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-3 h-1.5 bg-emerald-500/50"></div>
+                                            <span>히스토그램</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 스토캐스틱 패널 */}
+                            {indicators.stochastic && (
+                                <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
+                                    <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">스토캐스틱 (14, 3)</h3>
+                                    <ResponsiveContainer width="100%" height={120}>
+                                        <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                            <XAxis
+                                                dataKey="date"
+                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                tickFormatter={dateTickFormatter}
+                                                interval="preserveStartEnd"
+                                            />
+                                            <YAxis
+                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                domain={[0, 100]}
+                                                ticks={[0, 20, 50, 80, 100]}
+                                            />
+                                            <Tooltip
+                                                contentStyle={tooltipStyle}
+                                                formatter={(value, name) => {
+                                                    if (value === null || value === undefined) return ['-', name];
+                                                    const labels = { stochK: '%K', stochD: '%D' };
+                                                    return [Number(value).toFixed(2), labels[name] || name];
+                                                }}
+                                                labelFormatter={dateLabelFormatter}
+                                            />
+                                            <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.7} />
+                                            <ReferenceLine y={20} stroke="#10b981" strokeDasharray="3 3" strokeOpacity={0.7} />
+                                            <Line type="monotone" dataKey="stochK" stroke="#3b82f6" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                                            <Line type="monotone" dataKey="stochD" stroke="#ef4444" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls={false} isAnimationActive={false} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                    <div className="flex justify-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-3 h-0.5 bg-blue-500"></div>
+                                            <span>%K</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-3 h-0.5 bg-red-500 border-dashed border-t"></div>
+                                            <span>%D</span>
+                                        </div>
+                                        <span className="text-red-500">--- 과매수 (80)</span>
+                                        <span className="text-emerald-500">--- 과매도 (20)</span>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* 최근 데이터 요약 */}
                             {latestData && (
@@ -317,6 +539,133 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                 </div>
             </div>
         </>
+    );
+};
+
+/**
+ * 지표 토글 컴포넌트
+ */
+const IndicatorToggle = ({ indicators, onToggle }) => {
+    const [showHelp, setShowHelp] = useState(false);
+
+    return (
+        <div className="mt-3 text-xs">
+            <div className="flex flex-col sm:flex-row gap-2">
+                {/* 오버레이 그룹 */}
+                <div className="flex flex-wrap items-center gap-1">
+                    <span className="text-slate-500 dark:text-slate-400 mr-1 font-medium">오버레이</span>
+                    {OVERLAY_INDICATORS.map(ind => (
+                        <button
+                            key={ind.key}
+                            onClick={() => onToggle(ind.key)}
+                            className={`px-2 py-1 rounded border text-xs font-medium transition-colors ${
+                                indicators[ind.key]
+                                    ? 'text-white border-transparent'
+                                    : 'text-slate-600 border-slate-300 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700'
+                            }`}
+                            style={indicators[ind.key] ? { backgroundColor: ind.color } : {}}
+                        >
+                            {ind.label}
+                        </button>
+                    ))}
+                </div>
+                {/* 구분선 */}
+                <div className="hidden sm:block w-px bg-slate-300 dark:bg-slate-600 mx-1" />
+                {/* 오실레이터 그룹 */}
+                <div className="flex flex-wrap items-center gap-1">
+                    <span className="text-slate-500 dark:text-slate-400 mr-1 font-medium">오실레이터</span>
+                    {OSCILLATOR_INDICATORS.map(ind => (
+                        <button
+                            key={ind.key}
+                            onClick={() => onToggle(ind.key)}
+                            className={`px-2 py-1 rounded border text-xs font-medium transition-colors ${
+                                indicators[ind.key]
+                                    ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                                    : 'text-slate-600 border-slate-300 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            {ind.label}
+                        </button>
+                    ))}
+                </div>
+                {/* 도움말 토글 */}
+                <button
+                    onClick={() => setShowHelp(prev => !prev)}
+                    className={`ml-auto px-2 py-1 rounded border text-xs font-medium transition-colors ${
+                        showHelp
+                            ? 'bg-slate-600 text-white border-slate-600 dark:bg-slate-500 dark:border-slate-500'
+                            : 'text-slate-500 border-slate-300 hover:bg-slate-100 dark:text-slate-400 dark:border-slate-600 dark:hover:bg-slate-700'
+                    }`}
+                >
+                    ? 설명
+                </button>
+            </div>
+            {/* 지표 설명 패널 */}
+            {showHelp && (
+                <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 dark:bg-slate-700/50 dark:border-slate-600 space-y-2">
+                    <div>
+                        <div className="font-semibold text-slate-600 dark:text-slate-300 mb-1">오버레이 지표 — 가격 차트 위에 표시</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                            {OVERLAY_INDICATORS.map(ind => (
+                                <div key={ind.key} className="flex gap-1.5">
+                                    <span className="font-medium shrink-0" style={{ color: ind.color }}>{ind.label}</span>
+                                    <span className="text-slate-500 dark:text-slate-400">{ind.desc}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="border-t border-slate-200 dark:border-slate-600 pt-2">
+                        <div className="font-semibold text-slate-600 dark:text-slate-300 mb-1">오실레이터 지표 — 별도 패널에 표시</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                            {OSCILLATOR_INDICATORS.map(ind => (
+                                <div key={ind.key} className="flex gap-1.5">
+                                    <span className="font-medium text-blue-600 dark:text-blue-400 shrink-0">{ind.label}</span>
+                                    <span className="text-slate-500 dark:text-slate-400">{ind.desc}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
+ * 가격 차트 범례
+ */
+const PriceChartLegend = ({ indicators }) => {
+    const items = [
+        { color: '#3b82f6', label: '종가', show: true },
+        { color: '#94a3b8', label: '고가/저가', show: true, dashed: true },
+    ];
+
+    OVERLAY_INDICATORS.forEach(ind => {
+        if (indicators[ind.key]) {
+            items.push({
+                color: ind.color,
+                label: ind.label,
+                show: true,
+                dashed: ind.key.startsWith('ema'),
+            });
+        }
+    });
+
+    return (
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3 text-xs text-slate-600 dark:text-slate-400">
+            {items.filter(i => i.show).map((item, idx) => (
+                <div key={idx} className="flex items-center gap-1">
+                    <div
+                        className="w-3 h-0.5"
+                        style={{
+                            backgroundColor: item.color,
+                            borderTop: item.dashed ? `1px dashed ${item.color}` : 'none',
+                        }}
+                    />
+                    <span>{item.label}</span>
+                </div>
+            ))}
+        </div>
     );
 };
 

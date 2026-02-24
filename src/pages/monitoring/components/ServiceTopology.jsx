@@ -66,6 +66,12 @@ const MAX_TOTAL_COMETS = 200;
 
 const PRESSURE_COLORS = ['#7dd3fc', '#fbbf24', '#f87171'];
 
+// edgeId → trafficKey 역매핑
+const EDGE_TRAFFIC_KEY = {};
+for (const [key, edges] of Object.entries(TRAFFIC_EDGE_MAP)) {
+    for (const edgeId of edges) EDGE_TRAFFIC_KEY[edgeId] = key;
+}
+
 /* CSS keyframes — 컴포넌트 마운트 시 1회 주입 */
 const STYLE_ID = 'topology-anim-styles';
 function injectStyles() {
@@ -109,7 +115,7 @@ function injectStyles() {
     document.head.appendChild(style);
 }
 
-export default function ServiceTopology({ services = [], trades = [], traffic = {}, pressureLevel = 0 }) {
+export default function ServiceTopology({ services = [], trades = [], traffic = {} }) {
     const { isDark } = useTheme();
     const [pulseNodes, setPulseNodes] = useState(new Set());
     const [flashEdges, setFlashEdges] = useState(new Set());
@@ -120,7 +126,14 @@ export default function ServiceTopology({ services = [], trades = [], traffic = 
     const [comets, setComets] = useState([]);
     const cometIdRef = useRef(0);
 
-    const cometColor = PRESSURE_COLORS[pressureLevel];
+    const edgePressure = useMemo(() => {
+        const map = {};
+        for (const [edgeId, trafficKey] of Object.entries(EDGE_TRAFFIC_KEY)) {
+            const count = traffic[trafficKey] || 0;
+            map[edgeId] = count > 8 ? 2 : count >= 3 ? 1 : 0;
+        }
+        return map;
+    }, [traffic]);
 
     const lineColor = isDark ? '#334155' : '#cbd5e1';
     const statusTextColor = isDark ? '#94a3b8' : '#64748b';
@@ -251,7 +264,7 @@ export default function ServiceTopology({ services = [], trades = [], traffic = 
 
                             <line
                                 x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                                stroke={isFlashing ? '#22d3ee' : hasComet ? cometColor : lineColor}
+                                stroke={isFlashing ? '#22d3ee' : hasComet ? PRESSURE_COLORS[edgePressure[key] || 0] : lineColor}
                                 strokeWidth={isFlashing ? 2.5 : 1.5}
                                 strokeDasharray={isFlashing || hasComet ? undefined : '4 4'}
                                 opacity={hasComet ? 0.5 : 1}
@@ -276,6 +289,7 @@ export default function ServiceTopology({ services = [], trades = [], traffic = 
                     const animName = EDGE_ANIM[comet.edgeId];
                     const angle = EDGE_ANGLE[comet.edgeId] || 0;
                     if (!animName) return null;
+                    const color = PRESSURE_COLORS[edgePressure[comet.edgeId] || 0];
                     return (
                         <g key={`comet-${comet.id}`}>
                             {COMET_TRAIL.map(([rx, ry, fillOp, strokeOp], idx) => (
@@ -287,9 +301,9 @@ export default function ServiceTopology({ services = [], trades = [], traffic = 
                                 >
                                     <ellipse
                                         cx="0" cy="0" rx={rx} ry={ry}
-                                        fill={cometColor}
+                                        fill={color}
                                         fillOpacity={fillOp}
-                                        stroke={cometColor}
+                                        stroke={color}
                                         strokeWidth={idx === 0 ? 1 : 0.5}
                                         strokeOpacity={strokeOp}
                                         transform={`rotate(${angle})`}

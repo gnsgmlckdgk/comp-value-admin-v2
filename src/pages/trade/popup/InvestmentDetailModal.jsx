@@ -821,20 +821,47 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                         <div className="text-sm font-medium text-blue-800 dark:text-blue-200">{data.recommendation || '-'}</div>
                     </div>
 
-                    {/* 그레이엄 등급 배지 */}
-                    {data.resultDetail?.그레이엄_등급 && data.resultDetail.그레이엄_등급 !== 'N/A' && (
-                        <div className="mb-4 flex items-center gap-2">
-                            <span className="text-xs text-slate-500 dark:text-slate-400">그레이엄:</span>
-                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${
-                                data.resultDetail.그레이엄_등급 === '강력매수' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                                data.resultDetail.그레이엄_등급 === '매수' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                                data.resultDetail.그레이엄_등급 === '관망' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
-                                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    {/* 그레이엄 스크리닝 상세 */}
+                    {data.resultDetail?.그레이엄_등급 && data.resultDetail.그레이엄_등급 !== 'N/A' && (() => {
+                        const rd = data.resultDetail;
+                        const grade = rd.그레이엄_등급;
+                        const passCount = rd.그레이엄_통과수;
+                        const perPass = rd.그레이엄_PER통과 === true;
+                        const pbrPass = rd.그레이엄_PBR통과 === true;
+                        const compositePass = rd.그레이엄_복합통과 === true;
+                        const crPass = rd.그레이엄_유동비율통과 === true;
+                        const profitPass = rd.그레이엄_연속흑자통과 === true;
+                        const gradeColors = {
+                            '강력매수': 'text-emerald-700 bg-emerald-50 border-emerald-300 dark:text-emerald-400 dark:bg-emerald-900/30 dark:border-emerald-800',
+                            '매수': 'text-blue-700 bg-blue-50 border-blue-300 dark:text-blue-400 dark:bg-blue-900/30 dark:border-blue-800',
+                            '관망': 'text-amber-700 bg-amber-50 border-amber-300 dark:text-amber-400 dark:bg-amber-900/30 dark:border-amber-800',
+                            '위험': 'text-red-700 bg-red-50 border-red-300 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800',
+                        };
+                        const FilterBadge = ({ label, pass }) => (
+                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
+                                pass
+                                    ? 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-900/30'
+                                    : 'text-red-700 border-red-300 bg-red-50 dark:text-red-400 dark:border-red-800 dark:bg-red-900/30'
                             }`}>
-                                {data.resultDetail.그레이엄_등급} ({data.resultDetail.그레이엄_통과수}/5)
+                                {pass ? '✅' : '❌'} {label}
                             </span>
-                        </div>
-                    )}
+                        );
+                        return (
+                            <div className={`mb-4 w-full rounded-md border px-3 py-2 ${gradeColors[grade] || gradeColors['관망']}`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[13px] font-semibold">그레이엄 스크리닝 ({passCount}/5)</span>
+                                    <span className="text-[13px] font-bold">{grade}</span>
+                                </div>
+                                <div className="flex gap-1.5 flex-wrap">
+                                    <FilterBadge label="PER" pass={perPass} />
+                                    <FilterBadge label="PBR" pass={pbrPass} />
+                                    <FilterBadge label="PER×PBR" pass={compositePass} />
+                                    <FilterBadge label="유동비율" pass={crPass} />
+                                    <FilterBadge label="연속흑자" pass={profitPass} />
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* 진입 타이밍 분석 */}
                     <EntryTimingSection entryTiming={data.entryTiming} />

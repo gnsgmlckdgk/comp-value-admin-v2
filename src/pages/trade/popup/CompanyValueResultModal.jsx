@@ -346,7 +346,6 @@ const ModalContent = ({
             <CompanySummary data={compValueData} investmentData={investmentData} />
             <MetricExplanation onOpenGuide={onOpenGuide} 매출기반평가={metrics.매출기반평가} />
             <RecommendationBanner data={compValueData} investmentData={investmentData} />
-            <GrahamScreeningSection data={compValueData} />
             <HighlightCards data={compValueData} />
             <OvervaluationBanner data={compValueData} />
             <AIPredictionSection
@@ -524,70 +523,6 @@ const RecommendationBanner = ({ data, investmentData }) => {
     return (
         <div className="mt-2 w-full rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
             {`📊 투자판단 ${metrics.evalGrade}등급${scoreText} — `}<span className="font-semibold">투자 고려</span>
-        </div>
-    );
-};
-
-/**
- * 그레이엄 스크리닝 결과 섹션
- */
-const GrahamScreeningSection = ({ data }) => {
-    const getValDeep = (obj, keys) => {
-        if (!obj || typeof obj !== 'object') return undefined;
-        for (const key of keys) {
-            if (obj[key] != null) return obj[key];
-        }
-        const containers = ['상세', '상세정보', 'detail', 'details'];
-        for (const container of containers) {
-            if (obj[container] && typeof obj[container] === 'object') {
-                for (const key of keys) {
-                    if (obj[container][key] != null) return obj[container][key];
-                }
-            }
-        }
-        return undefined;
-    };
-
-    const grade = getValDeep(data, ['그레이엄_등급']);
-    const passCount = getValDeep(data, ['그레이엄_통과수']);
-    if (grade == null || grade === 'N/A') return null;
-
-    const perPass = getValDeep(data, ['그레이엄_PER통과']) === true;
-    const pbrPass = getValDeep(data, ['그레이엄_PBR통과']) === true;
-    const compositePass = getValDeep(data, ['그레이엄_복합통과']) === true;
-    const crPass = getValDeep(data, ['그레이엄_유동비율통과']) === true;
-    const profitPass = getValDeep(data, ['그레이엄_연속흑자통과']) === true;
-
-    const gradeColors = {
-        '강력매수': 'text-emerald-700 bg-emerald-50 border-emerald-300 dark:text-emerald-400 dark:bg-emerald-900/30 dark:border-emerald-800',
-        '매수': 'text-blue-700 bg-blue-50 border-blue-300 dark:text-blue-400 dark:bg-blue-900/30 dark:border-blue-800',
-        '관망': 'text-amber-700 bg-amber-50 border-amber-300 dark:text-amber-400 dark:bg-amber-900/30 dark:border-amber-800',
-        '위험': 'text-red-700 bg-red-50 border-red-300 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800',
-    };
-
-    const FilterBadge = ({ label, pass }) => (
-        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
-            pass
-                ? 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-900/30'
-                : 'text-red-700 border-red-300 bg-red-50 dark:text-red-400 dark:border-red-800 dark:bg-red-900/30'
-        }`}>
-            {pass ? '✅' : '❌'} {label}
-        </span>
-    );
-
-    return (
-        <div className={`mt-2 w-full rounded-md border px-3 py-2 ${gradeColors[grade] || gradeColors['관망']}`}>
-            <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] font-semibold">그레이엄 스크리닝 ({passCount}/5)</span>
-                <span className="text-[13px] font-bold">{grade}</span>
-            </div>
-            <div className="flex gap-1.5 flex-wrap">
-                <FilterBadge label="PER" pass={perPass} />
-                <FilterBadge label="PBR" pass={pbrPass} />
-                <FilterBadge label="PER×PBR" pass={compositePass} />
-                <FilterBadge label="유동비율" pass={crPass} />
-                <FilterBadge label="연속흑자" pass={profitPass} />
-            </div>
         </div>
     );
 };
@@ -886,6 +821,37 @@ const HighlightCards = ({ data }) => {
                     </div>
                 )}
             </div>
+
+            {/* 그레이엄 등급 간단 배지 */}
+            {(() => {
+                const getVal = (obj, keys) => {
+                    if (!obj || typeof obj !== 'object') return undefined;
+                    for (const key of keys) { if (obj[key] != null) return obj[key]; }
+                    const containers = ['상세', '상세정보', 'detail', 'details'];
+                    for (const c of containers) {
+                        if (obj[c] && typeof obj[c] === 'object') {
+                            for (const key of keys) { if (obj[c][key] != null) return obj[c][key]; }
+                        }
+                    }
+                    return undefined;
+                };
+                const grade = getVal(data, ['그레이엄_등급']);
+                const passCount = getVal(data, ['그레이엄_통과수']);
+                if (grade == null || grade === 'N/A') return null;
+                const colorClass =
+                    grade === '강력매수' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                    grade === '매수' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    grade === '관망' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+                return (
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">그레이엄:</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${colorClass}`}>
+                            {grade} ({passCount ?? 0}/5)
+                        </span>
+                    </div>
+                );
+            })()}
         </div>
     );
 };

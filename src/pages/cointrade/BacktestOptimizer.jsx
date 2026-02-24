@@ -186,8 +186,11 @@ export default function BacktestOptimizer() {
 
     // 이력 탭 상태
     const [historyList, setHistoryList] = useState([]);
+    const [historyRunningStatuses, setHistoryRunningStatuses] = useState({}); // { taskId: { progress, current_trial, total_trials, best_score, best_return } }
     const [selectedDetailTaskId, setSelectedDetailTaskId] = useState(null);
     const [detailResult, setDetailResult] = useState(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
     const [showAllTrials, setShowAllTrials] = useState(false);
     const { shouldRender: renderAllTrials, isAnimatingOut: isAllTrialsClosing } = useModalAnimation(showAllTrials, 250);
 
@@ -262,6 +265,40 @@ export default function BacktestOptimizer() {
         }
     }, [activeTab]);
 
+    // 이력 탭에서 실행 중인 항목들 진행사항 폴링
+    useEffect(() => {
+        if (activeTab !== 'history') return;
+
+        const runningItems = historyList.filter(item => item.status === 'running');
+        if (runningItems.length === 0) return;
+
+        // 즉시 한번 조회
+        const fetchRunningStatuses = async () => {
+            const newStatuses = {};
+            for (const item of runningItems) {
+                try {
+                    const { data, error } = await send(`/dart/api/backtest/optimizer/status/${item.task_id}`, {}, 'GET');
+                    if (!error && data?.success && data?.response) {
+                        newStatuses[item.task_id] = data.response;
+                        // 완료/실패로 변경된 경우 이력 목록 갱신
+                        if (data.response.status === 'completed' || data.response.status === 'failed') {
+                            fetchHistory();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error('이력 상태 조회 실패:', e);
+                }
+            }
+            setHistoryRunningStatuses(prev => ({ ...prev, ...newStatuses }));
+        };
+
+        fetchRunningStatuses();
+
+        const intervalId = setInterval(fetchRunningStatuses, 5000);
+        return () => clearInterval(intervalId);
+    }, [activeTab, historyList]);
+
     // 실행 중인 옵티마이저 자동 폴링
     useEffect(() => {
         if (!runningTaskId || activeTab !== 'run') return;
@@ -298,12 +335,15 @@ export default function BacktestOptimizer() {
     useEffect(() => {
         const handleEsc = (e) => {
             if (e.key === 'Escape') {
-                if (isRunConfirmModalOpen) {
+                if (isDetailModalOpen) {
+                    setIsDetailModalOpen(false);
+                } else if (isRunConfirmModalOpen) {
                     setIsRunConfirmModalOpen(false);
                 }
             }
         };
-        if (isRunConfirmModalOpen) {
+        const anyModalOpen = isRunConfirmModalOpen || isDetailModalOpen;
+        if (anyModalOpen) {
             window.addEventListener('keydown', handleEsc);
             document.body.style.overflow = 'hidden';
         }
@@ -311,7 +351,7 @@ export default function BacktestOptimizer() {
             window.removeEventListener('keydown', handleEsc);
             document.body.style.overflow = 'unset';
         };
-    }, [isRunConfirmModalOpen]);
+    }, [isRunConfirmModalOpen, isDetailModalOpen]);
 
     const setDefaultDates = () => {
         const today = new Date();
@@ -598,6 +638,17 @@ export default function BacktestOptimizer() {
         } catch (e) {
             console.error('결과 조회 실패:', e);
             setToast('결과 조회 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleOpenDetailModal = async (taskId) => {
+        setSelectedDetailTaskId(taskId);
+        setIsDetailModalOpen(true);
+        setLoading(true);
+        try {
+            await fetchTaskResult(taskId, true);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -1816,26 +1867,49 @@ export default function BacktestOptimizer() {
                                             <div className="text-xs text-slate-600 dark:text-slate-400 mb-3">
                                                 {item.start_date} ~ {item.end_date}
                                             </div>
-                                            <div className="grid grid-cols-3 gap-2 mb-3">
-                                                <div className="bg-slate-50 dark:bg-slate-700 rounded p-2">
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">점수</div>
-                                                    <div className="font-semibold text-slate-800 dark:text-slate-200">
-                                                        {item.best_score?.toFixed(1) || '-'}
+                                            {item.status === 'running' && historyRunningStatuses[item.task_id] ? (
+                                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                                    <div className="bg-blue-50 dark:bg-blue-900/30 rounded p-2">
+                                                        <div className="text-xs text-blue-500 dark:text-blue-400">진행률</div>
+                                                        <div className="font-semibold text-blue-700 dark:text-blue-300">
+                                                            {historyRunningStatuses[item.task_id].progress || `${historyRunningStatuses[item.task_id].current_trial || 0}/${historyRunningStatuses[item.task_id].total_trials || '?'}`}
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-blue-50 dark:bg-blue-900/30 rounded p-2">
+                                                        <div className="text-xs text-blue-500 dark:text-blue-400">최고 점수</div>
+                                                        <div className="font-semibold text-blue-700 dark:text-blue-300">
+                                                            {historyRunningStatuses[item.task_id].best_score?.toFixed(1) || '-'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-blue-50 dark:bg-blue-900/30 rounded p-2">
+                                                        <div className="text-xs text-blue-500 dark:text-blue-400">최고 수익률</div>
+                                                        <div className={`font-semibold ${(historyRunningStatuses[item.task_id].best_return ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            {historyRunningStatuses[item.task_id].best_return != null ? `${historyRunningStatuses[item.task_id].best_return.toFixed(1)}%` : '-'}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="bg-slate-50 dark:bg-slate-700 rounded p-2">
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">수익률</div>
-                                                    <div className={`font-semibold ${item.best_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                        {item.best_return != null ? `${item.best_return.toFixed(1)}%` : '-'}
+                                            ) : (
+                                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                                    <div className="bg-slate-50 dark:bg-slate-700 rounded p-2">
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">점수</div>
+                                                        <div className="font-semibold text-slate-800 dark:text-slate-200">
+                                                            {item.best_score?.toFixed(1) || '-'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-slate-50 dark:bg-slate-700 rounded p-2">
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">수익률</div>
+                                                        <div className={`font-semibold ${item.best_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            {item.best_return != null ? `${item.best_return.toFixed(1)}%` : '-'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-slate-50 dark:bg-slate-700 rounded p-2">
+                                                        <div className="text-xs text-slate-500 dark:text-slate-400">시행</div>
+                                                        <div className="font-semibold text-slate-800 dark:text-slate-200">
+                                                            {item.total_trials || '-'}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="bg-slate-50 dark:bg-slate-700 rounded p-2">
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400">시행</div>
-                                                    <div className="font-semibold text-slate-800 dark:text-slate-200">
-                                                        {item.total_trials || '-'}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            )}
                                             {item.stop_reason && (
                                                 <div className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                                                     중단: {item.stop_reason}
@@ -1844,15 +1918,7 @@ export default function BacktestOptimizer() {
                                             <div className="flex gap-2 pt-2">
                                                 <button
                                                     className="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
-                                                    onClick={async () => {
-                                                        setSelectedDetailTaskId(item.task_id);
-                                                        setLoading(true);
-                                                        try {
-                                                            await fetchTaskResult(item.task_id, true);
-                                                        } finally {
-                                                            setLoading(false);
-                                                        }
-                                                    }}
+                                                    onClick={() => handleOpenDetailModal(item.task_id)}
                                                     disabled={loading}
                                                 >
                                                     상세 보기
@@ -1887,10 +1953,19 @@ export default function BacktestOptimizer() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {historyList.map((item) => (
-                                                <tr key={item.task_id} className="border-b border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                            {historyList.map((item) => {
+                                                const runStatus = item.status === 'running' ? historyRunningStatuses[item.task_id] : null;
+                                                return (
+                                                <tr key={item.task_id} className={`border-b border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 ${item.status === 'running' ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
                                                     <td className="px-3 py-3">
-                                                        {getStatusBadge(item.status)}
+                                                        <div className="flex flex-col gap-1">
+                                                            {getStatusBadge(item.status)}
+                                                            {runStatus && (
+                                                                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                                                    {runStatus.progress || `${runStatus.current_trial || 0}/${runStatus.total_trials || '?'}`}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="px-3 py-3 text-slate-700 dark:text-slate-300">
                                                         <div className="flex flex-wrap gap-1 max-w-[150px]">
@@ -1908,10 +1983,13 @@ export default function BacktestOptimizer() {
                                                         {item.start_date} ~ {item.end_date}
                                                     </td>
                                                     <td className="px-3 py-3 text-right font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                                        {item.best_score?.toFixed(2) || '-'}
+                                                        {runStatus ? (runStatus.best_score?.toFixed(2) || '-') : (item.best_score?.toFixed(2) || '-')}
                                                     </td>
-                                                    <td className={`px-3 py-3 text-right font-medium whitespace-nowrap ${item.best_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                        {item.best_return != null ? `${item.best_return.toFixed(2)}%` : '-'}
+                                                    <td className={`px-3 py-3 text-right font-medium whitespace-nowrap ${(runStatus ? runStatus.best_return : item.best_return) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                        {runStatus
+                                                            ? (runStatus.best_return != null ? `${runStatus.best_return.toFixed(2)}%` : '-')
+                                                            : (item.best_return != null ? `${item.best_return.toFixed(2)}%` : '-')
+                                                        }
                                                     </td>
                                                     <td className="px-3 py-3 text-right text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                                         {item.total_trials || '-'}
@@ -1925,15 +2003,7 @@ export default function BacktestOptimizer() {
                                                     <td className="px-3 py-3 text-center">
                                                         <button
                                                             className="text-blue-600 dark:text-blue-200 hover:text-blue-700 dark:hover:text-white bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
-                                                            onClick={async () => {
-                                                                setSelectedDetailTaskId(item.task_id);
-                                                                setLoading(true);
-                                                                try {
-                                                                    await fetchTaskResult(item.task_id, true);
-                                                                } finally {
-                                                                    setLoading(false);
-                                                                }
-                                                            }}
+                                                            onClick={() => handleOpenDetailModal(item.task_id)}
                                                             disabled={loading}
                                                         >
                                                             상세
@@ -1949,7 +2019,8 @@ export default function BacktestOptimizer() {
                                                         </button>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -1972,17 +2043,12 @@ export default function BacktestOptimizer() {
                             />
                             <Button
                                 className="shrink-0"
-                                onClick={async () => {
+                                onClick={() => {
                                     if (!selectedDetailTaskId) {
                                         setToast('Task ID를 입력해주세요.');
                                         return;
                                     }
-                                    setLoading(true);
-                                    try {
-                                        await fetchTaskResult(selectedDetailTaskId, true);
-                                    } finally {
-                                        setLoading(false);
-                                    }
+                                    handleOpenDetailModal(selectedDetailTaskId);
                                 }}
                                 disabled={loading}
                             >
@@ -1991,229 +2057,270 @@ export default function BacktestOptimizer() {
                         </div>
                     </div>
 
-                    {/* 조회된 결과 표시 */}
-                    {detailResult && !showAllTrials && (
-                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">
-                                    조회 결과
+                </div>
+            )}
+
+            {/* 상세 결과 모달 */}
+            {renderDetailModal && (
+                <div
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate__animated ${isDetailModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                    style={{ animationDuration: '0.25s' }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsDetailModalOpen(false);
+                    }}
+                >
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col my-4 animate__animated ${isDetailModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
+                        {/* 헤더 */}
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                    옵티마이저 상세 결과
                                 </h3>
-                                <div className="flex items-center gap-2">
-                                    <Button size="sm" variant="outline" onClick={() => handleExportExcel(detailResult.data, detailResult.taskId)}>
-                                        엑셀 저장
-                                    </Button>
-                                    <Button size="sm" variant="outline" onClick={() => handleExportText(detailResult.data, detailResult.taskId)}>
-                                        텍스트 저장
-                                    </Button>
-                                    <div className="text-sm text-slate-500 dark:text-slate-400 font-mono">
-                                        <TogglableTaskId taskId={detailResult.taskId} maxLength={30} />
-                                    </div>
-                                </div>
+                                {detailResult && (
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
+                                        <TogglableTaskId taskId={detailResult.taskId} maxLength={20} />
+                                    </span>
+                                )}
                             </div>
-
-                            {/* 최적 파라미터 */}
-                            <div className="mb-6">
-                                <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
-                                    최적 파라미터
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                                    {detailResult.data.best_params && Object.entries(detailResult.data.best_params).map(([key, value]) => (
-                                        <div key={key} className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3">
-                                            <div className="text-xs text-blue-600 dark:text-blue-400 mb-0.5">
-                                                {getParamLabel(key)}
-                                            </div>
-                                            <div className="text-[10px] text-slate-400 dark:text-slate-500 mb-1 font-mono">
-                                                {key}
-                                            </div>
-                                            <div className="font-semibold text-slate-800 dark:text-slate-200">
-                                                {typeof value === 'number' ? value.toFixed(2) : value}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                            <div className="flex items-center gap-2">
+                                {detailResult && (
+                                    <>
+                                        <Button size="sm" variant="outline" onClick={() => handleExportExcel(detailResult.data, detailResult.taskId)}>
+                                            엑셀 저장
+                                        </Button>
+                                        <Button size="sm" variant="outline" onClick={() => handleExportText(detailResult.data, detailResult.taskId)}>
+                                            텍스트 저장
+                                        </Button>
+                                    </>
+                                )}
+                                <button
+                                    onClick={() => setIsDetailModalOpen(false)}
+                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                                >
+                                    <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
+                        </div>
 
-                            {/* 결과 요약 */}
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                    <div className="text-sm text-slate-500 dark:text-slate-400">최고 점수</div>
-                                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                        {detailResult.data.best_score?.toFixed(2)}
-                                    </div>
+                        {/* 콘텐츠 */}
+                        <div className="flex-1 overflow-auto p-6">
+                            {loading && !detailResult ? (
+                                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                                    조회 중...
                                 </div>
-                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                    <div className="text-sm text-slate-500 dark:text-slate-400">최고 수익률</div>
-                                    <div className={`text-xl font-bold ${detailResult.data.best_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                        {detailResult.data.best_return?.toFixed(2)}%
-                                    </div>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                    <div className="text-sm text-slate-500 dark:text-slate-400">총 시행 횟수</div>
-                                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                        {detailResult.data.total_trials || 0}회
-                                    </div>
-                                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                                        성공: {detailResult.data.completed_trials || 0} / 실패: {detailResult.data.failed_trials || 0}
-                                    </div>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                    <div className="text-sm text-slate-500 dark:text-slate-400">목표 달성</div>
-                                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                        {detailResult.data.target_met_trials || 0}회
-                                    </div>
-                                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                                        목표 수익률 이상
-                                    </div>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                    <div className="text-sm text-slate-500 dark:text-slate-400">소요 시간</div>
-                                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                        {detailResult.data.elapsed_time_seconds?.toFixed(1)}초
-                                    </div>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                    <div className="text-sm text-slate-500 dark:text-slate-400">중단 사유</div>
-                                    <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                                        {detailResult.data.stop_reason || '-'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 고정 파라미터 */}
-                            {detailResult.data.fixed_params && (
-                                <div className="mb-6">
-                                    <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
-                                        고정 파라미터
-                                    </h4>
-                                    <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
-                                            {Object.entries(detailResult.data.fixed_params).map(([key, value]) => (
-                                                <div key={key}>
-                                                    <div className="text-slate-500 dark:text-slate-400">{key}</div>
-                                                    <div className="font-medium text-slate-800 dark:text-slate-200">
-                                                        {typeof value === 'number'
-                                                            ? (key.includes('fee_rate') || Math.abs(value) < 0.01
-                                                                ? value.toFixed(4)
-                                                                : value.toLocaleString())
-                                                            : value}
+                            ) : detailResult ? (
+                                <div className="space-y-6">
+                                    {/* 최적 파라미터 */}
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
+                                            최적 파라미터
+                                        </h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                                            {detailResult.data.best_params && Object.entries(detailResult.data.best_params).map(([key, value]) => (
+                                                <div key={key} className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3">
+                                                    <div className="text-xs text-blue-600 dark:text-blue-400 mb-0.5">
+                                                        {getParamLabel(key)}
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 mb-1 font-mono">
+                                                        {key}
+                                                    </div>
+                                                    <div className="font-semibold text-slate-800 dark:text-slate-200">
+                                                        {typeof value === 'number' ? value.toFixed(2) : value}
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
-                                </div>
-                            )}
 
-                            {/* 파라미터 범위 */}
-                            {detailResult.data.param_ranges && (
-                                <div className="mb-6">
-                                    <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
-                                        탐색된 파라미터 범위
-                                    </h4>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="bg-slate-100 dark:bg-slate-700">
-                                                    <th className="px-4 py-2 text-left font-medium text-slate-600 dark:text-slate-300">파라미터</th>
-                                                    <th className="px-4 py-2 text-right font-medium text-slate-600 dark:text-slate-300">최소</th>
-                                                    <th className="px-4 py-2 text-right font-medium text-slate-600 dark:text-slate-300">최대</th>
-                                                    <th className="px-4 py-2 text-right font-medium text-slate-600 dark:text-slate-300">증가값</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {Object.entries(detailResult.data.param_ranges).map(([key, range]) => (
-                                                    <tr key={key} className="border-b border-slate-200 dark:border-slate-600">
-                                                        <td className="px-4 py-2 text-slate-700 dark:text-slate-300">
-                                                            <div>{getParamLabel(key)}</div>
-                                                            <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{key}</div>
-                                                        </td>
-                                                        <td className="px-4 py-2 text-right text-slate-800 dark:text-slate-200">{range.min}</td>
-                                                        <td className="px-4 py-2 text-right text-slate-800 dark:text-slate-200">{range.max}</td>
-                                                        <td className="px-4 py-2 text-right text-slate-800 dark:text-slate-200">{range.step}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 모든 시행 결과 */}
-                            {detailResult.data.all_trials && detailResult.data.all_trials.length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
-                                        모든 시행 결과 ({detailResult.data.all_trials.length}개)
-                                    </h4>
-                                    <div className="overflow-x-auto max-h-96">
-                                        <table className="w-full text-sm min-w-[800px]">
-                                            <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700">
-                                                <tr>
-                                                    <th className="px-2 py-2 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">#</th>
-                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">수익률</th>
-                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">승률</th>
-                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">거래</th>
-                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">MDD</th>
-                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">Sharpe</th>
-                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">안정성</th>
-                                                    <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">점수</th>
-                                                    <th className="px-2 py-2 text-center font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">파라미터</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {detailResult.data.all_trials
-                                                    .sort((a, b) => b.final_score - a.final_score)
-                                                    .map((trial, index) => (
-                                                        <tr
-                                                            key={trial.trial_id}
-                                                            className={`border-b border-slate-200 dark:border-slate-600 ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}
-                                                        >
-                                                            <td className="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                                                {trial.trial_id}
-                                                                {index === 0 && <span className="ml-1 text-yellow-600">★</span>}
-                                                            </td>
-                                                            <td className={`px-2 py-2 text-right font-medium whitespace-nowrap ${trial.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                                {trial.total_return?.toFixed(2)}%
-                                                            </td>
-                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                                                {typeof trial.win_rate === 'number' ? trial.win_rate.toFixed(2) : trial.win_rate}%
-                                                            </td>
-                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                                                {trial.total_trades}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                                                {typeof trial.max_drawdown === 'number' ? trial.max_drawdown.toFixed(2) : trial.max_drawdown}%
-                                                            </td>
-                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                                                {trial.sharpe_ratio?.toFixed(2)}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                                                {trial.stability_score?.toFixed(2)}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                                                {trial.final_score?.toFixed(2)}
-                                                            </td>
-                                                            <td className="px-2 py-2">
-                                                                <div className="flex flex-wrap gap-1 justify-center min-w-[150px]">
-                                                                    {trial.params && Object.entries(trial.params).map(([k, v]) => (
-                                                                        <span
-                                                                            key={k}
-                                                                            className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 rounded whitespace-nowrap"
-                                                                            title={getParamLabel(k)}
-                                                                        >
-                                                                            {typeof v === 'number' ? v.toFixed(2) : v}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        ))}
-                                                </tbody>
-                                            </table>
+                                    {/* 결과 요약 */}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">최고 점수</div>
+                                            <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                                {detailResult.data.best_score?.toFixed(2)}
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">최고 수익률</div>
+                                            <div className={`text-xl font-bold ${detailResult.data.best_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                {detailResult.data.best_return?.toFixed(2)}%
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">총 시행 횟수</div>
+                                            <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                                {detailResult.data.total_trials || 0}회
+                                            </div>
+                                            <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                                성공: {detailResult.data.completed_trials || 0} / 실패: {detailResult.data.failed_trials || 0}
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">목표 달성</div>
+                                            <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                                {detailResult.data.target_met_trials || 0}회
+                                            </div>
+                                            <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                                목표 수익률 이상
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">소요 시간</div>
+                                            <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                                {detailResult.data.elapsed_time_seconds?.toFixed(1)}초
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">중단 사유</div>
+                                            <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                                {detailResult.data.stop_reason || '-'}
+                                            </div>
                                         </div>
                                     </div>
-                                )}
+
+                                    {/* 고정 파라미터 */}
+                                    {detailResult.data.fixed_params && (
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
+                                                고정 파라미터
+                                            </h4>
+                                            <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+                                                    {Object.entries(detailResult.data.fixed_params).map(([key, value]) => (
+                                                        <div key={key}>
+                                                            <div className="text-slate-500 dark:text-slate-400">{key}</div>
+                                                            <div className="font-medium text-slate-800 dark:text-slate-200">
+                                                                {typeof value === 'number'
+                                                                    ? (key.includes('fee_rate') || Math.abs(value) < 0.01
+                                                                        ? value.toFixed(4)
+                                                                        : value.toLocaleString())
+                                                                    : value}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 파라미터 범위 */}
+                                    {detailResult.data.param_ranges && (
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
+                                                탐색된 파라미터 범위
+                                            </h4>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        <tr className="bg-slate-100 dark:bg-slate-700">
+                                                            <th className="px-4 py-2 text-left font-medium text-slate-600 dark:text-slate-300">파라미터</th>
+                                                            <th className="px-4 py-2 text-right font-medium text-slate-600 dark:text-slate-300">최소</th>
+                                                            <th className="px-4 py-2 text-right font-medium text-slate-600 dark:text-slate-300">최대</th>
+                                                            <th className="px-4 py-2 text-right font-medium text-slate-600 dark:text-slate-300">증가값</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {Object.entries(detailResult.data.param_ranges).map(([key, range]) => (
+                                                            <tr key={key} className="border-b border-slate-200 dark:border-slate-600">
+                                                                <td className="px-4 py-2 text-slate-700 dark:text-slate-300">
+                                                                    <div>{getParamLabel(key)}</div>
+                                                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{key}</div>
+                                                                </td>
+                                                                <td className="px-4 py-2 text-right text-slate-800 dark:text-slate-200">{range.min}</td>
+                                                                <td className="px-4 py-2 text-right text-slate-800 dark:text-slate-200">{range.max}</td>
+                                                                <td className="px-4 py-2 text-right text-slate-800 dark:text-slate-200">{range.step}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 모든 시행 결과 */}
+                                    {detailResult.data.all_trials && detailResult.data.all_trials.length > 0 && (
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
+                                                모든 시행 결과 ({detailResult.data.all_trials.length}개)
+                                            </h4>
+                                            <div className="overflow-x-auto max-h-96">
+                                                <table className="w-full text-sm min-w-[800px]">
+                                                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700">
+                                                        <tr>
+                                                            <th className="px-2 py-2 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">#</th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">수익률</th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">승률</th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">거래</th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">MDD</th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">Sharpe</th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">안정성</th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">점수</th>
+                                                            <th className="px-2 py-2 text-center font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">파라미터</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {detailResult.data.all_trials
+                                                            .sort((a, b) => b.final_score - a.final_score)
+                                                            .map((trial, index) => (
+                                                                <tr
+                                                                    key={trial.trial_id}
+                                                                    className={`border-b border-slate-200 dark:border-slate-600 ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}
+                                                                >
+                                                                    <td className="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                                                        {trial.trial_id}
+                                                                        {index === 0 && <span className="ml-1 text-yellow-600">★</span>}
+                                                                    </td>
+                                                                    <td className={`px-2 py-2 text-right font-medium whitespace-nowrap ${trial.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                        {trial.total_return?.toFixed(2)}%
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                        {typeof trial.win_rate === 'number' ? trial.win_rate.toFixed(2) : trial.win_rate}%
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                        {trial.total_trades}
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                        {typeof trial.max_drawdown === 'number' ? trial.max_drawdown.toFixed(2) : trial.max_drawdown}%
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                        {trial.sharpe_ratio?.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                        {trial.stability_score?.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                        {trial.final_score?.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-2 py-2">
+                                                                        <div className="flex flex-wrap gap-1 justify-center min-w-[150px]">
+                                                                            {trial.params && Object.entries(trial.params).map(([k, v]) => (
+                                                                                <span
+                                                                                    key={k}
+                                                                                    className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 rounded whitespace-nowrap"
+                                                                                    title={getParamLabel(k)}
+                                                                                >
+                                                                                    {typeof v === 'number' ? v.toFixed(2) : v}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                                    결과를 불러올 수 없습니다.
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
             )}
 

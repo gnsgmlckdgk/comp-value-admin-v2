@@ -4,6 +4,7 @@ import Register001 from '@/component/feature/board/Register001';
 
 import { sendMultipart } from '@/util/ClientUtil';
 import { useAuth } from '@/context/AuthContext';
+import { useTab } from '@/context/TabContext';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useState } from 'react';
 
@@ -11,6 +12,7 @@ const Register = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { userName, nickName, roles } = useAuth();
+    const { closeTabAndNavigate } = useTab();
 
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
 
@@ -67,14 +69,14 @@ const Register = () => {
         if (error) {
             openAlert(error || '게시글 등록중 문제가 발생했습니다.\n잠시 후 다시 시도해 주세요.');
         } else if (data) {
-            openAlert('게시글 등록이 완료되었습니다.', () => navigate(`/freeboard/`));
+            openAlert('게시글 등록이 완료되었습니다.', () => closeTabAndNavigate(location.pathname, '/freeboard/'));
         } else {
             openAlert('게시글 등록중 문제가 발생했습니다.\n잠시 후 다시 시도해 주세요.');
         }
     };
 
     const moveListPage = () => {
-        navigate(`/freeboard/`, { state: location.state });
+        closeTabAndNavigate(location.pathname, '/freeboard/');
     };
 
     return (

@@ -133,6 +133,25 @@ export function TabProvider({ children }) {
         });
     }, [navigate]);
 
+    /** 특정 탭을 닫고 지정한 경로로 이동 (등록/수정/삭제 완료 후 사용) */
+    const closeTabAndNavigate = useCallback((tabKeyToClose, targetPath) => {
+        if (tabKeyToClose === '/') return;
+
+        setTabs(prev => {
+            let next = prev.filter(t => t.key !== tabKeyToClose);
+            const exists = next.some(t => t.key === targetPath);
+            if (!exists && targetPath !== '/') {
+                const label = findRouteLabel(targetPath);
+                next = [...next, { key: targetPath, path: targetPath, label, closable: true }];
+            }
+            return next;
+        });
+
+        setActiveKey(targetPath);
+        isNavigatingRef.current = true;
+        navigate(targetPath);
+    }, [navigate]);
+
     const closeRightTabs = useCallback((key) => {
         setTabs(prev => {
             const idx = prev.findIndex(t => t.key === key);
@@ -154,7 +173,7 @@ export function TabProvider({ children }) {
     }, [navigate]);
 
     return (
-        <TabContext.Provider value={{ tabs, activeKey, openTab, switchTab, closeTab, closeOtherTabs, closeRightTabs }}>
+        <TabContext.Provider value={{ tabs, activeKey, openTab, switchTab, closeTab, closeTabAndNavigate, closeOtherTabs, closeRightTabs }}>
             {children}
         </TabContext.Provider>
     );

@@ -6,8 +6,9 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useAuth } from '@/context/AuthContext';
 import { send } from '@/util/ClientUtil';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useContext, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { TabActiveContext } from '@/context/TabContext';
 
 function List() {
     const location = useLocation();
@@ -22,6 +23,8 @@ function List() {
     const [sgubun, setSgubun] = useState(state.sgubun || ''); // 검색구분
 
     const navigate = useNavigate();
+    const isTabActive = useContext(TabActiveContext);
+    const prevActiveRef = useRef(isTabActive);
 
     // 페이징
     const [totalCount, setTotalCount] = useState(0);
@@ -30,9 +33,18 @@ function List() {
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '' });
     const [confirmConfig, setConfirmConfig] = useState({ open: false, message: '', onConfirm: null });
 
+    // 최초 마운트 시 조회
     useEffect(() => {
         if (isLoggedIn) fetchData(currentPage);
     }, []);
+
+    // 탭이 다시 활성화되면 데이터 갱신 (등록/수정/삭제 후 복귀 시)
+    useEffect(() => {
+        if (prevActiveRef.current === false && isTabActive === true && isLoggedIn) {
+            fetchData(currentPage);
+        }
+        prevActiveRef.current = isTabActive;
+    }, [isTabActive]);
 
     // ---- 역할 계산 (ROLE_SUPER_ADMIN / ROLE_ADMIN / ROLE_USER 등) ----
     let storedRoles = [];

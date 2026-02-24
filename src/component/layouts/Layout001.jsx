@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import useModalAnimation from '@/hooks/useModalAnimation';
 
 import Header from '@/component/layouts/common/Header001';
@@ -6,13 +6,25 @@ import SideBar from '@/component/layouts/common/SideBar001';
 import TabBar from '@/component/layouts/common/TabBar';
 import TabSheet from '@/component/layouts/common/TabSheet';
 import KeepAliveOutlet from '@/component/layouts/common/KeepAliveOutlet';
+import { useTab } from '@/context/TabContext';
 
 function Layout001() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isPinned, setIsPinned] = useState(false);
     const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
     const sidebarTimeoutRef = useRef(null);
+    const mainRef = useRef(null);
     const { shouldRender: showOverlay, isAnimatingOut: isOverlayFading } = useModalAnimation(isSidebarOpen, 200);
+    const { activeKey } = useTab();
+
+    // 탭 전환 시 스크롤 최상단으로 이동
+    useEffect(() => {
+        requestAnimationFrame(() => {
+            mainRef.current?.scrollTo(0, 0);
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+        });
+    }, [activeKey]);
 
     const handleMenuClick = () => {
         if (window.innerWidth >= 768) {
@@ -93,7 +105,7 @@ function Layout001() {
                     onMouseLeave={handleSidebarMouseLeave}
                 />
 
-                <main className="scrollbar-always relative flex-1 overflow-auto bg-white p-4 md:p-6 dark:bg-slate-900">
+                <main ref={mainRef} className="scrollbar-always relative flex-1 overflow-auto bg-white p-4 md:p-6 dark:bg-slate-900">
                     <TabSheet />
                     <KeepAliveOutlet />
                 </main>

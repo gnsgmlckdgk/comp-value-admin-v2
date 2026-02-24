@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import View001 from '@/component/feature/board/View001';
 import { send } from '@/util/ClientUtil';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useAuth } from '@/context/AuthContext';
+import { useTab, TabActiveContext } from '@/context/TabContext';
 
 function View() {
     const [boardData, setBoardData] = useState();
@@ -14,7 +15,9 @@ function View() {
     const navigate = useNavigate();
     const location = useLocation();
     const { userName, nickName, roles } = useAuth();
-
+    const { closeTabAndNavigate } = useTab();
+    const isTabActive = useContext(TabActiveContext);
+    const prevActiveRef = useRef(isTabActive);
 
     const openAlert = (message, onConfirm, onAfterClose) => {
         setAlertConfig({ open: true, message, onConfirm: onConfirm || null, onAfterClose: onAfterClose || null });
@@ -46,7 +49,9 @@ function View() {
             openAlert(error || '게시글 삭제 중 오류가 발생했습니다.');
             return;
         }
-        openAlert(`[${id}] 게시글을 삭제하였습니다.`, null, moveListPage);
+        openAlert(`[${id}] 게시글을 삭제하였습니다.`, null, () => {
+            closeTabAndNavigate(location.pathname, '/freeboard/');
+        });
     };
 
     const onDelete = () => {
@@ -104,6 +109,14 @@ function View() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // 탭이 다시 활성화되면 데이터 갱신 (수정 후 복귀 시)
+    useEffect(() => {
+        if (prevActiveRef.current === false && isTabActive === true) {
+            fetchData();
+        }
+        prevActiveRef.current = isTabActive;
+    }, [isTabActive]);
 
     const currentUsername = userName || localStorage.getItem('userName') || '';
     const currentNickname = nickName || localStorage.getItem('nickName') || '';

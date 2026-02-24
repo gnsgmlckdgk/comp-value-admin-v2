@@ -5,6 +5,7 @@ import Update001 from '@/component/feature/board/Update001';
 import { send, sendMultipart } from '@/util/ClientUtil';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import { useAuth } from '@/context/AuthContext';
+import { useTab } from '@/context/TabContext';
 
 function Update() {
     const { id } = useParams(); // ← URL에서 :id 값 가져옴
@@ -15,6 +16,7 @@ function Update() {
     const location = useLocation();
     const state = location.state;
     const { roles } = useAuth();
+    const { closeTabAndNavigate } = useTab();
 
     // 권한 계산
     let storedRoles = [];
@@ -48,9 +50,9 @@ function Update() {
         if (onConfirm) onConfirm();
     };
 
-    // view 페이지 이동
+    // view 페이지 이동 (수정 탭 닫고 뷰 탭으로)
     const moveViewPage = () => {
-        navigate(`/freeboard/view/${id}`, { state });
+        closeTabAndNavigate(location.pathname, `/freeboard/view/${id}`);
     };
 
     // 수정할 게시글 조회

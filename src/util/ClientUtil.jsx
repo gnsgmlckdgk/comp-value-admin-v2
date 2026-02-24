@@ -36,9 +36,29 @@ const getUrl = (url) => {
  * - 이전에 로그인 상태였을 때만 로그아웃 이벤트 발생 (미로그인 상태에서 401은 무시)
  * - 중복 호출 방지: 이미 로그아웃 처리 중이면 무시
  */
+// 대량조회 중 강제 로그아웃 지연
+let _bulkOperationActive = false;
+let _logoutPending = false;
+
+export function beginBulkOperation() {
+    _bulkOperationActive = true;
+    _logoutPending = false;
+    return () => {
+        _bulkOperationActive = false;
+        if (_logoutPending) {
+            _logoutPending = false;
+            forceClientLogout();
+        }
+    };
+}
+
 let _forceLogoutFired = false;
 const forceClientLogout = () => {
     if (_forceLogoutFired) return;
+    if (_bulkOperationActive) {
+        _logoutPending = true;
+        return;
+    }
     // 로그인한 적이 없으면 (userName 없으면) 조용히 무시
     const wasLoggedIn = !!localStorage.getItem('userName');
     _forceLogoutFired = true;

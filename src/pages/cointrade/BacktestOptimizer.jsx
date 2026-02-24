@@ -5,8 +5,275 @@ import useModalAnimation from '@/hooks/useModalAnimation';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
 import ExcelJS from 'exceljs';
+import {
+    ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, Cell, ReferenceLine
+} from 'recharts';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+/**
+ * 점수를 색상으로 변환 (빨강 → 노랑 → 초록)
+ */
+function scoreToColor(score, minScore, maxScore) {
+    if (minScore === maxScore) return '#3b82f6';
+    const ratio = Math.max(0, Math.min(1, (score - minScore) / (maxScore - minScore)));
+    if (ratio < 0.5) {
+        const t = ratio * 2;
+        const r = Math.round(239 + (234 - 239) * t);
+        const g = Math.round(68 + (179 - 68) * t);
+        const b = Math.round(68 + (8 - 68) * t);
+        return `rgb(${r},${g},${b})`;
+    } else {
+        const t = (ratio - 0.5) * 2;
+        const r = Math.round(234 + (34 - 234) * t);
+        const g = Math.round(179 + (197 - 179) * t);
+        const b = Math.round(8 + (94 - 8) * t);
+        return `rgb(${r},${g},${b})`;
+    }
+}
+
+/**
+ * 파라미터 탐색 분포 차트 컴포넌트
+ */
+function ParamExplorationChart({ allTrials, paramRanges, bestParams, getParamLabel }) {
+    const paramKeys = Object.keys(paramRanges || {});
+    const [selectedPairX, setSelectedPairX] = useState(paramKeys[0] || '');
+    const [selectedPairY, setSelectedPairY] = useState(paramKeys[1] || '');
+
+    if (!allTrials || allTrials.length === 0 || paramKeys.length === 0) return null;
+
+    const scores = allTrials.map(t => t.final_score).filter(s => s != null);
+    const minScore = Math.min(...scores);
+    const maxScore = Math.max(...scores);
+
+    // 파라미터별 스트립 차트 데이터
+    const stripData = paramKeys.map(key => {
+        const range = paramRanges[key];
+        const points = allTrials
+            .filter(t => t.params && t.params[key] != null)
+            .map(t => ({
+                value: t.params[key],
+                score: t.final_score,
+                totalReturn: t.total_return,
+                trialId: t.trial_id,
+            }));
+
+        // 범위 내 step 단위로 탐색된 값 빈도 계산
+        const valueCounts = {};
+        points.forEach(p => {
+            const rounded = Number(p.value.toFixed(4));
+            valueCounts[rounded] = (valueCounts[rounded] || 0) + 1;
+        });
+
+        // 가능한 전체 step 값
+        const allSteps = [];
+        if (range.step > 0) {
+            for (let v = range.min; v <= range.max + range.step * 0.01; v += range.step) {
+                allSteps.push(Number(v.toFixed(4)));
+            }
+        }
+        const exploredSteps = allSteps.filter(v => valueCounts[v]);
+
+        return { key, range, points, valueCounts, allSteps, exploredSteps };
+    });
+
+    // 2D 산점도 데이터
+    const scatterData = allTrials
+        .filter(t => t.params && t.params[selectedPairX] != null && t.params[selectedPairY] != null)
+        .map(t => ({
+            x: t.params[selectedPairX],
+            y: t.params[selectedPairY],
+            score: t.final_score,
+            totalReturn: t.total_return,
+            trialId: t.trial_id,
+            params: t.params,
+        }));
+
+    const CustomScatterTooltip = ({ active, payload }) => {
+        if (!active || !payload?.[0]) return null;
+        const d = payload[0].payload;
+        return (
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg p-3 text-xs">
+                <div className="font-semibold mb-1">시행 #{d.trialId}</div>
+                <div>점수: <span className="font-bold">{d.score?.toFixed(2)}</span></div>
+                <div>수익률: <span className={d.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}>{d.totalReturn?.toFixed(2)}%</span></div>
+                {d.params && Object.entries(d.params).map(([k, v]) => (
+                    <div key={k} className="text-slate-500">{getParamLabel(k)}: {typeof v === 'number' ? v.toFixed(2) : v}</div>
+                ))}
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* 파라미터별 스트립 차트 */}
+            <div>
+                <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
+                    파라미터별 탐색 분포
+                </h4>
+                <div className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+                    각 파라미터의 탐색 범위에서 실제 탐색된 값을 점으로 표시합니다. 점 색상은 점수를 나타냅니다 (
+                    <span style={{ color: '#ef4444' }}>빨강</span>=낮음 →
+                    <span style={{ color: '#eab308' }}> 노랑</span>=중간 →
+                    <span style={{ color: '#22c55e' }}> 초록</span>=높음).
+                </div>
+                <div className="space-y-3">
+                    {stripData.map(({ key, range, points, allSteps, exploredSteps }) => (
+                        <div key={key} className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <div>
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{getParamLabel(key)}</span>
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 ml-2 font-mono">{key}</span>
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    탐색: <span className="font-semibold text-blue-600 dark:text-blue-400">{exploredSteps.length}</span>/{allSteps.length}개 구간
+                                    ({allSteps.length > 0 ? (exploredSteps.length / allSteps.length * 100).toFixed(0) : 0}%)
+                                </div>
+                            </div>
+                            <ResponsiveContainer width="100%" height={60}>
+                                <ScatterChart margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
+                                    <XAxis
+                                        type="number"
+                                        dataKey="value"
+                                        domain={[range.min, range.max]}
+                                        tick={{ fontSize: 10 }}
+                                        tickCount={Math.min(allSteps.length, 10)}
+                                    />
+                                    <YAxis type="number" dataKey="jitter" domain={[0, 1]} hide />
+                                    <Tooltip content={({ active, payload }) => {
+                                        if (!active || !payload?.[0]) return null;
+                                        const d = payload[0].payload;
+                                        return (
+                                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded shadow-lg p-2 text-xs">
+                                                <div>값: <span className="font-bold">{d.value}</span></div>
+                                                <div>점수: <span className="font-bold">{d.score?.toFixed(2)}</span></div>
+                                                <div>수익률: <span className={d.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}>{d.totalReturn?.toFixed(2)}%</span></div>
+                                                <div className="text-slate-400">시행 #{d.trialId}</div>
+                                            </div>
+                                        );
+                                    }} />
+                                    {/* 탐색되지 않은 구간 표시 */}
+                                    {allSteps.filter(v => !exploredSteps.includes(v)).map(v => (
+                                        <ReferenceLine key={v} x={v} stroke="#cbd5e1" strokeDasharray="2 2" strokeWidth={1} />
+                                    ))}
+                                    {/* 최적값 표시 */}
+                                    {bestParams && bestParams[key] != null && (
+                                        <ReferenceLine x={bestParams[key]} stroke="#f59e0b" strokeWidth={2} label={{ value: '★', position: 'top', fontSize: 12 }} />
+                                    )}
+                                    <Scatter
+                                        data={points.map((p, i) => ({ ...p, jitter: 0.3 + Math.random() * 0.4 }))}
+                                        isAnimationActive={false}
+                                    >
+                                        {points.map((p, i) => (
+                                            <Cell key={i} fill={scoreToColor(p.score, minScore, maxScore)} fillOpacity={0.8} r={5} />
+                                        ))}
+                                    </Scatter>
+                                </ScatterChart>
+                            </ResponsiveContainer>
+                            {/* 커버리지 바 */}
+                            <div className="mt-1 h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-blue-500 rounded-full transition-all"
+                                    style={{ width: `${allSteps.length > 0 ? (exploredSteps.length / allSteps.length * 100) : 0}%` }}
+                                />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* 2D 산점도 */}
+            {paramKeys.length >= 2 && (
+                <div>
+                    <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
+                        파라미터 조합 탐색 (2D 산점도)
+                    </h4>
+                    <div className="flex flex-wrap gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-slate-500 dark:text-slate-400">X축:</label>
+                            <select
+                                value={selectedPairX}
+                                onChange={(e) => setSelectedPairX(e.target.value)}
+                                className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                            >
+                                {paramKeys.map(k => (
+                                    <option key={k} value={k}>{getParamLabel(k)}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs text-slate-500 dark:text-slate-400">Y축:</label>
+                            <select
+                                value={selectedPairY}
+                                onChange={(e) => setSelectedPairY(e.target.value)}
+                                className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+                            >
+                                {paramKeys.map(k => (
+                                    <option key={k} value={k}>{getParamLabel(k)}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+                        <ResponsiveContainer width="100%" height={300}>
+                            <ScatterChart margin={{ top: 10, right: 10, bottom: 30, left: 10 }}>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                <XAxis
+                                    type="number"
+                                    dataKey="x"
+                                    name={getParamLabel(selectedPairX)}
+                                    domain={[paramRanges[selectedPairX]?.min, paramRanges[selectedPairX]?.max]}
+                                    tick={{ fontSize: 10 }}
+                                    label={{ value: getParamLabel(selectedPairX), position: 'bottom', offset: 15, fontSize: 11 }}
+                                />
+                                <YAxis
+                                    type="number"
+                                    dataKey="y"
+                                    name={getParamLabel(selectedPairY)}
+                                    domain={[paramRanges[selectedPairY]?.min, paramRanges[selectedPairY]?.max]}
+                                    tick={{ fontSize: 10 }}
+                                    label={{ value: getParamLabel(selectedPairY), angle: -90, position: 'insideLeft', offset: 5, fontSize: 11 }}
+                                />
+                                <Tooltip content={<CustomScatterTooltip />} />
+                                {/* 최적값 십자선 */}
+                                {bestParams && bestParams[selectedPairX] != null && (
+                                    <ReferenceLine x={bestParams[selectedPairX]} stroke="#f59e0b" strokeDasharray="5 3" strokeWidth={1.5} />
+                                )}
+                                {bestParams && bestParams[selectedPairY] != null && (
+                                    <ReferenceLine y={bestParams[selectedPairY]} stroke="#f59e0b" strokeDasharray="5 3" strokeWidth={1.5} />
+                                )}
+                                <Scatter data={scatterData} isAnimationActive={false}>
+                                    {scatterData.map((d, i) => (
+                                        <Cell key={i} fill={scoreToColor(d.score, minScore, maxScore)} fillOpacity={0.8} r={6} />
+                                    ))}
+                                </Scatter>
+                            </ScatterChart>
+                        </ResponsiveContainer>
+                        <div className="flex items-center justify-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }} />
+                                <span>낮은 점수</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#eab308' }} />
+                                <span>중간 점수</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                                <span>높은 점수</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <div className="w-4 h-0.5 bg-yellow-500" />
+                                <span>최적값</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 /**
  * 숫자를 정수 부분(볼드)과 소수점 부분으로 분리하여 렌더링
@@ -642,6 +909,7 @@ export default function BacktestOptimizer() {
     };
 
     const handleOpenDetailModal = async (taskId) => {
+        setDetailResult(null);
         setSelectedDetailTaskId(taskId);
         setIsDetailModalOpen(true);
         setLoading(true);
@@ -2237,6 +2505,16 @@ export default function BacktestOptimizer() {
                                                 </table>
                                             </div>
                                         </div>
+                                    )}
+
+                                    {/* 파라미터 탐색 시각화 */}
+                                    {(detailResult.data.all_explored_trials?.length > 0 || detailResult.data.all_trials?.length > 0) && detailResult.data.param_ranges && (
+                                        <ParamExplorationChart
+                                            allTrials={detailResult.data.all_explored_trials?.length > 0 ? detailResult.data.all_explored_trials : detailResult.data.all_trials}
+                                            paramRanges={detailResult.data.param_ranges}
+                                            bestParams={detailResult.data.best_params}
+                                            getParamLabel={getParamLabel}
+                                        />
                                     )}
 
                                     {/* 모든 시행 결과 */}

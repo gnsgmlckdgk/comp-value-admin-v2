@@ -3,7 +3,7 @@ import useModalAnimation from '@/hooks/useModalAnimation';
 import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
 import ExcelJS from 'exceljs';
 
-import { send, API_ENDPOINTS } from '@/util/ClientUtil';
+import { send, API_ENDPOINTS, beginBulkOperation } from '@/util/ClientUtil';
 
 const BATCH_SIZE = 30;
 const BATCH_DELAY_MS = 10000;
@@ -82,6 +82,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
         setProgress({ current: 0, total: symbols.length, currentSymbol: '', waiting: false, waitSeconds: 0 });
         abortRef.current = false; // 중지 플래그 초기화
 
+        const endBulkOperation = beginBulkOperation();
         try {
             const fn = fetcher || defaultBulkFetcher;
             const items = await fn(symbols, (current, total, currentSymbol, waiting = false, waitSeconds = 0) => {
@@ -108,6 +109,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
             setStopping(false);
             setProgress({ current: 0, total: 0, currentSymbol: '', waiting: false, waitSeconds: 0 });
             abortRef.current = false;
+            endBulkOperation();
         }
     };
 

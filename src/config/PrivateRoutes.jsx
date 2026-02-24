@@ -1,9 +1,10 @@
 import { useAuth } from '@/context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { send } from '@/util/ClientUtil';
 import routes from '@/config/routes';
 import { hasAnyRole } from '@/util/RoleUtil';
+import { TabActiveContext } from '@/context/TabContext';
 
 // 로그인 없이 접근 가능한 공개 페이지 목록
 const PUBLIC_ROUTES = [
@@ -31,6 +32,8 @@ const findRouteByPath = (pathname) => {
 };
 
 function PrivateRoute({ children }) {
+    // 비활성 탭(display:none)에서는 불필요한 API 호출과 auth 체크를 스킵
+    const isTabActive = useContext(TabActiveContext) ?? true;
     const { isLoggedIn, setIsLoggedIn, roles: userRoles } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
@@ -61,13 +64,15 @@ function PrivateRoute({ children }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // 페이지 이동 시 인증 체크
+    // 페이지 이동 시 인증 체크 (활성 탭에서만)
     useEffect(() => {
+        if (!isTabActive) return;
         checkAuth();
-    }, [location.pathname, checkAuth]);
+    }, [location.pathname, isTabActive, checkAuth]);
 
-    // 브라우저 탭 복귀 시 세션 재검증 (오래 방치 후 돌아온 경우 대응)
+    // 브라우저 탭 복귀 시 세션 재검증 (활성 탭에서만)
     useEffect(() => {
+        if (!isTabActive) return;
         const onVisible = () => {
             if (document.visibilityState === 'visible') {
                 checkAuth();
@@ -75,7 +80,10 @@ function PrivateRoute({ children }) {
         };
         document.addEventListener('visibilitychange', onVisible);
         return () => document.removeEventListener('visibilitychange', onVisible);
-    }, [checkAuth]);
+    }, [isTabActive, checkAuth]);
+
+    // 비활성 탭: 항상 children 렌더링 (컴포넌트 상태 보존)
+    if (!isTabActive) return children;
 
     const isPublic = isPublicRoute(location.pathname);
 

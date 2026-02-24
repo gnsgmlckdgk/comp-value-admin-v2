@@ -3,6 +3,7 @@ import routes from '@/config/routes';
 import { useState, useEffect } from 'react';
 import { hasAnyRole } from '@/util/RoleUtil';
 import { useAuth } from '@/context/AuthContext';
+import { useTab } from '@/context/TabContext';
 
 function useIsMobile(breakpoint = 768) {
     const [isMobile, setIsMobile] = useState(window.innerWidth <= breakpoint);
@@ -16,12 +17,14 @@ function useIsMobile(breakpoint = 768) {
 
 export const SECTIONS = ['시작하기', '기업분석(국내)_DEP', '기업분석(미국)', '거래', '게시판', '코인', '유틸', '모니터링'];
 
-export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned, onMouseEnter, onMouseLeave }) {
+export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned, isDesktopCollapsed, onMouseEnter, onMouseLeave }) {
     const isMobile = useIsMobile();
     const location = useLocation();
     const { roles: userRoles } = useAuth();
+    const { openTab } = useTab();
 
-    const handleLinkClick = () => {
+    const handleLinkClick = (path) => {
+        openTab(path);
         if (isMobile && setSidebarOpen) {
             setSidebarOpen(false);
             setIsPinned && setIsPinned(false);
@@ -56,7 +59,7 @@ export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned,
                             <Link
                                 key={key}
                                 to={route.path}
-                                onClick={handleLinkClick}
+                                onClick={() => handleLinkClick(route.path)}
                                 className={`flex items-center rounded-md px-3 py-2 text-sm transition-all ${
                                     isActive
                                         ? 'bg-sky-50 text-sky-700 font-semibold border border-sky-100 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800'
@@ -76,7 +79,11 @@ export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned,
         <aside
             className={`${
                 isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
-            } fixed inset-y-16 left-0 z-30 w-60 transform border-r border-slate-200 bg-white/95 px-3 py-4 text-sm shadow-lg transition-all duration-200 ease-out md:static md:inset-y-0 md:translate-x-0 md:opacity-100 md:w-64 md:bg-white md:shadow-none dark:bg-slate-900/95 dark:border-slate-700 md:dark:bg-slate-900`}
+            } fixed inset-y-16 left-0 z-30 w-60 transform border-r border-slate-200 bg-white/95 px-3 py-4 text-sm shadow-lg transition-all duration-200 ease-out md:static md:inset-y-0 md:bg-white md:shadow-none dark:bg-slate-900/95 dark:border-slate-700 md:dark:bg-slate-900 ${
+                isDesktopCollapsed
+                    ? 'md:w-0 md:min-w-0 md:overflow-hidden md:opacity-0 md:p-0 md:border-0'
+                    : 'md:translate-x-0 md:opacity-100 md:w-64 md:shrink-0'
+            }`}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
         >

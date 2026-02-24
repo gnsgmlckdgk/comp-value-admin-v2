@@ -262,11 +262,11 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
             <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur dark:bg-slate-900/80 dark:border-slate-700">
                 <div className="flex h-16 w-full items-center px-3 md:px-6">
                     <button
-                        className="mr-2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 md:hidden"
+                        className="mr-2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
                         onClick={onMenuClick}
                         onMouseEnter={onMenuHover}
                         onMouseLeave={onMenuLeave}
-                        aria-label="메뉴 열기"
+                        aria-label="메뉴 토글"
                     >
                         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

@@ -5,6 +5,7 @@ import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 import Input from '@/component/common/input/Input';
 import Button from '@/component/common/button/Button';
+import ExcelJS from 'exceljs';
 
 // 숫자를 천 단위 콤마 포맷으로 변환
 const formatNumberWithComma = (value) => {
@@ -597,6 +598,180 @@ export default function CointradeHistory() {
         handleSearch(0, newSize);
     };
 
+    // ====== 다운로드 유틸 ======
+    const triggerDownload = (blob, filename) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const getTimestamp = () => {
+        const now = new Date();
+        return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    };
+
+    // 요약 데이터를 행 배열로 변환
+    const getSummaryRows = () => [
+        ['매수 건수', `${summary.buyCount}건`],
+        ['매수 금액', `${Math.floor(summary.buyAmount).toLocaleString()}원`],
+        ['매도 건수', `${summary.sellCount}건`],
+        ['매도 금액', `${Math.floor(summary.sellAmount).toLocaleString()}원`],
+        ['실현 손익', `${summary.totalProfit >= 0 ? '+' : ''}${Math.floor(summary.totalProfit).toLocaleString()}원`],
+        ['익절 건수', `${summary.takeProfitCount}건`],
+        ['손절 건수', `${summary.stopLossCount}건`],
+        ['만료 매도 건수', `${summary.expiredCount}건`],
+        ['실현 수익률', `${summary.realizedProfitRate >= 0 ? '+' : ''}${summary.realizedProfitRate.toFixed(2)}%`],
+        ['보유 종목 수', `${summary.holdingsCount}종목`],
+        ['보유 투자금', `${Math.floor(summary.holdingsInvestment).toLocaleString()}원`],
+        ['보유 평가손익', `${summary.holdingsProfit >= 0 ? '+' : ''}${Math.floor(summary.holdingsProfit).toLocaleString()}원`],
+        ['보유 수익률', `${summary.holdingsProfitRate >= 0 ? '+' : ''}${summary.holdingsProfitRate.toFixed(2)}%`],
+        ['합산 수익률', `${summary.combinedProfitRate >= 0 ? '+' : ''}${summary.combinedProfitRate.toFixed(2)}%`],
+    ];
+
+    // 거래 목록 → plain 값 행 배열 변환
+    const getTradeRows = (data) => data.map(row => [
+        row.createdAt ? formatDateTime(row.createdAt) : '-',
+        row.coinCode || '-',
+        row.tradeType === 'BUY' ? '매수' : '매도',
+        row.price != null ? `${formatNumberWithComma(row.price)}원` : '-',
+        row.quantity != null ? row.quantity.toFixed(8) : '-',
+        row.totalAmount != null ? `${formatNumberWithComma(row.totalAmount)}원` : '-',
+        row.reason ? getReasonLabel(row.reason) : '-',
+        row.profitLoss != null ? `${row.profitLoss >= 0 ? '+' : ''}${formatNumberWithComma(row.profitLoss)}원` : '-',
+        row.profitLossRate != null ? `${row.profitLossRate >= 0 ? '+' : ''}${row.profitLossRate.toFixed(2)}%` : '-',
+        row.upProbability != null ? `${(row.upProbability * 100).toFixed(1)}%` : '-',
+        row.expectedReturn != null ? `${row.expectedReturn.toFixed(2)}%` : '-',
+    ]);
+
+    const TRADE_HEADERS = ['일시', '종목', '유형', '가격', '수량', '금액', '사유', '손익', '손익률', '상승확률', '기대수익'];
+
+    // CSV 문자열 생성
+    const toCsv = (headers, rows) => {
+        const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+        const lines = [headers.map(escape).join(',')];
+        rows.forEach(r => lines.push(r.map(escape).join(',')));
+        return '\uFEFF' + lines.join('\n'); // BOM for Excel 한글
+    };
+
+    // ── 요약 다운로드 ──
+    const handleDownloadSummaryExcel = async () => {
+        try {
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet('조회결과요약');
+
+            // 헤더
+            ws.addRow(['항목', '값']);
+            ws.getRow(1).eachCell(cell => {
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
+                cell.alignment = { horizontal: 'center' };
+            });
+
+            getSummaryRows().forEach(r => ws.addRow(r));
+
+            ws.getColumn(1).width = 20;
+            ws.getColumn(2).width = 25;
+
+            const buf = await wb.xlsx.writeBuffer();
+            triggerDownload(
+                new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+                `코인거래_요약_${getTimestamp()}.xlsx`
+            );
+        } catch (e) {
+            console.error('요약 엑셀 다운로드 실패:', e);
+            setToast('엑셀 다운로드에 실패했습니다.');
+        }
+    };
+
+    const handleDownloadSummaryCsv = () => {
+        try {
+            const csv = toCsv(['항목', '값'], getSummaryRows());
+            triggerDownload(
+                new Blob([csv], { type: 'text/csv;charset=utf-8' }),
+                `코인거래_요약_${getTimestamp()}.csv`
+            );
+        } catch (e) {
+            console.error('요약 CSV 다운로드 실패:', e);
+            setToast('CSV 다운로드에 실패했습니다.');
+        }
+    };
+
+    // ── 거래 목록 다운로드 ──
+    const handleDownloadTradeExcel = async () => {
+        try {
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet('거래목록');
+
+            // 헤더
+            ws.addRow(TRADE_HEADERS);
+            ws.getRow(1).eachCell(cell => {
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
+                cell.alignment = { horizontal: 'center' };
+            });
+
+            const rows = getTradeRows(processedData);
+            rows.forEach(r => ws.addRow(r));
+
+            // 열 너비 자동 조정
+            const colWidths = [20, 14, 8, 16, 18, 16, 12, 16, 12, 12, 12];
+            colWidths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+            const buf = await wb.xlsx.writeBuffer();
+            triggerDownload(
+                new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+                `코인거래_목록_${getTimestamp()}.xlsx`
+            );
+        } catch (e) {
+            console.error('거래목록 엑셀 다운로드 실패:', e);
+            setToast('엑셀 다운로드에 실패했습니다.');
+        }
+    };
+
+    const handleDownloadTradeCsv = () => {
+        try {
+            const csv = toCsv(TRADE_HEADERS, getTradeRows(processedData));
+            triggerDownload(
+                new Blob([csv], { type: 'text/csv;charset=utf-8' }),
+                `코인거래_목록_${getTimestamp()}.csv`
+            );
+        } catch (e) {
+            console.error('거래목록 CSV 다운로드 실패:', e);
+            setToast('CSV 다운로드에 실패했습니다.');
+        }
+    };
+
+    // ====== 다운로드 버튼 컴포넌트 ======
+    const DownloadButtons = ({ onExcel, onCsv }) => (
+        <div className="flex items-center gap-1.5">
+            <button
+                type="button"
+                onClick={onExcel}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-green-300 bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100 transition-colors dark:bg-green-900/20 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/40"
+                title="엑셀 다운로드"
+            >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-6l2.5 3L13 14l3 4H8l2-3z" />
+                </svg>
+                Excel
+            </button>
+            <button
+                type="button"
+                onClick={onCsv}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-blue-300 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/40"
+                title="CSV 다운로드"
+            >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-2h8v-2H8v2zm0-4h8v-2H8v2z" />
+                </svg>
+                CSV
+            </button>
+        </div>
+    );
+
     // 상세보기 모달 핸들러
     const handleRowDoubleClick = (record) => {
         setSelectedRecord(record);
@@ -1126,14 +1301,19 @@ export default function CointradeHistory() {
             {/* 요약 정보 */}
             {totalElements > 0 && (
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                        조회 결과 요약
-                        {itemsPerPage !== 9999 && (
-                            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
-                                (전체 보기로 조회 시 정확한 요약을 확인할 수 있습니다)
-                            </span>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                            조회 결과 요약
+                            {itemsPerPage !== 9999 && (
+                                <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                                    (전체 보기로 조회 시 정확한 요약을 확인할 수 있습니다)
+                                </span>
+                            )}
+                        </h2>
+                        {itemsPerPage === 9999 && (
+                            <DownloadButtons onExcel={handleDownloadSummaryExcel} onCsv={handleDownloadSummaryCsv} />
                         )}
-                    </h2>
+                    </div>
 
                     {itemsPerPage === 9999 ? (
                         <>
@@ -1265,6 +1445,9 @@ export default function CointradeHistory() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </button>
+                        {currentRecords.length > 0 && (
+                            <DownloadButtons onExcel={handleDownloadTradeExcel} onCsv={handleDownloadTradeCsv} />
+                        )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* 건수 선택 */}

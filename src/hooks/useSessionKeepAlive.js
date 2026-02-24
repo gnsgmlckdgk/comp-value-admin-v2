@@ -15,7 +15,7 @@ export default function useSessionKeepAlive(isActive) {
         if (isActive) {
             intervalRef.current = setInterval(async () => {
                 try {
-                    await send('/dart/member/me/info', {}, 'GET');
+                    await send('/dart/member/session/keepalive', {}, 'GET');
                 } catch {
                     // 실패해도 무시 (다음 주기에 재시도)
                 }

@@ -8,6 +8,7 @@ import 'animate.css';
 import { AuthProvider } from './context/AuthContext';
 import { SessionProvider } from './context/SessionContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { TabProvider } from './context/TabContext';
 import ErrorBoundary from './component/common/ErrorBoundary';
 
 createRoot(document.getElementById('root')).render(
@@ -17,7 +18,9 @@ createRoot(document.getElementById('root')).render(
         <ThemeProvider>
           <StrictMode>
             <BrowserRouter>
-              <App />
+              <TabProvider>
+                <App />
+              </TabProvider>
             </BrowserRouter>
           </StrictMode>
         </ThemeProvider>

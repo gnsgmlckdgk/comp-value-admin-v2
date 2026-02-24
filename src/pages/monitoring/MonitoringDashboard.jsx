@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
 import useMonitoringSSE from './hooks/useMonitoringSSE';
 import ServiceStatusCard from './components/ServiceStatusCard';
 import ProcessStatusPanel from './components/ProcessStatusPanel';
@@ -14,6 +15,7 @@ import ResourceTimeSeries from './components/ResourceTimeSeries';
  */
 export default function MonitoringDashboard() {
     const { snapshot, trades, apiLogs, isConnected, isPaused, togglePause, resourceHistory, traffic } = useMonitoringSSE();
+    useSessionKeepAlive(true);
 
     const services = snapshot?.services || [];
     const resources = snapshot?.resources || null;

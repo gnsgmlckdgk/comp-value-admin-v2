@@ -1,29 +1,35 @@
 import { useState, useRef } from 'react';
-import { Outlet } from 'react-router-dom';
 import useModalAnimation from '@/hooks/useModalAnimation';
 
 import Header from '@/component/layouts/common/Header001';
 import SideBar from '@/component/layouts/common/SideBar001';
+import TabBar from '@/component/layouts/common/TabBar';
+import TabSheet from '@/component/layouts/common/TabSheet';
+import KeepAliveOutlet from '@/component/layouts/common/KeepAliveOutlet';
 
 function Layout001() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isPinned, setIsPinned] = useState(false);
+    const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
     const sidebarTimeoutRef = useRef(null);
     const { shouldRender: showOverlay, isAnimatingOut: isOverlayFading } = useModalAnimation(isSidebarOpen, 200);
 
     const handleMenuClick = () => {
-        if (sidebarTimeoutRef.current) {
-            clearTimeout(sidebarTimeoutRef.current);
-        }
-
-        // 이미 pinned 상태라면 닫기
-        if (isPinned) {
-            setIsPinned(false);
-            setIsSidebarOpen(false);
+        if (window.innerWidth >= 768) {
+            // 데스크톱: 사이드바 접기/펼치기
+            setIsDesktopCollapsed(prev => !prev);
         } else {
-            // pinned가 아니라면 고정
-            setIsPinned(true);
-            setIsSidebarOpen(true);
+            // 모바일: 오버레이 사이드바 토글
+            if (sidebarTimeoutRef.current) {
+                clearTimeout(sidebarTimeoutRef.current);
+            }
+            if (isPinned) {
+                setIsPinned(false);
+                setIsSidebarOpen(false);
+            } else {
+                setIsPinned(true);
+                setIsSidebarOpen(true);
+            }
         }
     };
 
@@ -63,6 +69,7 @@ function Layout001() {
                 onMenuHover={handleMenuHover}
                 onMenuLeave={handleMenuLeave}
             />
+            <TabBar />
 
             {/* 모바일에서 사이드바가 열렸을 때 배경 클릭 시 닫히는 오버레이 */}
             {showOverlay && (
@@ -76,17 +83,19 @@ function Layout001() {
                 />
             )}
 
-            <div className="flex w-full flex-1 gap-0 px-3 pb-4 pt-3 md:gap-4 md:px-6">
+            <div className="flex w-full flex-1">
                 <SideBar
                     isSidebarOpen={isSidebarOpen}
                     setSidebarOpen={setIsSidebarOpen}
                     setIsPinned={setIsPinned}
+                    isDesktopCollapsed={isDesktopCollapsed}
                     onMouseEnter={handleSidebarMouseEnter}
                     onMouseLeave={handleSidebarMouseLeave}
                 />
 
-                <main className="scrollbar-always relative flex-1 overflow-auto rounded-xl bg-white p-4 shadow-sm md:p-6 dark:bg-slate-900 dark:shadow-slate-800/30">
-                    <Outlet />
+                <main className="scrollbar-always relative flex-1 overflow-auto bg-white p-4 md:p-6 dark:bg-slate-900">
+                    <TabSheet />
+                    <KeepAliveOutlet />
                 </main>
             </div>
         </div>

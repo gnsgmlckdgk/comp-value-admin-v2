@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import useModalAnimation from '@/hooks/useModalAnimation';
 import {
-    ComposedChart, Line, BarChart, Bar, Cell,
+    ComposedChart, Line, BarChart, Bar, Cell, ReferenceArea,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import { fetchStockPriceVolume } from '@/util/ChartApi';
@@ -164,10 +164,9 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
         if (indicators.macd) result = calcMACD(result, 12, 26, 9);
         if (indicators.stochastic) result = calcStochastic(result, 14, 3);
 
-        // 표시 기간만큼만 slice (뒤에서 period개)
-        if (maxLookback > 0 && result.length > period) {
-            return result.slice(-period);
-        }
+        // 항상 표시 기간의 시작 날짜 기준으로 필터 (달력 일수 기준)
+        const displayFrom = new Date(Date.now() - period * 24 * 60 * 60 * 1000);
+        result = result.filter(d => new Date(d.date) >= displayFrom);
 
         return result;
     }, [rawData, indicators, period, maxLookback]);
@@ -175,6 +174,56 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
     // 지표 토글
     const toggleIndicator = (key) => {
         setIndicators(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    // --- 드래그 줌 ---
+    const [zoomDates, setZoomDates] = useState(null);
+    const [refAreaLeft, setRefAreaLeft] = useState(null);
+    const [refAreaRight, setRefAreaRight] = useState(null);
+    const isDragging = useRef(false);
+
+    // 줌 적용된 데이터 (모든 차트에서 공유)
+    const zoomedData = useMemo(() => {
+        if (!zoomDates) return enrichedData;
+        return enrichedData.filter(d => d.date >= zoomDates.left && d.date <= zoomDates.right);
+    }, [enrichedData, zoomDates]);
+
+    const handleChartMouseDown = (e) => {
+        if (e?.activeLabel) {
+            setRefAreaLeft(e.activeLabel);
+            isDragging.current = true;
+        }
+    };
+    const handleChartMouseMove = (e) => {
+        if (isDragging.current && e?.activeLabel) {
+            setRefAreaRight(e.activeLabel);
+        }
+    };
+    const handleChartMouseUp = () => {
+        if (!isDragging.current || !refAreaLeft || !refAreaRight) {
+            isDragging.current = false;
+            setRefAreaLeft(null);
+            setRefAreaRight(null);
+            return;
+        }
+        isDragging.current = false;
+
+        let left = refAreaLeft;
+        let right = refAreaRight;
+        if (left > right) [left, right] = [right, left];
+
+        if (left !== right) {
+            setZoomDates({ left, right });
+        }
+        setRefAreaLeft(null);
+        setRefAreaRight(null);
+    };
+    const resetZoom = () => setZoomDates(null);
+
+    // 기간 변경 시 줌 리셋
+    const handlePeriodChange = (newPeriod) => {
+        setPeriod(newPeriod);
+        setZoomDates(null);
     };
 
     // ESC 키로 닫기
@@ -249,7 +298,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                     </div>
                     {/* 기간 선택 */}
                     <div className="w-full sm:w-auto overflow-x-auto scrollbar-always min-w-0 p-0 m-0 border-none">
-                        <PeriodSelector period={period} onChange={setPeriod} disabled={loading} />
+                        <PeriodSelector period={period} onChange={handlePeriodChange} disabled={loading} />
                     </div>
                     {/* 지표 토글 */}
                     <IndicatorToggle indicators={indicators} onToggle={toggleIndicator} />
@@ -273,9 +322,33 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                         <div className="space-y-6">
                             {/* 가격 차트 */}
                             <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
-                                <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">주식 가격 (최근 {periodLabel})</h3>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        주식 가격 (최근 {periodLabel})
+                                        {zoomDates && <span className="ml-2 text-xs font-normal text-blue-500">줌 적용중</span>}
+                                    </h3>
+                                    {zoomDates && (
+                                        <button
+                                            onClick={resetZoom}
+                                            className="text-xs px-2 py-1 rounded border border-blue-400 text-blue-600 hover:bg-blue-50 transition-colors dark:text-blue-400 dark:border-blue-500 dark:hover:bg-slate-600"
+                                        >
+                                            줌 리셋
+                                        </button>
+                                    )}
+                                    {!zoomDates && (
+                                        <span className="text-xs text-slate-400 dark:text-slate-500">드래그하여 확대</span>
+                                    )}
+                                </div>
+                                <ResponsiveContainer width="100%" height={300} className="select-none">
+                                    <ComposedChart
+                                        data={zoomedData}
+                                        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                                        onMouseDown={handleChartMouseDown}
+                                        onMouseMove={handleChartMouseMove}
+                                        onMouseUp={handleChartMouseUp}
+                                        onDoubleClick={resetZoom}
+                                        style={{ cursor: 'crosshair', userSelect: 'none' }}
+                                    >
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                         <XAxis
                                             dataKey="date"
@@ -331,12 +404,13 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                         )}
 
                                         {/* 볼린저 밴드 선 */}
-                                        {indicators.bollinger && (
-                                            <>
-                                                <Line type="monotone" dataKey="bbUpper" stroke="#6366f1" strokeWidth={1} dot={false} strokeDasharray="4 2" connectNulls={false} isAnimationActive={false} />
-                                                <Line type="monotone" dataKey="bbMiddle" stroke="#6366f1" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
-                                                <Line type="monotone" dataKey="bbLower" stroke="#6366f1" strokeWidth={1} dot={false} strokeDasharray="4 2" connectNulls={false} isAnimationActive={false} />
-                                            </>
+                                        {indicators.bollinger && <Line type="monotone" dataKey="bbUpper" stroke="#6366f1" strokeWidth={1} dot={false} strokeDasharray="4 2" connectNulls={false} isAnimationActive={false} />}
+                                        {indicators.bollinger && <Line type="monotone" dataKey="bbMiddle" stroke="#6366f1" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />}
+                                        {indicators.bollinger && <Line type="monotone" dataKey="bbLower" stroke="#6366f1" strokeWidth={1} dot={false} strokeDasharray="4 2" connectNulls={false} isAnimationActive={false} />}
+
+                                        {/* 드래그 선택 영역 */}
+                                        {refAreaLeft && refAreaRight && (
+                                            <ReferenceArea x1={refAreaLeft} x2={refAreaRight} strokeOpacity={0.3} fill="#3b82f6" fillOpacity={0.15} />
                                         )}
                                     </ComposedChart>
                                 </ResponsiveContainer>
@@ -348,7 +422,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                             <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
                                 <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">거래량</h3>
                                 <ResponsiveContainer width="100%" height={180}>
-                                    <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                    <BarChart data={zoomedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                         <XAxis
                                             dataKey="date"
@@ -380,7 +454,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                 <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
                                     <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">RSI (14)</h3>
                                     <ResponsiveContainer width="100%" height={120}>
-                                        <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                        <ComposedChart data={zoomedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                             <XAxis
                                                 dataKey="date"
@@ -415,7 +489,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                 <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
                                     <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">MACD (12, 26, 9)</h3>
                                     <ResponsiveContainer width="100%" height={150}>
-                                        <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                        <ComposedChart data={zoomedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                             <XAxis
                                                 dataKey="date"
@@ -435,7 +509,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                             />
                                             <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
                                             <Bar dataKey="macdHist" isAnimationActive={false}>
-                                                {chartData.map((entry, index) => (
+                                                {zoomedData.map((entry, index) => (
                                                     <Cell key={index} fill={entry.macdHist >= 0 ? '#10b981' : '#ef4444'} />
                                                 ))}
                                             </Bar>
@@ -465,7 +539,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                 <div className="bg-white rounded-lg border p-4 dark:bg-slate-700 dark:border-slate-600">
                                     <h3 className="text-sm font-semibold text-slate-700 mb-3 dark:text-slate-200">스토캐스틱 (14, 3)</h3>
                                     <ResponsiveContainer width="100%" height={120}>
-                                        <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                        <ComposedChart data={zoomedData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                             <XAxis
                                                 dataKey="date"

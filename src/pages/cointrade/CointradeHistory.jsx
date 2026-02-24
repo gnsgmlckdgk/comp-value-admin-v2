@@ -1170,7 +1170,7 @@ export default function CointradeHistory() {
     };
 
     return (
-        <div className="p-2 md:p-4">
+        <div className="px-2 py-8 md:px-4">
             <PageTitle>거래기록 조회</PageTitle>
 
             {/* 필터 영역 */}
@@ -1431,8 +1431,8 @@ export default function CointradeHistory() {
             )}
 
             {/* 거래기록 테이블 */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+                <div className="px-2 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold text-slate-800 dark:text-white">거래 목록</h3>
                         <button
@@ -1482,11 +1482,9 @@ export default function CointradeHistory() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[70vh]">
-                    <table
-                        className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
-                        style={{ width: '100%', tableLayout: 'fixed', minWidth: '1200px' }}
-                    >
+                <div className="overflow-x-auto overflow-y-auto scrollbar-always bg-white border border-slate-200 rounded-lg shadow-sm max-h-[70vh] dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
+                  <div style={{ minWidth: '1200px' }}>
+                    <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
                         <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
                             <tr>
                                 {TABLE_COLUMNS.map((col, index) => (
@@ -1608,6 +1606,7 @@ export default function CointradeHistory() {
                             )}
                         </tbody>
                     </table>
+                  </div>
                 </div>
 
                 {/* 페이지네이션 (서버 사이드) */}

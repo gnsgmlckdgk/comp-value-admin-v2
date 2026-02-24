@@ -26,18 +26,10 @@ function findRouteLabel(pathname) {
 }
 
 function loadTabs() {
-    try {
-        const saved = sessionStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                const hasHome = parsed.some(t => t.key === '/');
-                if (!hasHome) return [HOME_TAB, ...parsed];
-                return parsed.map(t => t.key === '/' ? { ...t, closable: false } : t);
-            }
-        }
-    } catch { /* ignore */ }
-    return [HOME_TAB];
+    const pathname = window.location.pathname;
+    if (pathname === '/') return [HOME_TAB];
+    const label = findRouteLabel(pathname);
+    return [HOME_TAB, { key: pathname, path: pathname, label, closable: true }];
 }
 
 function saveTabs(tabs) {

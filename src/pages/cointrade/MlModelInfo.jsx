@@ -569,12 +569,12 @@ export default function MlModelInfo() {
     };
 
     return (
-        <div className="p-2 md:p-4">
+        <div className="px-2 py-8 md:px-4">
             <PageTitle>모델 예측정보 조회</PageTitle>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div>
                 {/* 툴바 */}
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="px-2 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold text-slate-800 dark:text-white">모델 목록</h3>
                         <button
@@ -629,8 +629,9 @@ export default function MlModelInfo() {
                 </div>
 
                 {/* 테이블 */}
-                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[75vh]">
-                    <table className="text-sm divide-y divide-slate-200 dark:divide-slate-700" style={{ width: '100%', minWidth: '1500px', tableLayout: 'fixed' }}>
+                <div className="overflow-x-auto overflow-y-auto scrollbar-always bg-white border border-slate-200 rounded-lg shadow-sm max-h-[75vh] dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
+                  <div style={{ minWidth: '1500px' }}>
+                    <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
                         <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md">
                             <tr>
                                 {TABLE_COLUMNS.map((col) => (
@@ -714,6 +715,7 @@ export default function MlModelInfo() {
                             )}
                         </tbody>
                     </table>
+                  </div>
                 </div>
 
                 {/* 페이지네이션 */}

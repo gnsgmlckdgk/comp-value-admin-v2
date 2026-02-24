@@ -929,7 +929,7 @@ export default function CointradeDashboard() {
     };
 
     return (
-        <div className="p-2 md:p-4">
+        <div className="px-2 py-8 md:px-4">
             <div className="flex items-center justify-between mb-6">
                 <PageTitle>자동매매 대시보드</PageTitle>
                 <Button onClick={handleRefresh} disabled={loading} className="px-4 py-2">
@@ -1038,9 +1038,8 @@ export default function CointradeDashboard() {
 
             {/* 보유 종목 테이블 */}
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
-
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="mb-6">
+                <div className="px-2 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
 
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
 
@@ -1085,17 +1084,9 @@ export default function CointradeDashboard() {
 
                 </div>
 
-
-
-                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[500px] pr-2">
-
-                    <table
-
-                        className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
-
-                        style={{ width: '100%', tableLayout: 'fixed', minWidth: '1200px' }}
-
-                    >
+                <div className="overflow-x-auto overflow-y-auto scrollbar-always bg-white border border-slate-200 rounded-lg shadow-sm max-h-[500px] dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
+                  <div style={{ minWidth: '1200px' }}>
+                    <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
 
                         <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
 
@@ -1310,15 +1301,15 @@ export default function CointradeDashboard() {
                         </tbody>
 
                     </table>
-
+                  </div>
                 </div>
 
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* 최근 거래 내역 테이블 */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div>
+                    <div className="px-2 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                             <h3 className="text-lg font-semibold text-slate-800 dark:text-white">최근 거래 내역</h3>
                             <span className="text-sm text-slate-500 dark:text-slate-400">(최근 30일)</span>
@@ -1361,11 +1352,9 @@ export default function CointradeDashboard() {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[500px] pr-2">
-                        <table
-                            className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
-                            style={{ width: '100%', tableLayout: 'fixed', minWidth: '680px' }}
-                        >
+                    <div className="overflow-x-auto overflow-y-auto scrollbar-always bg-white border border-slate-200 rounded-lg shadow-sm max-h-[500px] dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
+                      <div style={{ minWidth: '680px' }}>
+                        <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
                             <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
                                 <tr>
                                     {TABLE_COLUMNS.map((col, index) => (
@@ -1448,6 +1437,7 @@ export default function CointradeDashboard() {
                                 )}
                             </tbody>
                         </table>
+                      </div>
                     </div>
 
                     {/* 페이지네이션 (서버 사이드) */}

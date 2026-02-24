@@ -60,12 +60,18 @@ export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned,
                                 key={key}
                                 to={route.path}
                                 onClick={() => handleLinkClick(route.path)}
-                                className={`flex items-center rounded-md px-3 py-2 text-sm transition-all ${
+                                className={`group relative flex items-center rounded-md px-3 py-2 text-sm transition-all duration-200 ease-out ${
                                     isActive
-                                        ? 'bg-sky-50 text-sky-700 font-semibold border border-sky-100 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800'
-                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'
+                                        ? 'bg-sky-50 text-sky-700 font-semibold dark:bg-sky-900/30 dark:text-sky-400'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1 dark:text-slate-300 dark:hover:bg-slate-700/50 dark:hover:text-white'
                                 }`}
                             >
+                                {/* 왼쪽 인디케이터 바 */}
+                                <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full bg-sky-500 transition-all duration-200 ease-out dark:bg-sky-400 ${
+                                    isActive
+                                        ? 'h-5 opacity-100'
+                                        : 'h-0 opacity-0 group-hover:h-3.5 group-hover:opacity-70'
+                                }`} />
                                 <span className="truncate">{route.label}</span>
                             </Link>
                         );

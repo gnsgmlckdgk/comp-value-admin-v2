@@ -259,7 +259,7 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur dark:bg-slate-900/80 dark:border-slate-700">
+            <header className="sticky top-0 z-40 bg-white/80 backdrop-blur dark:bg-slate-900/80">
                 <div className="flex h-16 w-full items-center px-3 md:px-6">
                     <button
                         className="mr-2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
@@ -344,7 +344,7 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
                             <>
                                 <button
                                     type="button"
-                                    className="hidden sm:inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-sky-400 hover:text-sky-600 hover:shadow-sm dark:border-slate-600 dark:text-slate-300 dark:hover:border-sky-400"
+                                    className="inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-sky-400 hover:text-sky-600 hover:shadow-sm dark:border-slate-600 dark:text-slate-300 dark:hover:border-sky-400"
                                     onClick={() => navigate('/member/join')}
                                 >
                                     회원가입

@@ -261,7 +261,7 @@ export default function SellRecordHistory() {
         <>
             <PageTitle />
 
-            <div className="space-y-6">
+            <div className="px-2 py-8 md:px-4 space-y-6">
                 {/* 헤더 및 통계 */}
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 dark:bg-slate-800 dark:border-slate-700">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -353,7 +353,7 @@ export default function SellRecordHistory() {
                 </div>
 
                 {/* 테이블 */}
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
+                <div>
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600 dark:border-slate-700 dark:border-t-blue-400"></div>
@@ -367,8 +367,9 @@ export default function SellRecordHistory() {
                             <p className="text-sm mt-1">상단의 '기록 추가' 버튼을 눌러 첫 번째 기록을 추가해보세요</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto scrollbar-always">
-                            <table className="w-full table-fixed" style={{ minWidth: '1000px' }}>
+                        <div className="overflow-x-auto scrollbar-always bg-white border border-slate-200 rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
+                          <div style={{ minWidth: '1000px' }}>
+                            <table className="w-full table-fixed border-separate border-spacing-0">
                                 <thead className="bg-slate-50 dark:bg-slate-700/50">
                                     <tr>
                                         <SortableHeader field="sellDate" label="매도일" sortConfig={sortConfig} onSort={handleSort} width={COLUMN_WIDTHS.sellDate} />
@@ -473,6 +474,7 @@ export default function SellRecordHistory() {
                                     ))}
                                 </tbody>
                             </table>
+                          </div>
                         </div>
                     )}
                 </div>

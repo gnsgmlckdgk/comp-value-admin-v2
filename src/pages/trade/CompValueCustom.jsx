@@ -1,9 +1,8 @@
 import Loading from '@/component/common/display/Loading';
 import InputRowList from '@/component/common/input/InputRowList_Number';
-import Button from '@/component/common/button/Button';
 import PageTitle from '@/component/common/display/PageTitle';
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { send } from '@/util/ClientUtil';
 
 
@@ -15,7 +14,7 @@ const CompValueCustom = () => {
 
     const [operatingProfitPrePre, setOperatingProfitPrePre] = useState('');     // 전전기 영업이익
     const [operatingProfitPre, setOperatingProfitPre] = useState('');           // 전기 영업이익
-    const [operatingProfitCurrent, setOperatingProfitCurrent] = useState('');   // 당기 영업이익    
+    const [operatingProfitCurrent, setOperatingProfitCurrent] = useState('');   // 당기 영업이익
 
     const [currentAssetsTotal, setCurrentAssetsTotal] = useState('');           // 유동자산 합계
     const [currentLiabilitiesTotal, setCurrentLiabilitiesTotal] = useState(''); // 유동부채 합계
@@ -30,7 +29,7 @@ const CompValueCustom = () => {
 
     /**
      * 유동비율 계산
-     * @returns 
+     * @returns
      */
     const calculateCurrentRatio = () => {
         const assets = parseFloat(currentAssetsTotal.replace(/,/g, '')) || 0;
@@ -94,17 +93,30 @@ const CompValueCustom = () => {
     return (
         <>
             <PageTitle />
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-lg p-6 space-y-6">
+            <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">재무 수치를 직접 입력하여 기업가치를 수동으로 계산합니다.</p>
+
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-lg p-6 space-y-6">
                 <Loading show={isLoading} />
 
-
-                <div className="flex items-center space-x-2 mb-4">
-                    <Button children="분석" onClick={fetchData} />
-                    <Button children="초기화" variant="danger" onClick={resetParam} />
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    <button
+                        type="button"
+                        onClick={fetchData}
+                        className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap"
+                    >
+                        분석
+                    </button>
+                    <button
+                        type="button"
+                        onClick={resetParam}
+                        className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-medium hover:bg-red-50 active:bg-red-100 transition-colors whitespace-nowrap dark:bg-slate-700 dark:border-red-500 dark:text-red-400 dark:hover:bg-slate-600"
+                    >
+                        초기화
+                    </button>
                     {data !== '' && (
-                        <div className="px-4 py-2 bg-green-100 border border-green-300 text-green-800 rounded-md text-sm dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
-                            <span className="font-medium">결과:</span> {data}
-                        </div>
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 font-medium text-sm dark:bg-blue-900/30 dark:text-blue-300">
+                            결과: {data}
+                        </span>
                     )}
                 </div>
 
@@ -119,12 +131,13 @@ const CompValueCustom = () => {
                         [
                             <span className="flex items-center">
                                 유동비율
-                                <Button
-                                    children="계산"
+                                <button
+                                    type="button"
                                     onClick={calculateCurrentRatio}
-                                    variant="primary"
-                                    className="ml-2"
-                                />
+                                    className="ml-2 px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors"
+                                >
+                                    계산
+                                </button>
                             </span>,
                             currentRatio,
                             setCurrentRatio

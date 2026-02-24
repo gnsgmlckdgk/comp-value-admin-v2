@@ -795,7 +795,7 @@ const AbroadRecommendedStock = () => {
                         )}
                     </div>
                 </div>
-                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[70vh]">
+                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[70vh]" style={{ scrollbarGutter: 'stable' }}>
                     <table
                         className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
                         style={{ width: '100%', tableLayout: 'fixed' }}

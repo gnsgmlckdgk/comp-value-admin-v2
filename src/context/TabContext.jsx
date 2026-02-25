@@ -25,6 +25,37 @@ function findRouteLabel(pathname) {
     return pathname;
 }
 
+function findRoutePattern(pathname) {
+    for (const [, route] of Object.entries(routes)) {
+        if (!route.children) continue;
+        for (const child of route.children) {
+            if (!child.path.includes(':')) continue;
+            const basePath = route.path.replace(/\/$/, '');
+            const fullPattern = basePath + '/' + child.path;
+            if (matchPath(fullPattern, pathname)) return fullPattern;
+        }
+    }
+    return null;
+}
+
+function resolveTabUpdate(prev, pathname) {
+    if (prev.some(t => t.key === pathname)) return prev;
+
+    const label = findRouteLabel(pathname);
+    const pattern = findRoutePattern(pathname);
+
+    if (pattern) {
+        const existingIdx = prev.findIndex(t => matchPath(pattern, t.key));
+        if (existingIdx !== -1) {
+            const next = [...prev];
+            next[existingIdx] = { key: pathname, path: pathname, label, closable: true };
+            return next;
+        }
+    }
+
+    return [...prev, { key: pathname, path: pathname, label, closable: pathname !== '/' }];
+}
+
 function loadTabs() {
     const pathname = window.location.pathname;
     if (pathname === '/') return [HOME_TAB];
@@ -74,21 +105,11 @@ export function TabProvider({ children }) {
         const pathname = location.pathname;
         setActiveKey(pathname);
 
-        setTabs(prev => {
-            const exists = prev.some(t => t.key === pathname);
-            if (exists) return prev;
-            const label = findRouteLabel(pathname);
-            return [...prev, { key: pathname, path: pathname, label, closable: pathname !== '/' }];
-        });
+        setTabs(prev => resolveTabUpdate(prev, pathname));
     }, [location.pathname]);
 
     const openTab = useCallback((path) => {
-        setTabs(prev => {
-            const exists = prev.some(t => t.key === path);
-            if (exists) return prev;
-            const label = findRouteLabel(path);
-            return [...prev, { key: path, path, label, closable: path !== '/' }];
-        });
+        setTabs(prev => resolveTabUpdate(prev, path));
         setActiveKey(path);
     }, []);
 
@@ -138,13 +159,8 @@ export function TabProvider({ children }) {
         if (tabKeyToClose === '/') return;
 
         setTabs(prev => {
-            let next = prev.filter(t => t.key !== tabKeyToClose);
-            const exists = next.some(t => t.key === targetPath);
-            if (!exists && targetPath !== '/') {
-                const label = findRouteLabel(targetPath);
-                next = [...next, { key: targetPath, path: targetPath, label, closable: true }];
-            }
-            return next;
+            const filtered = prev.filter(t => t.key !== tabKeyToClose);
+            return resolveTabUpdate(filtered, targetPath);
         });
 
         setActiveKey(targetPath);

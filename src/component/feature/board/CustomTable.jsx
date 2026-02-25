@@ -127,6 +127,11 @@ const CustomTable = forwardRef(({ columns = [], rowData = [], loading = false, m
                                         </svg>
                                     )}
                                     <span className="flex-1">{row.title}</span>
+                                    {row.commentCount > 0 && (
+                                        <span className="text-xs text-blue-500 dark:text-blue-400 font-medium flex-shrink-0">
+                                            [{row.commentCount}]
+                                        </span>
+                                    )}
                                     {/<img\s/i.test(row.content || '') && (
                                         <Image size={16} className="mt-0.5 flex-shrink-0 text-emerald-500 dark:text-emerald-400" />
                                     )}

@@ -33,7 +33,11 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
         return resourceHistory.map(entry => {
             const point = { time: entry.ts };
             for (const c of entry.containers || []) {
-                point[`${c.name}_cpu`] = Number((c.cpuPercent || 0).toFixed(1));
+                const rawCpu = c.cpuPercent || 0;
+                const cpuPct = c.cpuLimitCores > 0
+                    ? (rawCpu / (c.cpuLimitCores * 100)) * 100
+                    : rawCpu;
+                point[`${c.name}_cpu`] = Number(cpuPct.toFixed(1));
                 const memPct = c.memoryLimitMB > 0
                     ? (c.memoryMB / c.memoryLimitMB) * 100
                     : 0;
@@ -138,7 +142,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                         />
                         <YAxis
                             tick={{ fontSize: 10, fill: tickColor }}
-                            domain={[0, 'auto']}
+                            domain={[0, 100]}
                             tickFormatter={v => `${v}%`}
                             stroke={axisColor}
                         />

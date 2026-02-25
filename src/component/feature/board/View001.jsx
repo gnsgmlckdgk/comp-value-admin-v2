@@ -10,6 +10,7 @@ import 'prismjs/components/prism-json';
 import 'prismjs/themes/prism-tomorrow.css';
 
 import Button from '@/component/common/button/Button';
+import CommentSection from '@/component/feature/board/comment/CommentSection';
 
 function View001({
     onMoveBack = () => {},
@@ -288,6 +289,9 @@ function View001({
                         </div>
                     </div>
                 )}
+
+                {/* 댓글 섹션 */}
+                <CommentSection boardId={Number(id)} />
 
                 {/* 버튼들 */}
                 <div className="border-t border-slate-200 px-3 sm:px-4 py-4 dark:border-slate-700">

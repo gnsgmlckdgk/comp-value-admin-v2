@@ -1228,7 +1228,7 @@ const DetailInfoModal = ({ isOpen, data, onClose, onAnalyze, isAnalyzing }) => {
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
                             onClick={() => onAnalyze(data.symbol)}
                             disabled={isAnalyzing}
                         >

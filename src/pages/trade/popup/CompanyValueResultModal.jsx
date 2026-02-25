@@ -989,7 +989,7 @@ const ActionButtons = ({ data, onCopy, onClose, onOpenChart, onOpenInvestmentDet
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
             <div className="flex gap-2">
                 <button
-                    className="flex-1 sm:flex-none px-3 py-2 rounded-md border text-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-900/30"
+                    className="flex-1 sm:flex-none px-3 py-2 rounded-md border text-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-900/30 whitespace-nowrap"
                     onClick={onOpenChart}
                     title="주식 가격 및 거래량 차트 보기"
                 >
@@ -998,7 +998,7 @@ const ActionButtons = ({ data, onCopy, onClose, onOpenChart, onOpenInvestmentDet
                 </button>
                 {symbol && (
                     <button
-                        className="flex-1 sm:flex-none px-3 py-2 rounded-md border text-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-1.5 text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 sm:flex-none px-3 py-2 rounded-md border text-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-1.5 text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         onClick={handleInvestmentJudgment}
                         disabled={investmentLoading || fromInvestmentDetail}
                         title={fromInvestmentDetail ? "이미 투자 판단 상세 모달에서 열렸습니다" : "투자 판단 상세 보기"}

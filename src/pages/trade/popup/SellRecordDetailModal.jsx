@@ -102,7 +102,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
-                            className="px-3 py-1.5 text-sm rounded-lg bg-white/20 text-white font-medium hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-sm rounded-lg bg-white/20 text-white font-medium hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
                             onClick={handleOpenCompanyValue}
                             disabled={companyValueLoading}
                             title="기업가치 계산 결과 보기"

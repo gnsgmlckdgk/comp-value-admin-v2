@@ -120,6 +120,22 @@ export default function TransactionOverview() {
         return success;
     };
 
+    // 그룹 행 상세 모달에서 필드 수정 (그룹 내 모든 항목에 적용)
+    const handleGroupDetailSave = async (groupRows, updates) => {
+        let success = true;
+        for (const groupRow of groupRows) {
+            for (const [field, value] of Object.entries(updates)) {
+                const result = await updateTransactionField(groupRow.id, field, value);
+                if (!result) success = false;
+            }
+        }
+        if (success) {
+            setDetailModalData({ open: false, row: null, isGroupRow: false });
+            openAlert('그룹 내 모든 항목이 수정되었습니다.');
+        }
+        return success;
+    };
+
     // 기업가치 분석 (상세 모달에서 호출)
     const handleAnalyze = async (symbol) => {
         if (!symbol || !symbol.trim()) {
@@ -478,6 +494,7 @@ export default function TransactionOverview() {
                 fx={fxRate}
                 onClose={handleCloseDetailModal}
                 onSave={handleDetailSave}
+                onGroupSave={handleGroupDetailSave}
                 onAnalyze={handleAnalyze}
                 onSell={handleSellFromDetail}
                 onRemove={handleRemoveTransaction}

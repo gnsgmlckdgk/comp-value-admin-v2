@@ -132,6 +132,7 @@ export default function TransactionDetailModal({
     row,
     fx,
     onSave,
+    onGroupSave,
     onAnalyze,
     onSell,
     onRemove,
@@ -157,7 +158,13 @@ export default function TransactionDetailModal({
                 currentPrice: row.currentPrice || '',
                 targetPrice: row.targetPrice || '',
                 buyExchangeRateAtTrade: row.buyExchangeRateAtTrade || '',
-                rmk: row.rmk || '',
+                rmk: (() => {
+                    if (isGroupRow && row.groupRows) {
+                        const rmks = row.groupRows.map(r => r.rmk || '');
+                        return rmks.every(r => r === rmks[0]) ? rmks[0] : '';
+                    }
+                    return row.rmk || '';
+                })(),
             });
             setIsEditing(false);
             setCompanyProfile(null);
@@ -214,6 +221,32 @@ export default function TransactionDetailModal({
         }
 
         const success = await onSave(row.id, updates);
+        if (success) {
+            setIsEditing(false);
+        }
+    };
+
+    const handleGroupSave = async () => {
+        const updates = {};
+        const newSymbol = formData.symbol.trim().toUpperCase();
+        const newCompanyName = formData.companyName.trim();
+        const newRmk = formData.rmk.trim();
+
+        if (newSymbol !== (row.symbol || '').toUpperCase()) updates.symbol = newSymbol;
+        if (newCompanyName !== (row.companyName || '').trim()) updates.companyName = newCompanyName;
+        if (String(formData.targetPrice) !== String(row.targetPrice || '')) updates.targetPrice = formData.targetPrice;
+
+        const originalRmks = (row.groupRows || []).map(r => r.rmk || '');
+        const allSameRmk = originalRmks.every(r => r === originalRmks[0]);
+        const originalRmk = allSameRmk ? originalRmks[0] : '';
+        if (newRmk !== originalRmk) updates.rmk = newRmk;
+
+        if (Object.keys(updates).length === 0) {
+            setIsEditing(false);
+            return;
+        }
+
+        const success = await onGroupSave(row.groupRows, updates);
         if (success) {
             setIsEditing(false);
         }
@@ -403,8 +436,119 @@ export default function TransactionDetailModal({
                         targetPrice={targetPrice}
                     />
 
-                    {/* 편집 폼 - 그룹 행이 아닐 때만 표시 */}
-                    {!isGroupRow && (
+                    {/* 편집 폼 */}
+                    {isGroupRow ? (
+                        <>
+                            {isEditing ? (
+                                <div className="border border-indigo-200 dark:border-indigo-700/50 rounded-lg p-4 space-y-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="font-medium text-slate-900 dark:text-white">그룹 정보 수정</h3>
+                                        <span className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-full">
+                                            그룹 내 {row.groupRows?.length || 0}개 항목에 적용
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">티커</label>
+                                            <input
+                                                type="text"
+                                                value={formData.symbol}
+                                                onChange={(e) => handleChange('symbol', e.target.value.toUpperCase())}
+                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">기업명</label>
+                                            <input
+                                                type="text"
+                                                value={formData.companyName}
+                                                onChange={(e) => handleChange('companyName', e.target.value)}
+                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">목표가 ($)</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={formData.targetPrice}
+                                                onChange={(e) => handleChange('targetPrice', e.target.value)}
+                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">비고</label>
+                                        <textarea
+                                            value={formData.rmk}
+                                            onChange={(e) => handleChange('rmk', e.target.value)}
+                                            rows={2}
+                                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            onClick={() => {
+                                                const rmks = (row.groupRows || []).map(r => r.rmk || '');
+                                                const allSame = rmks.every(r => r === rmks[0]);
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    symbol: row.symbol || '',
+                                                    companyName: row.companyName || '',
+                                                    targetPrice: row.targetPrice || '',
+                                                    rmk: allSame ? rmks[0] : '',
+                                                }));
+                                                setIsEditing(false);
+                                            }}
+                                            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-700"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={handleGroupSave}
+                                            disabled={saving}
+                                            className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {saving ? '저장 중...' : '일괄 저장'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="border border-indigo-200 dark:border-indigo-700/50 rounded-lg p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="font-medium text-slate-900 dark:text-white">그룹 정보</h3>
+                                        <button
+                                            onClick={() => setIsEditing(true)}
+                                            className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                            그룹 수정
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500 dark:text-slate-400">목표가</span>
+                                            <span className="text-slate-900 dark:text-white font-medium">
+                                                {formData.targetPrice ? `$${parseFloat(formData.targetPrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500 dark:text-slate-400">포함 항목</span>
+                                            <span className="text-slate-900 dark:text-white font-medium">{row.groupRows?.length || 0}건</span>
+                                        </div>
+                                        <div className="flex justify-between col-span-2">
+                                            <span className="text-slate-500 dark:text-slate-400">비고</span>
+                                            <span className="text-slate-900 dark:text-white font-medium truncate max-w-[300px]" title={formData.rmk}>
+                                                {formData.rmk || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    ) : (
                         <>
                             {isEditing ? (
                                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-4">

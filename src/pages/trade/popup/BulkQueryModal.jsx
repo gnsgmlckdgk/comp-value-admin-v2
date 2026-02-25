@@ -236,7 +236,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
                             {loading ? (
                                 <button
                                     type="button"
-                                    className={`px-3 py-2 rounded-md text-white text-sm font-medium flex items-center gap-2 ${stopping ? 'bg-amber-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500'}`}
+                                    className={`px-3 py-2 rounded-md text-white text-sm font-medium flex items-center gap-2 whitespace-nowrap ${stopping ? 'bg-amber-600 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500'}`}
                                     onClick={handleStop}
                                     disabled={stopping}
                                 >
@@ -260,7 +260,7 @@ export default function BulkQueryModal({ open, onClose, fetcher, initialSymbols 
                             ) : (
                                 <button
                                     type="button"
-                                    className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 flex items-center gap-2"
+                                    className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 flex items-center gap-2 whitespace-nowrap"
                                     onClick={run}
                                 >
                                     엑셀로 내보내기

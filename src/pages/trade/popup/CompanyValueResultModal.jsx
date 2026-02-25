@@ -204,7 +204,7 @@ const CompanyValueResultModal = ({ isOpen, onClose, data, fromInvestmentDetail =
             {/* 메인 모달 */}
             <div
                 ref={popupRef}
-                className={`fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[90vh] w-[min(900px,90vw)] overflow-auto dark:bg-slate-800 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`}
+                className={`fixed z-[110] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white shadow-xl rounded-md max-h-[90vh] w-[min(900px,90vw)] overflow-y-auto overflow-x-hidden dark:bg-slate-800 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`}
                 style={{ animationDuration: '0.25s' }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -1049,7 +1049,7 @@ const GuideOverlay = ({ onClose, data }) => {
         <>
             <div className="fixed inset-0 z-[120] bg-black/50 dark:bg-black/70" onClick={onClose} />
             <div
-                className="fixed z-[130] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
+                className="fixed z-[130] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(720px,calc(100vw-24px))] max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">
@@ -1246,7 +1246,7 @@ const DetailOverlay = ({ title, data, onClose, onCopy }) => (
     <>
         <div className="fixed inset-0 z-[120] bg-black/50 dark:bg-black/70" onClick={onClose} />
         <div
-            className="fixed z-[130] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(900px,calc(100vw-24px))] max-h-[85vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
+            className="fixed z-[130] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(900px,calc(100vw-24px))] max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:bg-slate-800 dark:border-slate-700"
             onClick={(e) => e.stopPropagation()}
         >
             <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-2.5 dark:bg-slate-800 dark:border-slate-700">

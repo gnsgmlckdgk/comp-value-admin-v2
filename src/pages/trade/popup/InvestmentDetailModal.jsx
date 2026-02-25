@@ -279,40 +279,40 @@ const EntryTimingSection = ({ entryTiming }) => {
                 <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">진입 타이밍 분석</div>
 
                 {/* 시그널 + 점수 */}
-                <div className="flex items-center gap-3 mb-3">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border ${getSignalBadgeStyle(entryTiming.signalColor)}`}>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold border whitespace-nowrap ${getSignalBadgeStyle(entryTiming.signalColor)}`}>
                         <span>{getSignalIcon(entryTiming.signalColor)}</span>
                         {entryTiming.signal}
                     </span>
-                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                    <span className="text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">
                         타이밍 점수: <span className="font-bold">{entryTiming.timingScore}</span><span className="text-slate-400">/100</span>
                     </span>
                 </div>
 
                 {/* 단기추세 + MACD */}
                 <div className="space-y-1.5 mb-3 text-sm text-slate-700 dark:text-slate-300">
-                    <div className="flex items-center gap-2">
-                        <span className="text-slate-500 dark:text-slate-400">단기추세:</span>
-                        <span className={`font-medium ${
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                        <span className="text-slate-500 dark:text-slate-400 whitespace-nowrap">단기추세:</span>
+                        <span className={`font-medium whitespace-nowrap ${
                             entryTiming.shortTermTrend === '상승' ? 'text-emerald-600 dark:text-emerald-400' :
                             entryTiming.shortTermTrend === '하락' ? 'text-red-600 dark:text-red-400' :
                             'text-slate-600 dark:text-slate-300'
                         }`}>{entryTiming.shortTermTrend}</span>
                         {entryTiming.trendDetail && (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">({entryTiming.trendDetail})</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">({entryTiming.trendDetail})</span>
                         )}
                     </div>
                 </div>
 
                 {/* 예상 지지/저항 */}
                 {(entryTiming.estimatedSupport > 0 || entryTiming.estimatedResistance > 0) && (
-                    <div className="flex items-center gap-4 mb-3 text-sm">
-                        <div>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 text-sm">
+                        <div className="whitespace-nowrap">
                             <span className="text-slate-500 dark:text-slate-400">예상 지지선: </span>
                             <span className="font-semibold text-emerald-600 dark:text-emerald-400">${entryTiming.estimatedSupport?.toFixed(2)}</span>
                         </div>
-                        <span className="text-slate-300 dark:text-slate-600">|</span>
-                        <div>
+                        <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
+                        <div className="whitespace-nowrap">
                             <span className="text-slate-500 dark:text-slate-400">예상 저항선: </span>
                             <span className="font-semibold text-red-600 dark:text-red-400">${entryTiming.estimatedResistance?.toFixed(2)}</span>
                         </div>
@@ -703,63 +703,66 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
-                <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b bg-white z-10 dark:bg-slate-800 dark:border-slate-700">
-                    <div>
-                        <h2 className="text-lg font-semibold dark:text-white">투자 판단 상세</h2>
-                        <button
-                            type="button"
-                            onClick={handleOpenCompanyInfo}
-                            className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 hover:text-blue-600 dark:hover:text-blue-400 hover:underline cursor-pointer transition-colors flex items-center gap-1"
-                        >
-                            <span>{data.symbol} - {data.companyName}</span>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-400 dark:text-slate-500">
-                            계산 버전: {data.calVersion}
-                        </span>
-                        <button
-                            type="button"
-                            className="px-3 py-1.5 text-sm rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                            onClick={handleOpenCompanyValue}
-                            disabled={companyValueLoading || fromCompanyValue}
-                            title={fromCompanyValue ? "이미 기업가치 계산 결과 모달에서 열렸습니다" : "기업가치 계산 결과 보기"}
-                        >
-                            {companyValueLoading ? (
-                                <>
-                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    조회 중...
-                                </>
-                            ) : (
-                                '기업 분석'
-                            )}
-                        </button>
-                        {onOpenFullDetail && (
+                <div className="sticky top-0 px-4 py-3 border-b bg-white z-10 dark:bg-slate-800 dark:border-slate-700">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                            <h2 className="text-lg font-semibold dark:text-white">투자 판단 상세</h2>
                             <button
                                 type="button"
-                                className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
-                                onClick={() => onOpenFullDetail(data)}
+                                onClick={handleOpenCompanyInfo}
+                                className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 hover:text-blue-600 dark:hover:text-blue-400 hover:underline cursor-pointer transition-colors flex items-center gap-1 truncate max-w-full"
                             >
-                                자세히 보기
+                                <span className="truncate">{data.symbol} - {data.companyName}</span>
+                                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
                             </button>
-                        )}
-                        <button
-                            className="text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                            onClick={onClose}
-                        >
-                            닫기 (Esc)
-                        </button>
+                        </div>
+                        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+                            <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline">
+                                계산 버전: {data.calVersion}
+                            </span>
+                            <button
+                                type="button"
+                                className="whitespace-nowrap px-2 sm:px-3 py-1.5 text-sm rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-600 flex items-center gap-1.5"
+                                onClick={handleOpenCompanyValue}
+                                disabled={companyValueLoading || fromCompanyValue}
+                                title={fromCompanyValue ? "이미 기업가치 계산 결과 모달에서 열렸습니다" : "기업가치 계산 결과 보기"}
+                            >
+                                {companyValueLoading ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span className="hidden sm:inline">조회 중...</span>
+                                    </>
+                                ) : (
+                                    '기업 분석'
+                                )}
+                            </button>
+                            {onOpenFullDetail && (
+                                <button
+                                    type="button"
+                                    className="whitespace-nowrap px-2 sm:px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+                                    onClick={() => onOpenFullDetail(data)}
+                                >
+                                    자세히 보기
+                                </button>
+                            )}
+                            <button
+                                className="whitespace-nowrap text-sm px-2 py-1 border rounded hover:bg-gray-50 transition-colors dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                                onClick={onClose}
+                            >
+                                <span className="sm:hidden">닫기</span>
+                                <span className="hidden sm:inline">닫기 (Esc)</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* 콘텐츠 */}
-                <div className="p-4 overflow-y-auto max-h-[calc(85vh-60px)]">
+                <div className="p-4 overflow-y-auto overflow-x-hidden max-h-[calc(85vh-60px)]">
                     {/* 요약 정보 */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                         <HighlightCard label="등급" value={data.grade} isGrade />
@@ -805,9 +808,9 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                         if (!isNaN(current) && !isNaN(fair) && fair > 0 && current > fair) {
                             const overPct = ((current - fair) / fair * 100).toFixed(1);
                             return (
-                                <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-800 flex items-center gap-2">
-                                    <span className="text-xl leading-none">🔴</span>
-                                    <div className="text-sm text-red-800 dark:text-red-200">
+                                <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-800 flex items-start gap-2">
+                                    <span className="text-xl leading-none flex-shrink-0">🔴</span>
+                                    <div className="text-sm text-red-800 dark:text-red-200 break-keep">
                                         현재가(<span className="font-semibold">${data.currentPrice}</span>)가 적정가(<span className="font-semibold">${data.fairValue}</span>)보다 <span className="font-bold text-red-600 dark:text-red-300">{overPct}%</span> 높음 — <span className="font-bold">고평가 주의</span>
                                     </div>
                                 </div>
@@ -838,7 +841,7 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                             '위험': 'text-red-700 bg-red-50 border-red-300 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800',
                         };
                         const FilterBadge = ({ label, pass }) => (
-                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
+                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
                                 pass
                                     ? 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-900/30'
                                     : 'text-red-700 border-red-300 bg-red-50 dark:text-red-400 dark:border-red-800 dark:bg-red-900/30'
@@ -994,7 +997,7 @@ export const FullDetailModal = ({ isOpen, data, onClose, zIndex = 70 }) => {
                 </div>
 
                 {/* 콘텐츠 */}
-                <div className="p-4 overflow-y-auto max-h-[calc(90vh-60px)]">
+                <div className="p-4 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-60px)]">
                     {/* 기본 정보 */}
                     <div className="mb-6">
                         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">

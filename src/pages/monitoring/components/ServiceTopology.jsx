@@ -173,7 +173,7 @@ export default function ServiceTopology({ services = [], trades = [], traffic = 
             for (let i = 0; i < numComets; i++) {
                 for (const edgeId of edgeList) {
                     cometIdRef.current++;
-                    newComets.push({ edgeId, id: cometIdRef.current, delay: Math.random() * 0.1, createdAt: now });
+                    newComets.push({ edgeId, id: cometIdRef.current, delay: Math.random() * 0.8, createdAt: now });
                 }
             }
         }

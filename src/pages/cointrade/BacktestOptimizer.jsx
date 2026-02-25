@@ -452,6 +452,9 @@ export default function BacktestOptimizer() {
         }, 1);
     }, [paramRanges]);
 
+    // 실행 제목
+    const [runTitle, setRunTitle] = useState('');
+
     // 실행 상태
     const [runningTaskId, setRunningTaskId] = useState(null);
     const [taskStatus, setTaskStatus] = useState(null);
@@ -468,6 +471,10 @@ export default function BacktestOptimizer() {
     const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
     const [showAllTrials, setShowAllTrials] = useState(false);
     const { shouldRender: renderAllTrials, isAnimatingOut: isAllTrialsClosing } = useModalAnimation(showAllTrials, 250);
+
+    // 인라인 제목 수정
+    const [editingTitleTaskId, setEditingTitleTaskId] = useState(null);
+    const [editingTitleValue, setEditingTitleValue] = useState('');
 
     // 삭제 확인 모달
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
@@ -710,6 +717,31 @@ export default function BacktestOptimizer() {
         }
     };
 
+    // 인라인 제목 수정 핸들러
+    const handleStartEditTitle = (taskId, currentTitle) => {
+        setEditingTitleTaskId(taskId);
+        setEditingTitleValue(currentTitle || '');
+    };
+
+    const handleSaveTitle = async (taskId) => {
+        const newTitle = editingTitleValue.trim() || null;
+        setEditingTitleTaskId(null);
+
+        try {
+            const { data, error } = await send(`/dart/api/backtest/optimizer/result/${taskId}`, { title: newTitle }, 'PATCH');
+            if (error) {
+                setToast('제목 수정 실패: ' + error);
+            } else {
+                setHistoryList(prev => prev.map(item =>
+                    item.task_id === taskId ? { ...item, title: newTitle } : item
+                ));
+            }
+        } catch (e) {
+            console.error('제목 수정 실패:', e);
+            setToast('제목 수정 중 오류가 발생했습니다.');
+        }
+    };
+
     const handleDatePreset = (preset) => {
         const today = new Date();
         let start = new Date();
@@ -808,6 +840,7 @@ export default function BacktestOptimizer() {
                 coin_codes: coinCodes,
                 start_date: startDate,
                 end_date: endDate,
+                title: runTitle.trim() || null,
                 max_runs: maxRuns,
                 max_time_minutes: maxTimeMinutes,
                 target_return: targetReturn,
@@ -874,19 +907,29 @@ export default function BacktestOptimizer() {
     // 옵티마이저 취소
     const handleCancelOptimizer = async () => {
         if (!runningTaskId) return;
+        await handleCancelTask(runningTaskId);
+    };
+
+    const handleCancelTask = async (taskId) => {
+        if (!taskId) return;
 
         if (!confirm('실행 중인 옵티마이저를 취소하시겠습니까?')) return;
 
         setLoading(true);
         try {
-            const { data, error } = await send(`/dart/api/backtest/optimizer/cancel/${runningTaskId}`, {}, 'POST');
+            const { data, error } = await send(`/dart/api/backtest/optimizer/cancel/${taskId}`, {}, 'POST');
 
             if (error) {
                 setToast('취소 실패: ' + error);
             } else if (data?.success) {
                 setToast('옵티마이저가 취소되었습니다.');
-                setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
-                localStorage.removeItem('optimizer_running_task_id');
+                // 실행 탭의 현재 태스크인 경우
+                if (taskId === runningTaskId) {
+                    setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
+                    localStorage.removeItem('optimizer_running_task_id');
+                }
+                // 이력 목록 새로고침
+                fetchHistory();
             }
         } catch (e) {
             console.error('옵티마이저 취소 실패:', e);
@@ -2165,6 +2208,28 @@ export default function BacktestOptimizer() {
                                             key={item.task_id}
                                             className="border border-slate-200 dark:border-slate-600 rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50"
                                         >
+                                            {/* 제목 */}
+                                            {editingTitleTaskId === item.task_id ? (
+                                                <input
+                                                    type="text"
+                                                    value={editingTitleValue}
+                                                    onChange={(e) => setEditingTitleValue(e.target.value)}
+                                                    onBlur={() => handleSaveTitle(item.task_id)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTitle(item.task_id); if (e.key === 'Escape') setEditingTitleTaskId(null); }}
+                                                    maxLength={200}
+                                                    autoFocus
+                                                    className="w-full px-2 py-1 mb-2 rounded border border-blue-400 dark:border-blue-500 bg-white dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    placeholder="제목 입력..."
+                                                />
+                                            ) : (
+                                                <div
+                                                    className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 min-h-[20px]"
+                                                    onClick={() => handleStartEditTitle(item.task_id, item.title)}
+                                                    title="클릭하여 제목 수정"
+                                                >
+                                                    {item.title || <span className="text-slate-400 dark:text-slate-500 italic text-xs">제목 없음 (클릭하여 추가)</span>}
+                                                </div>
+                                            )}
                                             <div className="flex items-center justify-between mb-3">
                                                 {getStatusBadge(item.status)}
                                                 <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -2233,6 +2298,15 @@ export default function BacktestOptimizer() {
                                                 </div>
                                             )}
                                             <div className="flex gap-2 pt-2">
+                                                {item.status === 'running' && (
+                                                    <button
+                                                        className="flex-1 px-4 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/30 text-amber-600 dark:text-amber-200 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/50 transition-colors disabled:opacity-50"
+                                                        onClick={() => handleCancelTask(item.task_id)}
+                                                        disabled={loading}
+                                                    >
+                                                        중지
+                                                    </button>
+                                                )}
                                                 <button
                                                     className="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
                                                     onClick={() => handleOpenDetailModal(item.task_id)}
@@ -2258,6 +2332,7 @@ export default function BacktestOptimizer() {
                                         <thead>
                                             <tr className="bg-slate-100 dark:bg-slate-700">
                                                 <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">상태</th>
+                                                <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap min-w-[120px]">제목</th>
                                                 <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">코인</th>
                                                 <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">기간</th>
                                                 <th className="px-3 py-3 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">점수</th>
@@ -2283,6 +2358,29 @@ export default function BacktestOptimizer() {
                                                                 </span>
                                                             )}
                                                         </div>
+                                                    </td>
+                                                    <td className="px-3 py-3">
+                                                        {editingTitleTaskId === item.task_id ? (
+                                                            <input
+                                                                type="text"
+                                                                value={editingTitleValue}
+                                                                onChange={(e) => setEditingTitleValue(e.target.value)}
+                                                                onBlur={() => handleSaveTitle(item.task_id)}
+                                                                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTitle(item.task_id); if (e.key === 'Escape') setEditingTitleTaskId(null); }}
+                                                                maxLength={200}
+                                                                autoFocus
+                                                                className="w-full px-2 py-1 rounded border border-blue-400 dark:border-blue-500 bg-white dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                placeholder="제목 입력..."
+                                                            />
+                                                        ) : (
+                                                            <span
+                                                                className="text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                                                                onClick={() => handleStartEditTitle(item.task_id, item.title)}
+                                                                title="클릭하여 제목 수정"
+                                                            >
+                                                                {item.title || <span className="text-slate-400 dark:text-slate-500 italic text-xs">-</span>}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="px-3 py-3 text-slate-700 dark:text-slate-300">
                                                         <div className="flex flex-wrap gap-1 max-w-[150px]">
@@ -2327,13 +2425,23 @@ export default function BacktestOptimizer() {
                                                         </button>
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
-                                                        <button
-                                                            className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
-                                                            onClick={() => handleDeleteResult(item.task_id)}
-                                                            disabled={loading}
-                                                        >
-                                                            삭제
-                                                        </button>
+                                                        {item.status === 'running' ? (
+                                                            <button
+                                                                className="text-amber-600 dark:text-amber-200 hover:text-amber-700 dark:hover:text-white bg-amber-50 dark:bg-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
+                                                                onClick={() => handleCancelTask(item.task_id)}
+                                                                disabled={loading}
+                                                            >
+                                                                중지
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
+                                                                onClick={() => handleDeleteResult(item.task_id)}
+                                                                disabled={loading}
+                                                            >
+                                                                삭제
+                                                            </button>
+                                                        )}
                                                     </td>
                                                 </tr>
                                                 );
@@ -2669,6 +2777,21 @@ export default function BacktestOptimizer() {
 
                         {/* 콘텐츠 */}
                         <div className="px-6 py-4 space-y-4">
+                            {/* 제목 입력 */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                    제목 (선택)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={runTitle}
+                                    onChange={(e) => setRunTitle(e.target.value)}
+                                    placeholder="실행 목적이나 메모를 입력하세요"
+                                    maxLength={200}
+                                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
                             {/* 기본 정보 */}
                             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3">
                                 <div className="flex justify-between">

@@ -122,6 +122,11 @@ export const send = async (url, params, method = "GET") => {
                 headers: { 'Content-Type': 'application/json' },
                 withCredentials: true,
             });
+        } else if (method === "PATCH") {
+            response = await axios.patch(url, params, {
+                headers: { 'Content-Type': 'application/json' },
+                withCredentials: true,
+            });
         } else if (method === "DELETE") {
             response = await axios.delete(url, { params, withCredentials: true });
         } else {

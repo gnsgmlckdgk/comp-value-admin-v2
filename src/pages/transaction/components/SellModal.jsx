@@ -229,15 +229,15 @@ export default function SellModal({
                 {/* 버튼 */}
                 <div className="flex justify-end gap-2">
                     <Button
+                        variant="secondary"
                         onClick={handleClose}
-                        className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-500"
                         disabled={saving}
                     >
                         취소
                     </Button>
                     <Button
+                        variant="danger"
                         onClick={handleSubmit}
-                        className="px-4 py-1.5 bg-rose-500 hover:bg-rose-600 text-white"
                         disabled={saving}
                     >
                         {saving ? '처리 중...' : '매도'}

@@ -747,28 +747,18 @@ export default function CointradeHistory() {
     // ====== 다운로드 버튼 컴포넌트 ======
     const DownloadButtons = ({ onExcel, onCsv }) => (
         <div className="flex items-center gap-1.5">
-            <button
-                type="button"
-                onClick={onExcel}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-green-300 bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100 transition-colors dark:bg-green-900/20 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/40"
-                title="엑셀 다운로드"
-            >
+            <Button variant="success" size="sm" onClick={onExcel} title="엑셀 다운로드">
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-6l2.5 3L13 14l3 4H8l2-3z" />
                 </svg>
                 Excel
-            </button>
-            <button
-                type="button"
-                onClick={onCsv}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-blue-300 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/40"
-                title="CSV 다운로드"
-            >
+            </Button>
+            <Button variant="secondary" size="sm" onClick={onCsv} title="CSV 다운로드">
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-2h8v-2H8v2zm0-4h8v-2H8v2z" />
                 </svg>
                 CSV
-            </button>
+            </Button>
         </div>
     );
 
@@ -1291,7 +1281,6 @@ export default function CointradeHistory() {
                     <Button
                         onClick={() => handleSearch(0)}
                         disabled={loading}
-                        className="px-8 py-2"
                     >
                         {loading ? '조회 중...' : '검색'}
                     </Button>

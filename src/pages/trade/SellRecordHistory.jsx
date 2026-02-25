@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import Button from '@/component/common/button/Button';
 import SellRecordModal from './popup/SellRecordModal';
 import SellRecordDetailModal from './popup/SellRecordDetailModal';
 
@@ -309,15 +310,12 @@ export default function SellRecordHistory() {
                                     </option>
                                 ))}
                             </select>
-                            <button
-                                onClick={handleAdd}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-lg hover:from-sky-600 hover:to-indigo-600 transition-all shadow-sm font-medium whitespace-nowrap"
-                            >
+                            <Button onClick={handleAdd}>
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                 </svg>
                                 <span className="hidden sm:inline">기록 추가</span>
-                            </button>
+                            </Button>
                         </div>
                     </div>
 

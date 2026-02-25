@@ -932,7 +932,7 @@ export default function CointradeDashboard() {
         <div className="px-2 py-8 md:px-4">
             <div className="flex items-center justify-between mb-6">
                 <PageTitle>자동매매 대시보드</PageTitle>
-                <Button onClick={handleRefresh} disabled={loading} className="px-4 py-2">
+                <Button onClick={handleRefresh} disabled={loading}>
                     {loading ? '갱신 중...' : '새로고침'}
                 </Button>
             </div>
@@ -1054,30 +1054,15 @@ export default function CointradeDashboard() {
                             </span>
                         )}
 
-                        <button
-                            type="button"
-                            onClick={handleSellClick}
-                            disabled={holdings.length === 0}
-                            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors dark:disabled:bg-slate-600"
-                        >
+                        <Button variant="danger" onClick={handleSellClick} disabled={holdings.length === 0}>
                             매도
-                        </button>
+                        </Button>
 
                         {Object.values(holdingsColumnFilters).some((v) => v !== '') && (
 
-                            <button
-
-                                type="button"
-
-                                onClick={() => setHoldingsColumnFilters({})}
-
-                                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
-
-                            >
-
+                            <Button variant="secondary" size="sm" onClick={() => setHoldingsColumnFilters({})}>
                                 필터 초기화
-
-                            </button>
+                            </Button>
 
                         )}
                     </div>

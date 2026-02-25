@@ -1240,10 +1240,10 @@ export default function Backtest() {
                                         />
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button onClick={handleSelectAllFiltered} className="px-4 py-1.5 text-sm">
+                                        <Button size="sm" onClick={handleSelectAllFiltered}>
                                             전체 선택
                                         </Button>
-                                        <Button onClick={handleDeselectAllFiltered} className="px-4 py-1.5 text-sm">
+                                        <Button size="sm" onClick={handleDeselectAllFiltered}>
                                             전체 해제
                                         </Button>
                                     </div>
@@ -1390,7 +1390,6 @@ export default function Backtest() {
                         <Button
                             onClick={handleOpenRunConfirmModal}
                             disabled={loading}
-                            className="px-6 py-2"
                         >
                             {loading ? '실행 중...' : '백테스트 실행'}
                         </Button>
@@ -1404,13 +1403,14 @@ export default function Backtest() {
                                     실행 상태
                                 </h2>
                                 <div className="flex gap-2">
-                                    <Button onClick={handleCheckStatus} className="px-4 py-2 text-sm">
+                                    <Button size="sm" onClick={handleCheckStatus}>
                                         상태 확인
                                     </Button>
                                     {taskStatus?.status === 'running' && (
                                         <Button
+                                            variant="danger"
+                                            size="sm"
                                             onClick={handleCancelBacktest}
-                                            className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white"
                                             disabled={loading}
                                         >
                                             중지
@@ -1502,17 +1502,18 @@ export default function Backtest() {
                                             {selectedHistoryIds.length}개 항목 선택됨
                                         </div>
                                         <div className="flex gap-2">
-                                            <Button onClick={() => { setSelectedHistoryIds([]); setCompareResults([]); }} className="px-4 py-2 text-sm">
+                                            <Button size="sm" onClick={() => { setSelectedHistoryIds([]); setCompareResults([]); }}>
                                                 선택 취소
                                             </Button>
                                             <Button
+                                                variant="danger"
+                                                size="sm"
                                                 onClick={handleDeleteSelected}
-                                                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white"
                                             >
                                                 선택 삭제
                                             </Button>
                                             {selectedHistoryIds.length === 2 && (
-                                                <Button onClick={handleCompare} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700">
+                                                <Button size="sm" onClick={handleCompare}>
                                                     비교하기
                                                 </Button>
                                             )}
@@ -2123,7 +2124,7 @@ function ResultSummary({ result, onExport }) {
         <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">결과 요약</h3>
-                <Button onClick={onExport} className="px-4 py-2 text-sm">
+                <Button size="sm" onClick={onExport}>
                     요약 엑셀 내보내기
                 </Button>
             </div>
@@ -2542,10 +2543,10 @@ function DetailView({ result, onClose, onExport }) {
                     <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">백테스트 상세 결과</h2>
                         <div className="flex items-center gap-2">
-                            <Button onClick={() => onExport(false)} className="px-4 py-2 text-sm bg-slate-600 hover:bg-slate-700">
+                            <Button variant="secondary" size="sm" onClick={() => onExport(false)}>
                                 요약 엑셀
                             </Button>
-                            <Button onClick={() => onExport(true)} className="px-4 py-2 text-sm">
+                            <Button size="sm" onClick={() => onExport(true)}>
                                 상세 엑셀
                             </Button>
                             <button

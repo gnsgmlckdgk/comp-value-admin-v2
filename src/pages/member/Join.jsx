@@ -4,6 +4,7 @@ import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Input from '@/component/common/input/Input';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import Button from '@/component/common/button/Button';
 
 export default function Join() {
     const navigate = useNavigate();
@@ -194,22 +195,13 @@ export default function Join() {
                             </div>
 
                             <div className="pt-4 space-y-3">
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full py-3 px-4 bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium rounded-lg hover:from-sky-600 hover:to-indigo-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
+                                <Button type="submit" fullWidth disabled={loading} className="py-3">
                                     {loading ? '가입 중...' : '회원가입'}
-                                </button>
+                                </Button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/')}
-                                    disabled={loading}
-                                    className="w-full py-3 px-4 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-                                >
+                                <Button variant="secondary" fullWidth onClick={() => navigate('/')} disabled={loading} className="py-3">
                                     취소
-                                </button>
+                                </Button>
                             </div>
                         </form>
 

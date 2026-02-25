@@ -1,37 +1,19 @@
+function Button({ children, onClick, type = 'button', variant = 'primary', size = 'md', disabled = false, fullWidth = false, className = '', ...rest }) {
 
-/**
- * 다양한 스타일과 동작을 지원하는 버튼 컴포넌트입니다.
- *
- * @component
- * @param {Object} props - 컴포넌트 속성
- * @param {React.ReactNode} props.children - 버튼 내부에 표시될 콘텐츠
- * @param {function} [props.onClick] - 버튼 클릭 시 호출되는 함수
- * @param {'button' | 'submit' | 'reset'} [props.type='button'] - 버튼의 타입
- * @param {'primary' | 'danger' | 'outline' | 'select'} [props.variant='primary'] - 버튼의 스타일 변형
- * @param {string} [props.className=''] - 추가적인 CSS 클래스
- * @returns {JSX.Element} 렌더링된 버튼 요소
- *
- * @example
- * // 기본 버튼
- * <Button onClick={() => alert('클릭됨')}>클릭</Button>
- *
- * @example
- * // 위험 스타일의 버튼
- * <Button variant="danger">삭제</Button>
- */
-function Button({ children, onClick, type = 'button', variant = 'primary', className = '', disabled = false }) {
-
-    // const baseStyle = 'px-5 py-2.5 rounded-lg shadow-md font-semibold transition-all duration-300 text-sm cursor-pointer'
-    // const baseStyle = 'whitespace-nowrap w-fit px-4 py-2 md:px-5 md:py-2.5 rounded-lg shadow-md font-semibold transition-all duration-300 text-sm cursor-pointer';
-    const baseStyle = `whitespace-nowrap w-fit px-3 py-2 md:px-5 md:py-2.5 text-sm md:text-base rounded-lg shadow-md font-semibold transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`;
+    const base = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed'
 
     const variants = {
-        primary: 'bg-blue-600 text-white hover:bg-blue-700',
-        danger: 'bg-red-500 text-white hover:bg-red-600',
-        outline: 'border border-gray-400 text-gray-700 bg-white hover:bg-gray-100',
+        primary: 'bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-sm hover:from-sky-600 hover:to-indigo-600',
+        secondary: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
+        danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
+        success: 'bg-green-600 text-white shadow-sm hover:bg-green-700',
+        ghost: 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700',
+    }
 
-        select: 'border border-amber-600 text-amber-600 hover:bg-amber-100 hover:shadow-lg transition-all duration-300',
-        close: 'px-4 py-2 bg-gray-300 text-black rounded'
+    const sizes = {
+        sm: 'px-3 py-1.5 text-sm',
+        md: 'px-4 py-2 text-sm',
+        lg: 'px-6 py-2.5 text-base',
     }
 
     return (
@@ -39,7 +21,8 @@ function Button({ children, onClick, type = 'button', variant = 'primary', class
             type={type}
             onClick={!disabled && typeof onClick === 'function' ? onClick : undefined}
             disabled={disabled}
-            className={`${baseStyle} ${variants[variant]} ${className}`}
+            className={`${base} ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${fullWidth ? 'w-full' : ''} ${className}`}
+            {...rest}
         >
             {children}
         </button>

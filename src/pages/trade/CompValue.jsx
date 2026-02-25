@@ -2,6 +2,7 @@ import Loading from '@/component/common/display/Loading';
 import BulkCalcPopup from './popup/BulkCalcPopup';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import PageTitle from '@/component/common/display/PageTitle';
+import Button from '@/component/common/button/Button';
 
 import { useState } from 'react'
 
@@ -114,22 +115,12 @@ const CompValue = () => {
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={fetchData}
-                            disabled={isLoading}
-                            className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm whitespace-nowrap"
-                        >
+                        <Button onClick={fetchData} disabled={isLoading}>
                             분석
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setIsPopup(true)}
-                            disabled={isLoading}
-                            className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
-                        >
+                        </Button>
+                        <Button variant="secondary" onClick={() => setIsPopup(true)} disabled={isLoading}>
                             대량분석
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

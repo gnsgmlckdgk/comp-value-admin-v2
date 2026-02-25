@@ -36,7 +36,7 @@ function SearchBar001({ fetchData, label = '', searchState }) {
     return (
         <div className='flex flex-wrap items-center gap-2 p-1'>
             <Input {...inputProps} className='flex-1 min-w-0' />
-            <Button children='조회하기' onClick={fetchData} variant='select' className='whitespace-nowrap w-fit min-w-[72px]' />
+            <Button children='조회하기' onClick={fetchData} />
         </div>
     )
 }

@@ -1567,10 +1567,10 @@ export default function BacktestOptimizer() {
                                         />
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button onClick={handleSelectAllFiltered} className="px-4 py-1.5 text-sm">
+                                        <Button size="sm" onClick={handleSelectAllFiltered}>
                                             전체 선택
                                         </Button>
-                                        <Button onClick={handleDeselectAllFiltered} className="px-4 py-1.5 text-sm">
+                                        <Button size="sm" onClick={handleDeselectAllFiltered}>
                                             전체 해제
                                         </Button>
                                     </div>
@@ -1886,7 +1886,7 @@ export default function BacktestOptimizer() {
                                 <div className="flex items-center gap-4">
                                     {getStatusBadge(taskStatus.status)}
                                     {taskStatus.status === 'completed' && (
-                                        <Button size="sm" variant="outline" onClick={handleResetTask}>
+                                        <Button size="sm" variant="secondary" onClick={handleResetTask}>
                                             새로 실행
                                         </Button>
                                     )}
@@ -1922,14 +1922,14 @@ export default function BacktestOptimizer() {
 
                             {taskStatus.status === 'running' && (
                                 <div className="flex justify-center gap-2">
-                                    <Button size="sm" variant="outline" onClick={handleCheckStatus} disabled={loading}>
+                                    <Button size="sm" variant="secondary" onClick={handleCheckStatus} disabled={loading}>
                                         상태 새로고침
                                     </Button>
                                     <Button
+                                        variant="danger"
                                         size="sm"
                                         onClick={handleCancelOptimizer}
                                         disabled={loading}
-                                        className="bg-red-600 hover:bg-red-700 text-white"
                                     >
                                         중지
                                     </Button>
@@ -1953,13 +1953,13 @@ export default function BacktestOptimizer() {
                                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                                     최적화 결과
                                 </h2>
-                                <Button size="sm" variant="outline" onClick={handleViewAllTrials}>
+                                <Button size="sm" variant="secondary" onClick={handleViewAllTrials}>
                                     모든 시행 결과 보기
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleExportExcel(taskResult, runningTaskId)}>
+                                <Button size="sm" variant="secondary" onClick={() => handleExportExcel(taskResult, runningTaskId)}>
                                     엑셀 저장
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleExportText(taskResult, runningTaskId)}>
+                                <Button size="sm" variant="secondary" onClick={() => handleExportText(taskResult, runningTaskId)}>
                                     텍스트 저장
                                 </Button>
                             </div>
@@ -2190,7 +2190,7 @@ export default function BacktestOptimizer() {
                             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                                 옵티마이저 이력
                             </h2>
-                            <Button size="sm" variant="outline" onClick={() => fetchHistory()} disabled={loading}>
+                            <Button size="sm" variant="secondary" onClick={() => fetchHistory()} disabled={loading}>
                                 {loading ? '조회 중...' : '새로고침'}
                             </Button>
                         </div>
@@ -2510,10 +2510,10 @@ export default function BacktestOptimizer() {
                             <div className="flex items-center gap-2">
                                 {detailResult && (
                                     <>
-                                        <Button size="sm" variant="outline" onClick={() => handleExportExcel(detailResult.data, detailResult.taskId)}>
+                                        <Button size="sm" variant="secondary" onClick={() => handleExportExcel(detailResult.data, detailResult.taskId)}>
                                             엑셀 저장
                                         </Button>
-                                        <Button size="sm" variant="outline" onClick={() => handleExportText(detailResult.data, detailResult.taskId)}>
+                                        <Button size="sm" variant="secondary" onClick={() => handleExportText(detailResult.data, detailResult.taskId)}>
                                             텍스트 저장
                                         </Button>
                                     </>
@@ -2839,7 +2839,7 @@ export default function BacktestOptimizer() {
 
                         {/* 푸터 */}
                         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end">
-                            <Button variant="outline" onClick={() => setIsRunConfirmModalOpen(false)}>
+                            <Button variant="secondary" onClick={() => setIsRunConfirmModalOpen(false)}>
                                 취소
                             </Button>
                             <Button onClick={handleConfirmRun}>
@@ -2887,7 +2887,7 @@ export default function BacktestOptimizer() {
                         {/* 푸터 */}
                         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end">
                             <Button
-                                variant="outline"
+                                variant="secondary"
                                 onClick={() => {
                                     setIsDeleteConfirmModalOpen(false);
                                     setDeleteTargetTaskId(null);
@@ -2896,8 +2896,8 @@ export default function BacktestOptimizer() {
                                 취소
                             </Button>
                             <Button
+                                variant="danger"
                                 onClick={handleConfirmDelete}
-                                className="bg-red-600 hover:bg-red-700 text-white"
                             >
                                 삭제
                             </Button>

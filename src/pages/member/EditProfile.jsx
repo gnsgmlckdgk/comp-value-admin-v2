@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
+import Button from '@/component/common/button/Button';
 
 export default function EditProfile() {
     const navigate = useNavigate();
@@ -296,21 +297,12 @@ export default function EditProfile() {
 
                         {/* 버튼 */}
                         <div className="flex items-center gap-3 pt-4">
-                            <button
-                                type="button"
-                                onClick={handleCancel}
-                                disabled={saving}
-                                className="flex-1 px-6 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
+                            <Button variant="secondary" type="button" onClick={handleCancel} disabled={saving} className="flex-1">
                                 취소
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="flex-1 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
+                            </Button>
+                            <Button type="submit" disabled={saving} className="flex-1">
                                 {saving ? '저장 중...' : '저장'}
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 </div>

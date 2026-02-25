@@ -483,8 +483,8 @@ export default function CointradeConfig() {
                             </div>
                             <div className="flex flex-wrap items-center gap-2 justify-end">
                                 <Button
+                                    size="sm"
                                     onClick={() => setIsOverviewModalOpen(true)}
-                                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 text-xs sm:text-sm shadow-sm"
                                 >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -493,8 +493,9 @@ export default function CointradeConfig() {
                                     한눈에 보기
                                 </Button>
                                 <Button
+                                    variant="secondary"
+                                    size="sm"
                                     onClick={handleExportText}
-                                    className="px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white flex items-center gap-2 text-xs sm:text-sm shadow-sm"
                                 >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -502,8 +503,9 @@ export default function CointradeConfig() {
                                     텍스트로 내보내기
                                 </Button>
                                 <Button
+                                    variant="success"
+                                    size="sm"
                                     onClick={handleExportExcel}
-                                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 text-xs sm:text-sm shadow-sm"
                                 >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -710,7 +712,6 @@ export default function CointradeConfig() {
                         <Button
                             onClick={handleSave}
                             disabled={saveLoading}
-                            className="px-6 py-2"
                         >
                             {saveLoading ? '저장 중...' : '저장'}
                         </Button>

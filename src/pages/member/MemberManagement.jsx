@@ -415,15 +415,12 @@ export default function MemberManagement() {
                             </p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setShowSearchForm(!showSearchForm)}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                    >
+                    <Button onClick={() => setShowSearchForm(!showSearchForm)}>
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         검색 {showSearchForm ? '닫기' : '열기'}
-                    </button>
+                    </Button>
                 </div>
 
                 {/* 검색 폼 */}
@@ -522,18 +519,12 @@ export default function MemberManagement() {
                             </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-4">
-                            <button
-                                onClick={handleResetSearch}
-                                className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                            >
+                            <Button variant="secondary" onClick={handleResetSearch}>
                                 초기화
-                            </button>
-                            <button
-                                onClick={handleSearch}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                            >
+                            </Button>
+                            <Button onClick={handleSearch}>
                                 검색
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -829,19 +820,12 @@ export default function MemberManagement() {
                         </div>
 
                         <div className="flex justify-end gap-2">
-                            <button
-                                onClick={handleDeleteCancel}
-                                className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer"
-                            >
+                            <Button variant="secondary" onClick={handleDeleteCancel}>
                                 취소
-                            </button>
-                            <button
-                                onClick={handleDeleteConfirm}
-                                disabled={deleteConfirmUsername !== deleteTargetMember.username}
-                                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
+                            </Button>
+                            <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleteConfirmUsername !== deleteTargetMember.username}>
                                 탈퇴 처리
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -895,20 +879,12 @@ export default function MemberManagement() {
                         </div>
 
                         <div className="flex justify-end gap-2">
-                            <button
-                                onClick={handleEditCancel}
-                                disabled={editLoading}
-                                className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer disabled:opacity-50"
-                            >
+                            <Button variant="secondary" onClick={handleEditCancel} disabled={editLoading}>
                                 취소
-                            </button>
-                            <button
-                                onClick={handleEditSave}
-                                disabled={editLoading}
-                                className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50"
-                            >
+                            </Button>
+                            <Button onClick={handleEditSave} disabled={editLoading}>
                                 {editLoading ? '저장 중...' : '저장'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

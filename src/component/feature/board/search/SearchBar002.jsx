@@ -53,8 +53,7 @@ function SearchBar002({ fetchData, label = '', searchState }) {
                 <Button
                     children="조회"
                     onClick={() => fetchData()}
-                    variant="select"
-                    className="w-20 sm:w-24 h-10 shrink-0 !py-0 flex items-center justify-center"
+                    className="w-20 sm:w-24 h-10 shrink-0 !py-0"
                 />
             </div>
         </div>

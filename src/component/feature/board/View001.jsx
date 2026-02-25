@@ -298,13 +298,13 @@ function View001({
                     <div className="flex justify-between items-center gap-2">
                         <div className="flex gap-2">
                             {canEdit && (
-                                <Button children="수정" variant="outline" onClick={onMoveUpdate} />
+                                <Button children="수정" variant="secondary" onClick={onMoveUpdate} />
                             )}
                             {canDelete && (
                                 <Button children="삭제" variant="danger" onClick={onDelete} />
                             )}
                         </div>
-                        <Button children="목록" variant="outline" onClick={onMoveBack} />
+                        <Button children="목록" variant="secondary" onClick={onMoveBack} />
                     </div>
                 </div>
             </div>

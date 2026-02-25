@@ -29,11 +29,11 @@ function CommentForm({
             />
             <div className="flex justify-end gap-2">
                 {onCancel && (
-                    <Button variant="outline" onClick={onCancel} className="!px-3 !py-1.5 !text-sm">
+                    <Button variant="secondary" size="sm" onClick={onCancel}>
                         취소
                     </Button>
                 )}
-                <Button onClick={handleSubmit} disabled={!content.trim()} className="!px-3 !py-1.5 !text-sm">
+                <Button size="sm" onClick={handleSubmit} disabled={!content.trim()}>
                     {submitLabel}
                 </Button>
             </div>

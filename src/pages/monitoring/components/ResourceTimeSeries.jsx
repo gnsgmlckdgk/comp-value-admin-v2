@@ -64,6 +64,36 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
         });
     }, []);
 
+    // 현재 필터에 해당하는 dataKey 목록
+    const getFilteredKeys = useCallback(() => {
+        const keys = [];
+        const isCpu = filter === 'all' || filter === 'cpu';
+        const isMem = filter === 'all' || filter === 'mem';
+        if (isCpu) podNames.forEach(n => keys.push(`${n}_cpu`));
+        if (isMem) podNames.forEach(n => keys.push(`${n}_mem`));
+        if (hasGpu && isCpu) keys.push('gpu');
+        if (hasGpu && isMem) keys.push('gpu_vram');
+        return keys;
+    }, [filter, podNames, hasGpu]);
+
+    const handleShowAll = useCallback(() => {
+        const keys = getFilteredKeys();
+        setHiddenKeys(prev => {
+            const next = new Set(prev);
+            keys.forEach(k => next.delete(k));
+            return next;
+        });
+    }, [getFilteredKeys]);
+
+    const handleHideAll = useCallback(() => {
+        const keys = getFilteredKeys();
+        setHiddenKeys(prev => {
+            const next = new Set(prev);
+            keys.forEach(k => next.add(k));
+            return next;
+        });
+    }, [getFilteredKeys]);
+
     if (chartData.length < 2) {
         return (
             <div className="flex items-center justify-center h-48 text-slate-400 dark:text-slate-600 text-sm">
@@ -201,16 +231,19 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                 </ResponsiveContainer>
             </div>
             {/* 필터 버튼 */}
-            <div className="flex justify-center gap-1.5 mt-1.5">
-                <FilterButton label="All" active={filter === 'all'} onClick={() => setFilter('all')} isDark={isDark} />
-                <FilterButton label="CPU" active={filter === 'cpu'} onClick={() => setFilter('cpu')} isDark={isDark} />
-                <FilterButton label="Memory" active={filter === 'mem'} onClick={() => setFilter('mem')} isDark={isDark} />
+            <div className="flex justify-center items-center gap-1.5 mt-1.5">
+                <FilterButton label="All" active={filter === 'all'} onClick={() => setFilter('all')} />
+                <FilterButton label="CPU" active={filter === 'cpu'} onClick={() => setFilter('cpu')} />
+                <FilterButton label="Memory" active={filter === 'mem'} onClick={() => setFilter('mem')} />
+                <span className="mx-1 text-slate-300 dark:text-slate-600">|</span>
+                <FilterButton label="전체 ON" active={false} onClick={handleShowAll} />
+                <FilterButton label="전체 OFF" active={false} onClick={handleHideAll} />
             </div>
         </div>
     );
 }
 
-function FilterButton({ label, active, onClick, isDark }) {
+function FilterButton({ label, active, onClick }) {
     return (
         <button
             onClick={onClick}

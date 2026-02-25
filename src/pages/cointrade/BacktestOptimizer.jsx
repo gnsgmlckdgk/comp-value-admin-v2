@@ -444,6 +444,14 @@ export default function BacktestOptimizer() {
         max_profit_rate: { min_value: 10.0, max_value: 50.0, step: 5.0 }
     });
 
+    // 전체 파라미터 조합 수 계산
+    const totalCombinations = useMemo(() => {
+        return Object.values(paramRanges).reduce((total, range) => {
+            const steps = Math.round((range.max_value - range.min_value) / range.step) + 1;
+            return total * Math.max(steps, 1);
+        }, 1);
+    }, [paramRanges]);
+
     // 실행 상태
     const [runningTaskId, setRunningTaskId] = useState(null);
     const [taskStatus, setTaskStatus] = useState(null);
@@ -1380,6 +1388,18 @@ export default function BacktestOptimizer() {
         return labels[key] || key;
     };
 
+    const getParamShortLabel = (key) => {
+        const shorts = {
+            min_up_probability: '확률',
+            buy_profit_threshold: '매수',
+            stop_loss_threshold: '손절',
+            take_profit_buffer: '익절버퍼',
+            min_profit_rate: '최소익절',
+            max_profit_rate: '최대익절',
+        };
+        return shorts[key] || key;
+    };
+
     return (
         <div className="p-2 md:p-4">
             <PageTitle>백테스트 옵티마이저</PageTitle>
@@ -1638,6 +1658,35 @@ export default function BacktestOptimizer() {
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
                             옵티마이저 설정
                         </h2>
+                        {/* 전체 조합 수 & 커버리지 표시 */}
+                        <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+                                <span className="text-slate-600 dark:text-slate-400">
+                                    전체 파라미터 조합 수: <span className="font-semibold text-slate-800 dark:text-slate-200">{totalCombinations.toLocaleString()}</span>개
+                                </span>
+                                <span className="text-slate-600 dark:text-slate-400">
+                                    현재 설정 커버리지: <span className={`font-semibold ${
+                                        maxRuns >= totalCombinations ? 'text-emerald-600 dark:text-emerald-400' :
+                                        (maxRuns / totalCombinations) >= 0.5 ? 'text-blue-600 dark:text-blue-400' :
+                                        (maxRuns / totalCombinations) >= 0.1 ? 'text-amber-600 dark:text-amber-400' :
+                                        'text-red-600 dark:text-red-400'
+                                    }`}>
+                                        {maxRuns >= totalCombinations ? '100%' :
+                                         (maxRuns / totalCombinations * 100) >= 0.01 ?
+                                         `${(maxRuns / totalCombinations * 100).toFixed(2)}%` :
+                                         `${(maxRuns / totalCombinations * 100).toFixed(4)}%`
+                                        }
+                                    </span>
+                                    {' '}({maxRuns.toLocaleString()} / {totalCombinations.toLocaleString()})
+                                </span>
+                                {maxRuns < totalCombinations && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                        전체 탐색에 <span className="font-medium">{totalCombinations.toLocaleString()}</span>회 필요
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                             <div>
                                 <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">최대 실행 횟수</label>
@@ -2073,7 +2122,7 @@ export default function BacktestOptimizer() {
                                                                         className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 rounded whitespace-nowrap"
                                                                         title={getParamLabel(k)}
                                                                     >
-                                                                        {typeof v === 'number' ? v.toFixed(2) : v}
+                                                                        <span className="text-slate-500 dark:text-slate-400">{getParamShortLabel(k)}</span>{' '}{typeof v === 'number' ? v.toFixed(2) : v}
                                                                     </span>
                                                                 ))}
                                                             </div>
@@ -2579,7 +2628,7 @@ export default function BacktestOptimizer() {
                                                                                     className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-600 rounded whitespace-nowrap"
                                                                                     title={getParamLabel(k)}
                                                                                 >
-                                                                                    {typeof v === 'number' ? v.toFixed(2) : v}
+                                                                                    <span className="text-slate-500 dark:text-slate-400">{getParamShortLabel(k)}</span>{' '}{typeof v === 'number' ? v.toFixed(2) : v}
                                                                                 </span>
                                                                             ))}
                                                                         </div>

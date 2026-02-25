@@ -4,6 +4,73 @@ import { useTheme } from '@/context/ThemeContext';
 
 const POD_COLORS = ['#3b82f6', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#eab308'];
 
+function CustomLegend({ payload = [], hiddenKeys, onToggle }) {
+    const groups = useMemo(() => {
+        const map = new Map();
+        const result = [];
+        for (const entry of payload) {
+            const dk = entry.dataKey;
+            let pod, lineType, label;
+            if (dk === 'gpu') {
+                pod = 'GPU'; lineType = 'solid'; label = 'UTIL';
+            } else if (dk === 'gpu_vram') {
+                pod = 'GPU'; lineType = 'dashed'; label = 'VRAM';
+            } else if (dk.endsWith('_cpu')) {
+                pod = dk.slice(0, -4); lineType = 'solid'; label = 'CPU';
+            } else if (dk.endsWith('_mem')) {
+                pod = dk.slice(0, -4); lineType = 'dashed'; label = 'MEM';
+            } else continue;
+            if (!map.has(pod)) {
+                const g = { pod, items: [] };
+                map.set(pod, g);
+                result.push(g);
+            }
+            map.get(pod).items.push({ dataKey: dk, color: entry.color, lineType, label });
+        }
+        return result;
+    }, [payload]);
+
+    if (!groups.length) return null;
+
+    return (
+        <div className="flex flex-col items-center gap-0.5 pt-1 text-[10px] select-none">
+            {groups.map(g => (
+                <div key={g.pod} className="inline-flex items-center">
+                    <span className="text-slate-500 dark:text-slate-400 text-right font-mono w-[8.5rem] shrink-0 pr-2 truncate">
+                        {g.pod}
+                    </span>
+                    {g.items.map(item => {
+                        const hidden = hiddenKeys.has(item.dataKey);
+                        const c = hidden ? '#9ca3af' : item.color;
+                        return (
+                            <button
+                                key={item.dataKey}
+                                className="inline-flex items-center gap-0.5 px-1 cursor-pointer"
+                                onClick={() => onToggle({ dataKey: item.dataKey })}
+                            >
+                                <svg width="14" height="8" className="shrink-0">
+                                    <line
+                                        x1="0" y1="4" x2="14" y2="4"
+                                        stroke={c}
+                                        strokeWidth={item.lineType === 'solid' ? 2 : 1.5}
+                                        strokeDasharray={item.lineType === 'dashed' ? '3 2' : undefined}
+                                    />
+                                </svg>
+                                <span style={{
+                                    color: c,
+                                    textDecoration: hidden ? 'line-through' : 'none',
+                                }}>
+                                    {item.label}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 /**
  * Recharts LineChart — 파드별 CPU% + Memory% 시계열 (최근 30분)
  * CPU: 실선, Memory: 점선
@@ -157,23 +224,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                             labelFormatter={formatTime}
                             formatter={(value, name) => [`${value}%`, name]}
                         />
-                        <Legend
-                            onClick={handleLegendClick}
-                            wrapperStyle={{ fontSize: '10px', paddingTop: '4px', cursor: 'pointer' }}
-                            iconType="plainline"
-                            iconSize={12}
-                            formatter={(value, entry) => {
-                                const isHidden = hiddenKeys.has(entry.dataKey);
-                                return (
-                                    <span style={{
-                                        color: isHidden ? '#9ca3af' : entry.color,
-                                        textDecoration: isHidden ? 'line-through' : 'none',
-                                    }}>
-                                        {value}
-                                    </span>
-                                );
-                            }}
-                        />
+                        <Legend content={<CustomLegend hiddenKeys={hiddenKeys} onToggle={handleLegendClick} />} />
                         {/* CPU lines — 실선 */}
                         {showCpu && podNames.map((name, i) => (
                             <Line

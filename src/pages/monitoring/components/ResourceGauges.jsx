@@ -1,4 +1,5 @@
 import { useTheme } from '@/context/ThemeContext';
+import TruncatedText from './TruncatedText';
 
 /**
  * 파드별 리소스 게이지 — CPU / Memory 프로그레스 바
@@ -47,9 +48,9 @@ function PodResourceRow({ pod }) {
 
     return (
         <div className="rounded-lg bg-slate-50 dark:bg-slate-800/40 p-2.5 space-y-1.5 overflow-hidden">
-            <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+            <TruncatedText as="div" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 {pod.name}
-            </div>
+            </TruncatedText>
             <ProgressBar
                 label="CPU"
                 percent={cpuPercent}
@@ -107,7 +108,7 @@ function ProgressBar({ label, percent, text, noLimit }) {
                     />
                 )}
             </div>
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 text-right truncate shrink-0 max-w-[5.5rem]">{text}</span>
+            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 text-right truncate shrink-0 sm:max-w-[6.5rem]">{text}</span>
         </div>
     );
 }

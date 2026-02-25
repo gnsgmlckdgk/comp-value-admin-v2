@@ -1,3 +1,5 @@
+import TruncatedText from './TruncatedText';
+
 /**
  * 서비스 건강 상태 카드
  */
@@ -15,7 +17,7 @@ export default function ServiceStatusCard({ service }) {
     return (
         <div className="rounded-xl border border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 p-4 shadow-lg">
             <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{service.name}</span>
+                <TruncatedText className="text-sm font-medium text-slate-700 dark:text-slate-300">{service.name}</TruncatedText>
                 <span className={`flex items-center gap-1.5 text-xs font-semibold ${cfg.color}`}>
                     <span className={`h-2 w-2 rounded-full ${cfg.dot} animate-pulse`} />
                     {cfg.label}

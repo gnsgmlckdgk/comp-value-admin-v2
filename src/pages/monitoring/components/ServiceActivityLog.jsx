@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import TruncatedText from './TruncatedText';
 
 /**
  * Service Activity 로그 — API 요청 로그 실시간 표시
@@ -65,9 +66,9 @@ function ActivityRow({ log, isNew }) {
             <span className={`font-bold font-mono w-10 shrink-0 ${methodColor}`}>
                 {log.method}
             </span>
-            <span className="text-slate-700 dark:text-slate-300 font-mono truncate min-w-0">
+            <TruncatedText className="text-slate-700 dark:text-slate-300 font-mono min-w-0">
                 {log.uri}
-            </span>
+            </TruncatedText>
             <span className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 font-bold shrink-0 ${statusColor}`}>
                 {log.status}
             </span>

@@ -472,6 +472,11 @@ export default function BacktestOptimizer() {
     const [showAllTrials, setShowAllTrials] = useState(false);
     const { shouldRender: renderAllTrials, isAnimatingOut: isAllTrialsClosing } = useModalAnimation(showAllTrials, 250);
 
+    // 전체 탐색 시행 테이블 필터/정렬
+    const [exploredTrialFilter, setExploredTrialFilter] = useState('all'); // 'all' | 'met' | 'unmet'
+    const [exploredTrialSortKey, setExploredTrialSortKey] = useState('final_score'); // 'final_score' | 'total_return' | 'trial_id'
+    const [exploredTrialSortDir, setExploredTrialSortDir] = useState('desc'); // 'asc' | 'desc'
+
     // 인라인 제목 수정
     const [editingTitleTaskId, setEditingTitleTaskId] = useState(null);
     const [editingTitleValue, setEditingTitleValue] = useState('');
@@ -2679,43 +2684,105 @@ export default function BacktestOptimizer() {
                                         const exploredTrials = detailResult.data.all_explored_trials;
                                         const targetMetTrials = detailResult.data.all_trials;
                                         const showAllExplored = exploredTrials?.length > 0;
-                                        const displayTrials = showAllExplored ? exploredTrials : targetMetTrials;
-                                        if (!displayTrials || displayTrials.length === 0) return null;
+                                        const sourceTrials = showAllExplored ? exploredTrials : targetMetTrials;
+                                        if (!sourceTrials || sourceTrials.length === 0) return null;
+
+                                        const targetMetIds = new Set(targetMetTrials?.map(t => t.trial_id) || []);
+
+                                        // 필터 적용
+                                        const filteredTrials = showAllExplored
+                                            ? sourceTrials.filter(t => {
+                                                if (exploredTrialFilter === 'met') return targetMetIds.has(t.trial_id);
+                                                if (exploredTrialFilter === 'unmet') return !targetMetIds.has(t.trial_id);
+                                                return true;
+                                            })
+                                            : sourceTrials;
+
+                                        // 정렬 적용
+                                        const sortedTrials = [...filteredTrials].sort((a, b) => {
+                                            const key = showAllExplored ? exploredTrialSortKey : 'final_score';
+                                            const dir = showAllExplored ? exploredTrialSortDir : 'desc';
+                                            const av = a[key] ?? 0;
+                                            const bv = b[key] ?? 0;
+                                            return dir === 'desc' ? bv - av : av - bv;
+                                        });
+
+                                        const handleSortClick = (key) => {
+                                            if (exploredTrialSortKey === key) {
+                                                setExploredTrialSortDir(d => d === 'desc' ? 'asc' : 'desc');
+                                            } else {
+                                                setExploredTrialSortKey(key);
+                                                setExploredTrialSortDir('desc');
+                                            }
+                                        };
+
+                                        const SortIcon = ({ colKey }) => {
+                                            if (exploredTrialSortKey !== colKey) return <span className="ml-0.5 text-slate-300 dark:text-slate-600 text-[10px]">&#x2195;</span>;
+                                            return <span className="ml-0.5 text-blue-500 text-[10px]">{exploredTrialSortDir === 'desc' ? '\u25BC' : '\u25B2'}</span>;
+                                        };
+
                                         return (
                                         <div>
-                                            <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">
-                                                {showAllExplored ? '전체 탐색 시행' : '목표 달성 시행'} 결과 ({displayTrials.length}개)
-                                                {showAllExplored && targetMetTrials?.length > 0 && (
-                                                    <span className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">
-                                                        목표 달성: {targetMetTrials.length}개
-                                                    </span>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                                                    {showAllExplored ? '전체 탐색 시행' : '목표 달성 시행'} 결과 ({filteredTrials.length}개{showAllExplored && filteredTrials.length !== sourceTrials.length ? ` / ${sourceTrials.length}` : ''})
+                                                    {showAllExplored && targetMetTrials?.length > 0 && exploredTrialFilter === 'all' && (
+                                                        <span className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">
+                                                            목표 달성: {targetMetTrials.length}개
+                                                        </span>
+                                                    )}
+                                                </h4>
+                                                {showAllExplored && (
+                                                    <div className="flex items-center gap-1">
+                                                        {[
+                                                            { key: 'all', label: '전체' },
+                                                            { key: 'met', label: '달성' },
+                                                            { key: 'unmet', label: '미달' },
+                                                        ].map(({ key, label }) => (
+                                                            <button
+                                                                key={key}
+                                                                onClick={() => setExploredTrialFilter(key)}
+                                                                className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                                                                    exploredTrialFilter === key
+                                                                        ? 'bg-blue-500 text-white'
+                                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                                                }`}
+                                                            >
+                                                                {label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 )}
-                                            </h4>
-                                            <div className="overflow-x-auto max-h-96">
+                                            </div>
+                                            <div className="overflow-x-auto max-h-96 overflow-y-auto">
                                                 {showAllExplored ? (
                                                 <table className="w-full text-sm">
-                                                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700">
+                                                    <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-700 shadow-[0_1px_0_0_rgb(148,163,184)]  dark:shadow-[0_1px_0_0_rgb(71,85,105)]">
                                                         <tr>
-                                                            <th className="px-2 py-2 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">#</th>
-                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">수익률</th>
-                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">점수</th>
+                                                            <th className="px-2 py-2 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap cursor-pointer select-none hover:text-blue-500" onClick={() => handleSortClick('trial_id')}>
+                                                                #<SortIcon colKey="trial_id" />
+                                                            </th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap cursor-pointer select-none hover:text-blue-500" onClick={() => handleSortClick('total_return')}>
+                                                                수익률<SortIcon colKey="total_return" />
+                                                            </th>
+                                                            <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap cursor-pointer select-none hover:text-blue-500" onClick={() => handleSortClick('final_score')}>
+                                                                점수<SortIcon colKey="final_score" />
+                                                            </th>
                                                             <th className="px-2 py-2 text-center font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">파라미터</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {[...displayTrials]
-                                                            .sort((a, b) => b.final_score - a.final_score)
-                                                            .map((trial, index) => {
-                                                                const isTargetMet = targetMetTrials?.some(t => t.trial_id === trial.trial_id);
+                                                        {sortedTrials.map((trial) => {
+                                                                const isTargetMet = targetMetIds.has(trial.trial_id);
                                                                 return (
                                                                 <tr
                                                                     key={trial.trial_id}
-                                                                    className={`border-b border-slate-200 dark:border-slate-600 ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : !isTargetMet ? 'opacity-60' : ''}`}
+                                                                    className={`border-b border-slate-200 dark:border-slate-600 ${!isTargetMet ? 'opacity-60' : ''}`}
                                                                 >
                                                                     <td className="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                                                         {trial.trial_id}
-                                                                        {index === 0 && <span className="ml-1 text-yellow-600">★</span>}
-                                                                        {!isTargetMet && <span className="ml-1 text-xs text-slate-400" title="목표 미달">✕</span>}
+                                                                        {isTargetMet && <span className="ml-1 text-xs text-green-500" title="목표 달성">&#10003;</span>}
+                                                                        {!isTargetMet && <span className="ml-1 text-xs text-slate-400" title="목표 미달">&#10005;</span>}
                                                                     </td>
                                                                     <td className={`px-2 py-2 text-right font-medium whitespace-nowrap ${trial.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                                         {trial.total_return?.toFixed(2)}%
@@ -2743,7 +2810,7 @@ export default function BacktestOptimizer() {
                                                 </table>
                                                 ) : (
                                                 <table className="w-full text-sm min-w-[800px]">
-                                                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700">
+                                                    <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-700 shadow-[0_1px_0_0_rgb(148,163,184)] dark:shadow-[0_1px_0_0_rgb(71,85,105)]">
                                                         <tr>
                                                             <th className="px-2 py-2 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">#</th>
                                                             <th className="px-2 py-2 text-right font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">수익률</th>
@@ -2757,9 +2824,7 @@ export default function BacktestOptimizer() {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {[...displayTrials]
-                                                            .sort((a, b) => b.final_score - a.final_score)
-                                                            .map((trial, index) => (
+                                                        {sortedTrials.map((trial, index) => (
                                                                 <tr
                                                                     key={trial.trial_id}
                                                                     className={`border-b border-slate-200 dark:border-slate-600 ${index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}

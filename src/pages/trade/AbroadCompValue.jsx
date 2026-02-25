@@ -210,8 +210,11 @@ const AbroadCompValue = () => {
 
             {/* 테이블 영역 */}
             <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700">
-                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[65vh]">
-                    <table className="w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[65vh]" style={{ scrollbarGutter: 'stable' }}>
+                    <table
+                        className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
+                        style={{ width: '100%', tableLayout: 'fixed' }}
+                    >
                         {tableHead}
                         <tbody className="bg-white divide-y divide-slate-200 dark:bg-slate-800 dark:divide-slate-700">
                             {Array.isArray(compNameData) && compNameData.length > 0 ? (

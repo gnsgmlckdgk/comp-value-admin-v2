@@ -1731,7 +1731,7 @@ export default function Backtest() {
                                                                         value={editingTitleValue}
                                                                         onChange={(e) => setEditingTitleValue(e.target.value)}
                                                                         onBlur={() => handleSaveTitle(item.task_id)}
-                                                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTitle(item.task_id); if (e.key === 'Escape') setEditingTitleTaskId(null); }}
+                                                                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditingTitleTaskId(null); }}
                                                                         maxLength={200}
                                                                         autoFocus
                                                                         className="w-full px-2 py-1 rounded border border-blue-400 dark:border-blue-500 bg-white dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1740,7 +1740,7 @@ export default function Backtest() {
                                                                 ) : (
                                                                     <span
                                                                         className="text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                                                                        onClick={() => handleStartEditTitle(item.task_id, item.title)}
+                                                                        onClick={(e) => { e.stopPropagation(); handleStartEditTitle(item.task_id, item.title); }}
                                                                         title="클릭하여 제목 수정"
                                                                     >
                                                                         {item.title || <span className="text-slate-400 dark:text-slate-500 italic text-xs">-</span>}
@@ -1819,7 +1819,7 @@ export default function Backtest() {
                                                                     value={editingTitleValue}
                                                                     onChange={(e) => setEditingTitleValue(e.target.value)}
                                                                     onBlur={() => handleSaveTitle(item.task_id)}
-                                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTitle(item.task_id); if (e.key === 'Escape') setEditingTitleTaskId(null); }}
+                                                                    onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setEditingTitleTaskId(null); }}
                                                                     maxLength={200}
                                                                     autoFocus
                                                                     className="w-full px-2 py-1 mb-2 rounded border border-blue-400 dark:border-blue-500 bg-white dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"

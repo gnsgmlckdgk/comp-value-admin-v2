@@ -486,6 +486,11 @@ export default function BacktestOptimizer() {
     const { shouldRender: renderDeleteConfirm, isAnimatingOut: isDeleteConfirmClosing } = useModalAnimation(isDeleteConfirmModalOpen, 250);
     const [deleteTargetTaskId, setDeleteTargetTaskId] = useState(null);
 
+    // 다중 선택 삭제
+    const [selectedHistoryIds, setSelectedHistoryIds] = useState([]);
+    const [isDeleteSelectedModalOpen, setIsDeleteSelectedModalOpen] = useState(false);
+    const { shouldRender: renderDeleteSelected, isAnimatingOut: isDeleteSelectedClosing } = useModalAnimation(isDeleteSelectedModalOpen, 250);
+
     // Toast auto-hide
     useEffect(() => {
         if (!toast) return;
@@ -716,6 +721,72 @@ export default function BacktestOptimizer() {
             }
         } catch (e) {
             console.error('삭제 실패:', e);
+            setToast('삭제 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 다중 선택 핸들러
+    const handleHistorySelect = (taskId) => {
+        if (selectedHistoryIds.includes(taskId)) {
+            setSelectedHistoryIds(selectedHistoryIds.filter(id => id !== taskId));
+        } else {
+            setSelectedHistoryIds([...selectedHistoryIds, taskId]);
+        }
+    };
+
+    const handleSelectAll = () => {
+        const allIds = historyList.map(item => item.task_id);
+        setSelectedHistoryIds(allIds);
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedHistoryIds([]);
+    };
+
+    const handleDeleteSelected = () => {
+        if (selectedHistoryIds.length === 0) {
+            setToast('삭제할 항목을 선택해주세요.');
+            return;
+        }
+        setIsDeleteSelectedModalOpen(true);
+    };
+
+    const handleConfirmDeleteSelected = async () => {
+        setIsDeleteSelectedModalOpen(false);
+
+        setLoading(true);
+        try {
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const taskId of selectedHistoryIds) {
+                try {
+                    const { data, error } = await send(`/dart/api/backtest/optimizer/result/${taskId}`, {}, 'DELETE');
+                    if (error || !data?.success) {
+                        failCount++;
+                    } else {
+                        successCount++;
+                    }
+                } catch (e) {
+                    failCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                setToast(`${successCount}개 항목이 삭제되었습니다.${failCount > 0 ? ` (${failCount}개 실패)` : ''}`);
+                await fetchHistory();
+                setSelectedHistoryIds([]);
+                if (selectedHistoryIds.includes(selectedDetailTaskId)) {
+                    setSelectedDetailTaskId(null);
+                    setDetailResult(null);
+                }
+            } else {
+                setToast('삭제에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error('선택 삭제 실패:', e);
             setToast('삭제 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
@@ -2338,6 +2409,29 @@ export default function BacktestOptimizer() {
                             </Button>
                         </div>
 
+                        {/* 선택 상태 배너 */}
+                        {selectedHistoryIds.length > 0 && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-blue-700 dark:text-blue-300">
+                                        {selectedHistoryIds.length}개 항목 선택됨
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button size="sm" onClick={handleDeselectAll}>
+                                            선택 취소
+                                        </Button>
+                                        <Button
+                                            variant="danger"
+                                            size="sm"
+                                            onClick={handleDeleteSelected}
+                                        >
+                                            선택 삭제
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {historyList.length === 0 ? (
                             <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                                 이력이 없습니다.
@@ -2349,9 +2443,17 @@ export default function BacktestOptimizer() {
                                     {historyList.map((item) => (
                                         <div
                                             key={item.task_id}
-                                            className="border border-slate-200 dark:border-slate-600 rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                            className={`border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selectedHistoryIds.includes(item.task_id) ? 'border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-slate-200 dark:border-slate-600'}`}
                                         >
-                                            {/* 제목 */}
+                                            {/* 체크박스 + 제목 */}
+                                            <div className="flex items-start gap-2 mb-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedHistoryIds.includes(item.task_id)}
+                                                    onChange={() => handleHistorySelect(item.task_id)}
+                                                    className="w-4 h-4 mt-1 cursor-pointer shrink-0"
+                                                />
+                                                <div className="flex-1 min-w-0">
                                             {editingTitleTaskId === item.task_id ? (
                                                 <input
                                                     type="text"
@@ -2373,6 +2475,8 @@ export default function BacktestOptimizer() {
                                                     {item.title || <span className="text-slate-400 dark:text-slate-500 italic text-xs">제목 없음 (클릭하여 추가)</span>}
                                                 </div>
                                             )}
+                                                </div>
+                                            </div>
                                             <div className="flex items-center justify-between mb-3">
                                                 {getStatusBadge(item.status)}
                                                 <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -2474,6 +2578,22 @@ export default function BacktestOptimizer() {
                                     <table className="w-full text-sm min-w-[900px]">
                                         <thead>
                                             <tr className="bg-slate-100 dark:bg-slate-700">
+                                                <th className="px-3 py-3 text-left w-10">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 cursor-pointer"
+                                                        checked={historyList.length > 0 && selectedHistoryIds.length === historyList.length}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                handleSelectAll();
+                                                            } else {
+                                                                handleDeselectAll();
+                                                            }
+                                                        }}
+                                                        disabled={historyList.length === 0}
+                                                        title="전체 선택/해제"
+                                                    />
+                                                </th>
                                                 <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">상태</th>
                                                 <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap min-w-[120px]">제목</th>
                                                 <th className="px-3 py-3 text-left font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">코인</th>
@@ -2491,7 +2611,15 @@ export default function BacktestOptimizer() {
                                             {historyList.map((item) => {
                                                 const runStatus = item.status === 'running' ? historyRunningStatuses[item.task_id] : null;
                                                 return (
-                                                <tr key={item.task_id} className={`border-b border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 ${item.status === 'running' ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                                <tr key={item.task_id} className={`border-b border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selectedHistoryIds.includes(item.task_id) ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''} ${item.status === 'running' ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedHistoryIds.includes(item.task_id)}
+                                                            onChange={() => handleHistorySelect(item.task_id)}
+                                                            className="w-4 h-4 cursor-pointer"
+                                                        />
+                                                    </td>
                                                     <td className="px-3 py-3 whitespace-nowrap">
                                                         <div className="flex flex-col gap-1">
                                                             {getStatusBadge(item.status)}
@@ -3181,6 +3309,42 @@ export default function BacktestOptimizer() {
                                 variant="danger"
                                 onClick={handleConfirmDelete}
                             >
+                                삭제
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 선택 삭제 확인 모달 */}
+            {renderDeleteSelected && (
+                <div
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isDeleteSelectedClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`} style={{ animationDuration: '0.25s' }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsDeleteSelectedModalOpen(false);
+                    }}
+                >
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md animate__animated ${isDeleteSelectedClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                선택 항목 삭제
+                            </h3>
+                        </div>
+
+                        <div className="px-6 py-4 space-y-4">
+                            <p className="text-slate-700 dark:text-slate-300">
+                                선택한 {selectedHistoryIds.length}개의 옵티마이저 결과를 삭제하시겠습니까?
+                            </p>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                ⚠️ 삭제된 데이터는 복구할 수 없습니다.
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end">
+                            <Button variant="secondary" onClick={() => setIsDeleteSelectedModalOpen(false)}>
+                                취소
+                            </Button>
+                            <Button variant="danger" onClick={handleConfirmDeleteSelected}>
                                 삭제
                             </Button>
                         </div>

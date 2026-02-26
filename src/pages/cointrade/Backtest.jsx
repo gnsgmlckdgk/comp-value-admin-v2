@@ -182,6 +182,7 @@ export default function Backtest() {
 
     // 이력 탭 상태
     const [historyList, setHistoryList] = useState([]);
+    const [historyRunningStatuses, setHistoryRunningStatuses] = useState({});
     const [selectedHistoryIds, setSelectedHistoryIds] = useState([]);
     const [compareResults, setCompareResults] = useState([]);
     const [selectedDetailTaskId, setSelectedDetailTaskId] = useState(null);
@@ -297,6 +298,37 @@ export default function Backtest() {
 
         return () => clearInterval(intervalId);
     }, [runningTaskId, taskStatus?.status, activeTab]);
+
+    // 이력 탭에서 실행 중인 항목 진행률 폴링
+    useEffect(() => {
+        if (activeTab !== 'history') return;
+
+        const runningItems = historyList.filter(item => item.status === 'running');
+        if (runningItems.length === 0) return;
+
+        const fetchRunningStatuses = async () => {
+            const newStatuses = {};
+            for (const item of runningItems) {
+                try {
+                    const { data, error } = await send(`/dart/api/backtest/status/${item.task_id}`, {}, 'GET');
+                    if (!error && data?.success && data?.response) {
+                        newStatuses[item.task_id] = data.response;
+                        if (data.response.status === 'completed' || data.response.status === 'failed') {
+                            fetchHistory();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error('이력 상태 조회 실패:', e);
+                }
+            }
+            setHistoryRunningStatuses(prev => ({ ...prev, ...newStatuses }));
+        };
+
+        fetchRunningStatuses();
+        const intervalId = setInterval(fetchRunningStatuses, 5000);
+        return () => clearInterval(intervalId);
+    }, [activeTab, historyList]);
 
     // ESC 키로 모달 닫기
     useEffect(() => {
@@ -601,6 +633,33 @@ export default function Backtest() {
                 setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
                 localStorage.removeItem('backtest_running_task_id');
                 localStorage.removeItem('backtest_total_count');
+            }
+        } catch (e) {
+            console.error('백테스트 취소 실패:', e);
+            setToast('취소 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 이력 탭에서 백테스트 중지
+    const handleCancelHistoryTask = async (taskId) => {
+        if (!taskId) return;
+        if (!confirm('실행 중인 백테스트를 취소하시겠습니까?')) return;
+
+        setLoading(true);
+        try {
+            const { data, error } = await send(`/dart/api/backtest/cancel/${taskId}`, {}, 'POST');
+            if (error) {
+                setToast('취소 실패: ' + error);
+            } else if (data?.success) {
+                setToast('백테스트가 취소되었습니다.');
+                if (taskId === runningTaskId) {
+                    setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
+                    localStorage.removeItem('backtest_running_task_id');
+                    localStorage.removeItem('backtest_total_count');
+                }
+                fetchHistory();
             }
         } catch (e) {
             console.error('백테스트 취소 실패:', e);
@@ -1578,6 +1637,7 @@ export default function Backtest() {
                                                                 title="전체 선택/해제"
                                                             />
                                                         </th>
+                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-20">상태</th>
                                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 min-w-[200px]">Task ID</th>
                                                         <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-20">종목 수</th>
                                                         <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 min-w-[240px]">기간</th>
@@ -1591,11 +1651,13 @@ export default function Backtest() {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                    {historyList.map((item) => (
+                                                    {historyList.map((item) => {
+                                                        const runStatus = item.status === 'running' ? historyRunningStatuses[item.task_id] : null;
+                                                        return (
                                                         <tr
                                                             key={item.task_id}
-                                                            className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
-                                                            onDoubleClick={() => handleViewDetail(item.task_id)}
+                                                            className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer ${item.status === 'running' ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                                                            onDoubleClick={() => item.status === 'completed' ? handleViewDetail(item.task_id) : null}
                                                         >
                                                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                                 <input
@@ -1605,44 +1667,83 @@ export default function Backtest() {
                                                                     className="w-4 h-4"
                                                                 />
                                                             </td>
+                                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                                <div className="flex flex-col gap-1">
+                                                                    {item.status === 'running' ? (
+                                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 w-fit">실행 중</span>
+                                                                    ) : item.status === 'failed' ? (
+                                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 w-fit">실패</span>
+                                                                    ) : item.status === 'cancelled' ? (
+                                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 w-fit">취소</span>
+                                                                    ) : (
+                                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 w-fit">완료</span>
+                                                                    )}
+                                                                    {runStatus && (
+                                                                        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                                                            {runStatus.progress || `${runStatus.current_step || 0}/${runStatus.total_steps || '?'}`}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
                                                             <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                                                                 <TogglableTaskId taskId={item.task_id} maxLength={20} />
                                                             </td>
                                                             <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100">{item.coin_count}</td>
                                                             <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100 text-xs whitespace-nowrap">{item.start_date} ~ {item.end_date}</td>
-                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                                {item.total_return.toFixed(2)}%
+                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.status !== 'completed' ? 'text-slate-400 dark:text-slate-500' : item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                {item.status === 'completed' ? `${item.total_return.toFixed(2)}%` : '-'}
                                                             </td>
-                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.invested_return != null ? (item.invested_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
-                                                                {item.invested_return != null ? `${item.invested_return.toFixed(2)}%` : '-'}
+                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.status !== 'completed' ? 'text-slate-400 dark:text-slate-500' : item.invested_return != null ? (item.invested_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
+                                                                {item.status === 'completed' && item.invested_return != null ? `${item.invested_return.toFixed(2)}%` : '-'}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100 whitespace-nowrap">{item.win_rate.toFixed(2)}%</td>
-                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.total_trades}</td>
-                                                            <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 whitespace-nowrap">{(item.max_drawdown * 100).toFixed(2)}%</td>
-                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{item.sharpe_ratio.toFixed(2)}</td>
+                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                                                                {item.status === 'completed' ? `${item.win_rate.toFixed(2)}%` : '-'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">
+                                                                {item.status === 'completed' ? item.total_trades : '-'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 whitespace-nowrap">
+                                                                {item.status === 'completed' ? `${(item.max_drawdown * 100).toFixed(2)}%` : '-'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">
+                                                                {item.status === 'completed' ? item.sharpe_ratio.toFixed(2) : '-'}
+                                                            </td>
                                                             <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                                                                <button
-                                                                    onClick={() => handleDeleteResult(item.task_id)}
-                                                                    className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
-                                                                >
-                                                                    삭제
-                                                                </button>
+                                                                {item.status === 'running' ? (
+                                                                    <button
+                                                                        onClick={() => handleCancelHistoryTask(item.task_id)}
+                                                                        disabled={loading}
+                                                                        className="text-amber-600 dark:text-amber-200 hover:text-amber-700 dark:hover:text-white bg-amber-50 dark:bg-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
+                                                                    >
+                                                                        중지
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => handleDeleteResult(item.task_id)}
+                                                                        className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
+                                                                    >
+                                                                        삭제
+                                                                    </button>
+                                                                )}
                                                             </td>
                                                         </tr>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>
 
                                         {/* 모바일 카드 뷰 */}
                                         <div className="md:hidden p-4 space-y-4">
-                                            {historyList.map((item) => (
+                                            {historyList.map((item) => {
+                                                const runStatus = item.status === 'running' ? historyRunningStatuses[item.task_id] : null;
+                                                return (
                                                 <div
                                                     key={item.task_id}
-                                                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 shadow-sm space-y-3 cursor-pointer"
-                                                    onDoubleClick={() => handleViewDetail(item.task_id)}
+                                                    className={`bg-white dark:bg-slate-800 border rounded-lg p-4 shadow-sm space-y-3 cursor-pointer ${item.status === 'running' ? 'border-blue-300 dark:border-blue-700' : 'border-slate-200 dark:border-slate-700'}`}
+                                                    onDoubleClick={() => item.status === 'completed' ? handleViewDetail(item.task_id) : null}
                                                 >
-                                                    {/* 체크박스와 Task ID */}
+                                                    {/* 체크박스, 상태, Task ID */}
                                                     <div className="flex items-start gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
                                                         <div onClick={(e) => e.stopPropagation()}>
                                                             <input
@@ -1653,8 +1754,21 @@ export default function Backtest() {
                                                             />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                                                Task ID
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                {item.status === 'running' ? (
+                                                                    <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">실행 중</span>
+                                                                ) : item.status === 'failed' ? (
+                                                                    <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">실패</span>
+                                                                ) : item.status === 'cancelled' ? (
+                                                                    <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">취소</span>
+                                                                ) : (
+                                                                    <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">완료</span>
+                                                                )}
+                                                                {runStatus && (
+                                                                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                                                        {runStatus.progress || `${runStatus.current_step || 0}/${runStatus.total_steps || '?'}`}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <div className="font-mono text-xs text-slate-600 dark:text-slate-400">
                                                                 <TogglableTaskId taskId={item.task_id} maxLength={25} />
@@ -1663,48 +1777,47 @@ export default function Backtest() {
                                                     </div>
 
                                                     {/* 주요 지표 - 2열 그리드 */}
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div>
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                                                총 수익률
+                                                    {item.status === 'completed' ? (
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">총 수익률</div>
+                                                                <div className={`text-lg font-bold ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                    {item.total_return.toFixed(2)}%
+                                                                </div>
                                                             </div>
-                                                            <div className={`text-lg font-bold ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                                {item.total_return.toFixed(2)}%
+                                                            <div>
+                                                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">매수금 수익률</div>
+                                                                <div className={`text-lg font-bold ${item.invested_return != null ? (item.invested_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
+                                                                    {item.invested_return != null ? `${item.invested_return.toFixed(2)}%` : '-'}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                                                매수금 수익률
+                                                            <div>
+                                                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">승률</div>
+                                                                <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{item.win_rate.toFixed(2)}%</div>
                                                             </div>
-                                                            <div className={`text-lg font-bold ${item.invested_return != null ? (item.invested_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
-                                                                {item.invested_return != null ? `${item.invested_return.toFixed(2)}%` : '-'}
+                                                            <div>
+                                                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">거래 횟수</div>
+                                                                <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{item.total_trades}</div>
                                                             </div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                                                승률
-                                                            </div>
-                                                            <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                                                                {item.win_rate.toFixed(2)}%
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                                                거래 횟수
-                                                            </div>
-                                                            <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                                                                {item.total_trades}
+                                                            <div>
+                                                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">종목 수</div>
+                                                                <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{item.coin_count}</div>
                                                             </div>
                                                         </div>
-                                                        <div>
-                                                            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                                                종목 수
+                                                    ) : (
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">종목 수</div>
+                                                                <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{item.coin_count}</div>
                                                             </div>
-                                                            <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                                                                {item.coin_count}
+                                                            <div>
+                                                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">생성일시</div>
+                                                                <div className="text-sm text-slate-700 dark:text-slate-300">
+                                                                    {item.created_at ? new Date(item.created_at).toLocaleString('ko-KR') : '-'}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    )}
 
                                                     {/* 기타 정보 */}
                                                     <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -1714,31 +1827,46 @@ export default function Backtest() {
                                                                 {item.start_date} ~ {item.end_date}
                                                             </span>
                                                         </div>
-                                                        <div className="flex justify-between text-sm">
-                                                            <span className="text-slate-600 dark:text-slate-400">MDD</span>
-                                                            <span className="text-red-600 dark:text-red-400 font-medium">
-                                                                {(item.max_drawdown * 100).toFixed(2)}%
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between text-sm">
-                                                            <span className="text-slate-600 dark:text-slate-400">샤프 지수</span>
-                                                            <span className="text-slate-900 dark:text-slate-100 font-medium">
-                                                                {item.sharpe_ratio.toFixed(2)}
-                                                            </span>
-                                                        </div>
+                                                        {item.status === 'completed' && (
+                                                            <>
+                                                                <div className="flex justify-between text-sm">
+                                                                    <span className="text-slate-600 dark:text-slate-400">MDD</span>
+                                                                    <span className="text-red-600 dark:text-red-400 font-medium">
+                                                                        {(item.max_drawdown * 100).toFixed(2)}%
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex justify-between text-sm">
+                                                                    <span className="text-slate-600 dark:text-slate-400">샤프 지수</span>
+                                                                    <span className="text-slate-900 dark:text-slate-100 font-medium">
+                                                                        {item.sharpe_ratio.toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
 
                                                     {/* 액션 버튼 */}
                                                     <div className="flex gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={() => handleDeleteResult(item.task_id)}
-                                                            className="flex-1 px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-red-900/30 text-red-600 dark:text-red-200 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/50 transition-colors"
-                                                        >
-                                                            삭제
-                                                        </button>
+                                                        {item.status === 'running' ? (
+                                                            <button
+                                                                onClick={() => handleCancelHistoryTask(item.task_id)}
+                                                                disabled={loading}
+                                                                className="flex-1 px-4 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/30 text-amber-600 dark:text-amber-200 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/50 transition-colors disabled:opacity-50"
+                                                            >
+                                                                중지
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleDeleteResult(item.task_id)}
+                                                                className="flex-1 px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-red-900/30 text-red-600 dark:text-red-200 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/50 transition-colors"
+                                                            >
+                                                                삭제
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </>
                                 )}

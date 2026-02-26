@@ -2766,7 +2766,7 @@ export default function BacktestOptimizer() {
                         if (e.target === e.currentTarget) setIsDetailModalOpen(false);
                     }}
                 >
-                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col my-4 animate__animated ${isDetailModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] sm:max-h-[90vh] overflow-hidden flex flex-col my-4 animate__animated ${isDetailModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-3">

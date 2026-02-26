@@ -165,6 +165,23 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
         });
     }, [getFilteredKeys]);
 
+    const showCpu = filter === 'all' || filter === 'cpu';
+    const showMem = filter === 'all' || filter === 'mem';
+
+    // 범례에 전달할 payload 생성 (Recharts Legend 밖으로 빼기 위해)
+    const legendPayload = useMemo(() => {
+        const items = [];
+        if (showCpu) podNames.forEach((name, i) => items.push({
+            dataKey: `${name}_cpu`, color: POD_COLORS[i % POD_COLORS.length],
+        }));
+        if (showMem) podNames.forEach((name, i) => items.push({
+            dataKey: `${name}_mem`, color: POD_COLORS[i % POD_COLORS.length],
+        }));
+        if (hasGpu && showCpu) items.push({ dataKey: 'gpu', color: '#34d399' });
+        if (hasGpu && showMem) items.push({ dataKey: 'gpu_vram', color: '#34d399' });
+        return items;
+    }, [showCpu, showMem, podNames, hasGpu]);
+
     if (chartData.length < 2) {
         return (
             <div className="flex items-center justify-center h-48 text-slate-400 dark:text-slate-600 text-sm">
@@ -188,23 +205,6 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
     // 고정 30분 윈도우: 현재 시각 기준 오른쪽 정렬
     const now = chartData.length > 0 ? chartData[chartData.length - 1].time : Date.now();
     const thirtyMinAgo = now - 30 * 60 * 1000;
-
-    const showCpu = filter === 'all' || filter === 'cpu';
-    const showMem = filter === 'all' || filter === 'mem';
-
-    // 범례에 전달할 payload 생성 (Recharts Legend 밖으로 빼기 위해)
-    const legendPayload = useMemo(() => {
-        const items = [];
-        if (showCpu) podNames.forEach((name, i) => items.push({
-            dataKey: `${name}_cpu`, color: POD_COLORS[i % POD_COLORS.length],
-        }));
-        if (showMem) podNames.forEach((name, i) => items.push({
-            dataKey: `${name}_mem`, color: POD_COLORS[i % POD_COLORS.length],
-        }));
-        if (hasGpu && showCpu) items.push({ dataKey: 'gpu', color: '#34d399' });
-        if (hasGpu && showMem) items.push({ dataKey: 'gpu_vram', color: '#34d399' });
-        return items;
-    }, [showCpu, showMem, podNames, hasGpu]);
 
     return (
         <div>

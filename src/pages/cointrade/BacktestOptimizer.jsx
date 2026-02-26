@@ -452,6 +452,12 @@ export default function BacktestOptimizer() {
         }, 1);
     }, [paramRanges]);
 
+    // TPE 추천 실행 횟수 계산
+    const recommendedRuns = useMemo(() => {
+        const paramCount = Object.keys(paramRanges).length;
+        return paramCount * 50; // 높은 신뢰도 기준
+    }, [paramRanges]);
+
     // 실행 제목
     const [runTitle, setRunTitle] = useState('');
 
@@ -1915,32 +1921,27 @@ export default function BacktestOptimizer() {
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
                             옵티마이저 설정
                         </h2>
-                        {/* 전체 조합 수 & 커버리지 표시 */}
+                        {/* TPE 추천 실행 횟수 표시 */}
                         <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
-                            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+                            <div className="flex flex-col gap-1 text-sm">
                                 <span className="text-slate-600 dark:text-slate-400">
-                                    전체 파라미터 조합 수: <span className="font-semibold text-slate-800 dark:text-slate-200">{totalCombinations.toLocaleString()}</span>개
+                                    탐색 방식: <span className="font-semibold text-slate-800 dark:text-slate-200">TPE (Bayesian Optimization)</span>
                                 </span>
                                 <span className="text-slate-600 dark:text-slate-400">
-                                    현재 설정 커버리지: <span className={`font-semibold ${
-                                        maxRuns >= totalCombinations ? 'text-emerald-600 dark:text-emerald-400' :
-                                        (maxRuns / totalCombinations) >= 0.5 ? 'text-blue-600 dark:text-blue-400' :
-                                        (maxRuns / totalCombinations) >= 0.1 ? 'text-amber-600 dark:text-amber-400' :
-                                        'text-red-600 dark:text-red-400'
-                                    }`}>
-                                        {maxRuns >= totalCombinations ? '100%' :
-                                         (maxRuns / totalCombinations * 100) >= 0.01 ?
-                                         `${(maxRuns / totalCombinations * 100).toFixed(2)}%` :
-                                         `${(maxRuns / totalCombinations * 100).toFixed(4)}%`
-                                        }
-                                    </span>
-                                    {' '}({maxRuns.toLocaleString()} / {totalCombinations.toLocaleString()})
+                                    파라미터 <span className="font-semibold text-slate-800 dark:text-slate-200">{Object.keys(paramRanges).length}</span>종 · 추천 실행 횟수: <span className="font-semibold text-slate-800 dark:text-slate-200">{recommendedRuns.toLocaleString()}</span>회 <span className="text-xs">(높은 신뢰도)</span>
                                 </span>
-                                {maxRuns < totalCombinations && (
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                                        전체 탐색에 <span className="font-medium">{totalCombinations.toLocaleString()}</span>회 필요
-                                    </span>
-                                )}
+                                <span className="text-slate-600 dark:text-slate-400">
+                                    현재 설정: <span className={`font-semibold ${
+                                        maxRuns >= recommendedRuns ? 'text-emerald-600 dark:text-emerald-400' :
+                                        maxRuns >= recommendedRuns * 0.5 ? 'text-amber-600 dark:text-amber-400' :
+                                        'text-orange-600 dark:text-orange-400'
+                                    }`}>{maxRuns.toLocaleString()}회</span>
+                                    {' '}<span className={`text-xs ${
+                                        maxRuns >= recommendedRuns ? 'text-emerald-600 dark:text-emerald-400' :
+                                        maxRuns >= recommendedRuns * 0.5 ? 'text-amber-600 dark:text-amber-400' :
+                                        'text-orange-600 dark:text-orange-400'
+                                    }`}>(추천 대비 {(maxRuns / recommendedRuns * 100).toFixed(1)}%)</span>
+                                </span>
                             </div>
                         </div>
 

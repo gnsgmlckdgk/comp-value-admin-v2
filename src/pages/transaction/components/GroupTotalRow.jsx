@@ -170,6 +170,9 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
 
             {/* 매수일자 (비워둠) */}
             <Td />
+
+            {/* 비고 (비워둠) */}
+            <Td />
         </tr>
     );
 }

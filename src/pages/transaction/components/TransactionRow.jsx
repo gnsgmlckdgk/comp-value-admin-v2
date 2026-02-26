@@ -156,6 +156,13 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
                     {fmtDate(row.buyDate)}
                 </div>
             </Td>
+
+            {/* 비고 */}
+            <Td>
+                <div className="h-9 flex items-center text-slate-600 dark:text-slate-300 text-xs truncate max-w-[140px]" title={row.rmk || ''}>
+                    {row.rmk || ''}
+                </div>
+            </Td>
         </tr>
     );
 }

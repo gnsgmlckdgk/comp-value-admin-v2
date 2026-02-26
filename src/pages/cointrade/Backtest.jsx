@@ -188,6 +188,14 @@ export default function Backtest() {
     const [selectedDetailTaskId, setSelectedDetailTaskId] = useState(null);
     const [detailResult, setDetailResult] = useState(null);
 
+    // 실행 제목
+    const [runTitle, setRunTitle] = useState('');
+
+    // 인라인 제목 수정
+    const [editingTitleTaskId, setEditingTitleTaskId] = useState(null);
+    const [editingTitleValue, setEditingTitleValue] = useState('');
+
+
     // Toast auto-hide
     useEffect(() => {
         if (!toast) return;
@@ -402,6 +410,31 @@ export default function Backtest() {
         }
     };
 
+    // 인라인 제목 수정 핸들러
+    const handleStartEditTitle = (taskId, currentTitle) => {
+        setEditingTitleTaskId(taskId);
+        setEditingTitleValue(currentTitle || '');
+    };
+
+    const handleSaveTitle = async (taskId) => {
+        const newTitle = editingTitleValue.trim() || null;
+        setEditingTitleTaskId(null);
+
+        try {
+            const { data, error } = await send(`/dart/api/backtest/result/${taskId}`, { title: newTitle }, 'PATCH');
+            if (error) {
+                setToast('제목 수정 실패: ' + error);
+            } else {
+                setHistoryList(prev => prev.map(item =>
+                    item.task_id === taskId ? { ...item, title: newTitle } : item
+                ));
+            }
+        } catch (e) {
+            console.error('제목 수정 실패:', e);
+            setToast('제목 수정 중 오류가 발생했습니다.');
+        }
+    };
+
     const handleDatePreset = (preset) => {
         const today = new Date();
         let start = new Date();
@@ -536,6 +569,7 @@ export default function Backtest() {
                 coin_codes: coinCodes,
                 start_date: startDate,
                 end_date: endDate,
+                title: runTitle.trim() || null,
                 config: {
                     initial_capital: backtestConfig.initial_capital,
                     buy_amount_per_coin: backtestConfig.buy_amount_per_coin,
@@ -576,6 +610,7 @@ export default function Backtest() {
                 }
 
                 setToast('백테스트가 시작되었습니다.');
+                setRunTitle('');
             }
         } catch (e) {
             console.error('백테스트 실행 실패:', e);
@@ -1639,6 +1674,7 @@ export default function Backtest() {
                                                         </th>
                                                         <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-20">상태</th>
                                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 min-w-[200px]">Task ID</th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 min-w-[150px]">제목</th>
                                                         <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-20">종목 수</th>
                                                         <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 min-w-[240px]">기간</th>
                                                         <th className="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 w-24">총 수익률</th>
@@ -1687,6 +1723,29 @@ export default function Backtest() {
                                                             </td>
                                                             <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                                                                 <TogglableTaskId taskId={item.task_id} maxLength={20} />
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                {editingTitleTaskId === item.task_id ? (
+                                                                    <input
+                                                                        type="text"
+                                                                        value={editingTitleValue}
+                                                                        onChange={(e) => setEditingTitleValue(e.target.value)}
+                                                                        onBlur={() => handleSaveTitle(item.task_id)}
+                                                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTitle(item.task_id); if (e.key === 'Escape') setEditingTitleTaskId(null); }}
+                                                                        maxLength={200}
+                                                                        autoFocus
+                                                                        className="w-full px-2 py-1 rounded border border-blue-400 dark:border-blue-500 bg-white dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        placeholder="제목 입력..."
+                                                                    />
+                                                                ) : (
+                                                                    <span
+                                                                        className="text-sm text-slate-700 dark:text-slate-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                                                                        onClick={() => handleStartEditTitle(item.task_id, item.title)}
+                                                                        title="클릭하여 제목 수정"
+                                                                    >
+                                                                        {item.title || <span className="text-slate-400 dark:text-slate-500 italic text-xs">-</span>}
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                             <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100">{item.coin_count}</td>
                                                             <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100 text-xs whitespace-nowrap">{item.start_date} ~ {item.end_date}</td>
@@ -1743,7 +1802,7 @@ export default function Backtest() {
                                                     className={`bg-white dark:bg-slate-800 border rounded-lg p-4 shadow-sm space-y-3 cursor-pointer ${item.status === 'running' ? 'border-blue-300 dark:border-blue-700' : 'border-slate-200 dark:border-slate-700'}`}
                                                     onDoubleClick={() => item.status === 'completed' ? handleViewDetail(item.task_id) : null}
                                                 >
-                                                    {/* 체크박스, 상태, Task ID */}
+                                                    {/* 체크박스 + 제목 */}
                                                     <div className="flex items-start gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
                                                         <div onClick={(e) => e.stopPropagation()}>
                                                             <input
@@ -1754,6 +1813,27 @@ export default function Backtest() {
                                                             />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
+                                                            {editingTitleTaskId === item.task_id ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={editingTitleValue}
+                                                                    onChange={(e) => setEditingTitleValue(e.target.value)}
+                                                                    onBlur={() => handleSaveTitle(item.task_id)}
+                                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTitle(item.task_id); if (e.key === 'Escape') setEditingTitleTaskId(null); }}
+                                                                    maxLength={200}
+                                                                    autoFocus
+                                                                    className="w-full px-2 py-1 mb-2 rounded border border-blue-400 dark:border-blue-500 bg-white dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                    placeholder="제목 입력..."
+                                                                />
+                                                            ) : (
+                                                                <div
+                                                                    className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 min-h-[20px]"
+                                                                    onClick={() => handleStartEditTitle(item.task_id, item.title)}
+                                                                    title="클릭하여 제목 수정"
+                                                                >
+                                                                    {item.title || <span className="text-slate-400 dark:text-slate-500 italic text-xs">제목 없음 (클릭하여 추가)</span>}
+                                                                </div>
+                                                            )}
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 {item.status === 'running' ? (
                                                                     <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">실행 중</span>
@@ -2099,6 +2179,21 @@ export default function Backtest() {
                                                 />
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* 제목 입력 */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                            제목 (선택)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={runTitle}
+                                            onChange={(e) => setRunTitle(e.target.value)}
+                                            placeholder="실행 목적이나 메모를 입력하세요"
+                                            maxLength={200}
+                                            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
                                     </div>
 
                                     <div className="text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-3">

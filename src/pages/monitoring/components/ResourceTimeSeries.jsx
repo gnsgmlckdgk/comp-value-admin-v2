@@ -33,10 +33,10 @@ function CustomLegend({ payload = [], hiddenKeys, onToggle }) {
     if (!groups.length) return null;
 
     return (
-        <div className="flex flex-col items-center gap-0.5 pt-1 text-[10px] select-none">
+        <div className="flex flex-col items-end gap-0.5 text-[10px] select-none">
             {groups.map(g => (
                 <div key={g.pod} className="inline-flex items-center">
-                    <span className="text-slate-500 dark:text-slate-400 text-right font-mono w-[8.5rem] shrink-0 pr-2 truncate">
+                    <span className="text-slate-500 dark:text-slate-400 text-right font-mono max-w-[7rem] shrink-0 pr-1.5 truncate" title={g.pod}>
                         {g.pod}
                     </span>
                     {g.items.map(item => {
@@ -192,98 +192,118 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
     const showCpu = filter === 'all' || filter === 'cpu';
     const showMem = filter === 'all' || filter === 'mem';
 
+    // 범례에 전달할 payload 생성 (Recharts Legend 밖으로 빼기 위해)
+    const legendPayload = useMemo(() => {
+        const items = [];
+        if (showCpu) podNames.forEach((name, i) => items.push({
+            dataKey: `${name}_cpu`, color: POD_COLORS[i % POD_COLORS.length],
+        }));
+        if (showMem) podNames.forEach((name, i) => items.push({
+            dataKey: `${name}_mem`, color: POD_COLORS[i % POD_COLORS.length],
+        }));
+        if (hasGpu && showCpu) items.push({ dataKey: 'gpu', color: '#34d399' });
+        if (hasGpu && showMem) items.push({ dataKey: 'gpu_vram', color: '#34d399' });
+        return items;
+    }, [showCpu, showMem, podNames, hasGpu]);
+
     return (
         <div>
-            <div style={{ width: '100%', height: '220px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                        <XAxis
-                            dataKey="time"
-                            type="number"
-                            domain={[thirtyMinAgo, now]}
-                            tick={{ fontSize: 10, fill: tickColor }}
-                            tickFormatter={formatTime}
-                            interval="preserveStartEnd"
-                            stroke={axisColor}
-                        />
-                        <YAxis
-                            tick={{ fontSize: 10, fill: tickColor }}
-                            domain={[0, 100]}
-                            tickFormatter={v => `${v}%`}
-                            stroke={axisColor}
-                        />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: tooltipBg,
-                                border: `1px solid ${tooltipBorder}`,
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                color: tooltipText,
-                            }}
-                            labelFormatter={formatTime}
-                            formatter={(value, name) => [`${value}%`, name]}
-                        />
-                        <Legend content={<CustomLegend hiddenKeys={hiddenKeys} onToggle={handleLegendClick} />} />
-                        {/* CPU lines — 실선 */}
-                        {showCpu && podNames.map((name, i) => (
-                            <Line
-                                key={`${name}_cpu`}
-                                type="monotone"
-                                dataKey={`${name}_cpu`}
-                                name={`${name} CPU`}
-                                stroke={POD_COLORS[i % POD_COLORS.length]}
-                                strokeWidth={2}
-                                dot={false}
-                                connectNulls
-                                hide={hiddenKeys.has(`${name}_cpu`)}
+            <div className="flex gap-1">
+                {/* 차트 영역 */}
+                <div className="flex-1 min-w-0" style={{ height: '220px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                            <XAxis
+                                dataKey="time"
+                                type="number"
+                                domain={[thirtyMinAgo, now]}
+                                tick={{ fontSize: 10, fill: tickColor }}
+                                tickFormatter={formatTime}
+                                interval="preserveStartEnd"
+                                stroke={axisColor}
                             />
-                        ))}
-                        {/* Memory lines — 점선 */}
-                        {showMem && podNames.map((name, i) => (
-                            <Line
-                                key={`${name}_mem`}
-                                type="monotone"
-                                dataKey={`${name}_mem`}
-                                name={`${name} MEM`}
-                                stroke={POD_COLORS[i % POD_COLORS.length]}
-                                strokeWidth={1.5}
-                                strokeDasharray="4 3"
-                                dot={false}
-                                connectNulls
-                                hide={hiddenKeys.has(`${name}_mem`)}
+                            <YAxis
+                                tick={{ fontSize: 10, fill: tickColor }}
+                                domain={[0, 100]}
+                                tickFormatter={v => `${v}%`}
+                                stroke={axisColor}
                             />
-                        ))}
-                        {/* GPU util line (CPU 필터) */}
-                        {hasGpu && showCpu && (
-                            <Line
-                                type="monotone"
-                                dataKey="gpu"
-                                name="GPU"
-                                stroke="#34d399"
-                                strokeWidth={2}
-                                strokeDasharray="8 4"
-                                dot={false}
-                                connectNulls
-                                hide={hiddenKeys.has('gpu')}
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: tooltipBg,
+                                    border: `1px solid ${tooltipBorder}`,
+                                    borderRadius: '8px',
+                                    fontSize: '12px',
+                                    color: tooltipText,
+                                }}
+                                labelFormatter={formatTime}
+                                formatter={(value, name) => [`${value}%`, name]}
                             />
-                        )}
-                        {/* GPU VRAM line (Memory 필터) */}
-                        {hasGpu && showMem && (
-                            <Line
-                                type="monotone"
-                                dataKey="gpu_vram"
-                                name="GPU VRAM"
-                                stroke="#34d399"
-                                strokeWidth={1.5}
-                                strokeDasharray="4 3"
-                                dot={false}
-                                connectNulls
-                                hide={hiddenKeys.has('gpu_vram')}
-                            />
-                        )}
-                    </LineChart>
-                </ResponsiveContainer>
+                            {/* CPU lines — 실선 */}
+                            {showCpu && podNames.map((name, i) => (
+                                <Line
+                                    key={`${name}_cpu`}
+                                    type="monotone"
+                                    dataKey={`${name}_cpu`}
+                                    name={`${name} CPU`}
+                                    stroke={POD_COLORS[i % POD_COLORS.length]}
+                                    strokeWidth={2}
+                                    dot={false}
+                                    connectNulls
+                                    hide={hiddenKeys.has(`${name}_cpu`)}
+                                />
+                            ))}
+                            {/* Memory lines — 점선 */}
+                            {showMem && podNames.map((name, i) => (
+                                <Line
+                                    key={`${name}_mem`}
+                                    type="monotone"
+                                    dataKey={`${name}_mem`}
+                                    name={`${name} MEM`}
+                                    stroke={POD_COLORS[i % POD_COLORS.length]}
+                                    strokeWidth={1.5}
+                                    strokeDasharray="4 3"
+                                    dot={false}
+                                    connectNulls
+                                    hide={hiddenKeys.has(`${name}_mem`)}
+                                />
+                            ))}
+                            {/* GPU util line (CPU 필터) */}
+                            {hasGpu && showCpu && (
+                                <Line
+                                    type="monotone"
+                                    dataKey="gpu"
+                                    name="GPU"
+                                    stroke="#34d399"
+                                    strokeWidth={2}
+                                    strokeDasharray="8 4"
+                                    dot={false}
+                                    connectNulls
+                                    hide={hiddenKeys.has('gpu')}
+                                />
+                            )}
+                            {/* GPU VRAM line (Memory 필터) */}
+                            {hasGpu && showMem && (
+                                <Line
+                                    type="monotone"
+                                    dataKey="gpu_vram"
+                                    name="GPU VRAM"
+                                    stroke="#34d399"
+                                    strokeWidth={1.5}
+                                    strokeDasharray="4 3"
+                                    dot={false}
+                                    connectNulls
+                                    hide={hiddenKeys.has('gpu_vram')}
+                                />
+                            )}
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+                {/* 범례 — 차트 오른쪽 사이드 */}
+                <div className="shrink-0 flex flex-col justify-center overflow-y-auto" style={{ maxHeight: '220px' }}>
+                    <CustomLegend payload={legendPayload} hiddenKeys={hiddenKeys} onToggle={handleLegendClick} />
+                </div>
             </div>
             {/* 필터 버튼 */}
             <div className="flex justify-center items-center gap-1.5 mt-1.5">

@@ -1345,6 +1345,144 @@ export default function BacktestOptimizer() {
         }
     };
 
+    const handleExportExploredTrialsCsv = (trials, targetMetTrials, taskId) => {
+        try {
+            if (!trials || trials.length === 0) return;
+            const targetMetIds = new Set(targetMetTrials?.map(t => t.trial_id) || []);
+            const paramKeys = trials[0]?.params ? Object.keys(trials[0].params) : [];
+
+            const headers = ['trial_id', '목표달성', '수익률(%)', '점수', ...paramKeys.map(k => getParamLabel(k))];
+            const rows = [...trials]
+                .sort((a, b) => b.final_score - a.final_score)
+                .map(t => {
+                    const paramValues = paramKeys.map(k => {
+                        const v = t.params?.[k];
+                        return typeof v === 'number' ? v.toFixed(2) : (v ?? '');
+                    });
+                    return [
+                        t.trial_id,
+                        targetMetIds.has(t.trial_id) ? 'Y' : 'N',
+                        t.total_return?.toFixed(2) ?? '',
+                        t.final_score?.toFixed(2) ?? '',
+                        ...paramValues
+                    ];
+                });
+
+            const escapeCsv = (v) => {
+                const s = String(v ?? '');
+                return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+            };
+            const csv = [headers.map(escapeCsv).join(','), ...rows.map(r => r.map(escapeCsv).join(','))].join('\n');
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+            const shortTaskId = taskId ? taskId.substring(0, 12) : 'unknown';
+            a.download = `explored_trials_${shortTaskId}_${timestamp}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('CSV 내보내기 실패:', e);
+            setToast('CSV 내보내기 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleExportExploredTrialsExcel = async (trials, targetMetTrials, taskId) => {
+        try {
+            if (!trials || trials.length === 0) return;
+            const targetMetIds = new Set(targetMetTrials?.map(t => t.trial_id) || []);
+            const sortedTrials = [...trials].sort((a, b) => b.final_score - a.final_score);
+            const paramKeys = sortedTrials[0]?.params ? Object.keys(sortedTrials[0].params) : [];
+
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet('전체 탐색 시행');
+
+            // 헤더
+            const headers = ['#', '목표달성', '수익률(%)', '점수', ...paramKeys.map(k => getParamLabel(k))];
+            const headerRow = ws.addRow(headers);
+            headerRow.height = 20;
+            headerRow.eachCell(cell => {
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            });
+
+            // 데이터
+            sortedTrials.forEach((trial) => {
+                const isMet = targetMetIds.has(trial.trial_id);
+                const paramValues = paramKeys.map(k => {
+                    const v = trial.params?.[k];
+                    return typeof v === 'number' ? v.toFixed(2) : (v ?? '-');
+                });
+
+                const row = ws.addRow([
+                    trial.trial_id,
+                    isMet ? 'Y' : 'N',
+                    trial.total_return?.toFixed(2) ?? '-',
+                    trial.final_score?.toFixed(2) ?? '-',
+                    ...paramValues
+                ]);
+
+                // 수익률 색상
+                if (trial.total_return != null) {
+                    row.getCell(3).font = { color: { argb: trial.total_return >= 0 ? 'FF00B050' : 'FFFF0000' } };
+                }
+
+                // 목표 달성 색상
+                row.getCell(2).font = { color: { argb: isMet ? 'FF00B050' : 'FFFF0000' }, bold: true };
+
+                // 미달 행 회색 배경
+                if (!isMet) {
+                    row.eachCell(cell => {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+                    });
+                }
+
+                // 숫자 컬럼 오른쪽 정렬
+                for (let col = 3; col <= row.cellCount; col++) {
+                    row.getCell(col).alignment = { horizontal: 'right' };
+                }
+            });
+
+            // 열 너비
+            ws.getColumn(1).width = 8;
+            ws.getColumn(2).width = 10;
+            ws.getColumn(3).width = 12;
+            ws.getColumn(4).width = 10;
+            for (let i = 5; i <= 4 + paramKeys.length; i++) {
+                ws.getColumn(i).width = 14;
+            }
+
+            // 테두리
+            ws.eachRow(row => {
+                row.eachCell(cell => {
+                    cell.border = {
+                        top: { style: 'thin' }, left: { style: 'thin' },
+                        bottom: { style: 'thin' }, right: { style: 'thin' }
+                    };
+                });
+            });
+
+            const buf = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+            const shortTaskId = taskId ? taskId.substring(0, 12) : 'unknown';
+            a.download = `explored_trials_${shortTaskId}_${timestamp}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('엑셀 내보내기 실패:', e);
+            setToast('엑셀 내보내기 중 오류가 발생했습니다.');
+        }
+    };
+
     const getFilteredCoins = () => {
         return allCoins.filter(coin => {
             if (marketFilter !== 'ALL') {
@@ -1404,13 +1542,13 @@ export default function BacktestOptimizer() {
     const getStatusBadge = (status) => {
         switch (status) {
             case 'running':
-                return <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">실행 중</span>;
+                return <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 whitespace-nowrap">실행 중</span>;
             case 'completed':
-                return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">완료</span>;
+                return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 whitespace-nowrap">완료</span>;
             case 'failed':
-                return <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">실패</span>;
+                return <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 whitespace-nowrap">실패</span>;
             default:
-                return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">{status}</span>;
+                return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 whitespace-nowrap">{status}</span>;
         }
     };
 
@@ -2354,11 +2492,11 @@ export default function BacktestOptimizer() {
                                                 const runStatus = item.status === 'running' ? historyRunningStatuses[item.task_id] : null;
                                                 return (
                                                 <tr key={item.task_id} className={`border-b border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 ${item.status === 'running' ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                                                    <td className="px-3 py-3">
+                                                    <td className="px-3 py-3 whitespace-nowrap">
                                                         <div className="flex flex-col gap-1">
                                                             {getStatusBadge(item.status)}
                                                             {runStatus && (
-                                                                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                                                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap">
                                                                     {runStatus.progress || `${runStatus.current_trial || 0}/${runStatus.total_trials || '?'}`}
                                                                 </span>
                                                             )}
@@ -2387,10 +2525,10 @@ export default function BacktestOptimizer() {
                                                             </span>
                                                         )}
                                                     </td>
-                                                    <td className="px-3 py-3 text-slate-700 dark:text-slate-300">
-                                                        <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                                    <td className="px-3 py-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                                        <div className="flex flex-nowrap gap-1">
                                                             {item.coin_codes?.slice(0, 3).map(code => (
-                                                                <span key={code} className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                                                                <span key={code} className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded whitespace-nowrap">
                                                                     {code.replace('KRW-', '')}
                                                                 </span>
                                                             ))}
@@ -2732,27 +2870,43 @@ export default function BacktestOptimizer() {
                                                         </span>
                                                     )}
                                                 </h4>
-                                                {showAllExplored && (
-                                                    <div className="flex items-center gap-1">
-                                                        {[
-                                                            { key: 'all', label: '전체' },
-                                                            { key: 'met', label: '달성' },
-                                                            { key: 'unmet', label: '미달' },
-                                                        ].map(({ key, label }) => (
-                                                            <button
-                                                                key={key}
-                                                                onClick={() => setExploredTrialFilter(key)}
-                                                                className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                                                                    exploredTrialFilter === key
-                                                                        ? 'bg-blue-500 text-white'
-                                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
-                                                                }`}
-                                                            >
-                                                                {label}
-                                                            </button>
-                                                        ))}
+                                                <div className="flex items-center gap-2">
+                                                    {showAllExplored && (
+                                                        <div className="flex items-center gap-1">
+                                                            {[
+                                                                { key: 'all', label: '전체' },
+                                                                { key: 'met', label: '달성' },
+                                                                { key: 'unmet', label: '미달' },
+                                                            ].map(({ key, label }) => (
+                                                                <button
+                                                                    key={key}
+                                                                    onClick={() => setExploredTrialFilter(key)}
+                                                                    className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                                                                        exploredTrialFilter === key
+                                                                            ? 'bg-blue-500 text-white'
+                                                                            : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                                                    }`}
+                                                                >
+                                                                    {label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center gap-1 ml-1">
+                                                        <button
+                                                            onClick={() => handleExportExploredTrialsCsv(filteredTrials, targetMetTrials, detailResult.taskId)}
+                                                            className="px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                                        >
+                                                            CSV
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleExportExploredTrialsExcel(filteredTrials, targetMetTrials, detailResult.taskId)}
+                                                            className="px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                                        >
+                                                            Excel
+                                                        </button>
                                                     </div>
-                                                )}
+                                                </div>
                                             </div>
                                             <div className="overflow-x-auto max-h-96 overflow-y-auto">
                                                 {showAllExplored ? (

@@ -1233,7 +1233,7 @@ export default function Backtest() {
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                             }`}
                     >
-                        이력 조회
+                        결과 조회
                     </button>
                 </div>
             </div>
@@ -1692,8 +1692,7 @@ export default function Backtest() {
                                                         return (
                                                         <tr
                                                             key={item.task_id}
-                                                            className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer ${item.status === 'running' ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
-                                                            onDoubleClick={() => item.status === 'completed' ? handleViewDetail(item.task_id) : null}
+                                                            className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${item.status === 'running' ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
                                                         >
                                                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                                 <input
@@ -1767,23 +1766,33 @@ export default function Backtest() {
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">
                                                                 {item.status === 'completed' ? item.sharpe_ratio.toFixed(2) : '-'}
                                                             </td>
-                                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                                                                {item.status === 'running' ? (
-                                                                    <button
-                                                                        onClick={() => handleCancelHistoryTask(item.task_id)}
-                                                                        disabled={loading}
-                                                                        className="text-amber-600 dark:text-amber-200 hover:text-amber-700 dark:hover:text-white bg-amber-50 dark:bg-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
-                                                                    >
-                                                                        중지
-                                                                    </button>
-                                                                ) : (
-                                                                    <button
-                                                                        onClick={() => handleDeleteResult(item.task_id)}
-                                                                        className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
-                                                                    >
-                                                                        삭제
-                                                                    </button>
-                                                                )}
+                                                            <td className="px-4 py-3 text-center">
+                                                                <div className="flex items-center justify-center gap-1">
+                                                                    {item.status === 'completed' && (
+                                                                        <button
+                                                                            onClick={() => handleViewDetail(item.task_id)}
+                                                                            className="text-blue-600 dark:text-blue-200 hover:text-blue-700 dark:hover:text-white bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
+                                                                        >
+                                                                            상세
+                                                                        </button>
+                                                                    )}
+                                                                    {item.status === 'running' ? (
+                                                                        <button
+                                                                            onClick={() => handleCancelHistoryTask(item.task_id)}
+                                                                            disabled={loading}
+                                                                            className="text-amber-600 dark:text-amber-200 hover:text-amber-700 dark:hover:text-white bg-amber-50 dark:bg-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-50"
+                                                                        >
+                                                                            중지
+                                                                        </button>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => handleDeleteResult(item.task_id)}
+                                                                            className="text-red-600 dark:text-red-200 hover:text-red-700 dark:hover:text-white bg-red-50 dark:bg-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/60 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap"
+                                                                        >
+                                                                            삭제
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                         );
@@ -1799,8 +1808,7 @@ export default function Backtest() {
                                                 return (
                                                 <div
                                                     key={item.task_id}
-                                                    className={`bg-white dark:bg-slate-800 border rounded-lg p-4 shadow-sm space-y-3 cursor-pointer ${item.status === 'running' ? 'border-blue-300 dark:border-blue-700' : 'border-slate-200 dark:border-slate-700'}`}
-                                                    onDoubleClick={() => item.status === 'completed' ? handleViewDetail(item.task_id) : null}
+                                                    className={`bg-white dark:bg-slate-800 border rounded-lg p-4 shadow-sm space-y-3 ${item.status === 'running' ? 'border-blue-300 dark:border-blue-700' : 'border-slate-200 dark:border-slate-700'}`}
                                                 >
                                                     {/* 체크박스 + 제목 */}
                                                     <div className="flex items-start gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
@@ -1926,7 +1934,15 @@ export default function Backtest() {
                                                     </div>
 
                                                     {/* 액션 버튼 */}
-                                                    <div className="flex gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex gap-2 pt-2">
+                                                        {item.status === 'completed' && (
+                                                            <button
+                                                                onClick={() => handleViewDetail(item.task_id)}
+                                                                className="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                                                            >
+                                                                상세 보기
+                                                            </button>
+                                                        )}
                                                         {item.status === 'running' ? (
                                                             <button
                                                                 onClick={() => handleCancelHistoryTask(item.task_id)}

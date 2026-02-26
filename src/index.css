@@ -60,7 +60,7 @@
 
 /* WebKit (Chrome, Safari, Edge) 커스텀 스크롤바 */
 .scrollbar-always::-webkit-scrollbar {
-  height: 10px;
+  height: 14px;
   /* 가로 스크롤바 높이 */
 }
 

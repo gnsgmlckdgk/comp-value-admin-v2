@@ -1672,7 +1672,7 @@ export default function Backtest() {
                                                                 title="전체 선택/해제"
                                                             />
                                                         </th>
-                                                        <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-20">상태</th>
+                                                        <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">상태</th>
                                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 min-w-[200px]">Task ID</th>
                                                         <th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-200 min-w-[150px]">제목</th>
                                                         <th className="px-4 py-3 text-center font-semibold text-slate-700 dark:text-slate-200 w-20">종목 수</th>
@@ -1705,13 +1705,13 @@ export default function Backtest() {
                                                             <td className="px-4 py-3 whitespace-nowrap">
                                                                 <div className="flex flex-col gap-1">
                                                                     {item.status === 'running' ? (
-                                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 w-fit">실행 중</span>
+                                                                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 whitespace-nowrap">실행 중</span>
                                                                     ) : item.status === 'failed' ? (
-                                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 w-fit">실패</span>
+                                                                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 whitespace-nowrap">실패</span>
                                                                     ) : item.status === 'cancelled' ? (
-                                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 w-fit">취소</span>
+                                                                        <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 whitespace-nowrap">취소</span>
                                                                     ) : (
-                                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 w-fit">완료</span>
+                                                                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 whitespace-nowrap">완료</span>
                                                                     )}
                                                                     {runStatus && (
                                                                         <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">

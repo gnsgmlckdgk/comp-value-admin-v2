@@ -33,7 +33,7 @@ function CustomLegend({ payload = [], hiddenKeys, onToggle }) {
     if (!groups.length) return null;
 
     return (
-        <div className="flex flex-col items-end gap-0.5 text-[10px] select-none">
+        <div className="flex flex-row flex-wrap justify-center gap-x-2 gap-y-0.5 sm:flex-col sm:items-end sm:justify-start text-[10px] select-none">
             {groups.map(g => (
                 <div key={g.pod} className="inline-flex items-center">
                     <span className="text-slate-500 dark:text-slate-400 text-right font-mono max-w-[7rem] shrink-0 pr-1.5 truncate" title={g.pod}>
@@ -208,10 +208,10 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
 
     return (
         <div>
-            <div className="flex gap-1">
+            <div className="flex flex-col sm:flex-row gap-1">
                 {/* 차트 영역 */}
-                <div className="flex-1 min-w-0" style={{ height: '220px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="flex-1 min-w-0 h-[220px]">
+                    <ResponsiveContainer width="100%" height={220}>
                         <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                             <XAxis
@@ -300,8 +300,8 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
-                {/* 범례 — 차트 오른쪽 사이드 */}
-                <div className="shrink-0 flex flex-col justify-center overflow-y-auto" style={{ maxHeight: '220px' }}>
+                {/* 범례 — 데스크탑: 차트 오른쪽 / 모바일: 차트 아래 */}
+                <div className="shrink-0 flex flex-col justify-center overflow-y-auto sm:max-h-[220px]">
                     <CustomLegend payload={legendPayload} hiddenKeys={hiddenKeys} onToggle={handleLegendClick} />
                 </div>
             </div>

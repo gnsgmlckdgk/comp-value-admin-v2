@@ -1619,7 +1619,7 @@ export default function Backtest() {
 
                                 {/* 선택 상태 배너 */}
                                 {selectedHistoryIds.length > 0 && (
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-6 py-4">
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
                                         <div className="flex items-center justify-between">
                                             <div className="text-sm text-blue-700 dark:text-blue-300">
                                                 {selectedHistoryIds.length}개 항목 선택됨

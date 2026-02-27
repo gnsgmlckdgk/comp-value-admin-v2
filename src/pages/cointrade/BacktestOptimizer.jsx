@@ -2403,11 +2403,27 @@ export default function BacktestOptimizer() {
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                                옵티마이저 이력
+                                옵티마이저 이력 ({historyList.length})
                             </h2>
-                            <Button size="sm" variant="secondary" onClick={() => fetchHistory()} disabled={loading}>
-                                {loading ? '조회 중...' : '새로고침'}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleSelectAll}
+                                    disabled={historyList.length === 0}
+                                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    전체선택
+                                </button>
+                                <button
+                                    onClick={handleDeselectAll}
+                                    disabled={selectedHistoryIds.length === 0}
+                                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    전체해제
+                                </button>
+                                <Button size="sm" variant="secondary" onClick={() => fetchHistory()} disabled={loading}>
+                                    {loading ? '조회 중...' : '새로고침'}
+                                </Button>
+                            </div>
                         </div>
 
                         {/* 선택 상태 배너 */}

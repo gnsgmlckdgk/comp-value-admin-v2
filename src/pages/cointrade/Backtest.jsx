@@ -1588,34 +1588,6 @@ export default function Backtest() {
                         </div>
                     ) : (
                         <>
-                            {/* 비교 기능 */}
-                            {selectedHistoryIds.length > 0 && (
-                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm text-blue-700 dark:text-blue-300">
-                                            {selectedHistoryIds.length}개 항목 선택됨
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button size="sm" onClick={() => { setSelectedHistoryIds([]); setCompareResults([]); }}>
-                                                선택 취소
-                                            </Button>
-                                            <Button
-                                                variant="danger"
-                                                size="sm"
-                                                onClick={handleDeleteSelected}
-                                            >
-                                                선택 삭제
-                                            </Button>
-                                            {selectedHistoryIds.length === 2 && (
-                                                <Button size="sm" onClick={handleCompare}>
-                                                    비교하기
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
                             {/* 비교 결과 */}
                             {compareResults.length === 2 && (
                                 <ComparisonView results={compareResults} />
@@ -1644,6 +1616,34 @@ export default function Backtest() {
                                         </button>
                                     </div>
                                 </div>
+
+                                {/* 선택 상태 배너 */}
+                                {selectedHistoryIds.length > 0 && (
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-6 py-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-sm text-blue-700 dark:text-blue-300">
+                                                {selectedHistoryIds.length}개 항목 선택됨
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button size="sm" onClick={() => { setSelectedHistoryIds([]); setCompareResults([]); }}>
+                                                    선택 취소
+                                                </Button>
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={handleDeleteSelected}
+                                                >
+                                                    선택 삭제
+                                                </Button>
+                                                {selectedHistoryIds.length === 2 && (
+                                                    <Button size="sm" onClick={handleCompare}>
+                                                        비교하기
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {historyList.length === 0 ? (
                                     <div className="text-center py-12 text-slate-500 dark:text-slate-400">

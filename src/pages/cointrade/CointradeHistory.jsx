@@ -109,6 +109,8 @@ const COL_WIDTHS = {
     reason: '100px',
     profitLoss: '120px',
     profitLossRate: '100px',
+    predictedHigh: '120px',
+    predictedLow: '120px',
     upProbability: '100px',
     expectedReturn: '100px',
 };
@@ -213,6 +215,24 @@ const TABLE_COLUMNS = [
                 {value >= 0 ? '+' : ''}{value.toFixed(2)}%
             </span>
         ) : '-'
+    },
+    {
+        key: 'predictedHigh',
+        label: '예측고가',
+        width: COL_WIDTHS.predictedHigh,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
+        render: (value) => value != null ? renderFormattedPrice(value, '원') : '-'
+    },
+    {
+        key: 'predictedLow',
+        label: '예측저가',
+        width: COL_WIDTHS.predictedLow,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
+        render: (value) => value != null ? renderFormattedPrice(value, '원') : '-'
     },
     {
         key: 'upProbability',
@@ -644,11 +664,13 @@ export default function CointradeHistory() {
         row.reason ? getReasonLabel(row.reason) : '-',
         row.profitLoss != null ? `${row.profitLoss >= 0 ? '+' : ''}${formatNumberWithComma(row.profitLoss)}원` : '-',
         row.profitLossRate != null ? `${row.profitLossRate >= 0 ? '+' : ''}${row.profitLossRate.toFixed(2)}%` : '-',
+        row.predictedHigh != null ? `${formatNumberWithComma(row.predictedHigh)}원` : '-',
+        row.predictedLow != null ? `${formatNumberWithComma(row.predictedLow)}원` : '-',
         row.upProbability != null ? `${(row.upProbability * 100).toFixed(1)}%` : '-',
         row.expectedReturn != null ? `${row.expectedReturn.toFixed(2)}%` : '-',
     ]);
 
-    const TRADE_HEADERS = ['일시', '종목', '유형', '가격', '수량', '금액', '사유', '손익', '손익률', '상승확률', '기대수익'];
+    const TRADE_HEADERS = ['일시', '종목', '유형', '가격', '수량', '금액', '사유', '손익', '손익률', '예측고가', '예측저가', '상승확률', '기대수익'];
 
     // CSV 문자열 생성
     const toCsv = (headers, rows) => {

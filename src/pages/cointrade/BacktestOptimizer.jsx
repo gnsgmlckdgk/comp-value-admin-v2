@@ -442,7 +442,8 @@ export default function BacktestOptimizer() {
         stop_loss_threshold: { min_value: 3.0, max_value: 10.0, step: 0.5 },
         take_profit_buffer: { min_value: 1.0, max_value: 5.0, step: 0.5 },
         min_profit_rate: { min_value: 3.0, max_value: 10.0, step: 1.0 },
-        max_profit_rate: { min_value: 10.0, max_value: 50.0, step: 5.0 }
+        max_profit_rate: { min_value: 10.0, max_value: 50.0, step: 5.0 },
+        max_holding_days: { min_value: 2, max_value: 14, step: 1 }
     });
 
     // 전체 파라미터 조합 수 계산

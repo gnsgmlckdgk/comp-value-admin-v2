@@ -37,7 +37,9 @@ const getReasonColor = (reason) => {
         'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
         'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
         'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
-        'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
+        'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
+        'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
+        'PARTIAL_MAX_HOLDING_EXPIRED': 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
     };
 
     if (colors[reason]) return colors[reason];
@@ -62,7 +64,9 @@ const getReasonLabel = (reason) => {
         'PARTIAL_TAKE_PROFIT': '부분익절',
         'PARTIAL_STOP_LOSS': '부분손절',
         'MANUAL': '수동매도',
-        'PARTIAL_MANUAL': '부분수동'
+        'PARTIAL_MANUAL': '부분수동',
+        'MAX_HOLDING_EXPIRED': '강제청산',
+        'PARTIAL_MAX_HOLDING_EXPIRED': '부분강제청산'
     };
 
     if (labels[reason]) return labels[reason];
@@ -382,28 +386,38 @@ const HOLDINGS_TABLE_COLUMNS = [
     },
     {
         key: 'profitConfirmDate',
-        label: '수익확정일',
+        label: '확정/청산일',
         width: HOLDINGS_COL_WIDTHS.profitConfirmDate,
         sortable: true,
         headerClassName: 'px-4 py-3 pr-8 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
-        render: (value, row, predictionDays = 7) => {
+        render: (value, row, configData = {}) => {
             if (!row.buyDate) return '-';
+            const predictionDays = configData.predictionDays || 7;
+            const maxHoldingDays = configData.maxHoldingDays || 7;
+
             const buyDate = new Date(row.buyDate);
             const confirmDate = new Date(buyDate);
             confirmDate.setDate(buyDate.getDate() + predictionDays);
 
+            const forceCloseDate = new Date(buyDate);
+            forceCloseDate.setDate(buyDate.getDate() + maxHoldingDays);
+
             const today = new Date();
-            const isPassed = today >= confirmDate;
+            const isConfirmPassed = today >= confirmDate;
+            const isForceClosePassed = today >= forceCloseDate;
+
+            const formatDate = (d) => d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
 
             return (
-                <span className={isPassed ? 'text-green-600 dark:text-green-400 font-bold' : ''}>
-                    {confirmDate.toLocaleDateString('ko-KR', {
-                        month: '2-digit',
-                        day: '2-digit'
-                    })}
-                    {isPassed ? ' (도래)' : ''}
-                </span>
+                <div className="flex flex-col gap-0.5 text-xs">
+                    <span className={isConfirmPassed ? 'text-green-600 dark:text-green-400 font-bold' : ''}>
+                        {formatDate(confirmDate)}{isConfirmPassed ? ' (도래)' : ''}
+                    </span>
+                    <span className={`text-[10px] ${isForceClosePassed ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-slate-400 dark:text-slate-500'}`}>
+                        강제 {formatDate(forceCloseDate)}
+                    </span>
+                </div>
             );
         }
     }
@@ -427,9 +441,10 @@ export default function CointradeDashboard() {
         holdingsCount: 0
     });
 
-    // 설정 정보 (PREDICTION_DAYS 등)
+    // 설정 정보 (PREDICTION_DAYS, MAX_HOLDING_DAYS 등)
     const [config, setConfig] = useState({
-        predictionDays: 7 // 기본값 7일
+        predictionDays: 7, // 기본값 7일
+        maxHoldingDays: 7  // 최대 보유 기간 기본값 7일
     });
 
     // KRW 잔액
@@ -505,7 +520,8 @@ export default function CointradeDashboard() {
                 });
 
                 setConfig({
-                    predictionDays: parseInt(configMap.PREDICTION_DAYS || 7)
+                    predictionDays: parseInt(configMap.PREDICTION_DAYS || 7),
+                    maxHoldingDays: parseInt(configMap.MAX_HOLDING_DAYS || 7)
                 });
             }
 
@@ -1228,7 +1244,7 @@ export default function CointradeDashboard() {
 
                                                 const value = holding[col.key];
 
-                                                const displayValue = col.render ? col.render(value, holding, config.predictionDays) : (value ?? '-');
+                                                const displayValue = col.render ? col.render(value, holding, config) : (value ?? '-');
 
                                                 const leftPosition = col.sticky
                                                     ? (colIndex === 0 ? 0 : colIndex === 1 ? '50px' : undefined)
@@ -2171,7 +2187,7 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
                                 </div>
                             </div>
 
-                            {/* 수익 확정일 */}
+                            {/* 수익 확정일 / 강제 청산일 */}
                             {selectedHolding.buyDate && (
                                 <div className="sm:text-right">
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수익 확정일 (D+{config?.predictionDays || 7})</div>
@@ -2182,25 +2198,38 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
                                             return formatDateTime(confirmDate);
                                         })()}
                                     </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-1">강제 청산일 (D+{config?.maxHoldingDays || 7})</div>
+                                    <div className="text-sm sm:text-base font-bold text-amber-600 dark:text-amber-400">
+                                        {(() => {
+                                            const forceCloseDate = new Date(selectedHolding.buyDate);
+                                            forceCloseDate.setDate(forceCloseDate.getDate() + (config?.maxHoldingDays || 7));
+                                            return formatDateTime(forceCloseDate);
+                                        })()}
+                                    </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* 수익 확정 설명 */}
+                        {/* 수익 확정 / 강제 청산 설명 */}
                         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">💡 수익 확정일이란?</span><br />
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">수익 확정일이란?</span><br />
                             {selectedHolding.buyDate && (() => {
                                 const predictionDays = config?.predictionDays || 7;
+                                const maxHoldingDays = config?.maxHoldingDays || 7;
                                 const buyDate = new Date(selectedHolding.buyDate);
                                 const confirmDate = new Date(buyDate);
                                 confirmDate.setDate(buyDate.getDate() + predictionDays);
+                                const forceCloseDate = new Date(buyDate);
+                                forceCloseDate.setDate(buyDate.getDate() + maxHoldingDays);
 
                                 const m1 = buyDate.getMonth() + 1;
                                 const d1 = buyDate.getDate();
                                 const m2 = confirmDate.getMonth() + 1;
                                 const d2 = confirmDate.getDate();
+                                const m3 = forceCloseDate.getMonth() + 1;
+                                const d3 = forceCloseDate.getDate();
 
-                                return `${m1}월 ${d1}일에 매수했다면, ${m2}월 ${d2}일 새벽부터 수익률이 최소익절률을 넘기는 즉시 매도 프로세스가 작동합니다.`;
+                                return `${m1}월 ${d1}일에 매수했다면, ${m2}월 ${d2}일부터 수익률이 최소익절률을 넘기면 매도됩니다. ${m3}월 ${d3}일(D+${maxHoldingDays})이 지나면 손익에 관계없이 강제 청산됩니다.`;
                             })()}
                         </div>
                     </div>

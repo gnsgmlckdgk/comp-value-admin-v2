@@ -48,6 +48,7 @@ export default function CointradeConfig() {
         MIN_PROFIT_RATE: '',           // 최소 익절률 %
         MAX_PROFIT_RATE: '',           // 최대 익절률 %
         PREDICTION_DAYS: '',           // 예측 기간 (일)
+        MAX_HOLDING_DAYS: '',          // 최대 보유 기간 (일)
         TRAIN_SCHEDULE_ENABLED: 'false', // 재학습 스케줄러 활성화 여부
         TRAIN_SCHEDULE_CRON: '',       // 모델 재학습 스케줄 (Cron)
         ENSEMBLE_MODE: 'ensemble',     // 앙상블 모드
@@ -91,6 +92,7 @@ export default function CointradeConfig() {
                 'MAX_PROFIT_RATE',
                 'TAKE_PROFIT_BUFFER',
                 'STOP_LOSS_THRESHOLD',
+                'MAX_HOLDING_DAYS',
                 'SELL_CHECK_SECONDS',
                 'PRICE_MONITOR_SECONDS',
             ]
@@ -107,6 +109,7 @@ export default function CointradeConfig() {
         'TARGET_MODE',
         'TAKE_PROFIT_BUFFER',
         'STOP_LOSS_THRESHOLD',
+        'MAX_HOLDING_DAYS',
         'MIN_PROFIT_RATE',
         'MAX_PROFIT_RATE',
         'SELL_CHECK_SECONDS',
@@ -190,6 +193,7 @@ export default function CointradeConfig() {
             'PRICE_MONITOR_SECONDS',
             'BUY_CHECK_HOURS',
             'PREDICTION_DAYS',
+            'MAX_HOLDING_DAYS',
         ];
         numericParams.forEach(key => {
             if (key === 'TARGET_MODE') return;
@@ -418,6 +422,7 @@ export default function CointradeConfig() {
             MAX_PROFIT_RATE: '최대 익절률 (%)',
             TARGET_MODE: '대상 모드 (ALL/SELECTED)',
             PREDICTION_DAYS: '예측 기간 (일)',
+            MAX_HOLDING_DAYS: '최대 보유 기간 (일)',
             TRAIN_SCHEDULE_ENABLED: '재학습 스케줄러 활성화 여부',
             TRAIN_SCHEDULE_CRON: '모델 재학습 스케줄 (Cron)',
             ENSEMBLE_MODE: '앙상블 모드',
@@ -445,6 +450,7 @@ export default function CointradeConfig() {
             MAX_PROFIT_RATE: 'AI가 폭등을 예측해도 이 정도 수익이면 만족하고 나옵니다. (추천: 30%)',
             TARGET_MODE: 'ALL: 전체 종목 매매, SELECTED: 선택 종목만 매매',
             PREDICTION_DAYS: 'AI 모델이 예측할 미래 기간 (일 단위)',
+            MAX_HOLDING_DAYS: '이 기간이 지나면 손익에 관계없이 강제 매도됩니다. (추천: 7일)',
             TRAIN_SCHEDULE_ENABLED: '설정된 스케줄에 따라 자동 재학습을 진행할지 여부 (true/false)',
             TRAIN_SCHEDULE_CRON: '모델 재학습 실행 주기 (예: 0 3 * * 2,5 -> 수/토(Python APScheduler 기준) 새벽 3시 / 0=월, 6=일)',
             ENSEMBLE_MODE: '사용할 모델 모드 (lstm_only/gru_only/cnn_only/ensemble)',

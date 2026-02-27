@@ -18,17 +18,18 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 function scoreToColor(score, minScore, maxScore) {
     if (minScore === maxScore) return '#3b82f6';
     const ratio = Math.max(0, Math.min(1, (score - minScore) / (maxScore - minScore)));
+    // 색각이상 친화 팔레트: 파란색(낮음) → 노란색(중간) → 주황색(높음)
     if (ratio < 0.5) {
         const t = ratio * 2;
-        const r = Math.round(239 + (234 - 239) * t);
-        const g = Math.round(68 + (179 - 68) * t);
-        const b = Math.round(68 + (8 - 68) * t);
+        const r = Math.round(59 + (251 - 59) * t);
+        const g = Math.round(130 + (191 - 130) * t);
+        const b = Math.round(246 + (36 - 246) * t);
         return `rgb(${r},${g},${b})`;
     } else {
         const t = (ratio - 0.5) * 2;
-        const r = Math.round(234 + (34 - 234) * t);
-        const g = Math.round(179 + (197 - 179) * t);
-        const b = Math.round(8 + (94 - 8) * t);
+        const r = Math.round(251 + (249 - 251) * t);
+        const g = Math.round(191 + (115 - 191) * t);
+        const b = Math.round(36 + (22 - 36) * t);
         return `rgb(${r},${g},${b})`;
     }
 }
@@ -114,9 +115,9 @@ function ParamExplorationChart({ allTrials, paramRanges, bestParams, getParamLab
                 </h4>
                 <div className="text-xs text-slate-400 dark:text-slate-500 mb-4">
                     각 파라미터의 탐색 범위에서 실제 탐색된 값을 점으로 표시합니다. 점 색상은 점수를 나타냅니다 (
-                    <span style={{ color: '#ef4444' }}>빨강</span>=낮음 →
-                    <span style={{ color: '#eab308' }}> 노랑</span>=중간 →
-                    <span style={{ color: '#22c55e' }}> 초록</span>=높음).
+                    <span style={{ color: '#3b82f6' }}>파랑</span>=낮음 →
+                    <span style={{ color: '#fbbf24' }}> 노랑</span>=중간 →
+                    <span style={{ color: '#f97316' }}> 주황</span>=높음).
                 </div>
                 <div className="space-y-3">
                     {stripData.map(({ key, range, points, allSteps, exploredSteps }) => (
@@ -252,15 +253,15 @@ function ParamExplorationChart({ allTrials, paramRanges, bestParams, getParamLab
                         </ResponsiveContainer>
                         <div className="flex items-center justify-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }} />
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
                                 <span>낮은 점수</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#eab308' }} />
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#fbbf24' }} />
                                 <span>중간 점수</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#f97316' }} />
                                 <span>높은 점수</span>
                             </div>
                             <div className="flex items-center gap-1">
@@ -3006,8 +3007,8 @@ export default function BacktestOptimizer() {
 
                                         return (
                                         <div>
-                                            <div className="flex items-center justify-between mb-3">
-                                                <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                                            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                                <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                                     {showAllExplored ? '전체 탐색 시행' : '목표 달성 시행'} 결과 ({filteredTrials.length}개{showAllExplored && filteredTrials.length !== sourceTrials.length ? ` / ${sourceTrials.length}` : ''})
                                                     {showAllExplored && targetMetTrials?.length > 0 && exploredTrialFilter === 'all' && (
                                                         <span className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">
@@ -3015,7 +3016,7 @@ export default function BacktestOptimizer() {
                                                         </span>
                                                     )}
                                                 </h4>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-shrink-0">
                                                     {showAllExplored && (
                                                         <div className="flex items-center gap-1">
                                                             {[
@@ -3026,7 +3027,7 @@ export default function BacktestOptimizer() {
                                                                 <button
                                                                     key={key}
                                                                     onClick={() => setExploredTrialFilter(key)}
-                                                                    className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                                                                    className={`px-2 py-0.5 text-xs rounded whitespace-nowrap transition-colors ${
                                                                         exploredTrialFilter === key
                                                                             ? 'bg-blue-500 text-white'
                                                                             : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
@@ -3040,13 +3041,13 @@ export default function BacktestOptimizer() {
                                                     <div className="flex items-center gap-1 ml-1">
                                                         <button
                                                             onClick={() => handleExportExploredTrialsCsv(filteredTrials, targetMetTrials, detailResult.taskId)}
-                                                            className="px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                                            className="px-2 py-0.5 text-xs rounded whitespace-nowrap bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                                                         >
                                                             CSV
                                                         </button>
                                                         <button
                                                             onClick={() => handleExportExploredTrialsExcel(filteredTrials, targetMetTrials, detailResult.taskId)}
-                                                            className="px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                                            className="px-2 py-0.5 text-xs rounded whitespace-nowrap bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                                                         >
                                                             Excel
                                                         </button>

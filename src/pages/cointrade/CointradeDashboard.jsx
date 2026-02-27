@@ -38,8 +38,7 @@ const getReasonColor = (reason) => {
         'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
         'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
         'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
-        'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
-        'PARTIAL_MAX_HOLDING_EXPIRED': 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+        'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
     };
 
     if (colors[reason]) return colors[reason];
@@ -65,8 +64,7 @@ const getReasonLabel = (reason) => {
         'PARTIAL_STOP_LOSS': '부분손절',
         'MANUAL': '수동매도',
         'PARTIAL_MANUAL': '부분수동',
-        'MAX_HOLDING_EXPIRED': '강제청산',
-        'PARTIAL_MAX_HOLDING_EXPIRED': '부분강제청산'
+        'MAX_HOLDING_EXPIRED': '강제청산'
     };
 
     if (labels[reason]) return labels[reason];
@@ -491,6 +489,7 @@ export default function CointradeDashboard() {
         takeProfitRate: 0,
         stopLossRate: 0,
         expiredRate: 0,
+        maxHoldingExpiredRate: 0,
         avgProfitRate: 0,
         totalTrades: 0
     });
@@ -688,6 +687,7 @@ export default function CointradeDashboard() {
                 takeProfitRate: 0,
                 stopLossRate: 0,
                 expiredRate: 0,
+                maxHoldingExpiredRate: 0,
                 avgProfitRate: 0,
                 totalTrades: 0
             });
@@ -702,6 +702,7 @@ export default function CointradeDashboard() {
                    /^\d+DAY_PROFIT$/.test(reason) ||
                    /^PARTIAL_\d+DAY_PROFIT$/.test(reason);
         }).length;
+        const maxHoldingExpiredCount = sellTrades.filter(t => t.reason === 'MAX_HOLDING_EXPIRED').length;
 
         const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
         const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
@@ -711,6 +712,7 @@ export default function CointradeDashboard() {
             takeProfitRate: (takeProfitCount / totalSells) * 100,
             stopLossRate: (stopLossCount / totalSells) * 100,
             expiredRate: (expiredCount / totalSells) * 100,
+            maxHoldingExpiredRate: (maxHoldingExpiredCount / totalSells) * 100,
             avgProfitRate,
             totalTrades: totalSells
         });
@@ -1512,7 +1514,23 @@ export default function CointradeDashboard() {
                             </div>
                         </div>
 
-                        {/* 3. 손절 관리 */}
+                        {/* 3. 최대보유기간 강제청산 */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">최대보유기간({config.maxHoldingDays}일) 강제청산</span>
+                                <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                                    {performance.maxHoldingExpiredRate.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                                <div
+                                    className="bg-amber-500 dark:bg-amber-400 h-2 rounded-full"
+                                    style={{ width: `${performance.maxHoldingExpiredRate}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* 4. 손절 관리 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm text-slate-600 dark:text-slate-400">손절 관리 (리스크 최소화)</span>
@@ -1684,6 +1702,12 @@ export default function CointradeDashboard() {
                                                 <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분수동</td>
                                                 <td className="px-4 py-2">
                                                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400">PARTIAL_MANUAL</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="bg-white dark:bg-slate-800">
+                                                <td className="px-4 py-2 text-slate-600 dark:text-slate-400">강제청산</td>
+                                                <td className="px-4 py-2">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">MAX_HOLDING_EXPIRED</span>
                                                 </td>
                                             </tr>
                                         </tbody>

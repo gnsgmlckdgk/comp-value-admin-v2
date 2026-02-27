@@ -75,7 +75,8 @@ const getReasonColor = (reason) => {
         'PARTIAL_7DAY_PROFIT': 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
         'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
         'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
-        'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
+        'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
+        'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
     };
     return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
 };
@@ -91,7 +92,8 @@ const getReasonLabel = (reason) => {
         'PARTIAL_7DAY_PROFIT': '부분기간',
         'PARTIAL_STOP_LOSS': '부분손절',
         'MANUAL': '수동매도',
-        'PARTIAL_MANUAL': '부분수동'
+        'PARTIAL_MANUAL': '부분수동',
+        'MAX_HOLDING_EXPIRED': '강제청산'
     };
     return labels[reason] || reason;
 };
@@ -1272,6 +1274,7 @@ export default function CointradeHistory() {
                             <option value="TAKE_PROFIT">익절 (TAKE_PROFIT)</option>
                             <option value="STOP_LOSS">손절 (STOP_LOSS)</option>
                             <option value="EXPIRED">만료 (EXPIRED)</option>
+                            <option value="MAX_HOLDING_EXPIRED">강제청산 (MAX_HOLDING_EXPIRED)</option>
                         </select>
                     </div>
                 </div>

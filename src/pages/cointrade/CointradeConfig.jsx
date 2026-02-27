@@ -681,16 +681,16 @@ export default function CointradeConfig() {
                                                             <div className="flex items-center gap-2 w-full sm:w-auto">
                                                                 <input
                                                                     type="number"
-                                                                    placeholder="예상 최고가(%)"
-                                                                    className="w-full sm:w-36 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                    placeholder="예상 최고 상승률(%)"
+                                                                    className="w-full sm:w-44 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                     value={calcHigh}
                                                                     onChange={(e) => setCalcHigh(e.target.value)}
                                                                 />
                                                                 <span className="text-slate-400">-</span>
                                                                 <input
                                                                     type="number"
-                                                                    placeholder="예상 하락률(%)"
-                                                                    className="w-full sm:w-36 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                    placeholder="예상 최저 하락률(%)"
+                                                                    className="w-full sm:w-44 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                     value={calcLow}
                                                                     onChange={(e) => setCalcLow(e.target.value)}
                                                                 />

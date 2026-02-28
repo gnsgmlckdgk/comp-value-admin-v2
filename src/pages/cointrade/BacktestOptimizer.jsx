@@ -1642,6 +1642,7 @@ export default function BacktestOptimizer() {
             take_profit_buffer: '익절 버퍼 (%)',
             min_profit_rate: '최소 익절률 (%)',
             max_profit_rate: '최대 익절률 (%)',
+            max_holding_days: '최대 보유 기간 (일)',
             // 고정 파라미터 (소문자)
             initial_capital: '초기 자본 (원)',
             buy_amount_per_coin: '종목당 매수금액 (원)',
@@ -1661,6 +1662,7 @@ export default function BacktestOptimizer() {
             take_profit_buffer: '익절버퍼',
             min_profit_rate: '최소익절',
             max_profit_rate: '최대익절',
+            max_holding_days: '보유기간',
         };
         return shorts[key] || key;
     };
@@ -2076,6 +2078,14 @@ export default function BacktestOptimizer() {
                                         onChange={handleParamRangeChange}
                                         step={5}
                                         unit="%"
+                                    />
+                                    <ParamRangeInput
+                                        label="최대 보유 기간"
+                                        paramKey="max_holding_days"
+                                        value={paramRanges.max_holding_days}
+                                        onChange={handleParamRangeChange}
+                                        step={1}
+                                        unit="일"
                                     />
                                 </div>
                             )}

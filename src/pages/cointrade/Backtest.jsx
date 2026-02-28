@@ -2164,7 +2164,7 @@ export default function Backtest() {
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    최대 보유 기간 (일) <code className="text-blue-500">max_holding_days</code>
+                                                    최대 보유(일) <code className="text-blue-500">max_holding_days</code>
                                                 </label>
                                                 <input
                                                     type="number"
@@ -2544,6 +2544,7 @@ function getParamLabel(key) {
         MIN_UP_PROBABILITY: '최소 상승 확률 (%)',
         MIN_PROFIT_RATE: '최소 익절률 (%)',
         MAX_PROFIT_RATE: '최대 익절률 (%)',
+        MAX_HOLDING_DAYS: '최대 보유 기간 (일)',
         TARGET_MODE: '대상 모드 (ALL/SELECTED)',
         PREDICTION_DAYS: '예측 기간 (일)',
         TRAIN_SCHEDULE_ENABLED: '재학습 스케줄러 활성화 여부',

@@ -443,7 +443,11 @@ export default function BacktestOptimizer() {
         take_profit_buffer: { min_value: 1.0, max_value: 5.0, step: 0.5 },
         min_profit_rate: { min_value: 3.0, max_value: 10.0, step: 1.0 },
         max_profit_rate: { min_value: 10.0, max_value: 50.0, step: 5.0 },
-        max_holding_days: { min_value: 2, max_value: 14, step: 1 }
+        max_holding_days: { min_value: 2, max_value: 14, step: 1 },
+        btc_trend_ma_period: { min_value: 5, max_value: 60, step: 5 },
+        trailing_stop_rate: { min_value: 1.0, max_value: 8.0, step: 0.5 },
+        trailing_stop_activation: { min_value: 1.0, max_value: 5.0, step: 0.5 },
+        min_model_agreement: { min_value: 0.3, max_value: 0.9, step: 0.05 }
     });
 
     // 전체 파라미터 조합 수 계산
@@ -1643,6 +1647,10 @@ export default function BacktestOptimizer() {
             min_profit_rate: '최소 익절률 (%)',
             max_profit_rate: '최대 익절률 (%)',
             max_holding_days: '최대 보유 기간 (일)',
+            btc_trend_ma_period: 'BTC MA 기간 (일)',
+            trailing_stop_rate: '트레일링 스탑 하락률 (%)',
+            trailing_stop_activation: '트레일링 스탑 활성화 수익률 (%)',
+            min_model_agreement: '모델 일치도 최소값 (0~1)',
             // 고정 파라미터 (소문자)
             initial_capital: '초기 자본 (원)',
             buy_amount_per_coin: '종목당 매수금액 (원)',
@@ -1663,6 +1671,9 @@ export default function BacktestOptimizer() {
             min_profit_rate: '최소익절',
             max_profit_rate: '최대익절',
             max_holding_days: '보유기간',
+            trailing_stop_rate: 'TS하락',
+            trailing_stop_activation: 'TS활성',
+            min_model_agreement: '일치도',
         };
         return shorts[key] || key;
     };
@@ -2086,6 +2097,30 @@ export default function BacktestOptimizer() {
                                         onChange={handleParamRangeChange}
                                         step={1}
                                         unit="일"
+                                    />
+                                    <ParamRangeInput
+                                        label="트레일링 스탑 하락률"
+                                        paramKey="trailing_stop_rate"
+                                        value={paramRanges.trailing_stop_rate}
+                                        onChange={handleParamRangeChange}
+                                        step={0.5}
+                                        unit="%"
+                                    />
+                                    <ParamRangeInput
+                                        label="트레일링 스탑 활성화 수익률"
+                                        paramKey="trailing_stop_activation"
+                                        value={paramRanges.trailing_stop_activation}
+                                        onChange={handleParamRangeChange}
+                                        step={0.5}
+                                        unit="%"
+                                    />
+                                    <ParamRangeInput
+                                        label="모델 일치도 최소값"
+                                        paramKey="min_model_agreement"
+                                        value={paramRanges.min_model_agreement}
+                                        onChange={handleParamRangeChange}
+                                        step={0.05}
+                                        unit="0~1"
                                     />
                                 </div>
                             )}

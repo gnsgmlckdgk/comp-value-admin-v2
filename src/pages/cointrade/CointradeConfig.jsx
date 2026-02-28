@@ -56,6 +56,12 @@ export default function CointradeConfig() {
         SELL_SCHEDULER_ENABLED: 'false', // 매도 스케줄러 활성화 여부
         TRADING_FEE_RATE: '',          // 거래 수수료율 %
         TRAIN_WORKERS: '',             // 학습 워커 개수 (병렬처리)
+        MIN_MODEL_AGREEMENT: '',       // 앙상블 모델 일치도 최소값 (0~1)
+        BTC_FILTER_ENABLED: 'false',   // BTC 추세 필터 활성화 여부
+        BTC_TREND_MA_PERIOD: '',       // BTC 추세 MA 기간 (일)
+        TRAILING_STOP_ENABLED: 'false', // 트레일링 스탑 활성화 여부
+        TRAILING_STOP_RATE: '',        // 트레일링 스탑 하락률 (%)
+        TRAILING_STOP_ACTIVATION: '',  // 트레일링 스탑 활성화 수익률 (%)
     });
 
     // 파라미터 그룹 정의
@@ -81,7 +87,10 @@ export default function CointradeConfig() {
                 'BUY_WAIT_SECONDS',
                 'BUY_RETRY_COUNT',
                 'BUY_CHECK_HOURS',
-                'TARGET_MODE'
+                'TARGET_MODE',
+                'MIN_MODEL_AGREEMENT',
+                'BTC_FILTER_ENABLED',
+                'BTC_TREND_MA_PERIOD'
             ]
         },
         SELL: {
@@ -95,6 +104,9 @@ export default function CointradeConfig() {
                 'MAX_HOLDING_DAYS',
                 'SELL_CHECK_SECONDS',
                 'PRICE_MONITOR_SECONDS',
+                'TRAILING_STOP_ENABLED',
+                'TRAILING_STOP_RATE',
+                'TRAILING_STOP_ACTIVATION',
             ]
         }
     };
@@ -107,13 +119,19 @@ export default function CointradeConfig() {
         'BUY_WAIT_SECONDS',
         'BUY_RETRY_COUNT',
         'TARGET_MODE',
+        'MIN_MODEL_AGREEMENT',
         'TAKE_PROFIT_BUFFER',
         'STOP_LOSS_THRESHOLD',
         'MAX_HOLDING_DAYS',
         'MIN_PROFIT_RATE',
         'MAX_PROFIT_RATE',
         'SELL_CHECK_SECONDS',
-        'TRADING_FEE_RATE'
+        'TRADING_FEE_RATE',
+        'BTC_FILTER_ENABLED',
+        'BTC_TREND_MA_PERIOD',
+        'TRAILING_STOP_ENABLED',
+        'TRAILING_STOP_RATE',
+        'TRAILING_STOP_ACTIVATION'
     ];
 
     // 재기동이 필요한 파라미터 목록
@@ -430,6 +448,12 @@ export default function CointradeConfig() {
             SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부',
             TRADING_FEE_RATE: '거래 수수료율 (비율)',
             TRAIN_WORKERS: '학습 워커 개수 (병렬처리)',
+            MIN_MODEL_AGREEMENT: '모델 일치도 최소값 (0~1)',
+            BTC_FILTER_ENABLED: 'BTC 추세 필터',
+            BTC_TREND_MA_PERIOD: 'BTC 추세 MA 기간 (일)',
+            TRAILING_STOP_ENABLED: '트레일링 스탑',
+            TRAILING_STOP_RATE: '트레일링 스탑 하락률 (%)',
+            TRAILING_STOP_ACTIVATION: '트레일링 스탑 활성화 수익률 (%)',
         };
         return labels[key] || key;
     };
@@ -458,6 +482,12 @@ export default function CointradeConfig() {
             SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부 (true/false)',
             TRADING_FEE_RATE: '거래소 수수료율 (0.05%면 0.0005로 입력, 업비트: 0.0005, 바이낸스: 0.001)',
             TRAIN_WORKERS: '학습 시 병렬처리할 워커 개수 (최대 10개)',
+            MIN_MODEL_AGREEMENT: '앙상블 모델(LSTM/GRU/CNN)의 예측 일치도. 1=완전 일치, 0=불일치. 단일 모델 사용 시 항상 1.0으로 무효화. 0이면 필터 비활성화 (추천: 0.5)',
+            BTC_FILTER_ENABLED: 'BTC 종가 < MA이면 하락추세로 판단, 모든 알트코인 매수 중단 (true/false)',
+            BTC_TREND_MA_PERIOD: 'BTC 이동평균 계산 기간 (일). 값이 작을수록 민감 (추천: 20일)',
+            TRAILING_STOP_ENABLED: '고정 익절 대신 최고가 추적. 최고가 대비 N% 하락 시 청산 (true/false)',
+            TRAILING_STOP_RATE: '최고가 대비 이 비율 하락 시 매도 (추천: 3%)',
+            TRAILING_STOP_ACTIVATION: '수익률이 이 값 이상일 때 트레일링 스탑 활성화 (추천: 2%)',
         };
         return descriptions[key] || '';
     };
@@ -619,7 +649,7 @@ export default function CointradeConfig() {
                                                                 <option value="ALL">ALL (전체)</option>
                                                                 <option value="SELECTED">SELECTED (선택)</option>
                                                             </select>
-                                                        ) : key === 'TRAIN_SCHEDULE_ENABLED' || key === 'BUY_SCHEDULER_ENABLED' || key === 'SELL_SCHEDULER_ENABLED' ? (
+                                                        ) : key === 'TRAIN_SCHEDULE_ENABLED' || key === 'BUY_SCHEDULER_ENABLED' || key === 'SELL_SCHEDULER_ENABLED' || key === 'BTC_FILTER_ENABLED' || key === 'TRAILING_STOP_ENABLED' ? (
                                                             <select
                                                                 value={params[key]}
                                                                 onChange={(e) => handleInputChange(key, e.target.value)}

@@ -171,7 +171,13 @@ export default function Backtest() {
         max_holding_days: 7,
         buy_fee_rate: 0.05,
         sell_fee_rate: 0.05,
-        sequence_length: 60
+        sequence_length: 60,
+        btc_filter_enabled: false,
+        btc_trend_ma_period: 20,
+        trailing_stop_enabled: false,
+        trailing_stop_rate: 3,
+        trailing_stop_activation: 2,
+        min_model_agreement: 0.5
     });
 
     // 삭제 확인 모달
@@ -534,6 +540,12 @@ export default function Backtest() {
                     max_holding_days: parseInt(configMap['MAX_HOLDING_DAYS']) || prev.max_holding_days,
                     buy_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || prev.buy_fee_rate,
                     sell_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || prev.sell_fee_rate,
+                    btc_filter_enabled: configMap['BTC_FILTER_ENABLED'] === 'true',
+                    btc_trend_ma_period: parseInt(configMap['BTC_TREND_MA_PERIOD']) || prev.btc_trend_ma_period,
+                    trailing_stop_enabled: configMap['TRAILING_STOP_ENABLED'] === 'true',
+                    trailing_stop_rate: parseFloat(configMap['TRAILING_STOP_RATE']) || prev.trailing_stop_rate,
+                    trailing_stop_activation: parseFloat(configMap['TRAILING_STOP_ACTIVATION']) || prev.trailing_stop_activation,
+                    min_model_agreement: configMap['MIN_MODEL_AGREEMENT'] != null ? parseFloat(configMap['MIN_MODEL_AGREEMENT']) : prev.min_model_agreement,
                 }));
             }
         } catch (e) {
@@ -585,7 +597,13 @@ export default function Backtest() {
                     max_holding_days: backtestConfig.max_holding_days,
                     buy_fee_rate: backtestConfig.buy_fee_rate / 100,
                     sell_fee_rate: backtestConfig.sell_fee_rate / 100,
-                    sequence_length: backtestConfig.sequence_length
+                    sequence_length: backtestConfig.sequence_length,
+                    btc_filter_enabled: backtestConfig.btc_filter_enabled,
+                    btc_trend_ma_period: backtestConfig.btc_trend_ma_period,
+                    trailing_stop_enabled: backtestConfig.trailing_stop_enabled,
+                    trailing_stop_rate: backtestConfig.trailing_stop_rate,
+                    trailing_stop_activation: backtestConfig.trailing_stop_activation,
+                    min_model_agreement: backtestConfig.min_model_agreement
                 }
             };
 
@@ -2094,6 +2112,111 @@ export default function Backtest() {
                                         </div>
 
                                         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
+                                            BTC 추세 필터
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                    BTC 필터 <code className="text-blue-500">btc_filter_enabled</code>
+                                                </label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={backtestConfig.btc_filter_enabled}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, btc_filter_enabled: e.target.checked }))}
+                                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                    {backtestConfig.btc_filter_enabled ? 'ON' : 'OFF'}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    BTC MA 기간 (일) <code className="text-blue-500">btc_trend_ma_period</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="5"
+                                                    max="200"
+                                                    value={backtestConfig.btc_trend_ma_period}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, btc_trend_ma_period: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                                                    disabled={!backtestConfig.btc_filter_enabled}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
+                                            트레일링 스탑
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                    활성화 <code className="text-blue-500">trailing_stop_enabled</code>
+                                                </label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={backtestConfig.trailing_stop_enabled}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_enabled: e.target.checked }))}
+                                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                    {backtestConfig.trailing_stop_enabled ? 'ON' : 'OFF'}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    하락률 (%) <code className="text-blue-500">trailing_stop_rate</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.5"
+                                                    min="0.5"
+                                                    max="20"
+                                                    value={backtestConfig.trailing_stop_rate}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    disabled={!backtestConfig.trailing_stop_enabled}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    활성화 수익률 (%) <code className="text-blue-500">trailing_stop_activation</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.5"
+                                                    min="0.5"
+                                                    max="20"
+                                                    value={backtestConfig.trailing_stop_activation}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_activation: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    disabled={!backtestConfig.trailing_stop_enabled}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
+                                            모델 일치도 필터
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    최소 일치도 (0~1) <code className="text-blue-500">min_model_agreement</code>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.05"
+                                                    min="0"
+                                                    max="1"
+                                                    value={backtestConfig.min_model_agreement}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_model_agreement: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                />
+                                                <p className="text-xs text-slate-400 mt-1">0이면 필터 비활성화. 단일 모델 시 무효</p>
+                                            </div>
+                                        </div>
+
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
                                             매도 조건
                                         </h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2554,6 +2677,12 @@ function getParamLabel(key) {
         SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부',
         BUY_FEE_RATE: '매수 수수료율(0.05%면 0.0005)',
         SELL_FEE_RATE: '매도 수수료율(0.05%면 0.0005)',
+        BTC_FILTER_ENABLED: 'BTC 추세 필터',
+        BTC_TREND_MA_PERIOD: 'BTC MA 기간 (일)',
+        TRAILING_STOP_ENABLED: '트레일링 스탑',
+        TRAILING_STOP_RATE: '트레일링 스탑 하락률 (%)',
+        TRAILING_STOP_ACTIVATION: '트레일링 스탑 활성화 수익률 (%)',
+        MIN_MODEL_AGREEMENT: '모델 일치도 최소값 (0~1)',
     };
 
     // 대소문자 구분 없이 매칭

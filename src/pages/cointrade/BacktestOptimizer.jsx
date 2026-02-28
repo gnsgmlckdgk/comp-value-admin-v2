@@ -444,6 +444,8 @@ export default function BacktestOptimizer() {
         min_profit_rate: { min_value: 3.0, max_value: 10.0, step: 1.0 },
         max_profit_rate: { min_value: 10.0, max_value: 50.0, step: 5.0 },
         max_holding_days: { min_value: 2, max_value: 14, step: 1 },
+        trailing_stop_enabled: { min_value: 0, max_value: 1, step: 1 },
+        btc_filter_enabled: { min_value: 0, max_value: 1, step: 1 },
         btc_trend_ma_period: { min_value: 5, max_value: 60, step: 5 },
         trailing_stop_rate: { min_value: 1.0, max_value: 8.0, step: 0.5 },
         trailing_stop_activation: { min_value: 1.0, max_value: 5.0, step: 0.5 },
@@ -1647,6 +1649,8 @@ export default function BacktestOptimizer() {
             min_profit_rate: '최소 익절률 (%)',
             max_profit_rate: '최대 익절률 (%)',
             max_holding_days: '최대 보유 기간 (일)',
+            trailing_stop_enabled: '트레일링 스탑 (0=OFF, 1=ON)',
+            btc_filter_enabled: 'BTC 추세 필터 (0=OFF, 1=ON)',
             btc_trend_ma_period: 'BTC MA 기간 (일)',
             trailing_stop_rate: '트레일링 스탑 하락률 (%)',
             trailing_stop_activation: '트레일링 스탑 활성화 수익률 (%)',
@@ -1671,6 +1675,8 @@ export default function BacktestOptimizer() {
             min_profit_rate: '최소익절',
             max_profit_rate: '최대익절',
             max_holding_days: '보유기간',
+            trailing_stop_enabled: 'TS사용',
+            btc_filter_enabled: 'BTC필터',
             trailing_stop_rate: 'TS하락',
             trailing_stop_activation: 'TS활성',
             min_model_agreement: '일치도',
@@ -2041,87 +2047,118 @@ export default function BacktestOptimizer() {
                             </label>
 
                             {useCustomParams && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <ParamRangeInput
-                                        label="최소 상승 확률"
-                                        paramKey="min_up_probability"
-                                        value={paramRanges.min_up_probability}
-                                        onChange={handleParamRangeChange}
-                                        step={0.05}
-                                        unit="0~1"
-                                    />
-                                    <ParamRangeInput
-                                        label="매수 조건 (기대 수익률)"
-                                        paramKey="buy_profit_threshold"
-                                        value={paramRanges.buy_profit_threshold}
-                                        onChange={handleParamRangeChange}
-                                        step={1}
-                                        unit="%"
-                                    />
-                                    <ParamRangeInput
-                                        label="손절선"
-                                        paramKey="stop_loss_threshold"
-                                        value={paramRanges.stop_loss_threshold}
-                                        onChange={handleParamRangeChange}
-                                        step={0.5}
-                                        unit="%"
-                                    />
-                                    <ParamRangeInput
-                                        label="익절 버퍼"
-                                        paramKey="take_profit_buffer"
-                                        value={paramRanges.take_profit_buffer}
-                                        onChange={handleParamRangeChange}
-                                        step={0.5}
-                                        unit="%"
-                                    />
-                                    <ParamRangeInput
-                                        label="최소 익절률"
-                                        paramKey="min_profit_rate"
-                                        value={paramRanges.min_profit_rate}
-                                        onChange={handleParamRangeChange}
-                                        step={1}
-                                        unit="%"
-                                    />
-                                    <ParamRangeInput
-                                        label="최대 익절률"
-                                        paramKey="max_profit_rate"
-                                        value={paramRanges.max_profit_rate}
-                                        onChange={handleParamRangeChange}
-                                        step={5}
-                                        unit="%"
-                                    />
-                                    <ParamRangeInput
-                                        label="최대 보유 기간"
-                                        paramKey="max_holding_days"
-                                        value={paramRanges.max_holding_days}
-                                        onChange={handleParamRangeChange}
-                                        step={1}
-                                        unit="일"
-                                    />
-                                    <ParamRangeInput
-                                        label="트레일링 스탑 하락률"
-                                        paramKey="trailing_stop_rate"
-                                        value={paramRanges.trailing_stop_rate}
-                                        onChange={handleParamRangeChange}
-                                        step={0.5}
-                                        unit="%"
-                                    />
-                                    <ParamRangeInput
-                                        label="트레일링 스탑 활성화 수익률"
-                                        paramKey="trailing_stop_activation"
-                                        value={paramRanges.trailing_stop_activation}
-                                        onChange={handleParamRangeChange}
-                                        step={0.5}
-                                        unit="%"
-                                    />
-                                    <ParamRangeInput
-                                        label="모델 일치도 최소값"
-                                        paramKey="min_model_agreement"
-                                        value={paramRanges.min_model_agreement}
-                                        onChange={handleParamRangeChange}
-                                        step={0.05}
-                                        unit="0~1"
-                                    />
+                                <div className="space-y-4">
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                                        트레일링 스탑과 BTC 추세 필터는 활성화/비활성화(0 또는 1) 자체도 최적화 대상입니다.
+                                        비활성화(0)가 더 나은 수익률을 내는 경우도 탐색합니다.
+                                        스위치가 꺼지면 하위 파라미터(하락률, 활성화 수익률, MA 기간)는 자동으로 탐색에서 제외됩니다.
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <ParamRangeInput
+                                            label="최소 상승 확률"
+                                            paramKey="min_up_probability"
+                                            value={paramRanges.min_up_probability}
+                                            onChange={handleParamRangeChange}
+                                            step={0.05}
+                                            unit="0~1"
+                                        />
+                                        <ParamRangeInput
+                                            label="매수 조건 (기대 수익률)"
+                                            paramKey="buy_profit_threshold"
+                                            value={paramRanges.buy_profit_threshold}
+                                            onChange={handleParamRangeChange}
+                                            step={1}
+                                            unit="%"
+                                        />
+                                        <ParamRangeInput
+                                            label="손절선"
+                                            paramKey="stop_loss_threshold"
+                                            value={paramRanges.stop_loss_threshold}
+                                            onChange={handleParamRangeChange}
+                                            step={0.5}
+                                            unit="%"
+                                        />
+                                        <ParamRangeInput
+                                            label="익절 버퍼"
+                                            paramKey="take_profit_buffer"
+                                            value={paramRanges.take_profit_buffer}
+                                            onChange={handleParamRangeChange}
+                                            step={0.5}
+                                            unit="%"
+                                        />
+                                        <ParamRangeInput
+                                            label="최소 익절률"
+                                            paramKey="min_profit_rate"
+                                            value={paramRanges.min_profit_rate}
+                                            onChange={handleParamRangeChange}
+                                            step={1}
+                                            unit="%"
+                                        />
+                                        <ParamRangeInput
+                                            label="최대 익절률"
+                                            paramKey="max_profit_rate"
+                                            value={paramRanges.max_profit_rate}
+                                            onChange={handleParamRangeChange}
+                                            step={5}
+                                            unit="%"
+                                        />
+                                        <ParamRangeInput
+                                            label="최대 보유 기간"
+                                            paramKey="max_holding_days"
+                                            value={paramRanges.max_holding_days}
+                                            onChange={handleParamRangeChange}
+                                            step={1}
+                                            unit="일"
+                                        />
+                                        <ParamRangeInput
+                                            label="트레일링 스탑 ON/OFF"
+                                            paramKey="trailing_stop_enabled"
+                                            value={paramRanges.trailing_stop_enabled}
+                                            onChange={handleParamRangeChange}
+                                            step={1}
+                                            unit="0/1"
+                                        />
+                                        <ParamRangeInput
+                                            label="트레일링 스탑 하락률"
+                                            paramKey="trailing_stop_rate"
+                                            value={paramRanges.trailing_stop_rate}
+                                            onChange={handleParamRangeChange}
+                                            step={0.5}
+                                            unit="%"
+                                        />
+                                        <ParamRangeInput
+                                            label="트레일링 스탑 활성화 수익률"
+                                            paramKey="trailing_stop_activation"
+                                            value={paramRanges.trailing_stop_activation}
+                                            onChange={handleParamRangeChange}
+                                            step={0.5}
+                                            unit="%"
+                                        />
+                                        <ParamRangeInput
+                                            label="BTC 추세 필터 ON/OFF"
+                                            paramKey="btc_filter_enabled"
+                                            value={paramRanges.btc_filter_enabled}
+                                            onChange={handleParamRangeChange}
+                                            step={1}
+                                            unit="0/1"
+                                        />
+                                        <ParamRangeInput
+                                            label="BTC MA 기간"
+                                            paramKey="btc_trend_ma_period"
+                                            value={paramRanges.btc_trend_ma_period}
+                                            onChange={handleParamRangeChange}
+                                            step={5}
+                                            unit="일"
+                                        />
+                                        <ParamRangeInput
+                                            label="모델 일치도 최소값"
+                                            paramKey="min_model_agreement"
+                                            value={paramRanges.min_model_agreement}
+                                            onChange={handleParamRangeChange}
+                                            step={0.05}
+                                            unit="0~1"
+                                        />
+                                    </div>
                                 </div>
                             )}
                         </div>

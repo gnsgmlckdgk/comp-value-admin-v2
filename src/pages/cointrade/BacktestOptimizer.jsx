@@ -2111,12 +2111,12 @@ export default function BacktestOptimizer() {
                                             unit="일"
                                         />
                                         <ParamRangeInput
-                                            label="트레일링 스탑 ON/OFF"
+                                            label="트레일링 스탑 (0=OFF, 1=ON)"
                                             paramKey="trailing_stop_enabled"
                                             value={paramRanges.trailing_stop_enabled}
                                             onChange={handleParamRangeChange}
                                             step={1}
-                                            unit="0/1"
+                                            unit="0=OFF, 1=ON"
                                         />
                                         <ParamRangeInput
                                             label="트레일링 스탑 하락률"
@@ -2135,12 +2135,12 @@ export default function BacktestOptimizer() {
                                             unit="%"
                                         />
                                         <ParamRangeInput
-                                            label="BTC 추세 필터 ON/OFF"
+                                            label="BTC 추세 필터 (0=OFF, 1=ON)"
                                             paramKey="btc_filter_enabled"
                                             value={paramRanges.btc_filter_enabled}
                                             onChange={handleParamRangeChange}
                                             step={1}
-                                            unit="0/1"
+                                            unit="0=OFF, 1=ON"
                                         />
                                         <ParamRangeInput
                                             label="BTC MA 기간"

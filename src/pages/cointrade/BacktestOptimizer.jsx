@@ -326,7 +326,7 @@ function TogglableTaskId({ taskId, maxLength = 20, className = '' }) {
 /**
  * 파라미터 범위 입력 컴포넌트
  */
-function ParamRangeInput({ label, paramKey, value, onChange, step = 0.01, unit = '' }) {
+function ParamRangeInput({ label, paramKey, value, onChange, step = 0.01, unit = '', description = '' }) {
     // 입력 중인 값을 문자열로 관리
     const [localValues, setLocalValues] = useState({
         min_value: value?.min_value?.toString() ?? '',
@@ -423,26 +423,26 @@ export default function BacktestOptimizer() {
     const [selectedPreset, setSelectedPreset] = useState('1year');
 
     // 옵티마이저 설정
-    const [maxRuns, setMaxRuns] = useState(50);
-    const [maxTimeMinutes, setMaxTimeMinutes] = useState(30);
-    const [targetReturn, setTargetReturn] = useState(15.0);
+    const [maxRuns, setMaxRuns] = useState(650);
+    const [maxTimeMinutes, setMaxTimeMinutes] = useState(390);
+    const [targetReturn, setTargetReturn] = useState(5.0);
     const [numWorkers, setNumWorkers] = useState(2);
     const [useCustomParams, setUseCustomParams] = useState(false);
 
     // 옵티마이저 설정 입력용 로컬 상태 (입력 중에는 문자열로 관리)
-    const [localMaxRuns, setLocalMaxRuns] = useState('50');
-    const [localMaxTimeMinutes, setLocalMaxTimeMinutes] = useState('30');
-    const [localTargetReturn, setLocalTargetReturn] = useState('15.0');
+    const [localMaxRuns, setLocalMaxRuns] = useState('650');
+    const [localMaxTimeMinutes, setLocalMaxTimeMinutes] = useState('390');
+    const [localTargetReturn, setLocalTargetReturn] = useState('5.0');
     const [localNumWorkers, setLocalNumWorkers] = useState('2');
 
     // 커스텀 파라미터 범위
     const [paramRanges, setParamRanges] = useState({
         min_up_probability: { min_value: 0.50, max_value: 0.80, step: 0.01 },
         buy_profit_threshold: { min_value: 0.5, max_value: 10.0, step: 0.5 },
-        stop_loss_threshold: { min_value: 3.0, max_value: 10.0, step: 0.5 },
+        stop_loss_threshold: { min_value: 1.0, max_value: 12.0, step: 1.0 },
         take_profit_buffer: { min_value: 1.0, max_value: 5.0, step: 0.5 },
-        min_profit_rate: { min_value: 3.0, max_value: 10.0, step: 1.0 },
-        max_profit_rate: { min_value: 10.0, max_value: 50.0, step: 5.0 },
+        min_profit_rate: { min_value: 1.0, max_value: 10.0, step: 1.0 },
+        max_profit_rate: { min_value: 10.0, max_value: 30.0, step: 2.0 },
         max_holding_days: { min_value: 2, max_value: 14, step: 1 },
         trailing_stop_enabled: { min_value: 0, max_value: 1, step: 1 },
         btc_filter_enabled: { min_value: 0, max_value: 1, step: 1 },
@@ -1972,11 +1972,11 @@ export default function BacktestOptimizer() {
                                 <input
                                     type="number"
                                     min="1"
-                                    max="1000"
+                                    max="5000"
                                     value={localMaxRuns}
                                     onChange={(e) => setLocalMaxRuns(e.target.value)}
                                     onBlur={() => {
-                                        const val = parseInt(localMaxRuns) || 50;
+                                        const val = parseInt(localMaxRuns) || 650;
                                         setMaxRuns(val);
                                         setLocalMaxRuns(val.toString());
                                     }}
@@ -1988,11 +1988,11 @@ export default function BacktestOptimizer() {
                                 <input
                                     type="number"
                                     min="1"
-                                    max="180"
+                                    max="600"
                                     value={localMaxTimeMinutes}
                                     onChange={(e) => setLocalMaxTimeMinutes(e.target.value)}
                                     onBlur={() => {
-                                        const val = parseInt(localMaxTimeMinutes) || 30;
+                                        const val = parseInt(localMaxTimeMinutes) || 390;
                                         setMaxTimeMinutes(val);
                                         setLocalMaxTimeMinutes(val.toString());
                                     }}
@@ -2008,7 +2008,7 @@ export default function BacktestOptimizer() {
                                     value={localTargetReturn}
                                     onChange={(e) => setLocalTargetReturn(e.target.value)}
                                     onBlur={() => {
-                                        const val = parseFloat(localTargetReturn) || 15.0;
+                                        const val = parseFloat(localTargetReturn) || 5.0;
                                         setTargetReturn(val);
                                         setLocalTargetReturn(val.toString());
                                     }}

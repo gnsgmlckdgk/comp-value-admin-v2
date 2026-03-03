@@ -622,6 +622,64 @@ const InvestmentEvaluation = () => {
         }
     }, [sortedData, openAlert]);
 
+    // CSV 다운로드
+    const handleExportToCsv = useCallback(() => {
+        if (sortedData.length === 0) {
+            openAlert('다운로드할 데이터가 없습니다.');
+            return;
+        }
+
+        try {
+            const headers = ['심볼', '기업명', '등급', '총점', '현재가', '적정가치', '가격차이율', '섹터', '거래소', '국가', '추천'];
+            const rows = sortedData.map((row) => [
+                row.symbol || '',
+                row.companyName || '',
+                row.grade || '',
+                row.totalScore != null ? row.totalScore.toFixed(1) : '',
+                row.currentPrice ? `$${row.currentPrice}` : '',
+                row.fairValue ? `$${row.fairValue}` : '',
+                row.priceGapPercent || '',
+                row.sector || '',
+                row.exchange || '',
+                row.country || '',
+                row.recommendation || '',
+            ]);
+
+            const escapeCsvField = (field) => {
+                const str = String(field);
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            const csvContent = '\uFEFF' + [
+                headers.map(escapeCsvField).join(','),
+                ...rows.map((row) => row.map(escapeCsvField).join(',')),
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+            const filename = `투자판단_${dateStr}.csv`;
+
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            openAlert(`CSV 파일이 다운로드되었습니다.\n파일명: ${filename}\n총 ${sortedData.length}건`);
+        } catch (error) {
+            console.error('CSV export error:', error);
+            openAlert('CSV 파일 생성 중 오류가 발생했습니다.');
+        }
+    }, [sortedData, openAlert]);
+
     // 행 클릭 -> 상세정보 모달
     const handleRowClick = useCallback((row) => {
         if (dropdownClosingRef.current) return;
@@ -821,6 +879,17 @@ const InvestmentEvaluation = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                                 엑셀 다운로드
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExportToCsv}
+                                disabled={sortedData.length === 0}
+                                className="px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-medium hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                CSV 다운로드
                             </button>
                             {Object.values(columnFilters).some((v) => v !== '') && (
                                 <button

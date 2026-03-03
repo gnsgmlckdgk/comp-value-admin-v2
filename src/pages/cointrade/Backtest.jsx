@@ -129,6 +129,28 @@ function TogglableTaskId({ taskId, maxLength = 20, className = '' }) {
     );
 }
 
+const DEFAULT_BACKTEST_CONFIG = {
+    initial_capital: 1000000,
+    buy_amount_per_coin: 100000,
+    min_up_probability: 60,
+    buy_profit_threshold: 10,
+    take_profit_buffer: 3,
+    stop_loss_threshold: 5,
+    min_profit_rate: 5,
+    max_profit_rate: 30,
+    prediction_days: 3,
+    max_holding_days: 7,
+    buy_fee_rate: 0.05,
+    sell_fee_rate: 0.05,
+    sequence_length: 60,
+    btc_filter_enabled: false,
+    btc_trend_ma_period: 20,
+    trailing_stop_enabled: false,
+    trailing_stop_rate: 3,
+    trailing_stop_activation: 2,
+    min_model_agreement: 0.5
+};
+
 /**
  * 백테스트 페이지
  */
@@ -158,27 +180,7 @@ export default function Backtest() {
 
     // 백테스트 파라미터 설정
     const [configLoading, setConfigLoading] = useState(false);
-    const [backtestConfig, setBacktestConfig] = useState({
-        initial_capital: 1000000,
-        buy_amount_per_coin: 100000,
-        min_up_probability: 60,
-        buy_profit_threshold: 10,
-        take_profit_buffer: 3,
-        stop_loss_threshold: 5,
-        min_profit_rate: 5,
-        max_profit_rate: 30,
-        prediction_days: 3,
-        max_holding_days: 7,
-        buy_fee_rate: 0.05,
-        sell_fee_rate: 0.05,
-        sequence_length: 60,
-        btc_filter_enabled: false,
-        btc_trend_ma_period: 20,
-        trailing_stop_enabled: false,
-        trailing_stop_rate: 3,
-        trailing_stop_activation: 2,
-        min_model_agreement: 0.5
-    });
+    const [backtestConfig, setBacktestConfig] = useState(DEFAULT_BACKTEST_CONFIG);
 
     // 삭제 확인 모달
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
@@ -194,6 +196,9 @@ export default function Backtest() {
     const [compareResults, setCompareResults] = useState([]);
     const [selectedDetailTaskId, setSelectedDetailTaskId] = useState(null);
     const [detailResult, setDetailResult] = useState(null);
+
+    // 옵티마이저 이력
+    const [optimizerHistory, setOptimizerHistory] = useState([]);
 
     // 실행 제목
     const [runTitle, setRunTitle] = useState('');
@@ -415,6 +420,60 @@ export default function Backtest() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // 기본값과 다른지 체크하는 헬퍼
+    const isModified = (key) => backtestConfig[key] !== DEFAULT_BACKTEST_CONFIG[key];
+
+    const paramInputClass = (key, extra = '') =>
+        `w-full px-3 py-2 text-sm border rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${extra} ${isModified(key) ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-400' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700'}`;
+
+    // 옵티마이저 이력 조회
+    const fetchOptimizerHistory = async () => {
+        const { data, error } = await send('/dart/api/backtest/optimizer/history?limit=20', {}, 'GET');
+        if (!error && data?.success && data?.response) {
+            setOptimizerHistory(data.response.filter(h => h.status === 'completed'));
+        }
+    };
+
+    // 옵티마이저 결과 적용
+    const applyOptimizerResult = async (taskId) => {
+        const { data, error } = await send(`/dart/api/backtest/optimizer/result/${taskId}`, {}, 'GET');
+        if (error || !data?.success || !data?.response?.data) {
+            setToast('옵티마이저 결과 조회 실패');
+            return;
+        }
+        const { best_params, fixed_params } = data.response.data;
+
+        setBacktestConfig(prev => {
+            const next = { ...prev };
+            if (best_params) {
+                if (best_params.min_up_probability != null) next.min_up_probability = best_params.min_up_probability * 100;
+                if (best_params.buy_profit_threshold != null) next.buy_profit_threshold = best_params.buy_profit_threshold;
+                if (best_params.take_profit_buffer != null) next.take_profit_buffer = best_params.take_profit_buffer;
+                if (best_params.stop_loss_threshold != null) next.stop_loss_threshold = best_params.stop_loss_threshold;
+                if (best_params.min_profit_rate != null) next.min_profit_rate = best_params.min_profit_rate;
+                if (best_params.max_profit_rate != null) next.max_profit_rate = best_params.max_profit_rate;
+                if (best_params.trailing_stop_enabled != null) next.trailing_stop_enabled = best_params.trailing_stop_enabled === 1;
+                if (best_params.trailing_stop_rate != null) next.trailing_stop_rate = best_params.trailing_stop_rate;
+                if (best_params.trailing_stop_activation != null) next.trailing_stop_activation = best_params.trailing_stop_activation;
+                if (best_params.btc_filter_enabled != null) next.btc_filter_enabled = best_params.btc_filter_enabled === 1;
+                if (best_params.btc_trend_ma_period != null) next.btc_trend_ma_period = best_params.btc_trend_ma_period;
+                if (best_params.max_holding_days != null) next.max_holding_days = best_params.max_holding_days;
+                if (best_params.min_model_agreement != null) next.min_model_agreement = best_params.min_model_agreement;
+            }
+            if (fixed_params) {
+                if (fixed_params.buy_fee_rate != null) next.buy_fee_rate = fixed_params.buy_fee_rate * 100;
+                if (fixed_params.sell_fee_rate != null) next.sell_fee_rate = fixed_params.sell_fee_rate * 100;
+                if (fixed_params.initial_capital != null) next.initial_capital = fixed_params.initial_capital;
+                if (fixed_params.buy_amount_per_coin != null) next.buy_amount_per_coin = fixed_params.buy_amount_per_coin;
+                if (fixed_params.prediction_days != null) next.prediction_days = fixed_params.prediction_days;
+                if (fixed_params.sequence_length != null) next.sequence_length = fixed_params.sequence_length;
+            }
+            return next;
+        });
+
+        setToast('옵티마이저 최적 파라미터가 적용되었습니다.');
     };
 
     // 인라인 제목 수정 핸들러
@@ -2125,6 +2184,37 @@ export default function Backtest() {
 
                                     {/* 파라미터 설정 */}
                                     <div className="space-y-4">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <select
+                                                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                defaultValue=""
+                                                onFocus={() => { if (optimizerHistory.length === 0) fetchOptimizerHistory(); }}
+                                                onChange={(e) => {
+                                                    if (e.target.value) {
+                                                        applyOptimizerResult(e.target.value);
+                                                        e.target.value = '';
+                                                    }
+                                                }}
+                                            >
+                                                <option value="" disabled>옵티마이저 결과 불러오기</option>
+                                                {optimizerHistory.map(h => (
+                                                    <option key={h.task_id} value={h.task_id}>
+                                                        {h.title || h.task_id.slice(0, 8)} | 수익률 {h.best_return}% | 점수 {h.best_score}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setBacktestConfig(DEFAULT_BACKTEST_CONFIG);
+                                                    setToast('기본값으로 초기화되었습니다.');
+                                                }}
+                                            >
+                                                기본값 초기화
+                                            </Button>
+                                        </div>
+
                                         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2">
                                             자본 설정
                                         </h4>
@@ -2132,23 +2222,25 @@ export default function Backtest() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     초기 자본금 (원) <code className="text-blue-500">initial_capital</code>
+                                                    {isModified('initial_capital') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     value={backtestConfig.initial_capital}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, initial_capital: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('initial_capital')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     1회 매수 금액 (원) <code className="text-blue-500">buy_amount_per_coin</code>
+                                                    {isModified('buy_amount_per_coin') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     value={backtestConfig.buy_amount_per_coin}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_amount_per_coin: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('buy_amount_per_coin')}
                                                 />
                                             </div>
                                         </div>
@@ -2160,25 +2252,27 @@ export default function Backtest() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     최소 상승 확률 (%) <code className="text-blue-500">min_up_probability</code>
+                                                    {isModified('min_up_probability') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.min_up_probability}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_up_probability: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('min_up_probability')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     기대 수익률 하한 (%) <code className="text-blue-500">buy_profit_threshold</code>
+                                                    {isModified('buy_profit_threshold') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.buy_profit_threshold}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_profit_threshold: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('buy_profit_threshold')}
                                                 />
                                             </div>
                                         </div>
@@ -2190,6 +2284,7 @@ export default function Backtest() {
                                             <div className="flex items-center gap-3">
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
                                                     BTC 필터 <code className="text-blue-500">btc_filter_enabled</code>
+                                                    {isModified('btc_filter_enabled') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="checkbox"
@@ -2204,6 +2299,7 @@ export default function Backtest() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     BTC MA 기간 (일) <code className="text-blue-500">btc_trend_ma_period</code>
+                                                    {isModified('btc_trend_ma_period') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
@@ -2212,7 +2308,7 @@ export default function Backtest() {
                                                     value={backtestConfig.btc_trend_ma_period}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, btc_trend_ma_period: e.target.value === '' ? '' : parseInt(e.target.value) }))}
                                                     disabled={!backtestConfig.btc_filter_enabled}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                                                    className={paramInputClass('btc_trend_ma_period', 'disabled:opacity-50')}
                                                 />
                                             </div>
                                         </div>
@@ -2224,6 +2320,7 @@ export default function Backtest() {
                                             <div className="flex items-center gap-2">
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
                                                     활성화 <code className="text-blue-500">trailing_stop_enabled</code>
+                                                    {isModified('trailing_stop_enabled') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="checkbox"
@@ -2238,6 +2335,7 @@ export default function Backtest() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     하락률 (%) <code className="text-blue-500">trailing_stop_rate</code>
+                                                    {isModified('trailing_stop_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
@@ -2247,12 +2345,13 @@ export default function Backtest() {
                                                     value={backtestConfig.trailing_stop_rate}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     disabled={!backtestConfig.trailing_stop_enabled}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                                                    className={paramInputClass('trailing_stop_rate', 'disabled:opacity-50')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     활성화 수익률 (%) <code className="text-blue-500">trailing_stop_activation</code>
+                                                    {isModified('trailing_stop_activation') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
@@ -2262,7 +2361,7 @@ export default function Backtest() {
                                                     value={backtestConfig.trailing_stop_activation}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_activation: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     disabled={!backtestConfig.trailing_stop_enabled}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                                                    className={paramInputClass('trailing_stop_activation', 'disabled:opacity-50')}
                                                 />
                                             </div>
                                         </div>
@@ -2274,6 +2373,7 @@ export default function Backtest() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     최소 일치도 (0~1) <code className="text-blue-500">min_model_agreement</code>
+                                                    {isModified('min_model_agreement') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
@@ -2282,7 +2382,7 @@ export default function Backtest() {
                                                     max="1"
                                                     value={backtestConfig.min_model_agreement}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_model_agreement: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('min_model_agreement')}
                                                 />
                                                 <p className="text-xs text-slate-400 mt-1">0이면 필터 비활성화. 단일 모델 시 무효</p>
                                             </div>
@@ -2295,49 +2395,53 @@ export default function Backtest() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     익절 버퍼 (%) <code className="text-blue-500">take_profit_buffer</code>
+                                                    {isModified('take_profit_buffer') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.take_profit_buffer}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, take_profit_buffer: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('take_profit_buffer')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     손절 임계값 (%) <code className="text-blue-500">stop_loss_threshold</code>
+                                                    {isModified('stop_loss_threshold') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.stop_loss_threshold}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, stop_loss_threshold: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('stop_loss_threshold')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     최소 익절률 (%) <code className="text-blue-500">min_profit_rate</code>
+                                                    {isModified('min_profit_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.min_profit_rate}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_profit_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('min_profit_rate')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     최대 익절률 (%) <code className="text-blue-500">max_profit_rate</code>
+                                                    {isModified('max_profit_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     step="0.1"
                                                     value={backtestConfig.max_profit_rate}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, max_profit_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('max_profit_rate')}
                                                 />
                                             </div>
                                         </div>
@@ -2349,17 +2453,19 @@ export default function Backtest() {
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     예측 기간 (일) <code className="text-blue-500">prediction_days</code>
+                                                    {isModified('prediction_days') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     value={backtestConfig.prediction_days}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, prediction_days: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('prediction_days')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     최대 보유(일) <code className="text-blue-500">max_holding_days</code>
+                                                    {isModified('max_holding_days') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
@@ -2367,42 +2473,45 @@ export default function Backtest() {
                                                     max="30"
                                                     value={backtestConfig.max_holding_days}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, max_holding_days: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('max_holding_days')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     매수 수수료 (%) <code className="text-blue-500">buy_fee_rate</code>
+                                                    {isModified('buy_fee_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     step="0.001"
                                                     value={backtestConfig.buy_fee_rate}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_fee_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('buy_fee_rate')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     매도 수수료 (%) <code className="text-blue-500">sell_fee_rate</code>
+                                                    {isModified('sell_fee_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     step="0.001"
                                                     value={backtestConfig.sell_fee_rate}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, sell_fee_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('sell_fee_rate')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     시퀀스 길이 <code className="text-blue-500">sequence_length</code>
+                                                    {isModified('sequence_length') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     value={backtestConfig.sequence_length}
                                                     onChange={(e) => setBacktestConfig(prev => ({ ...prev, sequence_length: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className={paramInputClass('sequence_length')}
                                                 />
                                             </div>
                                         </div>

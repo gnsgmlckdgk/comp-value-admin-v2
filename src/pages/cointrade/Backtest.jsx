@@ -449,16 +449,16 @@ export default function Backtest() {
         setBacktestConfig(prev => {
             const next = { ...prev };
             if (best_params) {
-                if (best_params.min_up_probability != null) next.min_up_probability = best_params.min_up_probability * 100;
+                if (best_params.min_up_probability != null) next.min_up_probability = best_params.min_up_probability;
                 if (best_params.buy_profit_threshold != null) next.buy_profit_threshold = best_params.buy_profit_threshold;
                 if (best_params.take_profit_buffer != null) next.take_profit_buffer = best_params.take_profit_buffer;
                 if (best_params.stop_loss_threshold != null) next.stop_loss_threshold = best_params.stop_loss_threshold;
                 if (best_params.min_profit_rate != null) next.min_profit_rate = best_params.min_profit_rate;
                 if (best_params.max_profit_rate != null) next.max_profit_rate = best_params.max_profit_rate;
-                if (best_params.trailing_stop_enabled != null) next.trailing_stop_enabled = best_params.trailing_stop_enabled === 1;
+                if (best_params.trailing_stop_enabled != null) next.trailing_stop_enabled = !!best_params.trailing_stop_enabled;
                 if (best_params.trailing_stop_rate != null) next.trailing_stop_rate = best_params.trailing_stop_rate;
                 if (best_params.trailing_stop_activation != null) next.trailing_stop_activation = best_params.trailing_stop_activation;
-                if (best_params.btc_filter_enabled != null) next.btc_filter_enabled = best_params.btc_filter_enabled === 1;
+                if (best_params.btc_filter_enabled != null) next.btc_filter_enabled = !!best_params.btc_filter_enabled;
                 if (best_params.btc_trend_ma_period != null) next.btc_trend_ma_period = best_params.btc_trend_ma_period;
                 if (best_params.max_holding_days != null) next.max_holding_days = best_params.max_holding_days;
                 if (best_params.min_model_agreement != null) next.min_model_agreement = best_params.min_model_agreement;
@@ -2211,6 +2211,7 @@ export default function Backtest() {
                                                 size="sm"
                                                 onClick={() => {
                                                     setBacktestConfig(DEFAULT_BACKTEST_CONFIG);
+                                                    setLoadedConfig(DEFAULT_BACKTEST_CONFIG);
                                                     setToast('기본값으로 초기화되었습니다.');
                                                 }}
                                             >

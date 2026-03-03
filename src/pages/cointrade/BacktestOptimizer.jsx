@@ -482,7 +482,7 @@ export default function BacktestOptimizer() {
     const [selectedDetailTaskId, setSelectedDetailTaskId] = useState(null);
     const [detailResult, setDetailResult] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
+    const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 150);
     const [showAllTrials, setShowAllTrials] = useState(false);
     const { shouldRender: renderAllTrials, isAnimatingOut: isAllTrialsClosing } = useModalAnimation(showAllTrials, 250);
 
@@ -2860,13 +2860,13 @@ export default function BacktestOptimizer() {
             {/* 상세 결과 모달 */}
             {renderDetailModal && (
                 <div
-                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate__animated ${isDetailModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
-                    style={{ animationDuration: '0.25s' }}
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 overflow-y-auto animate__animated ${isDetailModalClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+                    style={{ animationDuration: '0.15s' }}
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setIsDetailModalOpen(false);
                     }}
                 >
-                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] sm:max-h-[90vh] overflow-hidden flex flex-col my-4 animate__animated ${isDetailModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
+                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] sm:max-h-[90vh] overflow-hidden flex flex-col my-4 animate__animated ${isDetailModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.15s' }}>
                         {/* 헤더 */}
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-3">
@@ -2901,9 +2901,9 @@ export default function BacktestOptimizer() {
                             </div>
                         </div>
 
-                        {/* 콘텐츠 */}
+                        {/* 콘텐츠 - 닫기 애니메이션 시 무거운 DOM 즉시 제거 */}
                         <div className="flex-1 overflow-auto p-6">
-                            {loading && !detailResult ? (
+                            {isDetailModalClosing ? null : loading && !detailResult ? (
                                 <div className="text-center py-12 text-slate-500 dark:text-slate-400">
                                     조회 중...
                                 </div>

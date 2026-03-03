@@ -1173,6 +1173,77 @@ export default function Backtest() {
         }
     };
 
+    const handleExportCsv = (result) => {
+        try {
+            const portfolio = result.data.portfolio;
+            const individual = result.data.individual;
+
+            if (!individual) {
+                setToast('개별 종목 데이터가 없습니다.');
+                return;
+            }
+
+            const headers = [
+                '종목', '진입일', '청산일', '진입가', '청산가', '수량',
+                '손익', '수익률(%)', '예측 고가', '예측 저가',
+                '상승 확률(%)', '기대 수익률(%)', '사유'
+            ];
+
+            const escapeCell = (value) => {
+                const str = String(value ?? '');
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            const rows = [headers.map(escapeCell).join(',')];
+
+            Object.entries(individual)
+                .filter(([, data]) => data !== null && data.trades && data.trades.length > 0)
+                .forEach(([coin, data]) => {
+                    data.trades.forEach(trade => {
+                        rows.push([
+                            coin,
+                            trade.entry_date,
+                            trade.exit_date,
+                            trade.entry_price,
+                            trade.exit_price,
+                            trade.quantity,
+                            trade.profit_loss,
+                            trade.profit_loss_rate.toFixed(2),
+                            trade.predicted_high,
+                            trade.predicted_low,
+                            (trade.up_probability * 100).toFixed(2),
+                            trade.expected_return.toFixed(2),
+                            trade.reason
+                        ].map(escapeCell).join(','));
+                    });
+                });
+
+            const bom = '\uFEFF';
+            const csvContent = bom + rows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            const formatDate = (dateStr) => dateStr.replace(/-/g, '');
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+            const startDate = formatDate(portfolio.start_date);
+            const endDate = formatDate(portfolio.end_date);
+            const coinCount = portfolio.coin_count;
+
+            a.download = `backtest_${coinCount}coins_${startDate}_${endDate}_${timestamp}_detailed.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('CSV 내보내기 실패:', e);
+            setToast('CSV 내보내기 중 오류가 발생했습니다.');
+        }
+    };
+
     const getFilteredCoins = () => {
         return allCoins.filter(coin => {
             if (marketFilter !== 'ALL') {
@@ -1995,6 +2066,7 @@ export default function Backtest() {
                                     result={detailResult}
                                     onClose={() => { setDetailResult(null); setSelectedDetailTaskId(null); }}
                                     onExport={(includeIndividual) => handleExportExcel(detailResult, includeIndividual)}
+                                    onExportCsv={() => handleExportCsv(detailResult)}
                                 />
                             )}
                         </>
@@ -2751,7 +2823,7 @@ function CustomProfitTooltip({ active, payload, label }) {
 }
 
 // 상세 뷰 컴포넌트
-function DetailView({ result, onClose, onExport }) {
+function DetailView({ result, onClose, onExport, onExportCsv }) {
     const [showProfitRanking, setShowProfitRanking] = useState(false);
     const [showTradeCountRanking, setShowTradeCountRanking] = useState(false);
     const [showParams, setShowParams] = useState(false);
@@ -2933,6 +3005,9 @@ function DetailView({ result, onClose, onExport }) {
                             </Button>
                             <Button size="sm" onClick={() => onExport(true)}>
                                 상세 엑셀
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={onExportCsv}>
+                                상세 CSV
                             </Button>
                             <button
                                 onClick={onClose}

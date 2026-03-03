@@ -181,6 +181,7 @@ export default function Backtest() {
     // 백테스트 파라미터 설정
     const [configLoading, setConfigLoading] = useState(false);
     const [backtestConfig, setBacktestConfig] = useState(DEFAULT_BACKTEST_CONFIG);
+    const [loadedConfig, setLoadedConfig] = useState(DEFAULT_BACKTEST_CONFIG);
 
     // 삭제 확인 모달
     const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
@@ -422,8 +423,8 @@ export default function Backtest() {
         }
     };
 
-    // 기본값과 다른지 체크하는 헬퍼
-    const isModified = (key) => backtestConfig[key] !== DEFAULT_BACKTEST_CONFIG[key];
+    // 서버에서 불러온 값과 다른지 체크하는 헬퍼
+    const isModified = (key) => backtestConfig[key] !== loadedConfig[key];
 
     const paramInputClass = (key, extra = '') =>
         `w-full px-3 py-2 text-sm border rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${extra} ${isModified(key) ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-400' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700'}`;
@@ -585,27 +586,29 @@ export default function Backtest() {
                     if (key && val) configMap[key] = val;
                 });
 
-                setBacktestConfig(prev => ({
-                    ...prev,
-                    initial_capital: parseFloat(configMap['INITIAL_CAPITAL']) || prev.initial_capital,
-                    buy_amount_per_coin: parseFloat(configMap['BUY_AMOUNT_PER_COIN']) || prev.buy_amount_per_coin,
-                    min_up_probability: parseFloat(configMap['MIN_UP_PROBABILITY']) || prev.min_up_probability,
-                    buy_profit_threshold: parseFloat(configMap['BUY_PROFIT_THRESHOLD']) || prev.buy_profit_threshold,
-                    take_profit_buffer: parseFloat(configMap['TAKE_PROFIT_BUFFER']) || prev.take_profit_buffer,
-                    stop_loss_threshold: parseFloat(configMap['STOP_LOSS_THRESHOLD']) || prev.stop_loss_threshold,
-                    min_profit_rate: parseFloat(configMap['MIN_PROFIT_RATE']) || prev.min_profit_rate,
-                    max_profit_rate: parseFloat(configMap['MAX_PROFIT_RATE']) || prev.max_profit_rate,
-                    prediction_days: parseInt(configMap['PREDICTION_DAYS']) || prev.prediction_days,
-                    max_holding_days: parseInt(configMap['MAX_HOLDING_DAYS']) || prev.max_holding_days,
-                    buy_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || prev.buy_fee_rate,
-                    sell_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || prev.sell_fee_rate,
+                const serverConfig = {
+                    ...DEFAULT_BACKTEST_CONFIG,
+                    initial_capital: parseFloat(configMap['INITIAL_CAPITAL']) || DEFAULT_BACKTEST_CONFIG.initial_capital,
+                    buy_amount_per_coin: parseFloat(configMap['BUY_AMOUNT_PER_COIN']) || DEFAULT_BACKTEST_CONFIG.buy_amount_per_coin,
+                    min_up_probability: parseFloat(configMap['MIN_UP_PROBABILITY']) || DEFAULT_BACKTEST_CONFIG.min_up_probability,
+                    buy_profit_threshold: parseFloat(configMap['BUY_PROFIT_THRESHOLD']) || DEFAULT_BACKTEST_CONFIG.buy_profit_threshold,
+                    take_profit_buffer: parseFloat(configMap['TAKE_PROFIT_BUFFER']) || DEFAULT_BACKTEST_CONFIG.take_profit_buffer,
+                    stop_loss_threshold: parseFloat(configMap['STOP_LOSS_THRESHOLD']) || DEFAULT_BACKTEST_CONFIG.stop_loss_threshold,
+                    min_profit_rate: parseFloat(configMap['MIN_PROFIT_RATE']) || DEFAULT_BACKTEST_CONFIG.min_profit_rate,
+                    max_profit_rate: parseFloat(configMap['MAX_PROFIT_RATE']) || DEFAULT_BACKTEST_CONFIG.max_profit_rate,
+                    prediction_days: parseInt(configMap['PREDICTION_DAYS']) || DEFAULT_BACKTEST_CONFIG.prediction_days,
+                    max_holding_days: parseInt(configMap['MAX_HOLDING_DAYS']) || DEFAULT_BACKTEST_CONFIG.max_holding_days,
+                    buy_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || DEFAULT_BACKTEST_CONFIG.buy_fee_rate,
+                    sell_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || DEFAULT_BACKTEST_CONFIG.sell_fee_rate,
                     btc_filter_enabled: configMap['BTC_FILTER_ENABLED'] === 'true',
-                    btc_trend_ma_period: parseInt(configMap['BTC_TREND_MA_PERIOD']) || prev.btc_trend_ma_period,
+                    btc_trend_ma_period: parseInt(configMap['BTC_TREND_MA_PERIOD']) || DEFAULT_BACKTEST_CONFIG.btc_trend_ma_period,
                     trailing_stop_enabled: configMap['TRAILING_STOP_ENABLED'] === 'true',
-                    trailing_stop_rate: parseFloat(configMap['TRAILING_STOP_RATE']) || prev.trailing_stop_rate,
-                    trailing_stop_activation: parseFloat(configMap['TRAILING_STOP_ACTIVATION']) || prev.trailing_stop_activation,
-                    min_model_agreement: configMap['MIN_MODEL_AGREEMENT'] != null ? parseFloat(configMap['MIN_MODEL_AGREEMENT']) : prev.min_model_agreement,
-                }));
+                    trailing_stop_rate: parseFloat(configMap['TRAILING_STOP_RATE']) || DEFAULT_BACKTEST_CONFIG.trailing_stop_rate,
+                    trailing_stop_activation: parseFloat(configMap['TRAILING_STOP_ACTIVATION']) || DEFAULT_BACKTEST_CONFIG.trailing_stop_activation,
+                    min_model_agreement: configMap['MIN_MODEL_AGREEMENT'] != null ? parseFloat(configMap['MIN_MODEL_AGREEMENT']) : DEFAULT_BACKTEST_CONFIG.min_model_agreement,
+                };
+                setBacktestConfig(serverConfig);
+                setLoadedConfig(serverConfig);
             }
         } catch (e) {
             console.error('설정값 조회 실패:', e);

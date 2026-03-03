@@ -58,7 +58,7 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
                             💰 매도 전략 가이드 (AI 자동 매도)
                         </h4>
                         <p className="text-sm text-blue-700 dark:text-blue-200 leading-relaxed">
-                            자산을 안전하게 보호하고 수익을 확정하기 위해 <strong>3단계 매도 필터</strong>를 사용합니다. 
+                            자산을 안전하게 보호하고 수익을 확정하기 위해 <strong>4단계 매도 필터</strong>를 사용합니다.
                             모든 매도는 체결 가능성을 높이기 위해 <span className="font-bold underline">시장가</span>로 실행됩니다.
                         </p>
                     </div>
@@ -96,7 +96,31 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
                     {/* 전략 3 */}
                     <section className="space-y-3">
                         <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            3. 손절 관리 (리스크 최소화) 🛡️
+                            3. 트레일링 스탑 (최고가 추적 매도) 📉
+                        </h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            고정된 목표가 대신, 가격이 오르는 동안 <strong>최고가를 계속 추적</strong>하다가 일정 비율 하락하면 매도합니다.
+                        </p>
+                        <ul className="list-disc list-inside text-sm space-y-1.5 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <li><strong>활성화 조건:</strong> 수익률이 <strong>트레일링 스탑 활성화 수익률(<code>TRAILING_STOP_ACTIVATION</code>)</strong> 이상일 때부터 추적 시작</li>
+                            <li><strong>매도 조건:</strong> 추적 중인 최고가 대비 <strong>트레일링 스탑 하락률(<code>TRAILING_STOP_RATE</code>)</strong>만큼 하락하면 매도</li>
+                            <li><strong>장점:</strong> 상승 추세가 계속되면 수익을 더 가져가고, 하락 전환 시 자동으로 빠져나옵니다.</li>
+                            <li className="list-none pt-2 font-semibold text-purple-600 dark:text-purple-400 italic">"상승은 끝까지 따라가고, 하락 전환 시 놓치지 않고 빠져나옵니다."</li>
+                        </ul>
+                        <div className="text-sm text-slate-600 dark:text-slate-400 pl-2 border-l-4 border-purple-200 dark:border-purple-800 mt-2">
+                            <div className="font-semibold mb-1">관련 파라미터</div>
+                            <ul className="list-disc list-inside space-y-1">
+                                <li><code>TRAILING_STOP_ENABLED</code>: 트레일링 스탑 활성화 (true/false)</li>
+                                <li><code>TRAILING_STOP_RATE</code>: 최고가 대비 하락률 (추천: 3%)</li>
+                                <li><code>TRAILING_STOP_ACTIVATION</code>: 수익률이 이 값 이상일 때 추적 시작 (추천: 2%)</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    {/* 전략 4 */}
+                    <section className="space-y-3">
+                        <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            4. 손절 관리 (리스크 최소화) 🛡️
                         </h4>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
                             예측과 달리 시장 상황이 악화될 경우 손실을 짧게 끊어냅니다.

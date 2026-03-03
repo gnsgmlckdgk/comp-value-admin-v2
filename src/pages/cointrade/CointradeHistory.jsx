@@ -75,6 +75,7 @@ const getReasonColor = (reason) => {
         'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
         'PARTIAL_7DAY_PROFIT': 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
         'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
+        'TRAILING_STOP': 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300',
         'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
         'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
         'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
@@ -92,6 +93,7 @@ const getReasonLabel = (reason) => {
         'PARTIAL_TAKE_PROFIT': '부분익절',
         'PARTIAL_7DAY_PROFIT': '부분기간',
         'PARTIAL_STOP_LOSS': '부분손절',
+        'TRAILING_STOP': '트레일링스탑',
         'MANUAL': '수동매도',
         'PARTIAL_MANUAL': '부분수동',
         'MAX_HOLDING_EXPIRED': '강제청산'
@@ -307,6 +309,7 @@ export default function CointradeHistory() {
         takeProfitCount: 0,
         stopLossCount: 0,
         expiredCount: 0,
+        trailingStopCount: 0,
         // 보유 종목 수익 정보
         holdingsProfit: 0,
         holdingsInvestment: 0,
@@ -445,6 +448,7 @@ export default function CointradeHistory() {
         const takeProfitCount = sellRecords.filter(r => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(r.reason)).length;
         const stopLossCount = sellRecords.filter(r => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(r.reason)).length;
         const expiredCount = sellRecords.filter(r => ['7DAY_PROFIT', 'PARTIAL_7DAY_PROFIT', 'EXPIRED'].includes(r.reason)).length;
+        const trailingStopCount = sellRecords.filter(r => r.reason === 'TRAILING_STOP').length;
 
         // 보유 종목 수익 정보 조회
         let holdingsProfit = 0;
@@ -505,6 +509,7 @@ export default function CointradeHistory() {
             takeProfitCount,
             stopLossCount,
             expiredCount,
+            trailingStopCount,
             holdingsProfit,
             holdingsInvestment,
             holdingsProfitRate,
@@ -644,6 +649,7 @@ export default function CointradeHistory() {
         ['실현 손익', `${summary.totalProfit >= 0 ? '+' : ''}${Math.floor(summary.totalProfit).toLocaleString()}원`],
         ['익절 건수', `${summary.takeProfitCount}건`],
         ['손절 건수', `${summary.stopLossCount}건`],
+        ['트레일링스탑 건수', `${summary.trailingStopCount}건`],
         ['만료 매도 건수', `${summary.expiredCount}건`],
         ['실현 수익률', `${summary.realizedProfitRate >= 0 ? '+' : ''}${summary.realizedProfitRate.toFixed(2)}%`],
         ['보유 종목 수', `${summary.holdingsCount}종목`],
@@ -876,6 +882,18 @@ export default function CointradeHistory() {
                                     {isBuy ? '매수 (BUY)' : '매도 (SELL)'}
                                 </div>
                             </div>
+
+                            {/* 매도 사유 */}
+                            {!isBuy && selectedRecord.reason && (
+                                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매도 사유</div>
+                                    <div className="text-sm sm:text-base">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(selectedRecord.reason)}`}>
+                                            {getReasonLabel(selectedRecord.reason)}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* 가격 및 수량 정보 */}
@@ -1295,6 +1313,7 @@ export default function CointradeHistory() {
                             <option value="SIGNAL">매수 (SIGNAL)</option>
                             <option value="TAKE_PROFIT">익절 (TAKE_PROFIT)</option>
                             <option value="STOP_LOSS">손절 (STOP_LOSS)</option>
+                            <option value="TRAILING_STOP">트레일링스탑 (TRAILING_STOP)</option>
                             <option value="EXPIRED">만료 (EXPIRED)</option>
                             <option value="MAX_HOLDING_EXPIRED">강제청산 (MAX_HOLDING_EXPIRED)</option>
                         </select>
@@ -1385,6 +1404,14 @@ export default function CointradeHistory() {
                                     <div className="text-xs text-red-700 dark:text-red-400 mb-1">손절</div>
                                     <div className="text-xl font-bold text-red-800 dark:text-red-300">
                                         {summary.stopLossCount}건
+                                    </div>
+                                </div>
+
+                                {/* 트레일링스탑 */}
+                                <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-100 dark:border-teal-800">
+                                    <div className="text-xs text-teal-700 dark:text-teal-400 mb-1">트레일링스탑</div>
+                                    <div className="text-xl font-bold text-teal-800 dark:text-teal-300">
+                                        {summary.trailingStopCount}건
                                     </div>
                                 </div>
                             </div>

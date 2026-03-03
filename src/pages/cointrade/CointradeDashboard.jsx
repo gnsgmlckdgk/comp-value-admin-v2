@@ -37,6 +37,7 @@ const getReasonColor = (reason) => {
         'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
         'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
         'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
+        'TRAILING_STOP': 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300',
         'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
         'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
         'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
@@ -63,6 +64,7 @@ const getReasonLabel = (reason) => {
         'STOP_LOSS': '손절',
         'PARTIAL_TAKE_PROFIT': '부분익절',
         'PARTIAL_STOP_LOSS': '부분손절',
+        'TRAILING_STOP': '트레일링스탑',
         'MANUAL': '수동매도',
         'PARTIAL_MANUAL': '부분수동',
         'MAX_HOLDING_EXPIRED': '강제청산'
@@ -490,6 +492,7 @@ export default function CointradeDashboard() {
         stopLossRate: 0,
         expiredRate: 0,
         maxHoldingExpiredRate: 0,
+        trailingStopRate: 0,
         avgProfitRate: 0,
         totalTrades: 0
     });
@@ -688,6 +691,7 @@ export default function CointradeDashboard() {
                 stopLossRate: 0,
                 expiredRate: 0,
                 maxHoldingExpiredRate: 0,
+                trailingStopRate: 0,
                 avgProfitRate: 0,
                 totalTrades: 0
             });
@@ -703,6 +707,7 @@ export default function CointradeDashboard() {
                    /^PARTIAL_\d+DAY_PROFIT$/.test(reason);
         }).length;
         const maxHoldingExpiredCount = sellTrades.filter(t => t.reason === 'MAX_HOLDING_EXPIRED').length;
+        const trailingStopCount = sellTrades.filter(t => t.reason === 'TRAILING_STOP').length;
 
         const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
         const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
@@ -713,6 +718,7 @@ export default function CointradeDashboard() {
             stopLossRate: (stopLossCount / totalSells) * 100,
             expiredRate: (expiredCount / totalSells) * 100,
             maxHoldingExpiredRate: (maxHoldingExpiredCount / totalSells) * 100,
+            trailingStopRate: (trailingStopCount / totalSells) * 100,
             avgProfitRate,
             totalTrades: totalSells
         });
@@ -1530,7 +1536,23 @@ export default function CointradeDashboard() {
                             </div>
                         </div>
 
-                        {/* 4. 손절 관리 */}
+                        {/* 4. 트레일링스탑 */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">트레일링스탑 (수익 보호)</span>
+                                <span className="text-sm font-bold text-teal-600 dark:text-teal-400">
+                                    {performance.trailingStopRate.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                                <div
+                                    className="bg-teal-500 dark:bg-teal-400 h-2 rounded-full"
+                                    style={{ width: `${performance.trailingStopRate}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* 5. 손절 관리 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm text-slate-600 dark:text-slate-400">손절 관리 (리스크 최소화)</span>

@@ -553,6 +553,10 @@ export default function Backtest() {
             }
         } else if (mode === 'all') {
             setSelectedCoins(new Set());
+        } else if (mode === 'custom') {
+            // allCoins에 존재하는 종목만 유지 (Upbit 마켓 목록과 불일치 항목 제거)
+            const validMarkets = new Set(allCoins.map(c => c.market));
+            setSelectedCoins(new Set([...selectedCoins].filter(c => validMarkets.has(c))));
         }
     };
 

@@ -883,6 +883,10 @@ export default function BacktestOptimizer() {
             }
         } else if (mode === 'all') {
             setSelectedCoins(new Set());
+        } else if (mode === 'custom') {
+            // allCoins에 존재하는 종목만 유지 (상장폐지 등 유령 항목 제거)
+            const validMarkets = new Set(allCoins.map(c => c.market));
+            setSelectedCoins(new Set([...selectedCoins].filter(c => validMarkets.has(c))));
         }
     };
 

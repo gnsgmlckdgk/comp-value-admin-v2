@@ -33,8 +33,6 @@ import { SECTIONS } from '@/component/layouts/common/SideBar001';
 
 const routes = {
 
-    /** SideBar001.jsx 에 SECTIONS 도 같이 수정 필요 */
-
     "Home": {
         section: SECTIONS[0], label: 'Home', path: '/', element: <Home />
     },

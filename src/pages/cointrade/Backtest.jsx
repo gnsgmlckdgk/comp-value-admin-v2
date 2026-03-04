@@ -796,7 +796,12 @@ export default function Backtest() {
                 setToast('결과 조회 실패: ' + error);
             } else if (data?.success && data?.response?.data) {
                 if (includeDetails) {
-                    setDetailResult({ taskId, data: data.response.data });
+                    setDetailResult({
+                        taskId,
+                        data: data.response.data,
+                        created_at: data.response.created_at,
+                        completed_at: data.response.completed_at
+                    });
                 } else {
                     setTaskResult(data.response.data);
                 }
@@ -3111,7 +3116,28 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                 >
                     {/* 헤더 */}
                     <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">백테스트 상세 결과</h2>
+                        <div>
+                            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">백테스트 상세 결과</h2>
+                            {result.created_at && (
+                                <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    <span>실행: {new Date(result.created_at).toLocaleString('ko-KR')}</span>
+                                    {result.completed_at && (
+                                        <>
+                                            <span>완료: {new Date(result.completed_at).toLocaleString('ko-KR')}</span>
+                                            <span className="text-slate-400 dark:text-slate-500">
+                                                (소요 {(() => {
+                                                    const diff = Math.round((new Date(result.completed_at) - new Date(result.created_at)) / 1000);
+                                                    if (diff < 60) return `${diff}초`;
+                                                    const min = Math.floor(diff / 60);
+                                                    const sec = diff % 60;
+                                                    return `${min}분 ${sec}초`;
+                                                })()})
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         <div className="flex items-center gap-2">
                             <Button variant="secondary" size="sm" onClick={() => onExport(false)}>
                                 요약 엑셀

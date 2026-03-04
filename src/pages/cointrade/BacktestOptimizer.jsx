@@ -2477,7 +2477,7 @@ export default function BacktestOptimizer() {
                                                                         >
                                                                             <span className="text-slate-500 dark:text-slate-400">{getParamShortLabel(k)}</span>{' '}{typeof v === 'number' ? v.toFixed(2) : v}
                                                                             {isClicked && (
-                                                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 text-xs rounded shadow-lg whitespace-nowrap z-50">
+                                                                                <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 text-xs rounded shadow-lg whitespace-nowrap z-50">
                                                                                     <span className="font-mono text-blue-300 dark:text-blue-600">{k}</span>
                                                                                     <span className="mx-1 text-slate-400 dark:text-slate-500">|</span>
                                                                                     <span>{getParamLabel(k)}</span>
@@ -3205,7 +3205,7 @@ export default function BacktestOptimizer() {
                                                                                     >
                                                                                         <span className="text-slate-500 dark:text-slate-400">{getParamShortLabel(k)}</span>{' '}{typeof v === 'number' ? v.toFixed(2) : v}
                                                                                         {isClicked && (
-                                                                                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 text-xs rounded shadow-lg whitespace-nowrap z-50">
+                                                                                            <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 text-xs rounded shadow-lg whitespace-nowrap z-50">
                                                                                                 <span className="font-mono text-blue-300 dark:text-blue-600">{k}</span>
                                                                                                 <span className="mx-1 text-slate-400 dark:text-slate-500">|</span>
                                                                                                 <span>{getParamLabel(k)}</span>
@@ -3280,7 +3280,7 @@ export default function BacktestOptimizer() {
                                                                                     >
                                                                                         <span className="text-slate-500 dark:text-slate-400">{getParamShortLabel(k)}</span>{' '}{typeof v === 'number' ? v.toFixed(2) : v}
                                                                                         {isClicked && (
-                                                                                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 text-xs rounded shadow-lg whitespace-nowrap z-50">
+                                                                                            <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 text-xs rounded shadow-lg whitespace-nowrap z-50">
                                                                                                 <span className="font-mono text-blue-300 dark:text-blue-600">{k}</span>
                                                                                                 <span className="mx-1 text-slate-400 dark:text-slate-500">|</span>
                                                                                                 <span>{getParamLabel(k)}</span>

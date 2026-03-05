@@ -1110,7 +1110,8 @@ export default function BacktestOptimizer() {
             const summaryRows = [
                 ['Task ID', taskId || '-'],
                 ['최고 점수', resultData.best_score?.toFixed(2) ?? '-'],
-                ['최고 수익률 (%)', resultData.best_return?.toFixed(2) ?? '-'],
+                ['최고점수 수익률 (%)', resultData.best_return?.toFixed(2) ?? '-'],
+                ['최고 수익률 (%)', resultData.max_return?.toFixed(2) ?? '-'],
                 ['총 시행 횟수', resultData.total_trials || 0],
                 ['성공 시행', resultData.completed_trials || 0],
                 ['실패 시행', resultData.failed_trials || 0],
@@ -1125,8 +1126,17 @@ export default function BacktestOptimizer() {
                 row.getCell(1).font = { bold: true };
                 row.getCell(2).alignment = { horizontal: 'right' };
 
-                if (rowData[0] === '최고 수익률 (%)') {
+                if (rowData[0] === '최고점수 수익률 (%)') {
                     const val = resultData.best_return;
+                    if (val != null) {
+                        row.getCell(2).font = {
+                            color: { argb: val >= 0 ? 'FF00B050' : 'FFFF0000' },
+                            bold: true
+                        };
+                    }
+                }
+                if (rowData[0] === '최고 수익률 (%)') {
+                    const val = resultData.max_return;
                     if (val != null) {
                         row.getCell(2).font = {
                             color: { argb: val >= 0 ? 'FF00B050' : 'FFFF0000' },
@@ -1368,7 +1378,8 @@ export default function BacktestOptimizer() {
             // 결과 요약
             lines.push('[결과 요약]');
             lines.push(`최고 점수: ${resultData.best_score?.toFixed(2) ?? '-'}`);
-            lines.push(`최고 수익률: ${resultData.best_return?.toFixed(2) ?? '-'}%`);
+            lines.push(`최고점수 수익률: ${resultData.best_return?.toFixed(2) ?? '-'}%`);
+            lines.push(`최고 수익률: ${resultData.max_return?.toFixed(2) ?? '-'}%`);
             lines.push(`총 시행 횟수: ${resultData.total_trials || 0} (성공: ${resultData.completed_trials || 0} / 실패: ${resultData.failed_trials || 0})`);
             lines.push(`목표 달성: ${resultData.target_met_trials || 0}회`);
             lines.push(`소요 시간: ${resultData.elapsed_time_seconds?.toFixed(1) ?? '-'}초`);
@@ -2220,9 +2231,15 @@ export default function BacktestOptimizer() {
                                     </div>
                                 </div>
                                 <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                    <div className="text-sm text-slate-500 dark:text-slate-400">최고 수익률</div>
+                                    <div className="text-sm text-slate-500 dark:text-slate-400">최고점수 수익률</div>
                                     <div className={`font-semibold ${taskStatus.best_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                         {taskStatus.best_return != null ? `${taskStatus.best_return.toFixed(2)}%` : '-'}
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                    <div className="text-sm text-slate-500 dark:text-slate-400">최고 수익률</div>
+                                    <div className={`font-semibold ${(taskStatus.max_return ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {taskStatus.max_return != null ? `${taskStatus.max_return.toFixed(2)}%` : '-'}
                                     </div>
                                 </div>
                             </div>
@@ -2306,9 +2323,15 @@ export default function BacktestOptimizer() {
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                        <div className="text-sm text-slate-500 dark:text-slate-400">최고 수익률</div>
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">최고점수 수익률</div>
                                         <div className={`text-xl font-bold ${taskResult.best_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                             {taskResult.best_return?.toFixed(2)}%
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">최고 수익률</div>
+                                        <div className={`text-xl font-bold ${(taskResult.max_return ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                            {taskResult.max_return?.toFixed(2) ?? '-'}%
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
@@ -2617,7 +2640,7 @@ export default function BacktestOptimizer() {
                                                 {item.start_date} ~ {item.end_date}
                                             </div>
                                             {item.status === 'running' && historyRunningStatuses[item.task_id] ? (
-                                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                                <div className="grid grid-cols-4 gap-2 mb-3">
                                                     <div className="bg-blue-50 dark:bg-blue-900/30 rounded p-2">
                                                         <div className="text-xs text-blue-500 dark:text-blue-400">진행률</div>
                                                         <div className="font-semibold text-blue-700 dark:text-blue-300">
@@ -2631,9 +2654,15 @@ export default function BacktestOptimizer() {
                                                         </div>
                                                     </div>
                                                     <div className="bg-blue-50 dark:bg-blue-900/30 rounded p-2">
-                                                        <div className="text-xs text-blue-500 dark:text-blue-400">최고 수익률</div>
+                                                        <div className="text-xs text-blue-500 dark:text-blue-400">최고점수 수익률</div>
                                                         <div className={`font-semibold ${(historyRunningStatuses[item.task_id].best_return ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                             {historyRunningStatuses[item.task_id].best_return != null ? `${historyRunningStatuses[item.task_id].best_return.toFixed(1)}%` : '-'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-blue-50 dark:bg-blue-900/30 rounded p-2">
+                                                        <div className="text-xs text-blue-500 dark:text-blue-400">최고 수익률</div>
+                                                        <div className={`font-semibold ${(historyRunningStatuses[item.task_id].max_return ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            {historyRunningStatuses[item.task_id].max_return != null ? `${historyRunningStatuses[item.task_id].max_return.toFixed(1)}%` : '-'}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -2951,7 +2980,7 @@ export default function BacktestOptimizer() {
                                     </div>
 
                                     {/* 결과 요약 */}
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                                         <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
                                             <div className="text-sm text-slate-500 dark:text-slate-400">최고 점수</div>
                                             <div className="text-xl font-bold text-slate-800 dark:text-slate-200">
@@ -2959,9 +2988,15 @@ export default function BacktestOptimizer() {
                                             </div>
                                         </div>
                                         <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
-                                            <div className="text-sm text-slate-500 dark:text-slate-400">최고 수익률</div>
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">최고점수 수익률</div>
                                             <div className={`text-xl font-bold ${detailResult.data.best_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                 {detailResult.data.best_return?.toFixed(2)}%
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">
+                                            <div className="text-sm text-slate-500 dark:text-slate-400">최고 수익률</div>
+                                            <div className={`text-xl font-bold ${(detailResult.data.max_return ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                {detailResult.data.max_return?.toFixed(2) ?? '-'}%
                                             </div>
                                         </div>
                                         <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-4">

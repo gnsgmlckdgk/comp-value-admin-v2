@@ -17,12 +17,10 @@ const formatNumberWithComma = (value) => {
 // 등급별 색상
 const getGradeStyle = (grade) => {
     const styles = {
-        'A+': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
-        'A': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-        'B+': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-        'B': 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200',
-        'C+': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-        'C': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+        'S': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+        'A': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+        'B': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        'C': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
         'D': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
         'F': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
     };

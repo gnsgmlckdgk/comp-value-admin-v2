@@ -14,12 +14,10 @@ const SESSION_STORAGE_KEY = 'investmentEvaluationData';
 // 등급별 색상
 const getGradeStyle = (grade) => {
     const styles = {
-        'A+': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
-        'A': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-        'B+': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-        'B': 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200',
-        'C+': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-        'C': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+        'S': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+        'A': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+        'B': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        'C': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
         'D': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
         'F': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
     };
@@ -52,7 +50,17 @@ const TABLE_COLUMNS = [
         width: '200px',
         sortable: true,
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-left text-slate-700 dark:text-slate-200',
+        cellClassName: 'px-4 py-3 text-left text-slate-700 dark:text-slate-200',
+        render: (value, row, { onMouseEnter, onMouseLeave }) => (
+            <span
+                className="block max-w-[180px] truncate cursor-help"
+                onMouseEnter={(e) => onMouseEnter(e, value)}
+                onMouseLeave={onMouseLeave}
+                onClick={(e) => onMouseEnter(e, value)}
+            >
+                {value || '-'}
+            </span>
+        ),
     },
     {
         key: 'grade',
@@ -550,17 +558,29 @@ const InvestmentEvaluation = () => {
     const handleTooltipEnter = useCallback((e, text) => {
         if (!text) return;
         const rect = e.target.getBoundingClientRect();
+        const vw = window.innerWidth;
+        // 모바일: 요소 아래에 표시, 데스크톱: 요소 오른쪽에 표시
+        const isMobile = vw < 640;
         setTooltip({
             visible: true,
             text,
-            x: rect.right + 8,
-            y: rect.top + rect.height / 2,
+            x: isMobile ? Math.min(rect.left, vw - 16) : rect.right + 8,
+            y: isMobile ? rect.bottom + 6 : rect.top + rect.height / 2,
+            mobile: isMobile,
         });
     }, []);
 
     const handleTooltipLeave = useCallback(() => {
         setTooltip((prev) => ({ ...prev, visible: false }));
     }, []);
+
+    // 모바일: 다른 곳 탭하면 툴팁 닫기
+    useEffect(() => {
+        if (!tooltip.visible || !tooltip.mobile) return;
+        const hide = () => setTooltip((prev) => ({ ...prev, visible: false }));
+        const timer = setTimeout(() => document.addEventListener('touchstart', hide, { once: true }), 10);
+        return () => { clearTimeout(timer); document.removeEventListener('touchstart', hide); };
+    }, [tooltip.visible, tooltip.mobile]);
 
     // 엑셀 다운로드
     const handleExportToExcel = useCallback(() => {
@@ -1097,11 +1117,11 @@ const InvestmentEvaluation = () => {
             {/* 커스텀 툴팁 */}
             {tooltip.visible && (
                 <div
-                    className="fixed z-[9999] px-2 py-1 text-xs bg-slate-800 text-white rounded shadow-lg whitespace-nowrap pointer-events-none"
+                    className={`fixed z-[9999] px-2 py-1 text-xs bg-slate-800 text-white rounded shadow-lg pointer-events-none ${tooltip.mobile ? 'max-w-[90vw] whitespace-normal break-words' : 'whitespace-nowrap'}`}
                     style={{
                         left: tooltip.x,
                         top: tooltip.y,
-                        transform: 'translateY(-50%)',
+                        transform: tooltip.mobile ? 'none' : 'translateY(-50%)',
                     }}
                 >
                     {tooltip.text}

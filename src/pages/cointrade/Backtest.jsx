@@ -3123,19 +3123,20 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                         <div>
                             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">백테스트 상세 결과</h2>
                             {result.created_at && (
-                                <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500 dark:text-slate-400">
                                     <span>실행: {new Date(result.created_at).toLocaleString('ko-KR')}</span>
                                     {result.completed_at && (
                                         <>
-                                            <span>완료: {new Date(result.completed_at).toLocaleString('ko-KR')}</span>
-                                            <span className="text-slate-400 dark:text-slate-500">
-                                                (소요 {(() => {
-                                                    const diff = Math.round((new Date(result.completed_at) - new Date(result.created_at)) / 1000);
-                                                    if (diff < 60) return `${diff}초`;
-                                                    const min = Math.floor(diff / 60);
-                                                    const sec = diff % 60;
-                                                    return `${min}분 ${sec}초`;
-                                                })()})
+                                            <span>완료: {new Date(result.completed_at).toLocaleString('ko-KR')}{' '}
+                                                <span className="text-slate-400 dark:text-slate-500">
+                                                    (소요 {(() => {
+                                                        const diff = Math.round((new Date(result.completed_at) - new Date(result.created_at)) / 1000);
+                                                        if (diff < 60) return `${diff}초`;
+                                                        const min = Math.floor(diff / 60);
+                                                        const sec = diff % 60;
+                                                        return `${min}분 ${sec}초`;
+                                                    })()})
+                                                </span>
                                             </span>
                                         </>
                                     )}

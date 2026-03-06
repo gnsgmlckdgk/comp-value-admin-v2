@@ -2640,10 +2640,10 @@ export default function BacktestOptimizer() {
                                                 {item.start_date} ~ {item.end_date}
                                             </div>
                                             {item.status === 'running' && historyRunningStatuses[item.task_id] ? (
-                                                <div className="grid grid-cols-4 gap-2 mb-3">
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                                                     <div className="bg-blue-50 dark:bg-blue-900/30 rounded p-2">
                                                         <div className="text-xs text-blue-500 dark:text-blue-400">진행률</div>
-                                                        <div className="font-semibold text-blue-700 dark:text-blue-300">
+                                                        <div className="font-semibold text-blue-700 dark:text-blue-300 truncate">
                                                             {historyRunningStatuses[item.task_id].progress || `${historyRunningStatuses[item.task_id].current_trial || 0}/${historyRunningStatuses[item.task_id].total_trials || '?'}`}
                                                         </div>
                                                     </div>
@@ -2916,37 +2916,44 @@ export default function BacktestOptimizer() {
                 >
                     <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] sm:max-h-[90vh] overflow-hidden flex flex-col my-4 animate__animated ${isDetailModalClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.15s' }}>
                         {/* 헤더 */}
-                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
-                            <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                                    옵티마이저 상세 결과
-                                </h3>
-                                {detailResult && (
-                                    <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
-                                        <TogglableTaskId taskId={detailResult.taskId} maxLength={20} />
-                                    </span>
-                                )}
+                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                    <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                                        옵티마이저 상세 결과
+                                    </h3>
+                                    {detailResult && (
+                                        <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline">
+                                            <TogglableTaskId taskId={detailResult.taskId} maxLength={20} />
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                                    {detailResult && (
+                                        <>
+                                            <Button size="sm" variant="secondary" onClick={() => handleExportExcel(detailResult.data, detailResult.taskId)}>
+                                                <span className="hidden sm:inline">엑셀 저장</span><span className="sm:hidden">엑셀</span>
+                                            </Button>
+                                            <Button size="sm" variant="secondary" onClick={() => handleExportText(detailResult.data, detailResult.taskId)}>
+                                                <span className="hidden sm:inline">텍스트 저장</span><span className="sm:hidden">텍스트</span>
+                                            </Button>
+                                        </>
+                                    )}
+                                    <button
+                                        onClick={() => setIsDetailModalOpen(false)}
+                                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                                    >
+                                        <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                {detailResult && (
-                                    <>
-                                        <Button size="sm" variant="secondary" onClick={() => handleExportExcel(detailResult.data, detailResult.taskId)}>
-                                            엑셀 저장
-                                        </Button>
-                                        <Button size="sm" variant="secondary" onClick={() => handleExportText(detailResult.data, detailResult.taskId)}>
-                                            텍스트 저장
-                                        </Button>
-                                    </>
-                                )}
-                                <button
-                                    onClick={() => setIsDetailModalOpen(false)}
-                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                                >
-                                    <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
+                            {detailResult && (
+                                <div className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-1 sm:hidden">
+                                    <TogglableTaskId taskId={detailResult.taskId} maxLength={20} />
+                                </div>
+                            )}
                         </div>
 
                         {/* 콘텐츠 - 닫기 애니메이션 시 무거운 DOM 즉시 제거 */}

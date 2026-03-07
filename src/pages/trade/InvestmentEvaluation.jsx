@@ -6,10 +6,75 @@ import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import InvestmentDetailModal, { FullDetailModal } from '@/pages/trade/popup/InvestmentDetailModal';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 // 세션 스토리지 키
 const SESSION_STORAGE_KEY = 'investmentEvaluationData';
+
+// 가격차이율 이상치 경고 판별
+const PRICE_GAP_WARNING_THRESHOLD = 2000; // 2000% 이상이면 경고
+const PRICE_GAP_EXTREME_THRESHOLD = 5000; // 5000% 이상이면 극단적 이상치
+
+const getPriceGapWarning = (priceGapPercent, row) => {
+    if (!priceGapPercent) return null;
+    const numValue = parseFloat(priceGapPercent);
+    if (isNaN(numValue)) return null;
+    const absValue = Math.abs(numValue);
+    if (absValue < PRICE_GAP_WARNING_THRESHOLD) return null;
+
+    const reasons = [];
+
+    // 1. 소형주 (시총 낮음)
+    if (row?.marketCap) {
+        const cap = row.marketCap.replace(/[^0-9.BMK]/g, '');
+        const isSmallCap = row.marketCap.includes('M') || (row.marketCap.includes('B') && parseFloat(cap) < 1);
+        if (isSmallCap) reasons.push('소형주 (낮은 시총)로 BPS/EPS 기반 적정가 신뢰도 낮음');
+    }
+
+    // 2. 중국 ADR
+    if (row?.country === 'CN' || row?.country === 'HK') {
+        reasons.push('중국 ADR — BPS가 높아도 지정학 리스크(상장폐지, VIE, 자본통제)로 시장에서 극단적 할인');
+    }
+
+    // 3. 심볼 패턴으로 비일반주식 의심
+    const sym = row?.symbol || '';
+    const name = (row?.companyName || '').toLowerCase();
+    if (sym.endsWith('W') || sym.endsWith('WS') || sym.endsWith('WW') || name.includes('warrant')) {
+        reasons.push('워런트(파생상품)로 의심 — 주당가치 계산 부적합');
+    }
+    if (name.includes('preferred') || name.includes('preference')) {
+        reasons.push('우선주로 의심 — 보통주 재무데이터로 우선주 가치를 평가하면 부정확');
+    }
+    if (sym.includes('-RI') || name.includes('contingent')) {
+        reasons.push('CVR(조건부가치권) — 일반 주식이 아님');
+    }
+    if (name.includes('bond') || name.includes('mortgage') || name.includes('debenture') || name.includes('series due')) {
+        reasons.push('채권/모기지본드로 의심 — 주당가치 계산 대상 아님');
+    }
+
+    // 4. 현재가가 매우 낮음 ($1 미만)
+    if (row?.currentPrice) {
+        const price = parseFloat(row.currentPrice);
+        if (!isNaN(price) && price < 1) {
+            reasons.push(`현재가 $${price.toFixed(2)}로 페니스톡 — 소수점 가격에서 적정가 대비 비율이 극단적으로 확대됨`);
+        }
+    }
+
+    // 5. IPO 직후 / 재무데이터 부족
+    if (absValue > PRICE_GAP_EXTREME_THRESHOLD) {
+        reasons.push('IPO 직후이거나 재무데이터(발행주식수 등) 오류 가능성');
+    }
+
+    // 기본 사유
+    if (reasons.length === 0) {
+        reasons.push('계산 모델의 한계 — 특정 업종/상황에서 BPS/EPS 기반 적정가가 시장가와 괴리');
+    }
+
+    return {
+        level: absValue >= PRICE_GAP_EXTREME_THRESHOLD ? 'extreme' : 'warning',
+        reasons,
+    };
+};
 
 // 등급별 색상
 const getGradeStyle = (grade) => {
@@ -100,23 +165,66 @@ const TABLE_COLUMNS = [
         width: '100px',
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-600 dark:text-slate-300',
-        render: (value) => value ? `$${value}` : '-',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value, row) => {
+            if (!value) return '-';
+            const warning = getPriceGapWarning(row?.priceGapPercent, row);
+            return (
+                <span className={warning
+                    ? 'text-orange-400 line-through decoration-orange-400/50 dark:text-orange-500'
+                    : 'text-slate-600 dark:text-slate-300'
+                }>
+                    ${value}
+                </span>
+            );
+        },
     },
     {
         key: 'priceGapPercent',
         label: '가격차이율',
-        width: '100px',
+        width: '130px',
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
-        render: (value) => {
+        render: (value, row) => {
             if (!value) return '-';
             const numValue = parseFloat(value);
             const isPositive = numValue > 0;
+            const warning = getPriceGapWarning(value, row);
             return (
-                <span className={isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                    {isPositive ? '+' : ''}{value}
+                <span className="inline-flex items-center gap-1 justify-end">
+                    <span className={isPositive ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}>
+                        {isPositive ? '+' : ''}{value}
+                    </span>
+                    {warning && (
+                        <span className="group relative">
+                            <span className={`cursor-help text-sm ${
+                                warning.level === 'extreme'
+                                    ? 'text-orange-500 animate-pulse'
+                                    : 'text-yellow-500'
+                            }`}>
+                                {warning.level === 'extreme' ? '\u26A0\uFE0F' : '\u26A0'}
+                            </span>
+                            <span className="invisible group-hover:visible absolute z-50 right-0 bottom-full mb-2 w-72 p-3 rounded-lg shadow-lg
+                                bg-slate-800 text-white text-xs leading-relaxed border border-slate-600
+                                dark:bg-slate-900 dark:border-slate-500">
+                                <span className="block font-bold text-yellow-300 mb-1.5">
+                                    {warning.level === 'extreme' ? '극단적 이상치' : '이상치 경고'} — 가격차이율 {value}
+                                </span>
+                                <span className="block text-slate-300 mb-1.5">
+                                    이 수치는 신뢰하기 어렵습니다. 추정 원인:
+                                </span>
+                                {warning.reasons.map((reason, i) => (
+                                    <span key={i} className="block pl-2 border-l-2 border-yellow-400/60 mb-1 text-slate-200">
+                                        {reason}
+                                    </span>
+                                ))}
+                                <span className="block mt-1.5 text-slate-400 italic">
+                                    이 종목의 적정가치를 투자 근거로 사용하지 마세요.
+                                </span>
+                            </span>
+                        </span>
+                    )}
                 </span>
             );
         },
@@ -171,6 +279,17 @@ const TABLE_COLUMNS = [
         sortable: false,
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 text-left text-slate-600 dark:text-slate-300 text-xs',
+        render: (value, row) => {
+            const warning = getPriceGapWarning(row?.priceGapPercent, row);
+            if (warning) {
+                return (
+                    <span className="text-orange-500 dark:text-orange-400 font-medium">
+                        {'\u26A0\uFE0F'} 이상치 경고: 가격차이율({row.priceGapPercent})이 비현실적 — {warning.reasons[0]}
+                    </span>
+                );
+            }
+            return value || '-';
+        },
     },
 ];
 
@@ -582,58 +701,155 @@ const InvestmentEvaluation = () => {
         return () => { clearTimeout(timer); document.removeEventListener('touchstart', hide); };
     }, [tooltip.visible, tooltip.mobile]);
 
-    // 엑셀 다운로드
-    const handleExportToExcel = useCallback(() => {
+    // 엑셀 다운로드 (ExcelJS - 색상 스타일링 포함)
+    const handleExportToExcel = useCallback(async () => {
         if (sortedData.length === 0) {
             openAlert('다운로드할 데이터가 없습니다.');
             return;
         }
 
         try {
-            // 엑셀 데이터 준비
-            const excelData = sortedData.map((row) => ({
-                '심볼': row.symbol || '',
-                '기업명': row.companyName || '',
-                '등급': row.grade || '',
-                '총점': row.totalScore != null ? row.totalScore.toFixed(1) : '',
-                '현재가': row.currentPrice ? `$${row.currentPrice}` : '',
-                '적정가치': row.fairValue ? `$${row.fairValue}` : '',
-                '가격차이율': row.priceGapPercent || '',
-                '섹터': row.sector || '',
-                '거래소': row.exchange || '',
-                '국가': row.country || '',
-                '추천': row.recommendation || '',
-            }));
+            const wb = new ExcelJS.Workbook();
 
-            // 워크시트 생성
-            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            // === 1. 투자판단 결과 시트 ===
+            const ws = wb.addWorksheet('투자판단 결과');
 
-            // 컬럼 너비 설정
-            worksheet['!cols'] = [
-                { wch: 10 },  // 심볼
-                { wch: 30 },  // 기업명
-                { wch: 8 },   // 등급
-                { wch: 10 },  // 총점
-                { wch: 12 },  // 현재가
-                { wch: 12 },  // 적정가치
-                { wch: 12 },  // 가격차이율
-                { wch: 20 },  // 섹터
-                { wch: 10 },  // 거래소
-                { wch: 8 },   // 국가
-                { wch: 50 },  // 추천
+            // 컬럼 정의
+            ws.columns = [
+                { header: '심볼', key: 'symbol', width: 10 },
+                { header: '기업명', key: 'companyName', width: 30 },
+                { header: '등급', key: 'grade', width: 8 },
+                { header: '총점', key: 'totalScore', width: 10 },
+                { header: '현재가', key: 'currentPrice', width: 12 },
+                { header: '적정가치', key: 'fairValue', width: 12 },
+                { header: '가격차이율', key: 'priceGapPercent', width: 14 },
+                { header: '섹터', key: 'sector', width: 20 },
+                { header: '거래소', key: 'exchange', width: 10 },
+                { header: '국가', key: 'country', width: 8 },
+                { header: '추천', key: 'recommendation', width: 55 },
             ];
 
-            // 워크북 생성
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, '투자판단 결과');
+            // 등급별 행 배경색 (적록색약 친화)
+            const gradeFills = {
+                S: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E7FF' } }, // indigo-100
+                A: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } }, // emerald-100
+                B: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } }, // blue-100
+                C: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }, // amber-100
+                D: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEDD5' } }, // orange-100
+                F: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }, // red-100
+            };
+            const warningFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7ED' } }; // orange-50
+            const warningFont = { color: { argb: 'FFEA580C' } }; // orange-600
+            const extremeFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF2F2' } }; // red-50
+            const extremeFont = { color: { argb: 'FFDC2626' }, bold: true }; // red-600
 
-            // 파일명 생성 (현재 날짜 포함)
+            // 데이터 행 추가
+            sortedData.forEach((row) => {
+                const warning = getPriceGapWarning(row.priceGapPercent, row);
+                const dataRow = ws.addRow({
+                    symbol: row.symbol || '',
+                    companyName: row.companyName || '',
+                    grade: row.grade || '',
+                    totalScore: row.totalScore != null ? Number(row.totalScore.toFixed(1)) : '',
+                    currentPrice: row.currentPrice ? `$${row.currentPrice}` : '',
+                    fairValue: row.fairValue ? `$${row.fairValue}` : '',
+                    priceGapPercent: row.priceGapPercent || '',
+                    sector: row.sector || '',
+                    exchange: row.exchange || '',
+                    country: row.country || '',
+                    recommendation: warning
+                        ? `[이상치 경고] ${warning.reasons.join(' / ')}`
+                        : (row.recommendation || ''),
+                });
+
+                if (warning) {
+                    // 이상치 행: 주황/빨강 강조
+                    const isExtreme = warning.level === 'extreme';
+                    dataRow.eachCell((cell) => {
+                        cell.fill = isExtreme ? extremeFill : warningFill;
+                    });
+                    // 가격차이율, 적정가치, 추천 셀 폰트 색상
+                    dataRow.getCell('priceGapPercent').font = isExtreme ? extremeFont : warningFont;
+                    dataRow.getCell('fairValue').font = isExtreme ? extremeFont : warningFont;
+                    dataRow.getCell('recommendation').font = isExtreme ? extremeFont : warningFont;
+                } else {
+                    // 등급별 배경색
+                    const fill = gradeFills[row.grade];
+                    if (fill) {
+                        dataRow.eachCell((cell) => { cell.fill = fill; });
+                    }
+                }
+            });
+
+            // 헤더 스타일
+            const headerRow = ws.getRow(1);
+            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } }; // slate-700
+            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+            // === 2. 범례 시트 ===
+            const legendWs = wb.addWorksheet('범례');
+            legendWs.columns = [
+                { header: '구분', key: 'category', width: 18 },
+                { header: '색상/표시', key: 'color', width: 20 },
+                { header: '의미', key: 'meaning', width: 60 },
+            ];
+
+            const legendHeader = legendWs.getRow(1);
+            legendHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            legendHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+
+            // 등급별 범례
+            const legendItems = [
+                { category: '등급 S', fill: gradeFills.S, meaning: '92점 이상 — 강력 매수 추천 (저평가 + 재무 건전성 + 성장성 우수)' },
+                { category: '등급 A', fill: gradeFills.A, meaning: '83~91점 — 매수 추천 (안정적 재무구조 + 합리적 밸류에이션)' },
+                { category: '등급 B', fill: gradeFills.B, meaning: '73~82점 — 매수 고려 가능 (전반적 양호, 일부 주의 필요)' },
+                { category: '등급 C', fill: gradeFills.C, meaning: '63~72점 — 신중한 검토 필요 (리스크 요인 존재)' },
+                { category: '등급 D', fill: gradeFills.D, meaning: '50~62점 — 투자 주의 (여러 리스크 요인)' },
+                { category: '등급 F', fill: gradeFills.F, meaning: '50점 미만 — 투자 비추천 (높은 리스크)' },
+                { category: '', fill: null, meaning: '' },
+                { category: '이상치 경고', fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7ED' } }, meaning: `가격차이율 ${PRICE_GAP_WARNING_THRESHOLD}% 이상 — 적정가치 신뢰 불가, 주황색 텍스트` },
+                { category: '극단적 이상치', fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF2F2' } }, meaning: `가격차이율 ${PRICE_GAP_EXTREME_THRESHOLD}% 이상 — 적정가치 완전 신뢰 불가, 빨간색 볼드 텍스트` },
+                { category: '', fill: null, meaning: '' },
+                { category: '이상치 원인', fill: null, meaning: '' },
+                { category: '  소형주', fill: null, meaning: '시총이 낮아 BPS/EPS 기반 적정가 신뢰도가 낮음' },
+                { category: '  중국 ADR', fill: null, meaning: 'BPS가 높아도 지정학 리스크(상장폐지, VIE, 자본통제)로 시장에서 극단적 할인' },
+                { category: '  비일반주식', fill: null, meaning: '워런트/우선주/CVR/채권 등 — 보통주 기반 주당가치 계산이 부적합' },
+                { category: '  페니스톡', fill: null, meaning: '현재가 $1 미만 — 소수점 가격에서 적정가 비율이 극단적으로 확대' },
+                { category: '  데이터 오류', fill: null, meaning: 'IPO 직후이거나 발행주식수 등 재무데이터 오류 가능성' },
+            ];
+
+            legendItems.forEach((item) => {
+                const row = legendWs.addRow({
+                    category: item.category,
+                    color: item.fill ? '' : '',
+                    meaning: item.meaning,
+                });
+                if (item.fill) {
+                    row.getCell('color').fill = item.fill;
+                    row.getCell('color').value = item.category.includes('이상치') || item.category.includes('극단')
+                        ? '■ 이 색상' : '■ 이 색상';
+                }
+                if (item.category === '') {
+                    row.font = { italic: true, color: { argb: 'FF94A3B8' } };
+                }
+            });
+
+            // 파일 다운로드
             const today = new Date();
             const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
             const filename = `투자판단_${dateStr}.xlsx`;
 
-            // 파일 다운로드
-            XLSX.writeFile(workbook, filename);
+            const buf = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
 
             openAlert(`엑셀 파일이 다운로드되었습니다.\n파일명: ${filename}\n총 ${sortedData.length}건`);
         } catch (error) {
@@ -651,19 +867,22 @@ const InvestmentEvaluation = () => {
 
         try {
             const headers = ['심볼', '기업명', '등급', '총점', '현재가', '적정가치', '가격차이율', '섹터', '거래소', '국가', '추천'];
-            const rows = sortedData.map((row) => [
-                row.symbol || '',
-                row.companyName || '',
-                row.grade || '',
-                row.totalScore != null ? row.totalScore.toFixed(1) : '',
-                row.currentPrice ? `$${row.currentPrice}` : '',
-                row.fairValue ? `$${row.fairValue}` : '',
-                row.priceGapPercent || '',
-                row.sector || '',
-                row.exchange || '',
-                row.country || '',
-                row.recommendation || '',
-            ]);
+            const rows = sortedData.map((row) => {
+                const w = getPriceGapWarning(row.priceGapPercent, row);
+                return [
+                    row.symbol || '',
+                    row.companyName || '',
+                    row.grade || '',
+                    row.totalScore != null ? row.totalScore.toFixed(1) : '',
+                    row.currentPrice ? `$${row.currentPrice}` : '',
+                    row.fairValue ? `$${row.fairValue}` : '',
+                    row.priceGapPercent || '',
+                    row.sector || '',
+                    row.exchange || '',
+                    row.country || '',
+                    w ? `[이상치 경고] ${w.reasons.join(' / ')}` : (row.recommendation || ''),
+                ];
+            });
 
             const escapeCsvField = (field) => {
                 const str = String(field);

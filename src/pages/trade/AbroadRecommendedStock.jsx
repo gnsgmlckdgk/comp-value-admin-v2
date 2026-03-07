@@ -1323,6 +1323,7 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         isEtf: 'N',
         isFund: 'N',
         isActivelyTrading: 'Y',
+        excludeNonCommonStock: 'Y',
         exchange: ['NASDAQ', 'NYSE'],
         sector: [],
         industry: [],
@@ -1361,6 +1362,7 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         const hasValue = (v) => v !== null && v !== undefined && v !== '';
         const formDataWithArrays = {
             ...profile,
+            excludeNonCommonStock: profile.excludeNonCommonStock || 'Y',
             exchange: splitToArray(profile.exchange),
             sector: splitToArray(profile.sector),
             industry: splitToArray(profile.industry),
@@ -1816,6 +1818,13 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         onChange={(v) => onChange('isActivelyTrading', v)}
                         labelOn="활성거래만"
                         labelOff="전체"
+                    />
+                    <FormToggleSwitch
+                        label="비일반주식 제외 (excludeNonCommonStock)"
+                        value={formData.excludeNonCommonStock}
+                        onChange={(v) => onChange('excludeNonCommonStock', v)}
+                        labelOn="제외 (워런트/우선주/CVR/채권)"
+                        labelOff="포함"
                     />
                     <FormMultiSelect
                         label="국가 (country)"

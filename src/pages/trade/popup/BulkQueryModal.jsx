@@ -484,8 +484,43 @@ async function exportToExcel(items) {
         row.getCell('peg').numFmt = '0.00';
     });
 
-    ws.getRow(1).font = { bold: true };
+    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
     ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // === 범례 시트 ===
+    const legendWs = wb.addWorksheet('범례');
+    legendWs.columns = [
+        { header: '색상', key: 'color', width: 20 },
+        { header: '등급', key: 'grade', width: 10 },
+        { header: '의미', key: 'meaning', width: 55 },
+    ];
+
+    const legendHeader = legendWs.getRow(1);
+    legendHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    legendHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+
+    const fillYellowLegend = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE68A' } };
+    const fillGreenLegend = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBBF7D0' } };
+    const fillSkyLegend = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+
+    const legendData = [
+        { fill: fillYellowLegend, grade: 'S / A', meaning: '92점+ / 83점+ — 강력 매수 추천 / 매수 추천 (저평가 + 재무 건전성 우수)' },
+        { fill: fillGreenLegend, grade: 'B', meaning: '73~82점 — 매수 고려 가능 (전반적 양호, 일부 주의 필요)' },
+        { fill: fillSkyLegend, grade: 'C', meaning: '63~72점 — 신중한 검토 필요 (리스크 요인 존재)' },
+        { fill: null, grade: 'D / F', meaning: '62점 이하 — 투자 주의 / 비추천 (색상 없음)' },
+    ];
+
+    legendData.forEach((item) => {
+        const row = legendWs.addRow({
+            color: item.fill ? '■ 이 색상' : '(없음)',
+            grade: item.grade,
+            meaning: item.meaning,
+        });
+        if (item.fill) {
+            row.getCell('color').fill = item.fill;
+        }
+    });
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], {

@@ -11,6 +11,32 @@ import ExcelJS from 'exceljs';
 // 세션 스토리지 키
 const SESSION_STORAGE_KEY = 'investmentEvaluationData';
 
+// 시총 파싱 (포맷된 문자열 → 달러 숫자)
+const parseMarketCap = (marketCap) => {
+    if (!marketCap || marketCap === 'N/A') return null;
+    const cleaned = marketCap.replace(/[$,]/g, '');
+    const match = cleaned.match(/^([\d.]+)\s*([TBMK])?$/i);
+    if (!match) return null;
+    const num = parseFloat(match[1]);
+    const unit = (match[2] || '').toUpperCase();
+    if (unit === 'T') return num * 1e12;
+    if (unit === 'B') return num * 1e9;
+    if (unit === 'M') return num * 1e6;
+    if (unit === 'K') return num * 1e3;
+    return num;
+};
+
+// 소형주 유동성 리스크 판별
+const SMALL_CAP_THRESHOLD = 1e9; // $1B
+const MICRO_CAP_THRESHOLD = 3e8; // $300M
+const getMarketCapRisk = (marketCap) => {
+    const cap = parseMarketCap(marketCap);
+    if (cap === null) return null;
+    if (cap < MICRO_CAP_THRESHOLD) return { level: 'micro', label: '초소형주', desc: '시총 $300M 미만 — 유동성 매우 낮음, 스프레드 넓음, 급변동 위험' };
+    if (cap < SMALL_CAP_THRESHOLD) return { level: 'small', label: '소형주', desc: '시총 $1B 미만 — 유동성 리스크 존재, 대량 매매 시 슬리피지 주의' };
+    return null;
+};
+
 // 가격차이율 이상치 경고 판별
 const PRICE_GAP_WARNING_THRESHOLD = 2000; // 2000% 이상이면 경고
 const PRICE_GAP_EXTREME_THRESHOLD = 5000; // 5000% 이상이면 극단적 이상치
@@ -158,6 +184,42 @@ const TABLE_COLUMNS = [
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-600 dark:text-slate-300',
         render: (value) => value ? `$${value}` : '-',
+    },
+    {
+        key: 'marketCap',
+        label: '시총',
+        width: '110px',
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value, row) => {
+            if (!value || value === 'N/A') return '-';
+            const risk = getMarketCapRisk(value);
+            if (!risk) return <span className="text-slate-600 dark:text-slate-300">{value}</span>;
+            return (
+                <span className="group relative inline-flex items-center gap-1 justify-end">
+                    <span className={risk.level === 'micro'
+                        ? 'text-orange-500 dark:text-orange-400 font-medium'
+                        : 'text-yellow-600 dark:text-yellow-400'
+                    }>
+                        {value}
+                    </span>
+                    <span className="group relative">
+                        <span className={`cursor-help text-xs ${
+                            risk.level === 'micro' ? 'text-orange-500' : 'text-yellow-500'
+                        }`}>
+                            {risk.level === 'micro' ? '\u26A0\uFE0F' : '\u26A0'}
+                        </span>
+                        <span className="invisible group-hover:visible absolute z-50 right-0 bottom-full mb-2 w-56 p-2.5 rounded-lg shadow-lg
+                            bg-slate-800 text-white text-xs leading-relaxed border border-slate-600
+                            dark:bg-slate-900 dark:border-slate-500">
+                            <span className="block font-bold text-yellow-300 mb-1">{risk.label}</span>
+                            <span className="block text-slate-200">{risk.desc}</span>
+                        </span>
+                    </span>
+                </span>
+            );
+        },
     },
     {
         key: 'fairValue',
@@ -721,6 +783,7 @@ const InvestmentEvaluation = () => {
                 { header: '등급', key: 'grade', width: 8 },
                 { header: '총점', key: 'totalScore', width: 10 },
                 { header: '현재가', key: 'currentPrice', width: 12 },
+                { header: '시총', key: 'marketCap', width: 14 },
                 { header: '적정가치', key: 'fairValue', width: 12 },
                 { header: '가격차이율', key: 'priceGapPercent', width: 14 },
                 { header: '섹터', key: 'sector', width: 20 },
@@ -752,6 +815,11 @@ const InvestmentEvaluation = () => {
                     grade: row.grade || '',
                     totalScore: row.totalScore != null ? Number(row.totalScore.toFixed(1)) : '',
                     currentPrice: row.currentPrice ? `$${row.currentPrice}` : '',
+                    marketCap: (() => {
+                        const risk = getMarketCapRisk(row.marketCap);
+                        if (risk) return `${row.marketCap} [${risk.label}]`;
+                        return row.marketCap || 'N/A';
+                    })(),
                     fairValue: row.fairValue ? `$${row.fairValue}` : '',
                     priceGapPercent: row.priceGapPercent || '',
                     sector: row.sector || '',
@@ -761,6 +829,10 @@ const InvestmentEvaluation = () => {
                         ? `[이상치 경고] ${warning.reasons.join(' / ')}`
                         : (row.recommendation || ''),
                 });
+
+                const capRisk = getMarketCapRisk(row.marketCap);
+                const smallCapFont = { color: { argb: 'FFEA580C' } }; // orange-600
+                const microCapFont = { color: { argb: 'FFDC2626' }, bold: true }; // red-600
 
                 if (warning) {
                     // 이상치 행: 주황/빨강 강조
@@ -778,6 +850,11 @@ const InvestmentEvaluation = () => {
                     if (fill) {
                         dataRow.eachCell((cell) => { cell.fill = fill; });
                     }
+                }
+
+                // 소형주 시총 셀 색상 (이상치와 별개로 적용)
+                if (capRisk) {
+                    dataRow.getCell('marketCap').font = capRisk.level === 'micro' ? microCapFont : smallCapFont;
                 }
             });
 
@@ -817,6 +894,10 @@ const InvestmentEvaluation = () => {
                 { category: '  비일반주식', fill: null, meaning: '워런트/우선주/CVR/채권 등 — 보통주 기반 주당가치 계산이 부적합' },
                 { category: '  페니스톡', fill: null, meaning: '현재가 $1 미만 — 소수점 가격에서 적정가 비율이 극단적으로 확대' },
                 { category: '  데이터 오류', fill: null, meaning: 'IPO 직후이거나 발행주식수 등 재무데이터 오류 가능성' },
+                { category: '', fill: null, meaning: '' },
+                { category: '유동성 리스크', fill: null, meaning: '' },
+                { category: '  소형주', fill: null, meaning: '시총 $1B 미만 — 유동성 리스크, 대량 매매 시 슬리피지 주의 (주황색 텍스트)' },
+                { category: '  초소형주', fill: null, meaning: '시총 $300M 미만 — 유동성 매우 낮음, 스프레드 넓음, 급변동 위험 (빨간색 볼드)' },
             ];
 
             legendItems.forEach((item) => {
@@ -866,15 +947,17 @@ const InvestmentEvaluation = () => {
         }
 
         try {
-            const headers = ['심볼', '기업명', '등급', '총점', '현재가', '적정가치', '가격차이율', '섹터', '거래소', '국가', '추천'];
+            const headers = ['심볼', '기업명', '등급', '총점', '현재가', '시총', '적정가치', '가격차이율', '섹터', '거래소', '국가', '추천'];
             const rows = sortedData.map((row) => {
                 const w = getPriceGapWarning(row.priceGapPercent, row);
+                const capRisk = getMarketCapRisk(row.marketCap);
                 return [
                     row.symbol || '',
                     row.companyName || '',
                     row.grade || '',
                     row.totalScore != null ? row.totalScore.toFixed(1) : '',
                     row.currentPrice ? `$${row.currentPrice}` : '',
+                    capRisk ? `${row.marketCap} [${capRisk.label}]` : (row.marketCap || 'N/A'),
                     row.fairValue ? `$${row.fairValue}` : '',
                     row.priceGapPercent || '',
                     row.sector || '',

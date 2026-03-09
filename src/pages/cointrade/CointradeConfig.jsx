@@ -55,7 +55,9 @@ export default function CointradeConfig() {
         BUY_SCHEDULER_ENABLED: 'false', // 매수 스케줄러 활성화 여부
         SELL_SCHEDULER_ENABLED: 'false', // 매도 스케줄러 활성화 여부
         TRADING_FEE_RATE: '',          // 거래 수수료율 %
-        TRAIN_WORKERS: '',             // 학습 워커 개수 (병렬처리)
+        TRAIN_WORKERS_LSTM: '',        // LSTM 학습 워커 개수
+        TRAIN_WORKERS_GRU: '',         // GRU 학습 워커 개수
+        TRAIN_WORKERS_CNN: '',         // CNN 학습 워커 개수
         MIN_MODEL_AGREEMENT: '',       // 앙상블 모델 일치도 최소값 (0~1)
         BTC_FILTER_ENABLED: 'false',   // BTC 추세 필터 활성화 여부
         BTC_TREND_MA_PERIOD: '',       // BTC 추세 MA 기간 (일)
@@ -72,7 +74,9 @@ export default function CointradeConfig() {
                 'PREDICTION_DAYS',
                 'TRAIN_SCHEDULE_ENABLED',
                 'TRAIN_SCHEDULE_CRON',
-                'TRAIN_WORKERS',
+                'TRAIN_WORKERS_LSTM',
+                'TRAIN_WORKERS_GRU',
+                'TRAIN_WORKERS_CNN',
                 'ENSEMBLE_MODE',
                 'TRADING_FEE_RATE'
             ]
@@ -229,11 +233,13 @@ export default function CointradeConfig() {
             }
         }
 
-        // TRAIN_WORKERS 검증 (1~10)
-        if (params['TRAIN_WORKERS']) {
-            const value = parseInt(params['TRAIN_WORKERS']);
-            if (isNaN(value) || value < 1 || value > 10) {
-                errors.push(`${getParamLabel('TRAIN_WORKERS')}는 1~10 사이의 값이어야 합니다.`);
+        // TRAIN_WORKERS 모델별 검증 (1~10)
+        for (const wk of ['TRAIN_WORKERS_LSTM', 'TRAIN_WORKERS_GRU', 'TRAIN_WORKERS_CNN']) {
+            if (params[wk]) {
+                const value = parseInt(params[wk]);
+                if (isNaN(value) || value < 1 || value > 10) {
+                    errors.push(`${getParamLabel(wk)}는 1~10 사이의 값이어야 합니다.`);
+                }
             }
         }
 
@@ -447,7 +453,9 @@ export default function CointradeConfig() {
             BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부',
             SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부',
             TRADING_FEE_RATE: '거래 수수료율 (비율)',
-            TRAIN_WORKERS: '학습 워커 개수 (병렬처리)',
+            TRAIN_WORKERS_LSTM: 'LSTM 학습 워커 수',
+            TRAIN_WORKERS_GRU: 'GRU 학습 워커 수',
+            TRAIN_WORKERS_CNN: 'CNN 학습 워커 수',
             MIN_MODEL_AGREEMENT: '모델 일치도 최소값 (0~1)',
             BTC_FILTER_ENABLED: 'BTC 추세 필터',
             BTC_TREND_MA_PERIOD: 'BTC 추세 MA 기간 (일)',
@@ -481,7 +489,9 @@ export default function CointradeConfig() {
             BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부 (true/false)',
             SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부 (true/false)',
             TRADING_FEE_RATE: '거래소 수수료율 (0.05%면 0.0005로 입력, 업비트: 0.0005, 바이낸스: 0.001)',
-            TRAIN_WORKERS: '학습 시 병렬처리할 워커 개수 (최대 10개)',
+            TRAIN_WORKERS_LSTM: 'LSTM 모델 병렬 학습 워커 수 (추천: 4)',
+            TRAIN_WORKERS_GRU: 'GRU 모델 병렬 학습 워커 수 (추천: 4)',
+            TRAIN_WORKERS_CNN: 'CNN 모델 병렬 학습 워커 수 (추천: 2, 메모리 사용량 높음)',
             MIN_MODEL_AGREEMENT: '앙상블 모델(LSTM/GRU/CNN)의 예측 일치도. 1=완전 일치, 0=불일치. 단일 모델 사용 시 항상 1.0으로 무효화. 0이면 필터 비활성화 (추천: 0.5)',
             BTC_FILTER_ENABLED: 'BTC 종가 < MA이면 하락추세로 판단, 모든 알트코인 매수 중단 (true/false)',
             BTC_TREND_MA_PERIOD: 'BTC 이동평균 계산 기간 (일). 값이 작을수록 민감 (추천: 20일)',
@@ -669,13 +679,13 @@ export default function CointradeConfig() {
                                                                 <option value="gru_only">gru_only</option>
                                                                 <option value="cnn_only">cnn_only</option>
                                                             </select>
-                                                        ) : key === 'TRAIN_WORKERS' ? (
+                                                        ) : ['TRAIN_WORKERS_LSTM', 'TRAIN_WORKERS_GRU', 'TRAIN_WORKERS_CNN'].includes(key) ? (
                                                             <Input
                                                                 type="number"
                                                                 className="w-full h-10 md:h-9 dark:!bg-slate-600 dark:placeholder-slate-300"
                                                                 value={params[key]}
                                                                 onChange={(e) => handleInputChange(key, e.target.value)}
-                                                                placeholder="1"
+                                                                placeholder={key === 'TRAIN_WORKERS_CNN' ? '2' : '4'}
                                                                 min="1"
                                                                 max="10"
                                                                 step="1"

@@ -325,14 +325,36 @@ const TABLE_COLUMNS = [
         hasDropdown: true,
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-left',
-        render: (value) =>
-            value ? (
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                    {value}
+        render: (value) => {
+            if (!value) return '-';
+            const isChinaAdr = value === 'CN' || value === 'HK';
+            return (
+                <span className="inline-flex items-center gap-1">
+                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                        isChinaAdr
+                            ? 'bg-orange-50 text-orange-700 dark:bg-orange-900 dark:text-orange-200'
+                            : 'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
+                    }`}>
+                        {value}
+                    </span>
+                    {isChinaAdr && (
+                        <span className="group relative">
+                            <span className="cursor-help text-xs text-orange-500">{'\u26A0'}</span>
+                            <span className="invisible group-hover:visible absolute z-50 left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg shadow-lg
+                                bg-slate-800 text-white text-xs leading-relaxed border border-slate-600
+                                dark:bg-slate-900 dark:border-slate-500">
+                                <span className="block font-bold text-orange-300 mb-1">중국 ADR 리스크</span>
+                                <span className="block text-slate-200 mb-1">재무지표(BPS 등)는 양호하나 시장에서 크게 할인 거래됩니다.</span>
+                                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">상장폐지 리스크 (SEC 감사 규제)</span>
+                                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">VIE 구조 리스크 (실질 소유권 불확실)</span>
+                                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">자본통제 / 지정학 리스크</span>
+                                <span className="block mt-1.5 text-slate-400 italic">적정가치가 과대 산출될 가능성이 높습니다.</span>
+                            </span>
+                        </span>
+                    )}
                 </span>
-            ) : (
-                '-'
-            ),
+            );
+        },
     },
     {
         key: 'recommendation',
@@ -824,7 +846,10 @@ const InvestmentEvaluation = () => {
                     priceGapPercent: row.priceGapPercent || '',
                     sector: row.sector || '',
                     exchange: row.exchange || '',
-                    country: row.country || '',
+                    country: (() => {
+                        const c = row.country || '';
+                        return (c === 'CN' || c === 'HK') ? `${c} [중국ADR]` : c;
+                    })(),
                     recommendation: warning
                         ? `[이상치 경고] ${warning.reasons.join(' / ')}`
                         : (row.recommendation || ''),
@@ -833,6 +858,13 @@ const InvestmentEvaluation = () => {
                 const capRisk = getMarketCapRisk(row.marketCap);
                 const smallCapFont = { color: { argb: 'FFEA580C' } }; // orange-600
                 const microCapFont = { color: { argb: 'FFDC2626' }, bold: true }; // red-600
+                const isChinaAdr = row.country === 'CN' || row.country === 'HK';
+
+                // 중국 ADR 국가 셀 강조
+                if (isChinaAdr) {
+                    dataRow.getCell('country').font = { color: { argb: 'FFEA580C' }, bold: true }; // orange-600
+                    dataRow.getCell('country').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7ED' } }; // orange-50
+                }
 
                 if (warning) {
                     // 이상치 행: 주황/빨강 강조
@@ -898,6 +930,9 @@ const InvestmentEvaluation = () => {
                 { category: '유동성 리스크', fill: null, meaning: '' },
                 { category: '  소형주', fill: null, meaning: '시총 $1B 미만 — 유동성 리스크, 대량 매매 시 슬리피지 주의 (주황색 텍스트)' },
                 { category: '  초소형주', fill: null, meaning: '시총 $300M 미만 — 유동성 매우 낮음, 스프레드 넓음, 급변동 위험 (빨간색 볼드)' },
+                { category: '', fill: null, meaning: '' },
+                { category: '국가 리스크', fill: null, meaning: '' },
+                { category: '  중국 ADR', fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7ED' } }, meaning: 'CN/HK — 상장폐지 리스크, VIE 구조, 자본통제, 지정학 리스크로 적정가치가 과대 산출될 가능성 높음 (국가 셀 주황색)' },
             ];
 
             legendItems.forEach((item) => {
@@ -962,7 +997,10 @@ const InvestmentEvaluation = () => {
                     row.priceGapPercent || '',
                     row.sector || '',
                     row.exchange || '',
-                    row.country || '',
+                    (() => {
+                        const c = row.country || '';
+                        return (c === 'CN' || c === 'HK') ? `${c} [중국ADR]` : c;
+                    })(),
                     w ? `[이상치 경고] ${w.reasons.join(' / ')}` : (row.recommendation || ''),
                 ];
             });

@@ -151,10 +151,10 @@ export default function Header001({ onMenuClick, onMenuHover, onMenuLeave }) {
             // 세션 스토리지 클리어 (사용자별 데이터 초기화)
             sessionStorage.clear();
 
+            // 즉시 홈으로 이동 (탭 리셋과 URL을 동기화하여 빈 화면 방지)
             try {
-                openAlert('인증정보가 존재하지 않습니다.', () => {
-                    navigate('/', { replace: true, state: { reason: '401' } });
-                });
+                navigate('/', { replace: true, state: { reason: '401' } });
+                openAlert('인증정보가 존재하지 않습니다.');
             } catch {
                 window.location.href = '/';
             }

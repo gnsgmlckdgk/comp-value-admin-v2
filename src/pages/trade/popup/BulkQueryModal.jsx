@@ -6,7 +6,8 @@ import ExcelJS from 'exceljs';
 import { send, API_ENDPOINTS, beginBulkOperation } from '@/util/ClientUtil';
 
 const BATCH_SIZE = 30;
-const BATCH_DELAY_MS = 10000;
+// const BATCH_DELAY_MS = 10000; // FmpRateLimiter로 대체 (2026.03.10)
+const BATCH_DELAY_MS = 1000; // 배치 간 최소 간격 (백엔드 FmpRateLimiter가 rate limit 관리)
 
 /**
  * 대량조회 모달

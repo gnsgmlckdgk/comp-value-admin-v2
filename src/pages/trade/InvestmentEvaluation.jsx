@@ -192,30 +192,29 @@ const TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
-        render: (value, row) => {
+        render: (value, row, { showWarning, hideWarning }) => {
             if (!value || value === 'N/A') return '-';
             const risk = getMarketCapRisk(value);
             if (!risk) return <span className="text-slate-600 dark:text-slate-300">{value}</span>;
+            const content = (<>
+                <span className="block font-bold text-yellow-300 mb-1">{risk.label}</span>
+                <span className="block text-slate-200">{risk.desc}</span>
+            </>);
             return (
-                <span className="group relative inline-flex items-center gap-1 justify-end">
+                <span className="inline-flex items-center gap-1 justify-end">
                     <span className={risk.level === 'micro'
                         ? 'text-orange-500 dark:text-orange-400 font-medium'
                         : 'text-yellow-600 dark:text-yellow-400'
                     }>
                         {value}
                     </span>
-                    <span className="group relative">
-                        <span className={`cursor-help text-xs ${
-                            risk.level === 'micro' ? 'text-orange-500' : 'text-yellow-500'
-                        }`}>
-                            {risk.level === 'micro' ? '\u26A0\uFE0F' : '\u26A0'}
-                        </span>
-                        <span className="invisible group-hover:visible absolute z-50 right-0 bottom-full mb-2 w-56 p-2.5 rounded-lg shadow-lg
-                            bg-slate-800 text-white text-xs leading-relaxed border border-slate-600
-                            dark:bg-slate-900 dark:border-slate-500">
-                            <span className="block font-bold text-yellow-300 mb-1">{risk.label}</span>
-                            <span className="block text-slate-200">{risk.desc}</span>
-                        </span>
+                    <span
+                        className={`cursor-help text-xs ${risk.level === 'micro' ? 'text-orange-500' : 'text-yellow-500'}`}
+                        onMouseEnter={(e) => showWarning(e, content)}
+                        onMouseLeave={hideWarning}
+                        onClick={(e) => showWarning(e, content)}
+                    >
+                        {risk.level === 'micro' ? '\u26A0\uFE0F' : '\u26A0'}
                     </span>
                 </span>
             );
@@ -248,43 +247,44 @@ const TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
-        render: (value, row) => {
+        render: (value, row, { showWarning, hideWarning }) => {
             if (!value) return '-';
             const numValue = parseFloat(value);
             const isPositive = numValue > 0;
             const warning = getPriceGapWarning(value, row);
+            const content = warning && (<>
+                <span className="block font-bold text-yellow-300 mb-1.5">
+                    {warning.level === 'extreme' ? '극단적 이상치' : '이상치 경고'} — 가격차이율 {value}
+                </span>
+                <span className="block text-slate-300 mb-1.5">
+                    이 수치는 신뢰하기 어렵습니다. 추정 원인:
+                </span>
+                {warning.reasons.map((reason, i) => (
+                    <span key={i} className="block pl-2 border-l-2 border-yellow-400/60 mb-1 text-slate-200">
+                        {reason}
+                    </span>
+                ))}
+                <span className="block mt-1.5 text-slate-400 italic">
+                    이 종목의 적정가치를 투자 근거로 사용하지 마세요.
+                </span>
+            </>);
             return (
                 <span className="inline-flex items-center gap-1 justify-end">
                     <span className={isPositive ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}>
                         {isPositive ? '+' : ''}{value}
                     </span>
                     {warning && (
-                        <span className="group relative">
-                            <span className={`cursor-help text-sm ${
+                        <span
+                            className={`cursor-help text-sm ${
                                 warning.level === 'extreme'
                                     ? 'text-orange-500 animate-pulse'
                                     : 'text-yellow-500'
-                            }`}>
-                                {warning.level === 'extreme' ? '\u26A0\uFE0F' : '\u26A0'}
-                            </span>
-                            <span className="invisible group-hover:visible absolute z-50 right-0 bottom-full mb-2 w-72 p-3 rounded-lg shadow-lg
-                                bg-slate-800 text-white text-xs leading-relaxed border border-slate-600
-                                dark:bg-slate-900 dark:border-slate-500">
-                                <span className="block font-bold text-yellow-300 mb-1.5">
-                                    {warning.level === 'extreme' ? '극단적 이상치' : '이상치 경고'} — 가격차이율 {value}
-                                </span>
-                                <span className="block text-slate-300 mb-1.5">
-                                    이 수치는 신뢰하기 어렵습니다. 추정 원인:
-                                </span>
-                                {warning.reasons.map((reason, i) => (
-                                    <span key={i} className="block pl-2 border-l-2 border-yellow-400/60 mb-1 text-slate-200">
-                                        {reason}
-                                    </span>
-                                ))}
-                                <span className="block mt-1.5 text-slate-400 italic">
-                                    이 종목의 적정가치를 투자 근거로 사용하지 마세요.
-                                </span>
-                            </span>
+                            }`}
+                            onMouseEnter={(e) => showWarning(e, content)}
+                            onMouseLeave={hideWarning}
+                            onClick={(e) => showWarning(e, content)}
+                        >
+                            {warning.level === 'extreme' ? '\u26A0\uFE0F' : '\u26A0'}
                         </span>
                     )}
                 </span>
@@ -325,9 +325,17 @@ const TABLE_COLUMNS = [
         hasDropdown: true,
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-left',
-        render: (value) => {
+        render: (value, row, { showWarning, hideWarning }) => {
             if (!value) return '-';
             const isChinaAdr = value === 'CN' || value === 'HK';
+            const content = (<>
+                <span className="block font-bold text-orange-300 mb-1">중국 ADR 리스크</span>
+                <span className="block text-slate-200 mb-1">재무지표(BPS 등)는 양호하나 시장에서 크게 할인 거래됩니다.</span>
+                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">상장폐지 리스크 (SEC 감사 규제)</span>
+                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">VIE 구조 리스크 (실질 소유권 불확실)</span>
+                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">자본통제 / 지정학 리스크</span>
+                <span className="block mt-1.5 text-slate-400 italic">적정가치가 과대 산출될 가능성이 높습니다.</span>
+            </>);
             return (
                 <span className="inline-flex items-center gap-1">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
@@ -338,18 +346,13 @@ const TABLE_COLUMNS = [
                         {value}
                     </span>
                     {isChinaAdr && (
-                        <span className="group relative">
-                            <span className="cursor-help text-xs text-orange-500">{'\u26A0'}</span>
-                            <span className="invisible group-hover:visible absolute z-50 left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg shadow-lg
-                                bg-slate-800 text-white text-xs leading-relaxed border border-slate-600
-                                dark:bg-slate-900 dark:border-slate-500">
-                                <span className="block font-bold text-orange-300 mb-1">중국 ADR 리스크</span>
-                                <span className="block text-slate-200 mb-1">재무지표(BPS 등)는 양호하나 시장에서 크게 할인 거래됩니다.</span>
-                                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">상장폐지 리스크 (SEC 감사 규제)</span>
-                                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">VIE 구조 리스크 (실질 소유권 불확실)</span>
-                                <span className="block pl-2 border-l-2 border-orange-400/60 mb-0.5 text-slate-300">자본통제 / 지정학 리스크</span>
-                                <span className="block mt-1.5 text-slate-400 italic">적정가치가 과대 산출될 가능성이 높습니다.</span>
-                            </span>
+                        <span
+                            className="cursor-help text-xs text-orange-500"
+                            onMouseEnter={(e) => showWarning(e, content)}
+                            onMouseLeave={hideWarning}
+                            onClick={(e) => showWarning(e, content)}
+                        >
+                            {'\u26A0'}
                         </span>
                     )}
                 </span>
@@ -417,7 +420,7 @@ const InvestmentEvaluation = () => {
     const [openDropdown, setOpenDropdown] = useState(null);
     const [detailModal, setDetailModal] = useState({ open: false, data: null });
     const [fullDetailModal, setFullDetailModal] = useState({ open: false, data: null });
-    const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
+    const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0, rich: false });
     const [progress, setProgress] = useState({ current: 0, total: 0, status: '', waiting: false, remainingSeconds: 0, removedDuplicates: 0 });
 
     const inFlight = useRef({ fetch: false });
@@ -775,6 +778,26 @@ const InvestmentEvaluation = () => {
 
     const handleTooltipLeave = useCallback(() => {
         setTooltip((prev) => ({ ...prev, visible: false }));
+    }, []);
+
+    // 경고 툴팁 (리치 콘텐츠) - 데스크톱: hover, 모바일: 터치
+    const showWarningTooltip = useCallback((e, content) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const isMobile = vw < 640;
+        setTooltip({
+            visible: true,
+            text: content,
+            x: isMobile ? 16 : Math.min(rect.left, vw - 320),
+            y: isMobile ? rect.bottom + 8 : rect.top - 8,
+            mobile: isMobile,
+            rich: true,
+        });
+    }, []);
+
+    const hideWarningTooltip = useCallback(() => {
+        setTooltip((prev) => prev.rich ? { ...prev, visible: false } : prev);
     }, []);
 
     // 모바일: 다른 곳 탭하면 툴팁 닫기
@@ -1415,6 +1438,8 @@ const InvestmentEvaluation = () => {
                                             const tooltipHandlers = {
                                                 onMouseEnter: handleTooltipEnter,
                                                 onMouseLeave: handleTooltipLeave,
+                                                showWarning: showWarningTooltip,
+                                                hideWarning: hideWarningTooltip,
                                             };
                                             const displayValue = col.render ? col.render(value, row, tooltipHandlers) : value ?? '-';
 
@@ -1457,11 +1482,17 @@ const InvestmentEvaluation = () => {
             {/* 커스텀 툴팁 */}
             {tooltip.visible && (
                 <div
-                    className={`fixed z-[9999] px-2 py-1 text-xs bg-slate-800 text-white rounded shadow-lg pointer-events-none ${tooltip.mobile ? 'max-w-[90vw] whitespace-normal break-words' : 'whitespace-nowrap'}`}
+                    className={`fixed z-[9999] text-xs bg-slate-800 text-white rounded-lg shadow-lg border border-slate-600 ${
+                        tooltip.rich
+                            ? 'p-3 max-w-[min(20rem,90vw)] whitespace-normal leading-relaxed'
+                            : `px-2 py-1 pointer-events-none ${tooltip.mobile ? 'max-w-[90vw] whitespace-normal break-words' : 'whitespace-nowrap'}`
+                    }`}
                     style={{
                         left: tooltip.x,
                         top: tooltip.y,
-                        transform: tooltip.mobile ? 'none' : 'translateY(-50%)',
+                        transform: tooltip.rich
+                            ? (tooltip.mobile ? 'none' : 'translateY(-100%)')
+                            : (tooltip.mobile ? 'none' : 'translateY(-50%)'),
                     }}
                 >
                     {tooltip.text}

@@ -600,6 +600,9 @@ const InvestmentEvaluation = () => {
         inFlight.current.fetch = true;
         abortRef.current = false;
 
+        // 최근 조회 내역 저장 (전체 심볼 리스트, 배치 분할 전)
+        send('/dart/main/evaluate/recent-queries', { symbols }, 'POST').catch(() => {});
+
         const BATCH_SIZE = 50;
         const WAIT_SECONDS = 15;
         const chunks = chunkArray(symbols, BATCH_SIZE);

@@ -433,7 +433,8 @@ const InvestmentEvaluation = () => {
     const [recentQueries, setRecentQueries] = useState([]);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
     const [sortConfig, setSortConfig] = useState({ key: 'totalScore', direction: 'desc' });
-    const [columnFilters, setColumnFilters] = useState({});
+    const [columnFilters, setColumnFilters] = useState({}); // {key: string[]} 멀티셀렉트
+    const [filterSearch, setFilterSearch] = useState({}); // 드롭다운 내 검색어
     const [openDropdown, setOpenDropdown] = useState(null);
     const [detailModal, setDetailModal] = useState({ open: false, data: null });
     const [fullDetailModal, setFullDetailModal] = useState({ open: false, data: null });
@@ -506,7 +507,11 @@ const InvestmentEvaluation = () => {
             if (!dropdownColumns.includes(targetKey)) return [];
 
             const otherFilters = Object.entries(columnFilters).filter(
-                ([key, value]) => key !== targetKey && value !== ''
+                ([key, value]) => {
+                    if (key === targetKey) return false;
+                    if (Array.isArray(value)) return value.length > 0;
+                    return value !== '';
+                }
             );
 
             let dataToFilter = resultData;
@@ -515,6 +520,9 @@ const InvestmentEvaluation = () => {
                     return otherFilters.every(([key, filterValue]) => {
                         const cellValue = row[key];
                         if (cellValue == null) return false;
+                        if (Array.isArray(filterValue)) {
+                            return filterValue.some(v => String(v).toLowerCase() === String(cellValue).toLowerCase());
+                        }
                         return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
                     });
                 });
@@ -699,7 +707,10 @@ const InvestmentEvaluation = () => {
     // - 제외 OR 검색: "!fin|tech" → fin 또는 tech 포함된 데이터 제외 (= fin도 제외, tech도 제외)
     // - 제외 AND 검색: "!fin&tech" → fin도 제외, tech도 제외
     const filteredData = useMemo(() => {
-        const activeFilters = Object.entries(columnFilters).filter(([_, value]) => value !== '');
+        const activeFilters = Object.entries(columnFilters).filter(([_, value]) => {
+            if (Array.isArray(value)) return value.length > 0;
+            return value !== '';
+        });
         if (activeFilters.length === 0) return resultData;
 
         return resultData.filter((row) => {
@@ -708,35 +719,25 @@ const InvestmentEvaluation = () => {
                 if (cellValue == null) return false;
                 const cellStr = String(cellValue).toLowerCase();
 
-                // 제외 검색 (!로 시작)
+                // 멀티셀렉트 (배열)
+                if (Array.isArray(filterValue)) {
+                    return filterValue.some(v => String(v).toLowerCase() === cellStr);
+                }
+
+                // 텍스트 검색 (하위 호환)
                 const isExclude = filterValue.startsWith('!');
                 const actualFilter = isExclude ? filterValue.slice(1) : filterValue;
 
-                // AND 검색 (&로 구분)
                 if (actualFilter.includes('&')) {
                     const andTerms = actualFilter.split('&').map(t => t.trim().toLowerCase()).filter(t => t);
-                    if (isExclude) {
-                        // !a&b = a 제외 AND b 제외 (둘 중 하나라도 포함되면 제외)
-                        return andTerms.every(term => !cellStr.includes(term));
-                    } else {
-                        // a&b = a 포함 AND b 포함
-                        return andTerms.every(term => cellStr.includes(term));
-                    }
+                    return isExclude ? andTerms.every(term => !cellStr.includes(term)) : andTerms.every(term => cellStr.includes(term));
                 }
 
-                // OR 검색 (|로 구분)
                 if (actualFilter.includes('|')) {
                     const orTerms = actualFilter.split('|').map(t => t.trim().toLowerCase()).filter(t => t);
-                    if (isExclude) {
-                        // !a|b = a 제외 AND b 제외 (둘 중 하나라도 포함되면 제외)
-                        return orTerms.every(term => !cellStr.includes(term));
-                    } else {
-                        // a|b = a 포함 OR b 포함
-                        return orTerms.some(term => cellStr.includes(term));
-                    }
+                    return isExclude ? orTerms.every(term => !cellStr.includes(term)) : orTerms.some(term => cellStr.includes(term));
                 }
 
-                // 일반 검색
                 const filterStr = actualFilter.toLowerCase();
                 const matches = cellStr.includes(filterStr);
                 return isExclude ? !matches : matches;
@@ -772,7 +773,7 @@ const InvestmentEvaluation = () => {
         });
     }, [filteredData, sortConfig]);
 
-    // 컬럼 필터 핸들러
+    // 컬럼 필터 핸들러 (텍스트)
     const handleColumnFilterChange = useCallback((key, value) => {
         setColumnFilters((prev) => ({
             ...prev,
@@ -780,9 +781,28 @@ const InvestmentEvaluation = () => {
         }));
     }, []);
 
+    // 멀티셀렉트 토글
+    const toggleFilterValue = useCallback((key, value) => {
+        setColumnFilters((prev) => {
+            const current = Array.isArray(prev[key]) ? prev[key] : [];
+            const next = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+            return { ...prev, [key]: next };
+        });
+    }, []);
+
+    // 전체 선택/해제
+    const toggleAllFilterValues = useCallback((key, allValues) => {
+        setColumnFilters((prev) => {
+            const current = Array.isArray(prev[key]) ? prev[key] : [];
+            const next = current.length === allValues.length ? [] : [...allValues];
+            return { ...prev, [key]: next };
+        });
+    }, []);
+
     // 필터 초기화
     const clearColumnFilters = useCallback(() => {
         setColumnFilters({});
+        setFilterSearch({});
     }, []);
 
     // 정렬 핸들러
@@ -1311,7 +1331,7 @@ const InvestmentEvaluation = () => {
 
             {/* 분석 결과 테이블 */}
             {resultData.length > 0 && (
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700">
+                <div className="bg-white border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700">
                     <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <h3 className="text-lg font-semibold text-slate-800 dark:text-white">분석 결과</h3>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1337,7 +1357,7 @@ const InvestmentEvaluation = () => {
                                 </svg>
                                 CSV 다운로드
                             </button>
-                            {Object.values(columnFilters).some((v) => v !== '') && (
+                            {Object.values(columnFilters).some((v) => Array.isArray(v) ? v.length > 0 : v !== '') && (
                                 <button
                                     type="button"
                                     onClick={clearColumnFilters}
@@ -1353,10 +1373,10 @@ const InvestmentEvaluation = () => {
                             </span>
                         </div>
                     </div>
-                    <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[70vh]">
+                    <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[70vh]" style={{ scrollbarGutter: 'stable' }}>
+                      <div style={{ minWidth: '1500px' }}>
                         <table
-                            className="text-sm divide-y divide-slate-200 dark:divide-slate-700"
-                            style={{ width: '100%', tableLayout: 'fixed' }}
+                            className="w-full table-fixed text-sm divide-y divide-slate-200 dark:divide-slate-700"
                         >
                             <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
                                 <tr>
@@ -1397,88 +1417,107 @@ const InvestmentEvaluation = () => {
                                 </tr>
                                 {/* 필터 입력 행 */}
                                 <tr className="bg-slate-100 dark:bg-slate-700">
-                                    {TABLE_COLUMNS.map((col) => (
-                                        <th
-                                            key={`filter-${col.key}`}
-                                            className={`px-2 py-2 ${col.sticky ? 'sticky left-0 z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
-                                            style={{ width: col.width }}
-                                        >
-                                            <div className={`relative ${col.hasDropdown ? 'filter-dropdown-container' : ''}`}>
-                                                <input
-                                                    type="text"
-                                                    value={columnFilters[col.key] || ''}
-                                                    onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
-                                                    onFocus={() => col.hasDropdown && setOpenDropdown(col.key)}
-                                                    placeholder="필터..."
-                                                    className={`w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400 ${col.hasDropdown ? 'pr-6' : ''}`}
-                                                />
-                                                {col.hasDropdown && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setOpenDropdown(openDropdown === col.key ? null : col.key)
-                                                        }
-                                                        className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                                    >
-                                                        <svg
-                                                            className="w-3 h-3"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M19 9l-7 7-7-7"
-                                                            />
-                                                        </svg>
-                                                    </button>
-                                                )}
-                                                {col.hasDropdown &&
-                                                    openDropdown === col.key &&
-                                                    (() => {
-                                                        const options = getUniqueValuesForColumn(col.key);
-                                                        const filteredOptions = options.filter(
-                                                            (v) =>
-                                                                !columnFilters[col.key] ||
-                                                                String(v)
-                                                                    .toLowerCase()
-                                                                    .includes(columnFilters[col.key].toLowerCase())
-                                                        );
-                                                        return (
-                                                            options.length > 0 && (
-                                                                <div className="absolute left-0 top-full mt-1 w-48 max-h-48 overflow-y-auto bg-white border border-slate-300 rounded shadow-lg z-50 dark:bg-slate-700 dark:border-slate-600">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            handleColumnFilterChange(col.key, '');
-                                                                            setOpenDropdown(null);
-                                                                        }}
-                                                                        className="w-full px-3 py-1.5 text-left text-xs text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-600"
-                                                                    >
-                                                                        (전체)
-                                                                    </button>
-                                                                    {filteredOptions.map((value) => (
-                                                                        <button
-                                                                            key={value}
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                handleColumnFilterChange(col.key, String(value));
-                                                                                setOpenDropdown(null);
-                                                                            }}
-                                                                            className="w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-blue-50 dark:text-slate-200 dark:hover:bg-slate-600"
-                                                                        >
-                                                                            {value}
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            )
-                                                        );
-                                                    })()}
-                                            </div>
-                                        </th>
-                                    ))}
+                                    {TABLE_COLUMNS.map((col) => {
+                                        const selected = Array.isArray(columnFilters[col.key]) ? columnFilters[col.key] : [];
+                                        const hasActiveFilter = col.hasDropdown ? selected.length > 0 : (columnFilters[col.key] || '') !== '';
+                                        return (
+                                            <th
+                                                key={`filter-${col.key}`}
+                                                className={`px-2 py-2 ${col.sticky ? 'sticky left-0 z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                                style={{ width: col.width }}
+                                            >
+                                                <div className="relative filter-dropdown-container">
+                                                    {col.hasDropdown ? (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setOpenDropdown(openDropdown === col.key ? null : col.key)}
+                                                                className={`w-full flex items-center justify-between px-2 py-1 text-xs rounded border bg-white text-slate-700 outline-none dark:bg-slate-600 dark:text-white ${
+                                                                    hasActiveFilter
+                                                                        ? 'border-blue-500 ring-1 ring-blue-500'
+                                                                        : 'border-slate-300 dark:border-slate-500'
+                                                                }`}
+                                                            >
+                                                                <span className="truncate">
+                                                                    {hasActiveFilter ? `${selected.length}개 선택` : '전체'}
+                                                                </span>
+                                                                <svg className={`w-3 h-3 shrink-0 transition-transform ${openDropdown === col.key ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                </svg>
+                                                            </button>
+                                                            {openDropdown === col.key && (() => {
+                                                                const options = getUniqueValuesForColumn(col.key);
+                                                                const search = (filterSearch[col.key] || '').toLowerCase();
+                                                                const filtered = search ? options.filter(v => String(v).toLowerCase().includes(search)) : options;
+                                                                return options.length > 0 && (
+                                                                    <div className="absolute left-0 top-full mt-1 w-52 bg-white border border-slate-300 rounded-lg shadow-xl z-50 dark:bg-slate-700 dark:border-slate-600">
+                                                                        {/* 검색 */}
+                                                                        <div className="p-2 border-b border-slate-200 dark:border-slate-600">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={filterSearch[col.key] || ''}
+                                                                                onChange={(e) => setFilterSearch(prev => ({ ...prev, [col.key]: e.target.value }))}
+                                                                                placeholder="검색..."
+                                                                                className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+                                                                                autoFocus
+                                                                            />
+                                                                        </div>
+                                                                        {/* 전체 선택/해제 */}
+                                                                        <div className="px-2 py-1.5 border-b border-slate-200 dark:border-slate-600 flex items-center gap-2">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => toggleAllFilterValues(col.key, filtered)}
+                                                                                className="text-[11px] text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                                                                            >
+                                                                                {selected.length === filtered.length ? '전체 해제' : '전체 선택'}
+                                                                            </button>
+                                                                            {hasActiveFilter && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleColumnFilterChange(col.key, [])}
+                                                                                    className="text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                                                                                >
+                                                                                    초기화
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                        {/* 체크박스 목록 */}
+                                                                        <div className="max-h-48 overflow-y-auto">
+                                                                            {filtered.map((value) => (
+                                                                                <label
+                                                                                    key={value}
+                                                                                    className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 hover:bg-blue-50 cursor-pointer dark:text-slate-200 dark:hover:bg-slate-600"
+                                                                                >
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={selected.includes(value)}
+                                                                                        onChange={() => toggleFilterValue(col.key, value)}
+                                                                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-500 dark:bg-slate-600"
+                                                                                    />
+                                                                                    <span className="truncate">{value}</span>
+                                                                                </label>
+                                                                            ))}
+                                                                            {filtered.length === 0 && (
+                                                                                <div className="px-3 py-2 text-xs text-slate-400">결과 없음</div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </>
+                                                    ) : (
+                                                        <input
+                                                            type="text"
+                                                            value={columnFilters[col.key] || ''}
+                                                            onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
+                                                            placeholder="필터..."
+                                                            className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-slate-200 dark:bg-slate-800 dark:divide-slate-700">
@@ -1520,6 +1559,7 @@ const InvestmentEvaluation = () => {
                                 ))}
                             </tbody>
                         </table>
+                      </div>
                     </div>
                 </div>
             )}

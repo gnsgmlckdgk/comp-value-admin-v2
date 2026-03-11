@@ -221,6 +221,22 @@ const TABLE_COLUMNS = [
         },
     },
     {
+        key: 'averageVolume',
+        label: '평균거래량',
+        width: '110px',
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value) => {
+            if (!value) return '-';
+            const vol = Number(value);
+            const LOW_VOLUME = 100000;
+            const formatted = vol >= 1e6 ? `${(vol / 1e6).toFixed(1)}M` : vol >= 1e3 ? `${(vol / 1e3).toFixed(0)}K` : vol.toString();
+            if (vol < LOW_VOLUME) return <span className="text-orange-400 font-medium">{formatted}</span>;
+            return <span className="text-slate-600 dark:text-slate-300">{formatted}</span>;
+        },
+    },
+    {
         key: 'fairValue',
         label: '적정가치',
         width: '100px',
@@ -414,6 +430,7 @@ const InvestmentEvaluation = () => {
     // 대량조회 중 세션 유지
     useSessionKeepAlive(isLoading);
 
+    const [recentQueries, setRecentQueries] = useState([]);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
     const [sortConfig, setSortConfig] = useState({ key: 'totalScore', direction: 'desc' });
     const [columnFilters, setColumnFilters] = useState({});
@@ -469,6 +486,18 @@ const InvestmentEvaluation = () => {
             }
         }
     }, [symbolInput, resultData]);
+
+    // 최근 조회 내역 로드
+    const loadRecentQueries = useCallback(async () => {
+        const { data, error } = await send('/dart/main/evaluate/recent-queries', null, 'GET');
+        if (!error && data?.response) {
+            setRecentQueries(data.response);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadRecentQueries();
+    }, [loadRecentQueries]);
 
     // 드롭다운용 고유값 계산
     const getUniqueValuesForColumn = useCallback(
@@ -634,6 +663,7 @@ const InvestmentEvaluation = () => {
         } finally {
             setIsLoading(false);
             inFlight.current.fetch = false;
+            loadRecentQueries();
             // 2초 후 진행상태 초기화
             setTimeout(() => {
                 setProgress({ current: 0, total: 0, status: '', waiting: false, remainingSeconds: 0, removedDuplicates: 0 });
@@ -829,6 +859,7 @@ const InvestmentEvaluation = () => {
                 { header: '총점', key: 'totalScore', width: 10 },
                 { header: '현재가', key: 'currentPrice', width: 12 },
                 { header: '시총', key: 'marketCap', width: 14 },
+                { header: '평균거래량', key: 'averageVolume', width: 14 },
                 { header: '적정가치', key: 'fairValue', width: 12 },
                 { header: '가격차이율', key: 'priceGapPercent', width: 14 },
                 { header: '섹터', key: 'sector', width: 20 },
@@ -865,6 +896,7 @@ const InvestmentEvaluation = () => {
                         if (risk) return `${row.marketCap} [${risk.label}]`;
                         return row.marketCap || 'N/A';
                     })(),
+                    averageVolume: row.averageVolume ? Number(row.averageVolume) : '',
                     fairValue: row.fairValue ? `$${row.fairValue}` : '',
                     priceGapPercent: row.priceGapPercent || '',
                     sector: row.sector || '',
@@ -910,6 +942,11 @@ const InvestmentEvaluation = () => {
                 // 소형주 시총 셀 색상 (이상치와 별개로 적용)
                 if (capRisk) {
                     dataRow.getCell('marketCap').font = capRisk.level === 'micro' ? microCapFont : smallCapFont;
+                }
+
+                // 저거래량 셀 색상 (10만주 미만)
+                if (row.averageVolume && Number(row.averageVolume) < 100000) {
+                    dataRow.getCell('averageVolume').font = smallCapFont;
                 }
             });
 
@@ -1005,7 +1042,7 @@ const InvestmentEvaluation = () => {
         }
 
         try {
-            const headers = ['심볼', '기업명', '등급', '총점', '현재가', '시총', '적정가치', '가격차이율', '섹터', '거래소', '국가', '추천'];
+            const headers = ['심볼', '기업명', '등급', '총점', '현재가', '시총', '평균거래량', '적정가치', '가격차이율', '섹터', '거래소', '국가', '추천'];
             const rows = sortedData.map((row) => {
                 const w = getPriceGapWarning(row.priceGapPercent, row);
                 const capRisk = getMarketCapRisk(row.marketCap);
@@ -1016,6 +1053,7 @@ const InvestmentEvaluation = () => {
                     row.totalScore != null ? row.totalScore.toFixed(1) : '',
                     row.currentPrice ? `$${row.currentPrice}` : '',
                     capRisk ? `${row.marketCap} [${capRisk.label}]` : (row.marketCap || 'N/A'),
+                    row.averageVolume ? Number(row.averageVolume).toLocaleString() : '',
                     row.fairValue ? `$${row.fairValue}` : '',
                     row.priceGapPercent || '',
                     row.sector || '',
@@ -1088,6 +1126,28 @@ const InvestmentEvaluation = () => {
                 <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                     티커 심볼을 입력하고 분석 버튼을 눌러 투자 판단 정보를 확인하세요. 여러 티커는 줄바꿈, 쉼표, 공백으로 구분합니다.
                 </p>
+
+                {/* 최근 조회 내역 */}
+                {recentQueries.length > 0 && (
+                    <div className="mb-3 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">최근 조회:</span>
+                        {recentQueries.map((q, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setSymbolInput(q.symbols.join(', '))}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-blue-900 dark:hover:text-blue-200 transition-colors"
+                                title={q.symbols.join(', ')}
+                            >
+                                <span className="font-medium">{q.symbolCount}종목</span>
+                                <span className="text-slate-400 dark:text-slate-500">
+                                    {q.symbols.length <= 3 ? q.symbols.join(', ') : `${q.symbols.slice(0, 3).join(', ')} ...`}
+                                </span>
+                                <span className="text-slate-400 dark:text-slate-500 text-[10px]">{q.queriedAt}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* 입력 영역 */}
                 <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 dark:bg-slate-800 dark:border-slate-700">

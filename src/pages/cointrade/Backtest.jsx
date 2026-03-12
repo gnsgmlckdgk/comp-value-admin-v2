@@ -3219,8 +3219,19 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                             cx="50%"
                                             cy="50%"
                                             labelLine={false}
-                                            label={(entry) => `${entry.name}: ${entry.value}`}
-                                            outerRadius={100}
+                                            label={({ name, value, percent, cx, cy, midAngle, innerRadius, outerRadius: or }) => {
+                                                const RADIAN = Math.PI / 180;
+                                                const r = or * 0.6;
+                                                const x = cx + r * Math.cos(-midAngle * RADIAN);
+                                                const y = cy + r * Math.sin(-midAngle * RADIAN);
+                                                return (
+                                                    <text x={x} y={y} textAnchor="middle" dominantBaseline="central"
+                                                          fill="#fff" fontSize={12} fontWeight="bold">
+                                                        {`${value} (${(percent * 100).toFixed(0)}%)`}
+                                                    </text>
+                                                );
+                                            }}
+                                            outerRadius="70%"
                                             fill="#8884d8"
                                             dataKey="value"
                                         >

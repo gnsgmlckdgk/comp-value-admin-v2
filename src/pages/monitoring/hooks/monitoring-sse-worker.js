@@ -1,4 +1,4 @@
-const MAX_RESOURCE_HISTORY = 360;
+const MAX_RESOURCE_HISTORY = 620;
 
 let eventSource = null;
 let resourceHistory = [];

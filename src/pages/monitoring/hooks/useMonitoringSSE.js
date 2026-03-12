@@ -24,7 +24,7 @@ export default function useMonitoringSSE() {
     const isPausedRef = useRef(false);
     const MAX_TRADES = 100;
     const MAX_API_LOGS = 50;
-    const MAX_RESOURCE_HISTORY = 360;
+    const MAX_RESOURCE_HISTORY = 620;
 
     // ─── Worker 메시지 핸들러 ───
     const handleWorkerMessage = useCallback((e) => {

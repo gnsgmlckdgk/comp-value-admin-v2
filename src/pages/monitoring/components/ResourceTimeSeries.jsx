@@ -202,9 +202,12 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
     const tooltipBorder = isDark ? '#334155' : '#e2e8f0';
     const tooltipText = isDark ? '#e2e8f0' : '#1e293b';
 
-    // 고정 30분 윈도우: 현재 시각 기준 오른쪽 정렬
+    // 동적 윈도우: 데이터가 30분 미만이면 데이터 범위로, 30분 이상이면 고정 30분 윈도우
+    const THIRTY_MIN = 30 * 60 * 1000;
     const now = chartData.length > 0 ? chartData[chartData.length - 1].time : Date.now();
-    const thirtyMinAgo = now - 30 * 60 * 1000;
+    const firstTime = chartData.length > 0 ? chartData[0].time : now;
+    const dataSpan = now - firstTime;
+    const domainMin = dataSpan >= THIRTY_MIN ? now - THIRTY_MIN : firstTime;
 
     return (
         <div>
@@ -217,7 +220,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                             <XAxis
                                 dataKey="time"
                                 type="number"
-                                domain={[thirtyMinAgo, now]}
+                                domain={[domainMin, now]}
                                 tick={{ fontSize: 10, fill: tickColor }}
                                 tickFormatter={formatTime}
                                 interval="preserveStartEnd"

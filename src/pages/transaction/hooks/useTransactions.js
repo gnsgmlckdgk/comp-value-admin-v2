@@ -20,9 +20,14 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
     const [saving, setSaving] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
 
-    // 최초 로드 시 목록 조회
+    // 최초 로드 시 목록 조회 + 실시간 현재가 갱신
     useEffect(() => {
-        loadTransactions();
+        loadTransactions().then((list) => {
+            if (list && list.length > 0) {
+                const symbols = Array.from(new Set(list.map((r) => r.symbol).filter(Boolean)));
+                mergePricesBySymbols(symbols);
+            }
+        });
     }, []);
 
     const loadTransactions = async () => {
@@ -31,6 +36,7 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
             const list = await fetchTransactions();
             setRows(sortRowsBySymbolAndDate(list));
             setLastUpdated(new Date());
+            return list;
         } finally {
             setLoading(false);
         }
@@ -110,9 +116,23 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
     const removeTransaction = async (id) => {
         setSaving(true);
         try {
+            // 기존 현재가 보존
+            const prevPriceBySym = new Map(
+                rows.map((r) => [String(r.symbol || '').toUpperCase(), r.currentPrice])
+            );
+
             await deleteTransaction(id);
             const list = await fetchTransactions();
-            setRows(sortRowsBySymbolAndDate(list));
+
+            // 기존 현재가 머지
+            const merged = list.map((r) => {
+                const sym = String(r.symbol || '').toUpperCase();
+                const prevCp = prevPriceBySym.get(sym);
+                return (prevCp !== undefined && prevCp !== null && prevCp !== '')
+                    ? { ...r, currentPrice: prevCp }
+                    : r;
+            });
+            setRows(sortRowsBySymbolAndDate(merged));
             setLastUpdated(new Date());
             return true;
         } catch (e) {

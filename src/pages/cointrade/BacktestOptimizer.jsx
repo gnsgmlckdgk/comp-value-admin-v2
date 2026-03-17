@@ -546,24 +546,30 @@ export default function BacktestOptimizer() {
             const savedTaskId = localStorage.getItem('optimizer_running_task_id');
             if (savedTaskId) {
                 setRunningTaskId(savedTaskId);
+                const savedTitle = localStorage.getItem('optimizer_running_title');
+                if (savedTitle) setRunTitle(savedTitle);
                 const { data, error } = await send(`/dart/api/backtest/optimizer/status/${savedTaskId}`, {}, 'GET');
 
                 if (error) {
                     localStorage.removeItem('optimizer_running_task_id');
+                    localStorage.removeItem('optimizer_running_title');
                 } else if (data?.success && data?.response) {
                     setTaskStatus(data.response);
 
                     if (data.response.status === 'completed') {
                         await fetchTaskResult(savedTaskId);
                         localStorage.removeItem('optimizer_running_task_id');
+                    localStorage.removeItem('optimizer_running_title');
                     } else if (data.response.status === 'failed') {
                         localStorage.removeItem('optimizer_running_task_id');
+                    localStorage.removeItem('optimizer_running_title');
                     }
                 }
             }
         } catch (e) {
             console.error('옵티마이저 복원 실패:', e);
             localStorage.removeItem('optimizer_running_task_id');
+            localStorage.removeItem('optimizer_running_title');
         }
     };
 
@@ -626,9 +632,11 @@ export default function BacktestOptimizer() {
                     if (data.response.status === 'completed') {
                         await fetchTaskResult(runningTaskId);
                         localStorage.removeItem('optimizer_running_task_id');
+                    localStorage.removeItem('optimizer_running_title');
                         clearInterval(intervalId);
                     } else if (data.response.status === 'failed') {
                         localStorage.removeItem('optimizer_running_task_id');
+                    localStorage.removeItem('optimizer_running_title');
                         clearInterval(intervalId);
                     }
                 }
@@ -954,6 +962,7 @@ export default function BacktestOptimizer() {
                 setRunningTaskId(taskId);
                 setTaskResult(null);
                 localStorage.setItem('optimizer_running_task_id', taskId);
+                localStorage.setItem('optimizer_running_title', runTitle.trim());
 
                 if (data.response.status) {
                     setTaskStatus(data.response);
@@ -989,8 +998,10 @@ export default function BacktestOptimizer() {
                 if (data.response.status === 'completed') {
                     await fetchTaskResult(runningTaskId);
                     localStorage.removeItem('optimizer_running_task_id');
+                    localStorage.removeItem('optimizer_running_title');
                 } else if (data.response.status === 'failed') {
                     localStorage.removeItem('optimizer_running_task_id');
+                    localStorage.removeItem('optimizer_running_title');
                 }
             }
         } catch (e) {
@@ -1024,6 +1035,7 @@ export default function BacktestOptimizer() {
                 if (taskId === runningTaskId) {
                     setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
                     localStorage.removeItem('optimizer_running_task_id');
+                    localStorage.removeItem('optimizer_running_title');
                 }
                 // 이력 목록 새로고침
                 fetchHistory();
@@ -1045,7 +1057,8 @@ export default function BacktestOptimizer() {
                 setToast('결과 조회 실패: ' + error);
             } else if (data?.success && data?.response?.data) {
                 if (includeAllTrials) {
-                    setDetailResult({ taskId, data: data.response.data });
+                    const historyItem = historyList.find(item => item.task_id === taskId);
+                    setDetailResult({ taskId, title: historyItem?.title || '', data: data.response.data });
                 } else {
                     setTaskResult(data.response.data);
                 }
@@ -1082,6 +1095,7 @@ export default function BacktestOptimizer() {
         setShowAllTrials(false);
         setClickedParam(null);
         localStorage.removeItem('optimizer_running_task_id');
+        localStorage.removeItem('optimizer_running_title');
     };
 
     const handleExportExcel = async (resultData, taskId) => {
@@ -2199,7 +2213,7 @@ export default function BacktestOptimizer() {
                         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                                    실행 상태
+                                    실행 상태{runTitle && <span className="ml-2 text-base font-normal text-slate-500 dark:text-slate-400">— {runTitle}</span>}
                                 </h2>
                                 <div className="flex items-center gap-4">
                                     {getStatusBadge(taskStatus.status)}
@@ -2920,7 +2934,7 @@ export default function BacktestOptimizer() {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                     <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                                        옵티마이저 상세 결과
+                                        옵티마이저 상세 결과{detailResult?.title && <span className="ml-2 text-base font-normal text-slate-500 dark:text-slate-400">— {detailResult.title}</span>}
                                     </h3>
                                     {detailResult && (
                                         <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline">

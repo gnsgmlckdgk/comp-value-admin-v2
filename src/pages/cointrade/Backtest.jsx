@@ -247,6 +247,8 @@ export default function Backtest() {
             const savedTaskId = localStorage.getItem('backtest_running_task_id');
             if (savedTaskId) {
                 setRunningTaskId(savedTaskId);
+                const savedTitle = localStorage.getItem('backtest_running_title');
+                if (savedTitle) setRunTitle(savedTitle);
                 // 상태 조회하여 현재 상태 확인
                 const { data, error } = await send(`/dart/api/backtest/status/${savedTaskId}`, {}, 'GET');
 
@@ -254,6 +256,7 @@ export default function Backtest() {
                     // 에러 시 localStorage 정리
                     localStorage.removeItem('backtest_running_task_id');
                     localStorage.removeItem('backtest_total_count');
+                    localStorage.removeItem('backtest_running_title');
                 } else if (data?.success && data?.response) {
                     setTaskStatus(data.response);
 
@@ -262,10 +265,12 @@ export default function Backtest() {
                         await fetchTaskResult(savedTaskId);
                         localStorage.removeItem('backtest_running_task_id');
                         localStorage.removeItem('backtest_total_count');
+                    localStorage.removeItem('backtest_running_title');
                     } else if (data.response.status === 'failed') {
                         // 실패한 경우도 localStorage 정리
                         localStorage.removeItem('backtest_running_task_id');
                         localStorage.removeItem('backtest_total_count');
+                    localStorage.removeItem('backtest_running_title');
                     }
                 }
             }
@@ -273,6 +278,7 @@ export default function Backtest() {
             console.error('백테스트 복원 실패:', e);
             localStorage.removeItem('backtest_running_task_id');
             localStorage.removeItem('backtest_total_count');
+            localStorage.removeItem('backtest_running_title');
         }
     };
 
@@ -305,10 +311,12 @@ export default function Backtest() {
                         await fetchTaskResult(runningTaskId);
                         localStorage.removeItem('backtest_running_task_id');
                         localStorage.removeItem('backtest_total_count');
+                    localStorage.removeItem('backtest_running_title');
                         clearInterval(intervalId);
                     } else if (data.response.status === 'failed') {
                         localStorage.removeItem('backtest_running_task_id');
                         localStorage.removeItem('backtest_total_count');
+                    localStorage.removeItem('backtest_running_title');
                         clearInterval(intervalId);
                     }
                 }
@@ -684,6 +692,7 @@ export default function Backtest() {
                 // localStorage에 실행 중인 백테스트 정보 및 전체 종목 수 저장
                 localStorage.setItem('backtest_running_task_id', taskId);
                 localStorage.setItem('backtest_total_count', totalCount.toString());
+                localStorage.setItem('backtest_running_title', runTitle.trim());
 
                 // 백테스트 실행 응답에 상태 정보가 포함되어 있으면 설정, 없으면 즉시 조회
                 if (data.response.status) {
@@ -724,10 +733,12 @@ export default function Backtest() {
                     await fetchTaskResult(runningTaskId);
                     localStorage.removeItem('backtest_running_task_id');
                     localStorage.removeItem('backtest_total_count');
+                    localStorage.removeItem('backtest_running_title');
                 } else if (data.response.status === 'failed') {
                     // 실패한 경우도 localStorage 정리
                     localStorage.removeItem('backtest_running_task_id');
                     localStorage.removeItem('backtest_total_count');
+                    localStorage.removeItem('backtest_running_title');
                 }
             }
         } catch (e) {
@@ -755,6 +766,7 @@ export default function Backtest() {
                 setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
                 localStorage.removeItem('backtest_running_task_id');
                 localStorage.removeItem('backtest_total_count');
+                localStorage.removeItem('backtest_running_title');
             }
         } catch (e) {
             console.error('백테스트 취소 실패:', e);
@@ -780,6 +792,7 @@ export default function Backtest() {
                     setTaskStatus(prev => prev ? { ...prev, status: 'cancelled' } : null);
                     localStorage.removeItem('backtest_running_task_id');
                     localStorage.removeItem('backtest_total_count');
+                    localStorage.removeItem('backtest_running_title');
                 }
                 fetchHistory();
             }
@@ -800,8 +813,10 @@ export default function Backtest() {
                 setToast('결과 조회 실패: ' + error);
             } else if (data?.success && data?.response?.data) {
                 if (includeDetails) {
+                    const historyItem = historyList.find(item => item.task_id === taskId);
                     setDetailResult({
                         taskId,
+                        title: historyItem?.title || '',
                         data: data.response.data,
                         created_at: data.response.created_at,
                         completed_at: data.response.completed_at
@@ -1657,7 +1672,7 @@ export default function Backtest() {
                         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                                    실행 상태
+                                    실행 상태{runTitle && <span className="ml-2 text-base font-normal text-slate-500 dark:text-slate-400">— {runTitle}</span>}
                                 </h2>
                                 <div className="flex gap-2">
                                     <Button size="sm" onClick={handleCheckStatus}>
@@ -3121,7 +3136,9 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                     {/* 헤더 */}
                     <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
                         <div>
-                            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">백테스트 상세 결과</h2>
+                            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                백테스트 상세 결과{result.title && <span className="ml-2 text-base font-normal text-slate-500 dark:text-slate-400">— {result.title}</span>}
+                            </h2>
                             {result.created_at && (
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500 dark:text-slate-400">
                                     <span>실행: {new Date(result.created_at).toLocaleString('ko-KR')}</span>

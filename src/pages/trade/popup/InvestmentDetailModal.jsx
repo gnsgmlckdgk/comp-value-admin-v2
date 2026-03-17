@@ -594,7 +594,6 @@ const TradingGuideSection = ({ data }) => {
                         </div>
                         <div className="flex justify-between mt-2.5 text-[10px] text-slate-400 dark:text-slate-500">
                             <span>손절매가</span>
-                            <span>현재가</span>
                             <span>적정가</span>
                         </div>
                     </div>

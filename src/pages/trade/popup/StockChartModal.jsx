@@ -224,7 +224,9 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
         return enrichedData.filter(d => d.date >= zoomDates.left && d.date <= zoomDates.right);
     }, [enrichedData, zoomDates]);
 
+    const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const handleChartMouseDown = (e) => {
+        if (isTouchDevice()) return;
         if (e?.activeLabel) {
             setRefAreaLeft(e.activeLabel);
             isDragging.current = true;
@@ -372,7 +374,7 @@ const StockChartModal = ({ isOpen, onClose, symbol, companyName, zIndex = 140 })
                                         </button>
                                     )}
                                     {!zoomDates && (
-                                        <span className="text-xs text-slate-400 dark:text-slate-500">드래그하여 확대</span>
+                                        <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline">드래그하여 확대</span>
                                     )}
                                 </div>
                                 <ResponsiveContainer width="100%" height={300} className="select-none">

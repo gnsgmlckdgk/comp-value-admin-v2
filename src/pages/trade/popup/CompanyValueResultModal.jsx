@@ -805,13 +805,15 @@ const HighlightCards = ({ data }) => {
                                 </div>
                             )}
                             {/* 현재가 마커 (점) */}
-                            <div className="group/m absolute cursor-pointer" style={{ left: `${currentPct}%`, top: '50%', transform: 'translate(-50%, -50%)', width: '18px', height: '18px', zIndex: 20 }}>
-                                <div className="w-full h-full rounded-full bg-white border-2 border-slate-800 dark:border-white dark:bg-slate-800 shadow transition-transform group-hover/m:scale-125" />
-                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 px-2.5 py-1.5 bg-slate-800 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/m:opacity-100 group-hover/m:visible transition-all whitespace-nowrap z-50 pointer-events-none">
-                                    현재가: {formatUSD(price)}
-                                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800" />
+                            {currentPct !== null && (
+                                <div className="group/m absolute cursor-pointer" style={{ left: `${currentPct}%`, top: '50%', transform: 'translate(-50%, -50%)', width: '18px', height: '18px', zIndex: 20 }}>
+                                    <div className="w-full h-full rounded-full bg-white border-2 border-slate-800 dark:border-white dark:bg-slate-800 shadow transition-transform group-hover/m:scale-125" />
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 px-2.5 py-1.5 bg-slate-800 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/m:opacity-100 group-hover/m:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                                        현재가: {formatUSD(price)}
+                                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800" />
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                         {/* 바 라벨 */}
                         <div className="flex justify-between mt-2.5 text-[10px] text-slate-400 dark:text-slate-500">

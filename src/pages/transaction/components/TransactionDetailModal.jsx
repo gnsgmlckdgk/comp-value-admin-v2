@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
 import useModalAnimation from '@/hooks/useModalAnimation';
+import { fetchCurrentPriceBySymbol } from '../services/TransactionService';
 
 /**
  * 금액 표시 – 정수부분 볼드, 소수부분 연하게
@@ -169,9 +170,14 @@ export default function TransactionDetailModal({
             setIsEditing(false);
             setCompanyProfile(null);
             setIsAnalyzing(false);
-            // 프로파일 자동 조회
+            // 프로파일 + 현재가 자동 조회
             if (row.symbol) {
                 fetchCompanyProfile(row.symbol);
+                fetchCurrentPriceBySymbol(row.symbol).then((result) => {
+                    if (result?.currentPrice) {
+                        setFormData(prev => ({ ...prev, currentPrice: Number(result.currentPrice) }));
+                    }
+                });
             }
         }
     }, [isOpen, row]);

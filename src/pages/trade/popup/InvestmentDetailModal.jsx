@@ -816,6 +816,41 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                         return null;
                     })()}
 
+                    {/* Forward PER 경고 배너 */}
+                    {data.forwardPerWarning && (
+                        <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-800 flex items-start gap-2">
+                            <span className="text-xl leading-none flex-shrink-0">{'\u{1F7E1}'}</span>
+                            <div className="text-sm text-amber-800 dark:text-amber-200 break-keep">
+                                {data.forwardPerWarning}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 52주 고점 대비 하락률 경고 배너 */}
+                    {(() => {
+                        if (!data.high52wDropPercent) return null;
+                        const dropPct = parseFloat(data.high52wDropPercent.replace('%', ''));
+                        if (isNaN(dropPct) || dropPct > -20) return null;
+                        const isSevere = dropPct <= -30;
+                        return (
+                            <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${
+                                isSevere
+                                    ? 'bg-orange-50 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-800'
+                                    : 'bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-800'
+                            }`}>
+                                <span className="text-xl leading-none flex-shrink-0">{isSevere ? '\u{1F4C9}' : '\u26A0\uFE0F'}</span>
+                                <div className={`text-sm break-keep ${
+                                    isSevere
+                                        ? 'text-orange-800 dark:text-orange-200'
+                                        : 'text-amber-800 dark:text-amber-200'
+                                }`}>
+                                    52주 고점 대비 <span className="font-bold">{data.high52wDropPercent}</span> 하락
+                                    {isSevere ? ' — 강한 하락 추세, 추가 하락 가능성 주의' : ' — 하락 추세 주의'}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* 추천 */}
                     <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
                         <div className="text-sm font-medium text-blue-800 dark:text-blue-200">{data.recommendation || '-'}</div>
@@ -875,6 +910,8 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
                         <InfoCard label="가격차이율" value={data.priceGapPercent || '-'} />
                         <InfoCard label="PER" value={data.per ? parseFloat(data.per).toFixed(2) : '-'} />
                         <InfoCard label="PEG" value={data.peg || '-'} />
+                        <InfoCard label="Forward PER" value={data.forwardPer || '-'} />
+                        <InfoCard label="52주 고점 대비" value={data.high52wDropPercent || '-'} />
                     </div>
 
                     {/* 기업 정보 */}

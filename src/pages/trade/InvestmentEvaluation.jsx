@@ -308,6 +308,65 @@ const TABLE_COLUMNS = [
         },
     },
     {
+        key: 'high52wDropPercent',
+        label: '52주 고점대비',
+        width: '110px',
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value) => {
+            if (!value) return '-';
+            const num = parseFloat(value.replace('%', ''));
+            if (isNaN(num)) return '-';
+            const isSevere = num <= -30;
+            const isWarning = num <= -20;
+            return (
+                <span className={
+                    isSevere ? 'text-orange-500 dark:text-orange-400 font-semibold' :
+                    isWarning ? 'text-amber-600 dark:text-amber-400 font-medium' :
+                    'text-slate-600 dark:text-slate-300'
+                }>
+                    {num > 0 ? '+' : ''}{num.toFixed(1)}%
+                </span>
+            );
+        },
+    },
+    {
+        key: 'forwardPer',
+        label: 'Fwd PER',
+        width: '90px',
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value, row, { showWarning, hideWarning }) => {
+            if (!value) return '-';
+            const hasWarning = row?.forwardPerWarning;
+            const content = hasWarning && (
+                <>
+                    <span className="block font-bold text-amber-300 mb-1">Forward PER 경고</span>
+                    <span className="block text-slate-200">{row.forwardPerWarning}</span>
+                </>
+            );
+            return (
+                <span className="inline-flex items-center gap-1 justify-end">
+                    <span className={hasWarning ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-600 dark:text-slate-300'}>
+                        {value}
+                    </span>
+                    {hasWarning && (
+                        <span
+                            className="cursor-help text-xs text-amber-500"
+                            onMouseEnter={(e) => showWarning(e, content)}
+                            onMouseLeave={hideWarning}
+                            onClick={(e) => showWarning(e, content)}
+                        >
+                            {'\u26A0'}
+                        </span>
+                    )}
+                </span>
+            );
+        },
+    },
+    {
         key: 'sector',
         label: '섹터',
         width: '150px',

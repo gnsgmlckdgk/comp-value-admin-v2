@@ -451,23 +451,7 @@ const TradingGuideSection = ({ data }) => {
     const resistanceBarPct = toBarPct(estimatedResistance);
     const hasBar = currentPct !== null;
 
-    // 마커 겹침 감지 및 오프셋 계산
-    const OVERLAP_THRESHOLD = 3;
-    const markerMeta = [
-        supportBarPct !== null && { id: 'support', pct: supportBarPct, zBase: 12 },
-        resistanceBarPct !== null && { id: 'resistance', pct: resistanceBarPct, zBase: 13 },
-        purchaseBarPct !== null && { id: 'purchase', pct: purchaseBarPct, zBase: 14 },
-        sellBarPct !== null && { id: 'sell', pct: sellBarPct, zBase: 15 },
-        currentPct !== null && { id: 'current', pct: currentPct, zBase: 20 },
-    ].filter(Boolean);
-    const markerOffsets = {};
-    markerMeta.forEach(marker => {
-        const hasOverlapWithHigherZ = markerMeta.some(other =>
-            other.zBase > marker.zBase &&
-            Math.abs(other.pct - marker.pct) < OVERLAP_THRESHOLD
-        );
-        markerOffsets[marker.id] = hasOverlapWithHigherZ ? 'above' : 'center';
-    });
+    // 마커는 반투명 처리하여 겹쳐도 양쪽 다 보이게 함
 
     return (
         <div className="mb-4 rounded-lg border bg-white shadow-sm dark:bg-slate-700 dark:border-slate-600">
@@ -533,8 +517,8 @@ const TradingGuideSection = ({ data }) => {
                             />
                             {/* 예상 지지선 마커 (◆ 다이아몬드) */}
                             {supportBarPct !== null && (
-                                <div className="group/s absolute cursor-pointer" style={{ left: `${supportBarPct}%`, ...(markerOffsets.support === 'above' ? { top: '-14px', transform: 'translateX(-50%)' } : { top: '50%', transform: 'translate(-50%, -50%)' }), width: '16px', height: '16px', zIndex: 12 }}>
-                                    <div className="absolute inset-0.5 transition-transform group-hover/s:scale-125" style={{ background: '#2dd4bf', transform: 'rotate(45deg)', boxShadow: '0 0 5px rgba(45,212,191,0.6)', border: '1.5px solid rgba(255,255,255,0.5)' }} />
+                                <div className="group/s absolute cursor-pointer" style={{ left: `${supportBarPct}%`, top: '50%', transform: 'translate(-50%, -50%)', width: '16px', height: '16px', zIndex: 12 }}>
+                                    <div className="absolute inset-0.5 transition-all group-hover/s:scale-125 group-hover/s:opacity-100" style={{ background: '#2dd4bf', transform: 'rotate(45deg)', boxShadow: '0 0 5px rgba(45,212,191,0.6)', border: '1.5px solid rgba(255,255,255,0.5)', opacity: 0.7 }} />
                                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 bg-teal-700 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/s:opacity-100 group-hover/s:visible transition-all whitespace-nowrap z-50 pointer-events-none">
                                         예상 지지선: {formatUSD(estimatedSupport)}{' '}
                                         <span className={`${pctDiff(estimatedSupport) !== null && Number(pctDiff(estimatedSupport)) >= 0 ? 'text-teal-200' : 'text-red-200'}`}>
@@ -546,8 +530,8 @@ const TradingGuideSection = ({ data }) => {
                             )}
                             {/* 예상 저항선 마커 (◆ 다이아몬드) */}
                             {resistanceBarPct !== null && (
-                                <div className="group/r absolute cursor-pointer" style={{ left: `${resistanceBarPct}%`, ...(markerOffsets.resistance === 'above' ? { top: '-14px', transform: 'translateX(-50%)' } : { top: '50%', transform: 'translate(-50%, -50%)' }), width: '16px', height: '16px', zIndex: 13 }}>
-                                    <div className="absolute inset-0.5 transition-transform group-hover/r:scale-125" style={{ background: '#fb923c', transform: 'rotate(45deg)', boxShadow: '0 0 5px rgba(251,146,60,0.6)', border: '1.5px solid rgba(255,255,255,0.5)' }} />
+                                <div className="group/r absolute cursor-pointer" style={{ left: `${resistanceBarPct}%`, top: '50%', transform: 'translate(-50%, -50%)', width: '16px', height: '16px', zIndex: 13 }}>
+                                    <div className="absolute inset-0.5 transition-all group-hover/r:scale-125 group-hover/r:opacity-100" style={{ background: '#fb923c', transform: 'rotate(45deg)', boxShadow: '0 0 5px rgba(251,146,60,0.6)', border: '1.5px solid rgba(255,255,255,0.5)', opacity: 0.7 }} />
                                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 bg-orange-700 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/r:opacity-100 group-hover/r:visible transition-all whitespace-nowrap z-50 pointer-events-none">
                                         예상 저항선: {formatUSD(estimatedResistance)}{' '}
                                         <span className={`${pctDiff(estimatedResistance) !== null && Number(pctDiff(estimatedResistance)) >= 0 ? 'text-orange-200' : 'text-red-200'}`}>
@@ -559,8 +543,8 @@ const TradingGuideSection = ({ data }) => {
                             )}
                             {/* 매수적정가 마커 */}
                             {purchaseBarPct !== null && (
-                                <div className="group/m absolute cursor-pointer" style={{ left: `${purchaseBarPct}%`, ...(markerOffsets.purchase === 'above' ? { top: '-22px', height: '20px' } : { top: '-5px', bottom: '-5px' }), width: '10px', transform: 'translateX(-50%)', zIndex: 14 }}>
-                                    <div className="absolute rounded-sm transition-all group-hover/m:scale-x-150" style={{ left: '3px', right: '3px', top: 0, bottom: 0, background: '#10b981', boxShadow: '0 0 4px rgba(16,185,129,0.6)' }} />
+                                <div className="group/m absolute cursor-pointer" style={{ left: `${purchaseBarPct}%`, top: '-5px', bottom: '-5px', width: '10px', transform: 'translateX(-50%)', zIndex: 14 }}>
+                                    <div className="absolute rounded-sm transition-all group-hover/m:scale-x-150 group-hover/m:opacity-100" style={{ left: '3px', right: '3px', top: 0, bottom: 0, background: '#10b981', boxShadow: '0 0 4px rgba(16,185,129,0.6)', opacity: 0.7 }} />
                                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 bg-emerald-700 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/m:opacity-100 group-hover/m:visible transition-all whitespace-nowrap z-50 pointer-events-none">
                                         매수적정가: {formatUSD(purchasePrice)}{' '}
                                         <span className={`${pctDiff(purchasePrice) !== null && Number(pctDiff(purchasePrice)) >= 0 ? 'text-emerald-200' : 'text-red-200'}`}>
@@ -572,8 +556,8 @@ const TradingGuideSection = ({ data }) => {
                             )}
                             {/* 목표매도가 마커 */}
                             {sellBarPct !== null && (
-                                <div className="group/m absolute cursor-pointer" style={{ left: `${sellBarPct}%`, ...(markerOffsets.sell === 'above' ? { top: '-22px', height: '20px' } : { top: '-5px', bottom: '-5px' }), width: '10px', transform: 'translateX(-50%)', zIndex: 15 }}>
-                                    <div className="absolute rounded-sm transition-all group-hover/m:scale-x-150" style={{ left: '3px', right: '3px', top: 0, bottom: 0, background: '#3b82f6', boxShadow: '0 0 4px rgba(59,130,246,0.6)' }} />
+                                <div className="group/m absolute cursor-pointer" style={{ left: `${sellBarPct}%`, top: '-5px', bottom: '-5px', width: '10px', transform: 'translateX(-50%)', zIndex: 15 }}>
+                                    <div className="absolute rounded-sm transition-all group-hover/m:scale-x-150 group-hover/m:opacity-100" style={{ left: '3px', right: '3px', top: 0, bottom: 0, background: '#3b82f6', boxShadow: '0 0 4px rgba(59,130,246,0.6)', opacity: 0.7 }} />
                                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 bg-blue-700 text-white text-[11px] font-medium rounded shadow-lg opacity-0 invisible group-hover/m:opacity-100 group-hover/m:visible transition-all whitespace-nowrap z-50 pointer-events-none">
                                         목표매도가: {formatUSD(sellTarget)}{' '}
                                         <span className={`${pctDiff(sellTarget) !== null && Number(pctDiff(sellTarget)) >= 0 ? 'text-blue-200' : 'text-red-200'}`}>

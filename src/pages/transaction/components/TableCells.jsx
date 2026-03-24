@@ -9,7 +9,7 @@ export function FmtAmount({ text }) {
     if (dotIdx === -1) return text;
     return (
         <>
-            <span className="font-bold">{text.substring(0, dotIdx)}</span>
+            {text.substring(0, dotIdx)}
             <span className="font-normal opacity-50">{text.substring(dotIdx)}</span>
         </>
     );

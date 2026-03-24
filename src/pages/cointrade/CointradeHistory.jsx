@@ -160,7 +160,7 @@ const TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value) => `${formatNumberWithComma(value)}원`
+        render: (value) => renderFormattedPrice(value, '원')
     },
     {
         key: 'quantity',
@@ -178,7 +178,7 @@ const TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-medium text-slate-900 dark:text-slate-100',
-        render: (value) => `${formatNumberWithComma(value)}원`
+        render: (value) => renderFormattedPrice(value, '원')
     },
     {
         key: 'reason',
@@ -202,7 +202,7 @@ const TABLE_COLUMNS = [
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
         render: (value) => value != null ? (
             <span className={value >= 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-blue-600 dark:text-blue-400 font-medium'}>
-                {value >= 0 ? '+' : ''}{formatNumberWithComma(value)}원
+                {value >= 0 ? '+' : ''}{renderFormattedPrice(value, '원')}
             </span>
         ) : '-'
     },

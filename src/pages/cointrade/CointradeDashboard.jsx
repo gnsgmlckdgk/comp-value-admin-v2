@@ -493,6 +493,8 @@ export default function CointradeDashboard() {
         expiredRate: 0,
         maxHoldingExpiredRate: 0,
         trailingStopRate: 0,
+        trailingStopProfitRate: 0,
+        trailingStopLossRate: 0,
         avgProfitRate: 0,
         totalTrades: 0
     });
@@ -707,7 +709,10 @@ export default function CointradeDashboard() {
                    /^PARTIAL_\d+DAY_PROFIT$/.test(reason);
         }).length;
         const maxHoldingExpiredCount = sellTrades.filter(t => t.reason === 'MAX_HOLDING_EXPIRED').length;
-        const trailingStopCount = sellTrades.filter(t => t.reason === 'TRAILING_STOP').length;
+        const trailingStopTrades = sellTrades.filter(t => t.reason === 'TRAILING_STOP');
+        const trailingStopCount = trailingStopTrades.length;
+        const trailingStopProfitCount = trailingStopTrades.filter(t => (t.profitLoss || 0) > 0).length;
+        const trailingStopLossCount = trailingStopTrades.filter(t => (t.profitLoss || 0) <= 0).length;
 
         const totalProfit = sellTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
         const totalAmount = sellTrades.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
@@ -719,6 +724,8 @@ export default function CointradeDashboard() {
             expiredRate: (expiredCount / totalSells) * 100,
             maxHoldingExpiredRate: (maxHoldingExpiredCount / totalSells) * 100,
             trailingStopRate: (trailingStopCount / totalSells) * 100,
+            trailingStopProfitRate: trailingStopCount > 0 ? (trailingStopProfitCount / trailingStopCount) * 100 : 0,
+            trailingStopLossRate: trailingStopCount > 0 ? (trailingStopLossCount / trailingStopCount) * 100 : 0,
             avgProfitRate,
             totalTrades: totalSells
         });
@@ -1539,7 +1546,7 @@ export default function CointradeDashboard() {
                         {/* 4. 트레일링스탑 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">트레일링스탑 (수익 보호)</span>
+                                <span className="text-sm text-slate-600 dark:text-slate-400">트레일링스탑</span>
                                 <span className="text-sm font-bold text-teal-600 dark:text-teal-400">
                                     {performance.trailingStopRate.toFixed(1)}%
                                 </span>
@@ -1550,6 +1557,12 @@ export default function CointradeDashboard() {
                                     style={{ width: `${performance.trailingStopRate}%` }}
                                 />
                             </div>
+                            {performance.trailingStopRate > 0 && (
+                                <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                    <span>수익 <span className="font-semibold text-blue-600 dark:text-blue-400">{performance.trailingStopProfitRate.toFixed(0)}%</span></span>
+                                    <span>손실 <span className="font-semibold text-orange-600 dark:text-orange-400">{performance.trailingStopLossRate.toFixed(0)}%</span></span>
+                                </div>
+                            )}
                         </div>
 
                         {/* 5. 손절 관리 */}

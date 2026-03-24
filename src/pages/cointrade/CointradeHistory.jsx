@@ -1335,14 +1335,35 @@ export default function CointradeHistory() {
             {totalElements > 0 && (
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                            조회 결과 요약
-                            {itemsPerPage !== 9999 && (
-                                <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
-                                    (전체 보기로 조회 시 정확한 요약을 확인할 수 있습니다)
-                                </span>
-                            )}
-                        </h2>
+                        <div>
+                            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                조회 결과 요약
+                                {itemsPerPage !== 9999 && (
+                                    <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                                        (전체 보기로 조회 시 정확한 요약을 확인할 수 있습니다)
+                                    </span>
+                                )}
+                            </h2>
+                            <div className="flex flex-wrap items-center gap-x-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                <span>{filters.startDate} {filters.startTime} ~ {filters.endDate} {filters.endTime}</span>
+                                <span>·</span>
+                                <span>{totalElements.toLocaleString()}건</span>
+                                {(filters.tradeType !== 'all' || filters.coinCode !== 'all' || filters.reason !== 'all') && (
+                                    <>
+                                        <span>·</span>
+                                        <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                            필터 적용됨
+                                            ({[
+                                                filters.tradeType !== 'all' && (filters.tradeType === 'BUY' ? '매수' : '매도'),
+                                                filters.coinCode !== 'all' && filters.coinCode,
+                                                filters.reason !== 'all' && getReasonLabel(filters.reason)
+                                            ].filter(Boolean).join(', ')})
+                                            — 조회 조건에 해당하는 데이터만 집계
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
                         {itemsPerPage === 9999 && (
                             <DownloadButtons onExcel={handleDownloadSummaryExcel} onCsv={handleDownloadSummaryCsv} />
                         )}

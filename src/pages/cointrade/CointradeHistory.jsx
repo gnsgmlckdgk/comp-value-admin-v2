@@ -69,36 +69,57 @@ const formatDateTime = (dateStr) => {
 const getReasonColor = (reason) => {
     const colors = {
         'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+        'PARTIAL_SIGNAL': 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
         'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-        '7DAY_PROFIT': 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
         'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
         'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
-        'PARTIAL_7DAY_PROFIT': 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400',
         'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
         'TRAILING_STOP': 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300',
+        'PARTIAL_TRAILING_STOP': 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400',
         'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
         'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
         'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
     };
-    return colors[reason] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
+
+    if (colors[reason]) return colors[reason];
+
+    // {N}DAY_PROFIT 패턴
+    if (/^\d+DAY_PROFIT$/.test(reason)) {
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
+    }
+    if (/^PARTIAL_\d+DAY_PROFIT$/.test(reason)) {
+        return 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400';
+    }
+
+    return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
 };
 
 // 사유 라벨
 const getReasonLabel = (reason) => {
     const labels = {
         'SIGNAL': '매수',
+        'PARTIAL_SIGNAL': '부분매수',
         'TAKE_PROFIT': '익절',
-        '7DAY_PROFIT': '기간수익',
         'STOP_LOSS': '손절',
         'PARTIAL_TAKE_PROFIT': '부분익절',
-        'PARTIAL_7DAY_PROFIT': '부분기간',
         'PARTIAL_STOP_LOSS': '부분손절',
         'TRAILING_STOP': '트레일링스탑',
+        'PARTIAL_TRAILING_STOP': '부분트레일링',
         'MANUAL': '수동매도',
         'PARTIAL_MANUAL': '부분수동',
         'MAX_HOLDING_EXPIRED': '강제청산'
     };
-    return labels[reason] || reason;
+
+    if (labels[reason]) return labels[reason];
+
+    // {N}DAY_PROFIT 패턴
+    const dayProfitMatch = reason?.match(/^(\d+)DAY_PROFIT$/);
+    if (dayProfitMatch) return `${dayProfitMatch[1]}일수익`;
+
+    const partialDayProfitMatch = reason?.match(/^PARTIAL_(\d+)DAY_PROFIT$/);
+    if (partialDayProfitMatch) return `부분${partialDayProfitMatch[1]}일`;
+
+    return reason;
 };
 
 // 컬럼 너비 정의

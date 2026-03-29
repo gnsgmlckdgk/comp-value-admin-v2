@@ -515,10 +515,8 @@ export default function CointradeHistory() {
             console.error('보유 종목 조회 실패:', e);
         }
 
-        // 합산 수익률: (실현 손익 + 보유 평가손익) / (실현 원금 + 보유 투자금) * 100
-        const totalCombinedProfit = totalProfit + holdingsProfit;
-        const totalCombinedInvestment = sellCostBasis + holdingsInvestment;
-        const combinedProfitRate = totalCombinedInvestment > 0 ? (totalCombinedProfit / totalCombinedInvestment * 100) : 0;
+        // 합산 수익률: 조회 기간 실현 손익 / 총 매수금액 * 100
+        const combinedProfitRate = buyAmount > 0 ? (totalProfit / buyAmount * 100) : 0;
 
         setSummary({
             buyCount: buyRecords.length,

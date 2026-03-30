@@ -148,7 +148,8 @@ const DEFAULT_BACKTEST_CONFIG = {
     trailing_stop_enabled: false,
     trailing_stop_rate: 3,
     trailing_stop_activation: 2,
-    min_model_agreement: 0.5
+    min_model_agreement: 0.5,
+    ensemble_mode: null
 };
 
 /**
@@ -478,6 +479,7 @@ export default function Backtest() {
                 if (fixed_params.buy_amount_per_coin != null) next.buy_amount_per_coin = fixed_params.buy_amount_per_coin;
                 if (fixed_params.prediction_days != null) next.prediction_days = fixed_params.prediction_days;
                 if (fixed_params.sequence_length != null) next.sequence_length = fixed_params.sequence_length;
+                if (fixed_params.ensemble_mode != null) next.ensemble_mode = fixed_params.ensemble_mode;
             }
             return next;
         });
@@ -618,6 +620,7 @@ export default function Backtest() {
                     trailing_stop_rate: parseFloat(configMap['TRAILING_STOP_RATE']) || DEFAULT_BACKTEST_CONFIG.trailing_stop_rate,
                     trailing_stop_activation: parseFloat(configMap['TRAILING_STOP_ACTIVATION']) || DEFAULT_BACKTEST_CONFIG.trailing_stop_activation,
                     min_model_agreement: configMap['MIN_MODEL_AGREEMENT'] != null ? parseFloat(configMap['MIN_MODEL_AGREEMENT']) : DEFAULT_BACKTEST_CONFIG.min_model_agreement,
+                    ensemble_mode: configMap['ENSEMBLE_MODE'] || null,
                 };
                 setBacktestConfig(serverConfig);
                 setLoadedConfig(serverConfig);
@@ -658,27 +661,26 @@ export default function Backtest() {
                 start_date: startDate,
                 end_date: endDate,
                 title: runTitle.trim() || null,
-                config: {
-                    initial_capital: backtestConfig.initial_capital,
-                    buy_amount_per_coin: backtestConfig.buy_amount_per_coin,
-                    min_up_probability: backtestConfig.min_up_probability / 100,
-                    buy_profit_threshold: backtestConfig.buy_profit_threshold,
-                    take_profit_buffer: backtestConfig.take_profit_buffer,
-                    stop_loss_threshold: backtestConfig.stop_loss_threshold,
-                    min_profit_rate: backtestConfig.min_profit_rate,
-                    max_profit_rate: backtestConfig.max_profit_rate,
-                    prediction_days: backtestConfig.prediction_days,
-                    max_holding_days: backtestConfig.max_holding_days,
-                    buy_fee_rate: backtestConfig.buy_fee_rate / 100,
-                    sell_fee_rate: backtestConfig.sell_fee_rate / 100,
-                    sequence_length: backtestConfig.sequence_length,
-                    btc_filter_enabled: backtestConfig.btc_filter_enabled,
-                    btc_trend_ma_period: backtestConfig.btc_trend_ma_period,
-                    trailing_stop_enabled: backtestConfig.trailing_stop_enabled,
-                    trailing_stop_rate: backtestConfig.trailing_stop_rate,
-                    trailing_stop_activation: backtestConfig.trailing_stop_activation,
-                    min_model_agreement: backtestConfig.min_model_agreement
-                }
+                initial_capital: backtestConfig.initial_capital,
+                buy_amount_per_coin: backtestConfig.buy_amount_per_coin,
+                min_up_probability: backtestConfig.min_up_probability / 100,
+                buy_profit_threshold: backtestConfig.buy_profit_threshold,
+                take_profit_buffer: backtestConfig.take_profit_buffer,
+                stop_loss_threshold: backtestConfig.stop_loss_threshold,
+                min_profit_rate: backtestConfig.min_profit_rate,
+                max_profit_rate: backtestConfig.max_profit_rate,
+                prediction_days: backtestConfig.prediction_days,
+                max_holding_days: backtestConfig.max_holding_days,
+                buy_fee_rate: backtestConfig.buy_fee_rate / 100,
+                sell_fee_rate: backtestConfig.sell_fee_rate / 100,
+                sequence_length: backtestConfig.sequence_length,
+                btc_filter_enabled: backtestConfig.btc_filter_enabled,
+                btc_trend_ma_period: backtestConfig.btc_trend_ma_period,
+                trailing_stop_enabled: backtestConfig.trailing_stop_enabled,
+                trailing_stop_rate: backtestConfig.trailing_stop_rate,
+                trailing_stop_activation: backtestConfig.trailing_stop_activation,
+                min_model_agreement: backtestConfig.min_model_agreement,
+                ensemble_mode: backtestConfig.ensemble_mode || null
             };
 
             const { data, error } = await send('/dart/api/backtest/run', payload, 'POST');

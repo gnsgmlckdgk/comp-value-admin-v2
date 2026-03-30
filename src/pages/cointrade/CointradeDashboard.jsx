@@ -29,20 +29,21 @@ const formatDateTime = (dateStr) => {
     });
 };
 
-// 사유 색상
+// 사유 색상 (색각이상 친화: 파랑/주황/노랑 팔레트)
 const getReasonColor = (reason) => {
     const colors = {
         'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
         'PARTIAL_SIGNAL': 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
-        'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
-        'STOP_LOSS': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
-        'PARTIAL_TAKE_PROFIT': 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400',
-        'PARTIAL_STOP_LOSS': 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
+        'TAKE_PROFIT': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+        'STOP_LOSS': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
+        'PARTIAL_TAKE_PROFIT': 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
+        'PARTIAL_STOP_LOSS': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
         'TRAILING_STOP': 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300',
         'PARTIAL_TRAILING_STOP': 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400',
-        'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
-        'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
-        'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
+        'MANUAL': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
+        'PARTIAL_MANUAL': 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
+        'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
+        'MAX_HOLD_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
     };
 
     if (colors[reason]) return colors[reason];
@@ -95,8 +96,8 @@ const calculateDday = (date) => {
     targetDate.setHours(0, 0, 0, 0);
     const diff = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
 
-    if (diff < 0) return <span className="text-red-600 dark:text-red-400 font-bold">만료</span>;
-    if (diff === 0) return <span className="text-red-600 dark:text-red-400 font-bold">D-Day</span>;
+    if (diff < 0) return <span className="text-orange-600 dark:text-orange-400 font-bold">만료</span>;
+    if (diff === 0) return <span className="text-orange-600 dark:text-orange-400 font-bold">D-Day</span>;
     if (diff <= 3) return <span className="text-orange-600 dark:text-orange-400 font-medium">D-{diff}</span>;
     return <span className="text-slate-600 dark:text-slate-400">D-{diff}</span>;
 };
@@ -166,7 +167,7 @@ const TABLE_COLUMNS = [
         headerClassName: 'px-4 py-3 pr-12 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 pr-12 whitespace-nowrap text-right',
         render: (value) => value != null ? (
-            <span className={value >= 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-blue-600 dark:text-blue-400 font-medium'}>
+            <span className={value >= 0 ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-orange-600 dark:text-orange-400 font-medium'}>
                 {value >= 0 ? '+' : ''}{value.toFixed(2)}%
             </span>
         ) : '-'
@@ -215,25 +216,37 @@ const renderFormattedNumber = (value, decimals = 8) => {
     );
 };
 
+// 남은 시간 계산 (분 단위)
+const calculateTimeRemaining = (maxHoldUntil) => {
+    if (!maxHoldUntil) return '-';
+    const now = new Date();
+    const until = new Date(maxHoldUntil);
+    const diffMs = until - now;
+    if (diffMs <= 0) return <span className="text-orange-600 dark:text-orange-400 font-bold">만료</span>;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 60) return <span className="text-amber-600 dark:text-amber-400 font-medium">{diffMin}분</span>;
+    const hours = Math.floor(diffMin / 60);
+    const mins = diffMin % 60;
+    return <span className="text-slate-600 dark:text-slate-400">{hours}시간 {mins}분</span>;
+};
+
 // 보유 종목 컬럼 너비 정의
 const HOLDINGS_COL_WIDTHS = {
     checkbox: '50px',
     coinCode: '100px',
     buyPrice: '120px',
     currentPrice: '120px',
-    predictedLow: '120px',
-    predictedHigh: '160px', // 너비 조정
     quantity: '120px',
     valuation: '120px',
     profitRate: '100px',
-    upProbability: '100px',
-    downProbability: '100px',
-    expectedReturn: '100px',
+    momentumScore: '100px',
+    mlConfidence: '100px',
+    entryReason: '110px',
+    timeRemaining: '110px',
     buyDate: '120px',
-    profitConfirmDate: '140px'
 };
 
-// 보유 종목 테이블 컬럼 정의
+// 보유 종목 테이블 컬럼 정의 (모멘텀 스캘핑)
 const HOLDINGS_TABLE_COLUMNS = [
     {
         key: 'checkbox',
@@ -278,38 +291,7 @@ const HOLDINGS_TABLE_COLUMNS = [
             return (
                 <div className="flex flex-col items-end">
                     {renderFormattedPrice(value, getCurrencyUnit(row.coinCode))}
-                    <span className={`text-xs ${rate >= 0 ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`}>
-                        ({rate >= 0 ? '+' : ''}{rate.toFixed(2)}%)
-                    </span>
-                </div>
-            );
-        }
-    },
-    {
-        key: 'predictedLow',
-        label: '예측저가',
-        width: HOLDINGS_COL_WIDTHS.predictedLow,
-        sortable: true,
-        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value, row) => renderFormattedPrice(value, getCurrencyUnit(row.coinCode))
-    },
-    {
-        key: 'predictedHigh',
-        label: '예측고가',
-        width: HOLDINGS_COL_WIDTHS.predictedHigh,
-        sortable: true,
-        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value, row) => {
-            if (!value) return '-';
-            const rate = (row.buyPrice && row.buyPrice > 0)
-                ? ((value - row.buyPrice) / row.buyPrice) * 100
-                : 0;
-            return (
-                <div className="flex flex-col items-end">
-                    {renderFormattedPrice(value, getCurrencyUnit(row.coinCode))}
-                    <span className={`text-xs ${rate >= 0 ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`}>
+                    <span className={`text-xs ${rate >= 0 ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
                         ({rate >= 0 ? '+' : ''}{rate.toFixed(2)}%)
                     </span>
                 </div>
@@ -343,89 +325,77 @@ const HOLDINGS_TABLE_COLUMNS = [
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
         render: (value) => (
             <span className={`font-bold ${value >= 0
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-blue-600 dark:text-blue-400'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-orange-600 dark:text-orange-400'
                 }`}>
                 {value >= 0 ? '+' : ''}{value.toFixed(2)}%
             </span>
         )
     },
     {
-        key: 'upProbability',
-        label: '상승확률',
-        width: HOLDINGS_COL_WIDTHS.upProbability,
+        key: 'momentumScore',
+        label: '모멘텀',
+        width: HOLDINGS_COL_WIDTHS.momentumScore,
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-red-600 dark:text-red-400 font-medium',
-        render: (value) => value != null ? `${(value * 100).toFixed(1)}%` : '-'
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-right',
+        render: (value) => {
+            if (value == null) return '-';
+            const score = typeof value === 'number' ? value : parseFloat(value);
+            if (isNaN(score)) return '-';
+            const colorClass = score >= 0.7 ? 'text-blue-600 dark:text-blue-400' : score >= 0.4 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400';
+            return <span className={`font-medium ${colorClass}`}>{(score * 100).toFixed(0)}%</span>;
+        }
     },
     {
-        key: 'downProbability',
-        label: '하락확률',
-        width: HOLDINGS_COL_WIDTHS.downProbability,
+        key: 'mlConfidence',
+        label: 'ML 확률',
+        width: HOLDINGS_COL_WIDTHS.mlConfidence,
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-blue-600 dark:text-blue-400 font-medium',
         render: (value) => value != null ? `${(value * 100).toFixed(1)}%` : '-'
     },
     {
-        key: 'expectedReturn',
-        label: '기대수익',
-        width: HOLDINGS_COL_WIDTHS.expectedReturn,
+        key: 'entryReason',
+        label: '진입 사유',
+        width: HOLDINGS_COL_WIDTHS.entryReason,
         sortable: true,
-        headerClassName: 'px-4 py-3 pr-8 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-right text-slate-700 dark:text-slate-300',
-        render: (value) => value != null ? `${value.toFixed(2)}%` : '-'
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value) => {
+            if (!value) return '-';
+            const colorMap = {
+                'SCANNER': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+                'ML_CONFIRMED': 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300',
+                'MANUAL': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
+            };
+            const colorClass = colorMap[value] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
+            return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>{value}</span>;
+        }
+    },
+    {
+        key: 'maxHoldUntil',
+        label: '남은시간',
+        width: HOLDINGS_COL_WIDTHS.timeRemaining,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value) => calculateTimeRemaining(value)
     },
     {
         key: 'buyDate',
-        label: '매수일',
+        label: '매수일시',
         width: HOLDINGS_COL_WIDTHS.buyDate,
         sortable: true,
         headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
-        render: (value) => new Date(value).toLocaleDateString('ko-KR', {
-            month: '2-digit',
-            day: '2-digit'
-        })
-    },
-    {
-        key: 'profitConfirmDate',
-        label: '확정/청산일',
-        width: HOLDINGS_COL_WIDTHS.profitConfirmDate,
-        sortable: true,
-        headerClassName: 'px-4 py-3 pr-8 text-left text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-left text-slate-900 dark:text-slate-100',
-        render: (value, row, configData = {}) => {
-            if (!row.buyDate) return '-';
-            const predictionDays = configData.predictionDays || 7;
-            const maxHoldingDays = configData.maxHoldingDays || 7;
-
-            const buyDate = new Date(row.buyDate);
-            const confirmDate = new Date(buyDate);
-            confirmDate.setDate(buyDate.getDate() + predictionDays);
-
-            const forceCloseDate = new Date(buyDate);
-            forceCloseDate.setDate(buyDate.getDate() + maxHoldingDays);
-
-            const today = new Date();
-            const isConfirmPassed = today >= confirmDate;
-            const isForceClosePassed = today >= forceCloseDate;
-
-            const formatDate = (d) => d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
-
-            return (
-                <div className="flex flex-col gap-0.5 text-xs">
-                    <span className={isConfirmPassed ? 'text-green-600 dark:text-green-400 font-bold' : ''}>
-                        {formatDate(confirmDate)}{isConfirmPassed ? ' (도래)' : ''}
-                    </span>
-                    <span className={`text-[10px] ${isForceClosePassed ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-slate-400 dark:text-slate-500'}`}>
-                        강제 {formatDate(forceCloseDate)}
-                    </span>
-                </div>
-            );
+        render: (value) => {
+            if (!value) return '-';
+            const d = new Date(value);
+            return d.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
         }
-    }
+    },
 ];
 
 /**
@@ -446,11 +416,13 @@ export default function CointradeDashboard() {
         holdingsCount: 0
     });
 
-    // 설정 정보 (PREDICTION_DAYS, MAX_HOLDING_DAYS 등)
+    // 설정 정보
     const [config, setConfig] = useState({
-        predictionDays: 7, // 기본값 7일
-        maxHoldingDays: 7  // 최대 보유 기간 기본값 7일
+        maxHoldMinutes: 60  // 최대 보유 시간 기본값 60분
     });
+
+    // Scanner Signals
+    const [scannerSignals, setScannerSignals] = useState([]);
 
     // KRW 잔액
     const [krwBalance, setKrwBalance] = useState(0);
@@ -528,8 +500,7 @@ export default function CointradeDashboard() {
                 });
 
                 setConfig({
-                    predictionDays: parseInt(configMap.PREDICTION_DAYS || 7),
-                    maxHoldingDays: parseInt(configMap.MAX_HOLDING_DAYS || 7)
+                    maxHoldMinutes: parseInt(configMap.MAX_HOLD_MINUTES || 60)
                 });
             }
 
@@ -628,6 +599,16 @@ export default function CointradeDashboard() {
 
             // 5. 최근 거래 내역 조회 (서버 사이드 페이징)
             await fetchRecentTrades(0, itemsPerPage, isBackground);
+
+            // 6. Scanner Signals 조회
+            try {
+                const signalsResponse = await send('/dart/api/cointrade/scanner/signals', {}, 'GET');
+                if (signalsResponse.data?.success && signalsResponse.data?.response) {
+                    setScannerSignals(signalsResponse.data.response);
+                }
+            } catch (signalError) {
+                console.error('스캐너 시그널 조회 실패:', signalError);
+            }
         } catch (e) {
             console.error('데이터 조회 실패:', e);
         } finally {
@@ -953,7 +934,7 @@ export default function CointradeDashboard() {
     // 페이지 로드 시 + 30초마다 자동 새로고침
     useEffect(() => {
         fetchData(false); // 초기 로딩은 loading 표시
-        const interval = setInterval(() => fetchData(true), 30000); // 30초마다 백그라운드 갱신
+        const interval = setInterval(() => fetchData(true), 15000); // 15초마다 백그라운드 갱신
         return () => clearInterval(interval);
     }, [fetchData]);
 
@@ -981,7 +962,7 @@ export default function CointradeDashboard() {
                         <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-600 dark:text-slate-400">매수</span>
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.buySchedulerEnabled
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                                 : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
                                 }`}>
                                 {status.buySchedulerEnabled ? 'ON' : 'OFF'}
@@ -990,7 +971,7 @@ export default function CointradeDashboard() {
                         <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-600 dark:text-slate-400">매도</span>
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.sellSchedulerEnabled
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                                 : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
                                 }`}>
                                 {status.sellSchedulerEnabled ? 'ON' : 'OFF'}
@@ -1033,7 +1014,7 @@ export default function CointradeDashboard() {
                         const diff = Math.floor(status.totalValuation - status.totalInvestment);
                         const isPositive = diff >= 0;
                         return (
-                            <div className={`text-xs font-medium mt-1 ${isPositive ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`}>
+                            <div className={`text-xs font-medium mt-1 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
                                 {isPositive ? '+' : ''}{renderFormattedPrice(diff, '원')}
                             </div>
                         );
@@ -1053,18 +1034,18 @@ export default function CointradeDashboard() {
 
                 {/* 총 수익률 */}
                 <div className={`rounded-lg shadow-sm border p-4 ${status.totalProfitRate >= 0
-                    ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800'
-                    : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
+                    : 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800'
                     }`}>
                     <div className={`text-xs mb-1 ${status.totalProfitRate >= 0
-                        ? 'text-red-700 dark:text-red-400'
-                        : 'text-blue-700 dark:text-blue-400'
+                        ? 'text-blue-700 dark:text-blue-400'
+                        : 'text-orange-700 dark:text-orange-400'
                         }`}>
                         총 수익률
                     </div>
                     <div className={`text-3xl font-bold ${status.totalProfitRate >= 0
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-blue-600 dark:text-blue-400'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-orange-600 dark:text-orange-400'
                         }`}>
                         {status.totalProfitRate >= 0 ? '+' : ''}{status.totalProfitRate.toFixed(2)}%
                     </div>
@@ -1484,10 +1465,10 @@ export default function CointradeDashboard() {
                     )}
                 </div>
 
-                {/* 예측 성능 요약 */}
+                {/* 매도 성능 요약 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                        예측 성능 요약 (최근 30일)
+                        매도 성능 요약 (최근 30일)
                     </h2>
 
                     <div className="space-y-4">
@@ -1499,10 +1480,10 @@ export default function CointradeDashboard() {
                             </span>
                         </div>
 
-                        {/* 1. AI 예측 기반 익절 */}
+                        {/* 1. 익절 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">AI 예측 익절 (어깨 매도)</span>
+                                <span className="text-sm text-slate-600 dark:text-slate-400">목표 수익률 익절</span>
                                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                                     {performance.takeProfitRate.toFixed(1)}%
                                 </span>
@@ -1515,39 +1496,7 @@ export default function CointradeDashboard() {
                             </div>
                         </div>
 
-                        {/* 2. 기간 보유 수익 확정 */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">{config.predictionDays}일 보유 익절 (수익 확정)</span>
-                                <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                                    {performance.expiredRate.toFixed(1)}%
-                                </span>
-                            </div>
-                            <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                <div
-                                    className="bg-green-500 dark:bg-green-400 h-2 rounded-full"
-                                    style={{ width: `${performance.expiredRate}%` }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* 3. 최대보유기간 강제청산 */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">최대보유기간({config.maxHoldingDays}일) 강제청산</span>
-                                <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
-                                    {performance.maxHoldingExpiredRate.toFixed(1)}%
-                                </span>
-                            </div>
-                            <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                <div
-                                    className="bg-amber-500 dark:bg-amber-400 h-2 rounded-full"
-                                    style={{ width: `${performance.maxHoldingExpiredRate}%` }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* 4. 트레일링스탑 */}
+                        {/* 2. 트레일링스탑 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm text-slate-600 dark:text-slate-400">트레일링스탑</span>
@@ -1569,17 +1518,33 @@ export default function CointradeDashboard() {
                             )}
                         </div>
 
-                        {/* 5. 손절 관리 */}
+                        {/* 3. 최대보유시간 강제청산 */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-slate-600 dark:text-slate-400">손절 관리 (리스크 최소화)</span>
-                                <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">최대보유시간({config.maxHoldMinutes}분) 강제청산</span>
+                                <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                                    {performance.maxHoldingExpiredRate.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                                <div
+                                    className="bg-amber-500 dark:bg-amber-400 h-2 rounded-full"
+                                    style={{ width: `${performance.maxHoldingExpiredRate}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* 4. 손절 */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm text-slate-600 dark:text-slate-400">손절 (Stop Loss)</span>
+                                <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
                                     {performance.stopLossRate.toFixed(1)}%
                                 </span>
                             </div>
                             <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                                 <div
-                                    className="bg-red-500 dark:bg-red-400 h-2 rounded-full"
+                                    className="bg-orange-500 dark:bg-orange-400 h-2 rounded-full"
                                     style={{ width: `${performance.stopLossRate}%` }}
                                 />
                             </div>
@@ -1587,18 +1552,18 @@ export default function CointradeDashboard() {
 
                         {/* 평균 수익률 */}
                         <div className={`flex items-center justify-between p-4 rounded-lg ${performance.avgProfitRate >= 0
-                            ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800'
-                            : 'bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700'
+                            ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800'
+                            : 'bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800'
                             }`}>
                             <span className={`text-sm font-medium ${performance.avgProfitRate >= 0
-                                ? 'text-orange-700 dark:text-orange-400'
-                                : 'text-slate-700 dark:text-slate-400'
+                                ? 'text-blue-700 dark:text-blue-400'
+                                : 'text-orange-700 dark:text-orange-400'
                                 }`}>
                                 실현 평균 수익률
                             </span>
                             <span className={`text-2xl font-bold ${performance.avgProfitRate >= 0
-                                ? 'text-orange-600 dark:text-orange-400'
-                                : 'text-slate-600 dark:text-slate-400'
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-orange-600 dark:text-orange-400'
                                 }`}>
                                 {performance.avgProfitRate >= 0 ? '+' : ''}{performance.avgProfitRate.toFixed(2)}%
                             </span>
@@ -1607,9 +1572,62 @@ export default function CointradeDashboard() {
                 </div>
             </div>
 
+            {/* Scanner Signals Section */}
+            <div className="mt-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+                    Scanner Signals
+                </h2>
+                {scannerSignals.length === 0 ? (
+                    <div className="text-center text-slate-500 dark:text-slate-400 py-8">
+                        현재 감지된 시그널이 없습니다.
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-slate-100 dark:bg-slate-700/50">
+                                <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">종목</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">가격변화율</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">거래량 배율</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">RSI</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">ML 확률</th>
+                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">모멘텀 점수</th>
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">감지시각</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                {scannerSignals.map((signal, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                        <td className="px-4 py-2 font-medium text-slate-900 dark:text-slate-100">{signal.coinCode || signal.market}</td>
+                                        <td className="px-4 py-2 text-right">
+                                            <span className={`font-medium ${(signal.priceChange || 0) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                {signal.priceChange != null ? `${signal.priceChange >= 0 ? '+' : ''}${signal.priceChange.toFixed(2)}%` : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2 text-right text-slate-700 dark:text-slate-300">{signal.volumeRatio != null ? `${signal.volumeRatio.toFixed(1)}x` : '-'}</td>
+                                        <td className="px-4 py-2 text-right text-slate-700 dark:text-slate-300">{signal.rsi != null ? signal.rsi.toFixed(1) : '-'}</td>
+                                        <td className="px-4 py-2 text-right text-blue-600 dark:text-blue-400 font-medium">{signal.mlConfidence != null ? `${(signal.mlConfidence * 100).toFixed(1)}%` : '-'}</td>
+                                        <td className="px-4 py-2 text-right">
+                                            {signal.momentumScore != null ? (
+                                                <span className={`font-medium ${signal.momentumScore >= 0.7 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                                    {(signal.momentumScore * 100).toFixed(0)}%
+                                                </span>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="px-4 py-2 text-center text-slate-500 dark:text-slate-400 text-xs">
+                                            {signal.detectedAt ? new Date(signal.detectedAt).toLocaleTimeString('ko-KR', { hour12: false }) : '-'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
             {/* 자동 새로고침 안내 */}
             <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                ⏱️ 30초마다 자동으로 갱신됩니다
+                15초마다 자동으로 갱신됩니다
             </div>
 
             {/* Toast 메시지 */}
@@ -1670,7 +1688,7 @@ export default function CointradeDashboard() {
                                     ).map((h) => (
                                         <div key={h.coinCode} className="flex items-center justify-between py-1 px-2 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-600">
                                             <span className="font-medium text-slate-800 dark:text-slate-200">{h.coinCode}</span>
-                                            <span className={`text-sm font-medium ${h.profitRate >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                                            <span className={`text-sm font-medium ${h.profitRate >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                                 {h.profitRate >= 0 ? '+' : ''}{h.profitRate?.toFixed(2)}%
                                             </span>
                                         </div>
@@ -1721,13 +1739,13 @@ export default function CointradeDashboard() {
                         {/* 헤더 */}
                         <div className={`flex items-center justify-between px-6 py-4 ${
                             sellResult.success || sellResult.response?.status === 'success'
-                                ? 'bg-green-50 dark:bg-green-900/30'
-                                : 'bg-red-50 dark:bg-red-900/30'
+                                ? 'bg-blue-50 dark:bg-blue-900/30'
+                                : 'bg-orange-50 dark:bg-orange-900/30'
                         }`}>
                             <h3 className={`text-lg font-bold ${
                                 sellResult.success || sellResult.response?.status === 'success'
-                                    ? 'text-green-800 dark:text-green-300'
-                                    : 'text-red-800 dark:text-red-300'
+                                    ? 'text-blue-800 dark:text-blue-300'
+                                    : 'text-orange-800 dark:text-orange-300'
                             }`}>
                                 {sellResult.success || sellResult.response?.status === 'success' ? '매도 완료' : '매도 실패'}
                             </h3>
@@ -1755,11 +1773,11 @@ export default function CointradeDashboard() {
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-slate-600 dark:text-slate-400">성공</span>
-                                        <span className="font-medium text-green-600 dark:text-green-400">{sellResult.response.data.success}건</span>
+                                        <span className="font-medium text-blue-600 dark:text-blue-400">{sellResult.response.data.success}건</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-slate-600 dark:text-slate-400">실패</span>
-                                        <span className="font-medium text-red-600 dark:text-red-400">{sellResult.response.data.failed}건</span>
+                                        <span className="font-medium text-orange-600 dark:text-orange-400">{sellResult.response.data.failed}건</span>
                                     </div>
                                 </div>
                             )}
@@ -1827,8 +1845,8 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
                             {selectedHolding.coinCode}
                         </h3>
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${selectedHolding.profitRate >= 0
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                            : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
                             }`}>
                             {selectedHolding.profitRate >= 0 ? '+' : ''}{selectedHolding.profitRate.toFixed(2)}%
                         </span>
@@ -1845,112 +1863,8 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
 
                 {/* 콘텐츠 */}
                 <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                    {/* 가격 비교 그래프 */}
-                    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-800/50 rounded-lg p-4 sm:p-6 border border-slate-200 dark:border-slate-700">
-                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">가격 비교</h4>
-
-                        {/* 그래프 */}
-                        <div className="space-y-3">
-                            {(() => {
-                                const buyPrice = selectedHolding.buyPrice || 0;
-                                const currentPrice = selectedHolding.currentPrice || buyPrice;
-                                const predictedHigh = selectedHolding.predictedHigh || buyPrice;
-                                const predictedLow = selectedHolding.predictedLow || buyPrice;
-
-                                // 범위 계산 (전체 가격 데이터를 포함하는 최소/최대값)
-                                const dataMin = Math.min(predictedLow, buyPrice, currentPrice);
-                                const dataMax = Math.max(predictedHigh, buyPrice, currentPrice);
-                                let dataRange = dataMax - dataMin;
-
-                                // 범위가 0이거나 너무 작을 경우를 대비한 최소 범위 설정 (가격의 1%)
-                                if (dataRange === 0) dataRange = dataMin * 0.01;
-
-                                // 여백 설정 (데이터 범위의 10%)
-                                const padding = dataRange * 0.1;
-
-                                const minPrice = dataMin - padding;
-                                const maxPrice = dataMax + padding;
-                                const range = maxPrice - minPrice;
-
-                                // 각 가격의 위치 계산 (%)
-                                const buyPricePos = ((buyPrice - minPrice) / range) * 100;
-                                const currentPricePos = ((currentPrice - minPrice) / range) * 100;
-                                const predictedHighPos = ((predictedHigh - minPrice) / range) * 100;
-                                const predictedLowPos = ((predictedLow - minPrice) / range) * 100;
-
-                                return (
-                                    <>
-                                        {/* 범위 바 */}
-                                        <div className="relative h-12 sm:h-16 bg-white dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">
-                                            {/* 예측 범위 (저가~고가) */}
-                                            <div
-                                                className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-200/40 via-purple-200/40 to-green-200/40 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-green-900/30"
-                                                style={{
-                                                    left: `${predictedLowPos}%`,
-                                                    right: `${100 - predictedHighPos}%`
-                                                }}
-                                            />
-
-                                            {/* 예측저가 마커 */}
-                                            <div
-                                                className="absolute top-0 bottom-0 w-1 bg-blue-400 dark:bg-blue-500"
-                                                style={{ left: `${predictedLowPos}%` }}
-                                                title="예측저가"
-                                            />
-
-                                            {/* 매수가 마커 */}
-                                            <div
-                                                className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center"
-                                                style={{ left: `${buyPricePos}%`, transform: 'translate(-50%, -50%)' }}
-                                            >
-                                                <div className="w-0.5 h-full bg-slate-600 dark:bg-slate-400 absolute" style={{ height: '100%' }} />
-                                                <div className="relative z-10 w-3 h-3 rounded-full bg-slate-600 dark:bg-slate-400 border-2 border-white dark:border-slate-800" />
-                                            </div>
-
-                                            {/* 현재가 마커 */}
-                                            <div
-                                                className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center"
-                                                style={{ left: `${currentPricePos}%`, transform: 'translate(-50%, -50%)' }}
-                                            >
-                                                <div className={`w-1 h-full absolute ${selectedHolding.profitRate >= 0 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ height: '100%' }} />
-                                                <div className={`relative z-10 w-4 h-4 rounded-full ${selectedHolding.profitRate >= 0 ? 'bg-red-500' : 'bg-blue-500'} border-2 border-white dark:border-slate-800 shadow-lg`} />
-                                            </div>
-
-                                            {/* 예측고가 마커 */}
-                                            <div
-                                                className="absolute top-0 bottom-0 w-1 bg-green-500 dark:bg-green-400"
-                                                style={{ left: `${predictedHighPos}%` }}
-                                                title="예측고가"
-                                            />
-                                        </div>
-
-                                        {/* 범례 */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full bg-slate-600 dark:bg-slate-400" />
-                                                <span className="text-slate-600 dark:text-slate-400">매수가</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-3 h-3 rounded-full ${selectedHolding.profitRate >= 0 ? 'bg-red-500' : 'bg-blue-500'}`} />
-                                                <span className={selectedHolding.profitRate >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>현재가</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-0.5 bg-blue-400 dark:bg-blue-500" />
-                                                <span className="text-blue-600 dark:text-blue-400">예측저가</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-0.5 bg-green-500 dark:bg-green-400" />
-                                                <span className="text-green-600 dark:text-green-400">예측고가</span>
-                                            </div>
-                                        </div>
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    </div>
-
                     {/* 가격 정보 그리드 */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                         {/* 매수가 */}
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매수가</div>
@@ -1961,42 +1875,35 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
 
                         {/* 현재가 */}
                         <div className={`rounded-lg p-3 sm:p-4 ${selectedHolding.profitRate >= 0
-                            ? 'bg-red-50 dark:bg-red-900/20'
-                            : 'bg-blue-50 dark:bg-blue-900/20'
+                            ? 'bg-blue-50 dark:bg-blue-900/20'
+                            : 'bg-orange-50 dark:bg-orange-900/20'
                             }`}>
                             <div className={`text-xs mb-1 ${selectedHolding.profitRate >= 0
-                                ? 'text-red-700 dark:text-red-400'
-                                : 'text-blue-700 dark:text-blue-400'
+                                ? 'text-blue-700 dark:text-blue-400'
+                                : 'text-orange-700 dark:text-orange-400'
                                 }`}>
                                 현재가
                             </div>
                             <div className={`text-lg sm:text-xl font-bold ${selectedHolding.profitRate >= 0
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-blue-600 dark:text-blue-400'
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-orange-600 dark:text-orange-400'
                                 }`}>
                                 {renderFormattedPrice(selectedHolding.currentPrice, getCurrencyUnit(selectedHolding.coinCode))}
                             </div>
                         </div>
 
-                        {/* 예측저가 */}
-                        <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">예측저가</div>
-                            <div className="text-base sm:text-lg font-medium text-slate-800 dark:text-slate-200">
-                                {renderFormattedPrice(selectedHolding.predictedLow, getCurrencyUnit(selectedHolding.coinCode))}
+                        {/* 수익률 */}
+                        <div className={`rounded-lg p-3 sm:p-4 ${selectedHolding.profitRate >= 0
+                            ? 'bg-blue-50 dark:bg-blue-900/20'
+                            : 'bg-orange-50 dark:bg-orange-900/20'
+                            }`}>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수익률</div>
+                            <div className={`text-lg sm:text-xl font-bold ${selectedHolding.profitRate >= 0
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-orange-600 dark:text-orange-400'
+                                }`}>
+                                {selectedHolding.profitRate >= 0 ? '+' : ''}{selectedHolding.profitRate.toFixed(2)}%
                             </div>
-                        </div>
-
-                        {/* 예측고가 */}
-                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-green-700 dark:text-green-400 mb-1">예측고가</div>
-                            <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">
-                                {renderFormattedPrice(selectedHolding.predictedHigh, getCurrencyUnit(selectedHolding.coinCode))}
-                            </div>
-                            {selectedHolding.predictedHigh && selectedHolding.buyPrice && (
-                                <div className="text-xs text-green-600 dark:text-green-400 mt-1 font-bold">
-                                    +{(((selectedHolding.predictedHigh - selectedHolding.buyPrice) / selectedHolding.buyPrice) * 100).toFixed(2)}%
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -2022,56 +1929,45 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
                         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
                             <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">손익금액</div>
                             <div className={`text-base sm:text-lg font-bold ${profitLoss >= 0
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-blue-600 dark:text-blue-400'
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-orange-600 dark:text-orange-400'
                                 }`}>
                                 {profitLoss >= 0 ? '+' : ''}{renderFormattedPrice(profitLoss, getCurrencyUnit(selectedHolding.coinCode))}
                             </div>
                         </div>
                     </div>
 
-                    {/* 예측 정보 */}
+                    {/* 모멘텀 / ML 정보 */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                        {/* 상승확률 */}
-                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-red-700 dark:text-red-400 mb-2">상승 확률</div>
-                            <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                    <div
-                                        className="bg-red-500 dark:bg-red-400 h-2 rounded-full"
-                                        style={{ width: `${(selectedHolding.upProbability || 0) * 100}%` }}
-                                    />
-                                </div>
-                                <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                                    {((selectedHolding.upProbability || 0) * 100).toFixed(1)}%
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* 하락확률 */}
+                        {/* 모멘텀 점수 */}
                         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-blue-700 dark:text-blue-400 mb-2">하락 확률</div>
-                            <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                    <div
-                                        className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full"
-                                        style={{ width: `${(selectedHolding.downProbability || 0) * 100}%` }}
-                                    />
-                                </div>
-                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                                    {((selectedHolding.downProbability || 0) * 100).toFixed(1)}%
-                                </span>
+                            <div className="text-xs text-blue-700 dark:text-blue-400 mb-2">모멘텀 점수</div>
+                            <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                {selectedHolding.momentumScore != null ? `${(selectedHolding.momentumScore * 100).toFixed(0)}%` : '-'}
                             </div>
                         </div>
 
-                        {/* 기대수익률 */}
+                        {/* ML 확률 */}
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg p-3 sm:p-4">
+                            <div className="text-xs text-indigo-700 dark:text-indigo-400 mb-2">ML 확률</div>
+                            <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                                {selectedHolding.mlConfidence != null ? `${(selectedHolding.mlConfidence * 100).toFixed(1)}%` : '-'}
+                            </div>
+                        </div>
+
+                        {/* 진입 사유 */}
                         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">기대 수익률</div>
-                            <div className={`text-base sm:text-lg font-bold ${(selectedHolding.expectedReturn || 0) >= 0
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-blue-600 dark:text-blue-400'
-                                }`}>
-                                {(selectedHolding.expectedReturn || 0).toFixed(2)}%
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">진입 사유</div>
+                            <div className="text-base font-medium text-slate-800 dark:text-slate-200">
+                                {selectedHolding.entryReason || '-'}
+                            </div>
+                        </div>
+
+                        {/* 남은 시간 */}
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg p-3 sm:p-4">
+                            <div className="text-xs text-amber-700 dark:text-amber-400 mb-1">남은 보유 시간</div>
+                            <div className="text-base font-bold text-amber-600 dark:text-amber-400">
+                                {calculateTimeRemaining(selectedHolding.maxHoldUntil)}
                             </div>
                         </div>
                     </div>
@@ -2096,50 +1992,14 @@ const DetailModal = ({ isOpen, selectedHolding, onClose, config }) => {
                                 </div>
                             </div>
 
-                            {/* 수익 확정일 / 강제 청산일 */}
-                            {selectedHolding.buyDate && (
+                            {selectedHolding.maxHoldUntil && (
                                 <div className="sm:text-right">
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">수익 확정일 (D+{config?.predictionDays || 7})</div>
-                                    <div className="text-sm sm:text-base font-bold text-green-700 dark:text-green-400">
-                                        {(() => {
-                                            const confirmDate = new Date(selectedHolding.buyDate);
-                                            confirmDate.setDate(confirmDate.getDate() + (config?.predictionDays || 7));
-                                            return formatDateTime(confirmDate);
-                                        })()}
-                                    </div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-1">강제 청산일 (D+{config?.maxHoldingDays || 7})</div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">강제 청산 시각</div>
                                     <div className="text-sm sm:text-base font-bold text-amber-600 dark:text-amber-400">
-                                        {(() => {
-                                            const forceCloseDate = new Date(selectedHolding.buyDate);
-                                            forceCloseDate.setDate(forceCloseDate.getDate() + (config?.maxHoldingDays || 7));
-                                            return formatDateTime(forceCloseDate);
-                                        })()}
+                                        {formatDateTime(selectedHolding.maxHoldUntil)}
                                     </div>
                                 </div>
                             )}
-                        </div>
-
-                        {/* 수익 확정 / 강제 청산 설명 */}
-                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">수익 확정일이란?</span><br />
-                            {selectedHolding.buyDate && (() => {
-                                const predictionDays = config?.predictionDays || 7;
-                                const maxHoldingDays = config?.maxHoldingDays || 7;
-                                const buyDate = new Date(selectedHolding.buyDate);
-                                const confirmDate = new Date(buyDate);
-                                confirmDate.setDate(buyDate.getDate() + predictionDays);
-                                const forceCloseDate = new Date(buyDate);
-                                forceCloseDate.setDate(buyDate.getDate() + maxHoldingDays);
-
-                                const m1 = buyDate.getMonth() + 1;
-                                const d1 = buyDate.getDate();
-                                const m2 = confirmDate.getMonth() + 1;
-                                const d2 = confirmDate.getDate();
-                                const m3 = forceCloseDate.getMonth() + 1;
-                                const d3 = forceCloseDate.getDate();
-
-                                return `${m1}월 ${d1}일에 매수했다면, ${m2}월 ${d2}일부터 수익률이 최소익절률을 넘기면 매도됩니다. ${m3}월 ${d3}일(D+${maxHoldingDays})이 지나면 손익에 관계없이 강제 청산됩니다.`;
-                            })()}
                         </div>
                     </div>
                 </div>

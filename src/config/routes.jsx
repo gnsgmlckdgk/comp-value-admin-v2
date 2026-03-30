@@ -25,7 +25,7 @@ import CointradeScheduler from '@/pages/cointrade/CointradeScheduler'
 import CointradeHistory from '@/pages/cointrade/CointradeHistory'
 import MlModelInfo from '@/pages/cointrade/MlModelInfo'
 import Backtest from '@/pages/cointrade/Backtest'
-import BacktestOptimizer from '@/pages/cointrade/BacktestOptimizer'
+// BacktestOptimizer 삭제됨 (v4.0 모멘텀 스캘핑 전환)
 import ExcelViewer from '@/pages/util/excel-viewer'
 import MonitoringDashboard from '@/pages/monitoring/MonitoringDashboard'
 
@@ -127,13 +127,7 @@ const routes = {
         element: <Backtest />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
-    "BacktestOptimizer": {
-        section: SECTIONS[5],
-        label: '백테스트 옵티마이저',
-        path: '/cointrade/backtest-optimizer',
-        element: <BacktestOptimizer />,
-        accessRoles: ['ROLE_SUPER_ADMIN']
-    },
+    // BacktestOptimizer 라우트 삭제됨 (v4.0)
 
     /* 유틸 */
     "ExcelViewer": {

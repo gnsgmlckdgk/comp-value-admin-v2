@@ -130,26 +130,29 @@ function TogglableTaskId({ taskId, maxLength = 20, className = '' }) {
 }
 
 const DEFAULT_BACKTEST_CONFIG = {
+    // Capital
     initial_capital: 1000000,
     buy_amount_per_coin: 100000,
-    min_up_probability: 60,
-    buy_profit_threshold: 10,
-    take_profit_buffer: 3,
-    stop_loss_threshold: 5,
-    min_profit_rate: 5,
-    max_profit_rate: 30,
-    prediction_days: 3,
-    max_holding_days: 7,
-    buy_fee_rate: 0.05,
-    sell_fee_rate: 0.05,
-    sequence_length: 60,
-    btc_filter_enabled: false,
-    btc_trend_ma_period: 20,
-    trailing_stop_enabled: false,
-    trailing_stop_rate: 3,
-    trailing_stop_activation: 2,
-    min_model_agreement: 0.5,
-    ensemble_mode: null
+    buy_max_concurrent: 5,
+    // Scanner
+    scanner_volume_ratio_min: 3.0,
+    scanner_price_change_min: 1.0,
+    scanner_rsi_min: 40,
+    scanner_rsi_max: 75,
+    scanner_interval_seconds: 180,
+    // ML
+    ml_enabled: true,
+    ml_min_confidence: 0.60,
+    ml_candle_unit: 5,
+    // Sell
+    take_profit_pct: 2.0,
+    stop_loss_pct: 1.5,
+    trailing_stop_enabled: true,
+    trailing_stop_activation_pct: 1.5,
+    trailing_stop_rate_pct: 1.0,
+    max_hold_minutes: 180,
+    // Fee
+    trading_fee_rate: 0.0005,
 };
 
 /**
@@ -457,30 +460,16 @@ export default function Backtest() {
 
         setBacktestConfig(prev => {
             const next = { ...prev };
-            if (best_params) {
-                if (best_params.min_up_probability != null) next.min_up_probability = best_params.min_up_probability;
-                if (best_params.buy_profit_threshold != null) next.buy_profit_threshold = best_params.buy_profit_threshold;
-                if (best_params.take_profit_buffer != null) next.take_profit_buffer = best_params.take_profit_buffer;
-                if (best_params.stop_loss_threshold != null) next.stop_loss_threshold = best_params.stop_loss_threshold;
-                if (best_params.min_profit_rate != null) next.min_profit_rate = best_params.min_profit_rate;
-                if (best_params.max_profit_rate != null) next.max_profit_rate = best_params.max_profit_rate;
-                if (best_params.trailing_stop_enabled != null) next.trailing_stop_enabled = !!best_params.trailing_stop_enabled;
-                if (best_params.trailing_stop_rate != null) next.trailing_stop_rate = best_params.trailing_stop_rate;
-                if (best_params.trailing_stop_activation != null) next.trailing_stop_activation = best_params.trailing_stop_activation;
-                if (best_params.btc_filter_enabled != null) next.btc_filter_enabled = !!best_params.btc_filter_enabled;
-                if (best_params.btc_trend_ma_period != null) next.btc_trend_ma_period = best_params.btc_trend_ma_period;
-                if (best_params.max_holding_days != null) next.max_holding_days = best_params.max_holding_days;
-                if (best_params.min_model_agreement != null) next.min_model_agreement = best_params.min_model_agreement;
-            }
-            if (fixed_params) {
-                if (fixed_params.buy_fee_rate != null) next.buy_fee_rate = fixed_params.buy_fee_rate * 100;
-                if (fixed_params.sell_fee_rate != null) next.sell_fee_rate = fixed_params.sell_fee_rate * 100;
-                if (fixed_params.initial_capital != null) next.initial_capital = fixed_params.initial_capital;
-                if (fixed_params.buy_amount_per_coin != null) next.buy_amount_per_coin = fixed_params.buy_amount_per_coin;
-                if (fixed_params.prediction_days != null) next.prediction_days = fixed_params.prediction_days;
-                if (fixed_params.sequence_length != null) next.sequence_length = fixed_params.sequence_length;
-                if (fixed_params.ensemble_mode != null) next.ensemble_mode = fixed_params.ensemble_mode;
-            }
+            const all = { ...fixed_params, ...best_params };
+            Object.keys(DEFAULT_BACKTEST_CONFIG).forEach(key => {
+                if (all[key] != null) {
+                    if (typeof DEFAULT_BACKTEST_CONFIG[key] === 'boolean') {
+                        next[key] = !!all[key];
+                    } else {
+                        next[key] = all[key];
+                    }
+                }
+            });
             return next;
         });
 
@@ -604,23 +593,22 @@ export default function Backtest() {
                     ...DEFAULT_BACKTEST_CONFIG,
                     initial_capital: parseFloat(configMap['INITIAL_CAPITAL']) || DEFAULT_BACKTEST_CONFIG.initial_capital,
                     buy_amount_per_coin: parseFloat(configMap['BUY_AMOUNT_PER_COIN']) || DEFAULT_BACKTEST_CONFIG.buy_amount_per_coin,
-                    min_up_probability: parseFloat(configMap['MIN_UP_PROBABILITY']) || DEFAULT_BACKTEST_CONFIG.min_up_probability,
-                    buy_profit_threshold: parseFloat(configMap['BUY_PROFIT_THRESHOLD']) || DEFAULT_BACKTEST_CONFIG.buy_profit_threshold,
-                    take_profit_buffer: parseFloat(configMap['TAKE_PROFIT_BUFFER']) || DEFAULT_BACKTEST_CONFIG.take_profit_buffer,
-                    stop_loss_threshold: parseFloat(configMap['STOP_LOSS_THRESHOLD']) || DEFAULT_BACKTEST_CONFIG.stop_loss_threshold,
-                    min_profit_rate: parseFloat(configMap['MIN_PROFIT_RATE']) || DEFAULT_BACKTEST_CONFIG.min_profit_rate,
-                    max_profit_rate: parseFloat(configMap['MAX_PROFIT_RATE']) || DEFAULT_BACKTEST_CONFIG.max_profit_rate,
-                    prediction_days: parseInt(configMap['PREDICTION_DAYS']) || DEFAULT_BACKTEST_CONFIG.prediction_days,
-                    max_holding_days: parseInt(configMap['MAX_HOLDING_DAYS']) || DEFAULT_BACKTEST_CONFIG.max_holding_days,
-                    buy_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || DEFAULT_BACKTEST_CONFIG.buy_fee_rate,
-                    sell_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) * 100 || DEFAULT_BACKTEST_CONFIG.sell_fee_rate,
-                    btc_filter_enabled: configMap['BTC_FILTER_ENABLED'] === 'true',
-                    btc_trend_ma_period: parseInt(configMap['BTC_TREND_MA_PERIOD']) || DEFAULT_BACKTEST_CONFIG.btc_trend_ma_period,
-                    trailing_stop_enabled: configMap['TRAILING_STOP_ENABLED'] === 'true',
-                    trailing_stop_rate: parseFloat(configMap['TRAILING_STOP_RATE']) || DEFAULT_BACKTEST_CONFIG.trailing_stop_rate,
-                    trailing_stop_activation: parseFloat(configMap['TRAILING_STOP_ACTIVATION']) || DEFAULT_BACKTEST_CONFIG.trailing_stop_activation,
-                    min_model_agreement: configMap['MIN_MODEL_AGREEMENT'] != null ? parseFloat(configMap['MIN_MODEL_AGREEMENT']) : DEFAULT_BACKTEST_CONFIG.min_model_agreement,
-                    ensemble_mode: configMap['ENSEMBLE_MODE'] || null,
+                    buy_max_concurrent: parseInt(configMap['BUY_MAX_CONCURRENT']) || DEFAULT_BACKTEST_CONFIG.buy_max_concurrent,
+                    scanner_volume_ratio_min: parseFloat(configMap['SCANNER_VOLUME_RATIO_MIN']) || DEFAULT_BACKTEST_CONFIG.scanner_volume_ratio_min,
+                    scanner_price_change_min: parseFloat(configMap['SCANNER_PRICE_CHANGE_MIN']) || DEFAULT_BACKTEST_CONFIG.scanner_price_change_min,
+                    scanner_rsi_min: parseInt(configMap['SCANNER_RSI_MIN']) || DEFAULT_BACKTEST_CONFIG.scanner_rsi_min,
+                    scanner_rsi_max: parseInt(configMap['SCANNER_RSI_MAX']) || DEFAULT_BACKTEST_CONFIG.scanner_rsi_max,
+                    scanner_interval_seconds: parseInt(configMap['SCANNER_INTERVAL_SECONDS']) || DEFAULT_BACKTEST_CONFIG.scanner_interval_seconds,
+                    ml_enabled: configMap['ML_ENABLED'] != null ? configMap['ML_ENABLED'] === 'true' : DEFAULT_BACKTEST_CONFIG.ml_enabled,
+                    ml_min_confidence: parseFloat(configMap['ML_MIN_CONFIDENCE']) || DEFAULT_BACKTEST_CONFIG.ml_min_confidence,
+                    ml_candle_unit: parseInt(configMap['ML_CANDLE_UNIT']) || DEFAULT_BACKTEST_CONFIG.ml_candle_unit,
+                    take_profit_pct: parseFloat(configMap['TAKE_PROFIT_PCT']) || DEFAULT_BACKTEST_CONFIG.take_profit_pct,
+                    stop_loss_pct: parseFloat(configMap['STOP_LOSS_PCT']) || DEFAULT_BACKTEST_CONFIG.stop_loss_pct,
+                    trailing_stop_enabled: configMap['TRAILING_STOP_ENABLED'] != null ? configMap['TRAILING_STOP_ENABLED'] === 'true' : DEFAULT_BACKTEST_CONFIG.trailing_stop_enabled,
+                    trailing_stop_activation_pct: parseFloat(configMap['TRAILING_STOP_ACTIVATION_PCT']) || DEFAULT_BACKTEST_CONFIG.trailing_stop_activation_pct,
+                    trailing_stop_rate_pct: parseFloat(configMap['TRAILING_STOP_RATE_PCT']) || DEFAULT_BACKTEST_CONFIG.trailing_stop_rate_pct,
+                    max_hold_minutes: parseInt(configMap['MAX_HOLD_MINUTES']) || DEFAULT_BACKTEST_CONFIG.max_hold_minutes,
+                    trading_fee_rate: parseFloat(configMap['TRADING_FEE_RATE']) || DEFAULT_BACKTEST_CONFIG.trading_fee_rate,
                 };
                 setBacktestConfig(serverConfig);
                 setLoadedConfig(serverConfig);
@@ -661,28 +649,24 @@ export default function Backtest() {
                 start_date: startDate,
                 end_date: endDate,
                 title: runTitle.trim() || null,
-                config: {
-                    initial_capital: backtestConfig.initial_capital,
-                    buy_amount_per_coin: backtestConfig.buy_amount_per_coin,
-                    min_up_probability: backtestConfig.min_up_probability / 100,
-                    buy_profit_threshold: backtestConfig.buy_profit_threshold,
-                    take_profit_buffer: backtestConfig.take_profit_buffer,
-                    stop_loss_threshold: backtestConfig.stop_loss_threshold,
-                    min_profit_rate: backtestConfig.min_profit_rate,
-                    max_profit_rate: backtestConfig.max_profit_rate,
-                    prediction_days: backtestConfig.prediction_days,
-                    max_holding_days: backtestConfig.max_holding_days,
-                    buy_fee_rate: backtestConfig.buy_fee_rate / 100,
-                    sell_fee_rate: backtestConfig.sell_fee_rate / 100,
-                    sequence_length: backtestConfig.sequence_length,
-                    btc_filter_enabled: backtestConfig.btc_filter_enabled,
-                    btc_trend_ma_period: backtestConfig.btc_trend_ma_period,
-                    trailing_stop_enabled: backtestConfig.trailing_stop_enabled,
-                    trailing_stop_rate: backtestConfig.trailing_stop_rate,
-                    trailing_stop_activation: backtestConfig.trailing_stop_activation,
-                    min_model_agreement: backtestConfig.min_model_agreement,
-                    ensemble_mode: backtestConfig.ensemble_mode || undefined
-                }
+                initial_capital: backtestConfig.initial_capital,
+                buy_amount_per_coin: backtestConfig.buy_amount_per_coin,
+                buy_max_concurrent: backtestConfig.buy_max_concurrent,
+                scanner_volume_ratio_min: backtestConfig.scanner_volume_ratio_min,
+                scanner_price_change_min: backtestConfig.scanner_price_change_min,
+                scanner_rsi_min: backtestConfig.scanner_rsi_min,
+                scanner_rsi_max: backtestConfig.scanner_rsi_max,
+                scanner_interval_seconds: backtestConfig.scanner_interval_seconds,
+                ml_enabled: backtestConfig.ml_enabled,
+                ml_min_confidence: backtestConfig.ml_min_confidence,
+                ml_candle_unit: backtestConfig.ml_candle_unit,
+                take_profit_pct: backtestConfig.take_profit_pct,
+                stop_loss_pct: backtestConfig.stop_loss_pct,
+                trailing_stop_enabled: backtestConfig.trailing_stop_enabled,
+                trailing_stop_activation_pct: backtestConfig.trailing_stop_activation_pct,
+                trailing_stop_rate_pct: backtestConfig.trailing_stop_rate_pct,
+                max_hold_minutes: backtestConfig.max_hold_minutes,
+                trading_fee_rate: backtestConfig.trading_fee_rate,
             };
 
             const { data, error } = await send('/dart/api/backtest/run', payload, 'POST');
@@ -1010,6 +994,7 @@ export default function Backtest() {
                 ['승리 거래', portfolio.winning_trades],
                 ['패배 거래', portfolio.losing_trades],
                 ['승률 (%)', portfolio.win_rate.toFixed(2)],
+                ['평균 보유 (분)', portfolio.avg_hold_minutes != null ? portfolio.avg_hold_minutes.toFixed(1) : '-'],
                 ['최대 낙폭 (%)', (portfolio.max_drawdown * 100).toFixed(2)],
                 ['샤프 지수', portfolio.sharpe_ratio.toFixed(2)]
             ];
@@ -1023,7 +1008,7 @@ export default function Backtest() {
                 // 수익률 색상
                 if (rowData[0] === '총 수익률 (%)') {
                     row.getCell(2).font = {
-                        color: { argb: portfolio.total_return >= 0 ? 'FF00B050' : 'FFFF0000' },
+                        color: { argb: portfolio.total_return >= 0 ? 'FF3B82F6' : 'FFF97316' },
                         bold: true
                     };
                 }
@@ -1128,7 +1113,7 @@ export default function Backtest() {
                         ['총 수익/손실 (KRW)', totalProfit.toFixed(2)],
                         ['총 거래 횟수', data.total_trades],
                         ['승률 (%)', data.win_rate.toFixed(2)],
-                        ['평균 보유일', data.avg_holding_days.toFixed(1)],
+                        ['평균 보유(분)', data.avg_hold_minutes != null ? data.avg_hold_minutes.toFixed(1) : '-'],
                         ['평균 수익 (KRW)', data.avg_profit.toFixed(2)],
                         ['평균 손실 (KRW)', data.avg_loss.toFixed(2)],
                         ['Profit Factor', data.profit_factor.toFixed(2)]
@@ -1142,7 +1127,7 @@ export default function Backtest() {
                         // 총 수익률 색상
                         if (rowData[0] === '총 수익률 (%)') {
                             row.getCell(2).font = {
-                                color: { argb: data.total_return >= 0 ? 'FF00B050' : 'FFFF0000' },
+                                color: { argb: data.total_return >= 0 ? 'FF3B82F6' : 'FFF97316' },
                                 bold: true
                             };
                         }
@@ -1150,7 +1135,7 @@ export default function Backtest() {
                         // 총 수익/손실 색상
                         if (rowData[0] === '총 수익/손실 (KRW)') {
                             row.getCell(2).font = {
-                                color: { argb: totalProfit >= 0 ? 'FF00B050' : 'FFFF0000' },
+                                color: { argb: totalProfit >= 0 ? 'FF3B82F6' : 'FFF97316' },
                                 bold: true
                             };
                         }
@@ -1162,8 +1147,8 @@ export default function Backtest() {
                     // 거래 내역 헤더
                     const tradeHeaderRow = coinWs.addRow([
                         '진입일', '청산일', '진입가', '청산가', '수량',
-                        '손익', '수익률(%)', '예측 고가', '예측 저가',
-                        '상승 확률(%)', '기대 수익률(%)', '사유'
+                        '손익', '수익률(%)', '모멘텀', 'ML확률(%)',
+                        '진입사유', '보유(초)', '청산사유'
                     ]);
                     tradeHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
                     tradeHeaderRow.fill = {
@@ -1185,11 +1170,11 @@ export default function Backtest() {
                                 trade.quantity,
                                 trade.profit_loss,
                                 trade.profit_loss_rate.toFixed(2),
-                                trade.predicted_high,
-                                trade.predicted_low,
-                                (trade.up_probability * 100).toFixed(2),
-                                trade.expected_return.toFixed(2),
-                                trade.reason
+                                trade.momentum_score != null ? trade.momentum_score.toFixed(2) : '',
+                                trade.ml_confidence != null ? (trade.ml_confidence * 100).toFixed(1) : '',
+                                trade.entry_reason || '',
+                                trade.hold_duration_sec != null ? trade.hold_duration_sec : '',
+                                trade.reason || ''
                             ]);
 
                             // 숫자 컬럼 오른쪽 정렬
@@ -1199,10 +1184,10 @@ export default function Backtest() {
 
                             // 손익 색상
                             row.getCell(6).font = {
-                                color: { argb: trade.profit_loss >= 0 ? 'FF00B050' : 'FFFF0000' }
+                                color: { argb: trade.profit_loss >= 0 ? 'FF3B82F6' : 'FFF97316' }
                             };
                             row.getCell(7).font = {
-                                color: { argb: trade.profit_loss_rate >= 0 ? 'FF00B050' : 'FFFF0000' },
+                                color: { argb: trade.profit_loss_rate >= 0 ? 'FF3B82F6' : 'FFF97316' },
                                 bold: true
                             };
                         });
@@ -1216,11 +1201,11 @@ export default function Backtest() {
                     coinWs.getColumn(5).width = 15; // 수량
                     coinWs.getColumn(6).width = 12; // 손익
                     coinWs.getColumn(7).width = 12; // 수익률
-                    coinWs.getColumn(8).width = 15; // 예측 고가
-                    coinWs.getColumn(9).width = 15; // 예측 저가
-                    coinWs.getColumn(10).width = 12; // 상승 확률
-                    coinWs.getColumn(11).width = 14; // 기대 수익률
-                    coinWs.getColumn(12).width = 15; // 사유
+                    coinWs.getColumn(8).width = 12; // 모멘텀
+                    coinWs.getColumn(9).width = 12; // ML확률
+                    coinWs.getColumn(10).width = 15; // 진입사유
+                    coinWs.getColumn(11).width = 12; // 보유(초)
+                    coinWs.getColumn(12).width = 15; // 청산사유
 
                     // 테두리 추가
                     const startRow = 13; // 거래 내역 시작 행
@@ -1275,8 +1260,8 @@ export default function Backtest() {
 
             const headers = [
                 '종목', '진입일', '청산일', '진입가', '청산가', '수량',
-                '손익', '수익률(%)', '예측 고가', '예측 저가',
-                '상승 확률(%)', '기대 수익률(%)', '사유'
+                '손익', '수익률(%)', '모멘텀', 'ML확률(%)',
+                '진입사유', '보유(초)', '청산사유'
             ];
 
             const escapeCell = (value) => {
@@ -1302,11 +1287,11 @@ export default function Backtest() {
                             trade.quantity,
                             trade.profit_loss,
                             trade.profit_loss_rate.toFixed(2),
-                            trade.predicted_high,
-                            trade.predicted_low,
-                            (trade.up_probability * 100).toFixed(2),
-                            trade.expected_return.toFixed(2),
-                            trade.reason
+                            trade.momentum_score != null ? trade.momentum_score.toFixed(2) : '',
+                            trade.ml_confidence != null ? (trade.ml_confidence * 100).toFixed(1) : '',
+                            trade.entry_reason || '',
+                            trade.hold_duration_sec != null ? trade.hold_duration_sec : '',
+                            trade.reason || ''
                         ].map(escapeCell).join(','));
                     });
                 });
@@ -1706,9 +1691,9 @@ export default function Backtest() {
                                         </div>
                                         <div>
                                             <span className="text-sm text-slate-600 dark:text-slate-400">상태:</span>
-                                            <div className={`text-sm font-semibold ${taskStatus.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                                            <div className={`text-sm font-semibold ${taskStatus.status === 'completed' ? 'text-blue-600 dark:text-blue-400' :
                                                 taskStatus.status === 'running' ? 'text-blue-600 dark:text-blue-400' :
-                                                    taskStatus.status === 'failed' ? 'text-red-600 dark:text-red-400' :
+                                                    taskStatus.status === 'failed' ? 'text-orange-600 dark:text-orange-400' :
                                                         'text-slate-600 dark:text-slate-400'
                                                 }`}>
                                                 {taskStatus.status === 'running' ? '실행 중' :
@@ -1740,7 +1725,7 @@ export default function Backtest() {
 
                                     {/* 완료 시 진행률 텍스트 */}
                                     {taskStatus.status === 'completed' && taskStatus.progress && (
-                                        <div className="text-sm text-green-600 dark:text-green-400 font-medium">
+                                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
                                             {formatProgress(taskStatus.progress)}
                                         </div>
                                     )}
@@ -1930,10 +1915,10 @@ export default function Backtest() {
                                                             </td>
                                                             <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100">{item.coin_count}</td>
                                                             <td className="px-4 py-3 text-center text-slate-900 dark:text-slate-100 text-xs whitespace-nowrap">{item.start_date} ~ {item.end_date}</td>
-                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.status !== 'completed' ? 'text-slate-400 dark:text-slate-500' : item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.status !== 'completed' ? 'text-slate-400 dark:text-slate-500' : item.total_return >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                                                 {item.status === 'completed' ? `${item.total_return.toFixed(2)}%` : '-'}
                                                             </td>
-                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.status !== 'completed' ? 'text-slate-400 dark:text-slate-500' : item.invested_return != null ? (item.invested_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
+                                                            <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${item.status !== 'completed' ? 'text-slate-400 dark:text-slate-500' : item.invested_return != null ? (item.invested_return >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400') : 'text-slate-400 dark:text-slate-500'}`}>
                                                                 {item.status === 'completed' && item.invested_return != null ? `${item.invested_return.toFixed(2)}%` : '-'}
                                                             </td>
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100 whitespace-nowrap">
@@ -1942,7 +1927,7 @@ export default function Backtest() {
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">
                                                                 {item.status === 'completed' ? item.total_trades : '-'}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 whitespace-nowrap">
+                                                            <td className="px-4 py-3 text-right text-orange-600 dark:text-orange-400 whitespace-nowrap">
                                                                 {item.status === 'completed' ? `${(item.max_drawdown * 100).toFixed(2)}%` : '-'}
                                                             </td>
                                                             <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">
@@ -2051,13 +2036,13 @@ export default function Backtest() {
                                                         <div className="grid grid-cols-2 gap-3">
                                                             <div>
                                                                 <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">총 수익률</div>
-                                                                <div className={`text-lg font-bold ${item.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                <div className={`text-lg font-bold ${item.total_return >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                                                     {item.total_return.toFixed(2)}%
                                                                 </div>
                                                             </div>
                                                             <div>
                                                                 <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">매수금 수익률</div>
-                                                                <div className={`text-lg font-bold ${item.invested_return != null ? (item.invested_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
+                                                                <div className={`text-lg font-bold ${item.invested_return != null ? (item.invested_return >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400') : 'text-slate-400 dark:text-slate-500'}`}>
                                                                     {item.invested_return != null ? `${item.invested_return.toFixed(2)}%` : '-'}
                                                                 </div>
                                                             </div>
@@ -2101,7 +2086,7 @@ export default function Backtest() {
                                                             <>
                                                                 <div className="flex justify-between text-sm">
                                                                     <span className="text-slate-600 dark:text-slate-400">MDD</span>
-                                                                    <span className="text-red-600 dark:text-red-400 font-medium">
+                                                                    <span className="text-orange-600 dark:text-orange-400 font-medium">
                                                                         {(item.max_drawdown * 100).toFixed(2)}%
                                                                     </span>
                                                                 </div>
@@ -2250,7 +2235,7 @@ export default function Backtest() {
                                         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2">
                                             자본 설정
                                         </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                                                     초기 자본금 (원) <code className="text-blue-500">initial_capital</code>
@@ -2265,7 +2250,7 @@ export default function Backtest() {
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    1회 매수 금액 (원) <code className="text-blue-500">buy_amount_per_coin</code>
+                                                    종목당 금액 (원) <code className="text-blue-500">buy_amount_per_coin</code>
                                                     {isModified('buy_amount_per_coin') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
@@ -2275,72 +2260,191 @@ export default function Backtest() {
                                                     className={paramInputClass('buy_amount_per_coin')}
                                                 />
                                             </div>
-                                        </div>
-
-                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
-                                            매수 조건
-                                        </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    최소 상승 확률 (%) <code className="text-blue-500">min_up_probability</code>
-                                                    {isModified('min_up_probability') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                    최대 동시보유 <code className="text-blue-500">buy_max_concurrent</code>
+                                                    {isModified('buy_max_concurrent') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
-                                                    step="0.1"
-                                                    value={backtestConfig.min_up_probability}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_up_probability: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('min_up_probability')}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    기대 수익률 하한 (%) <code className="text-blue-500">buy_profit_threshold</code>
-                                                    {isModified('buy_profit_threshold') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.1"
-                                                    value={backtestConfig.buy_profit_threshold}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_profit_threshold: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('buy_profit_threshold')}
+                                                    min="1"
+                                                    max="20"
+                                                    value={backtestConfig.buy_max_concurrent}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_max_concurrent: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                                                    className={paramInputClass('buy_max_concurrent')}
                                                 />
                                             </div>
                                         </div>
 
                                         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
-                                            BTC 추세 필터
+                                            스캐너 설정
                                         </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    거래량 배율 <code className="text-blue-500">scanner_volume_ratio_min</code>
+                                                    {isModified('scanner_volume_ratio_min') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.5"
+                                                    min="1"
+                                                    value={backtestConfig.scanner_volume_ratio_min}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, scanner_volume_ratio_min: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    className={paramInputClass('scanner_volume_ratio_min')}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    가격변화율 (%) <code className="text-blue-500">scanner_price_change_min</code>
+                                                    {isModified('scanner_price_change_min') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0"
+                                                    value={backtestConfig.scanner_price_change_min}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, scanner_price_change_min: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    className={paramInputClass('scanner_price_change_min')}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    RSI 하한 <code className="text-blue-500">scanner_rsi_min</code>
+                                                    {isModified('scanner_rsi_min') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    value={backtestConfig.scanner_rsi_min}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, scanner_rsi_min: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                                                    className={paramInputClass('scanner_rsi_min')}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    RSI 상한 <code className="text-blue-500">scanner_rsi_max</code>
+                                                    {isModified('scanner_rsi_max') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    value={backtestConfig.scanner_rsi_max}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, scanner_rsi_max: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                                                    className={paramInputClass('scanner_rsi_max')}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    스캔 주기 (초) <code className="text-blue-500">scanner_interval_seconds</code>
+                                                    {isModified('scanner_interval_seconds') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="10"
+                                                    value={backtestConfig.scanner_interval_seconds}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, scanner_interval_seconds: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                                                    className={paramInputClass('scanner_interval_seconds')}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
+                                            ML 설정
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                             <div className="flex items-center gap-3">
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
-                                                    BTC 필터 <code className="text-blue-500">btc_filter_enabled</code>
-                                                    {isModified('btc_filter_enabled') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                    ML 사용 <code className="text-blue-500">ml_enabled</code>
+                                                    {isModified('ml_enabled') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="checkbox"
-                                                    checked={backtestConfig.btc_filter_enabled}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, btc_filter_enabled: e.target.checked }))}
+                                                    checked={backtestConfig.ml_enabled}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, ml_enabled: e.target.checked }))}
                                                     className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                                 />
                                                 <span className="text-xs text-slate-500 dark:text-slate-400">
-                                                    {backtestConfig.btc_filter_enabled ? 'ON' : 'OFF'}
+                                                    {backtestConfig.ml_enabled ? 'ON' : 'OFF'}
                                                 </span>
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    BTC MA 기간 (일) <code className="text-blue-500">btc_trend_ma_period</code>
-                                                    {isModified('btc_trend_ma_period') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                    최소 확률 <code className="text-blue-500">ml_min_confidence</code>
+                                                    {isModified('ml_min_confidence') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
-                                                    min="5"
-                                                    max="200"
-                                                    value={backtestConfig.btc_trend_ma_period}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, btc_trend_ma_period: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                                                    disabled={!backtestConfig.btc_filter_enabled}
-                                                    className={paramInputClass('btc_trend_ma_period', 'disabled:opacity-50')}
+                                                    step="0.05"
+                                                    min="0"
+                                                    max="1"
+                                                    value={backtestConfig.ml_min_confidence}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, ml_min_confidence: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    disabled={!backtestConfig.ml_enabled}
+                                                    className={paramInputClass('ml_min_confidence', 'disabled:opacity-50')}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    분봉 단위 (분) <code className="text-blue-500">ml_candle_unit</code>
+                                                    {isModified('ml_candle_unit') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={backtestConfig.ml_candle_unit}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, ml_candle_unit: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                                                    disabled={!backtestConfig.ml_enabled}
+                                                    className={paramInputClass('ml_candle_unit', 'disabled:opacity-50')}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
+                                            매도 조건
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    익절 (%) <code className="text-blue-500">take_profit_pct</code>
+                                                    {isModified('take_profit_pct') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0.1"
+                                                    value={backtestConfig.take_profit_pct}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, take_profit_pct: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    className={paramInputClass('take_profit_pct')}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    손절 (%) <code className="text-blue-500">stop_loss_pct</code>
+                                                    {isModified('stop_loss_pct') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0.1"
+                                                    value={backtestConfig.stop_loss_pct}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, stop_loss_pct: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    className={paramInputClass('stop_loss_pct')}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                                    최대 보유 (분) <code className="text-blue-500">max_hold_minutes</code>
+                                                    {isModified('max_hold_minutes') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={backtestConfig.max_hold_minutes}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, max_hold_minutes: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                                                    className={paramInputClass('max_hold_minutes')}
                                                 />
                                             </div>
                                         </div>
@@ -2366,185 +2470,56 @@ export default function Backtest() {
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    하락률 (%) <code className="text-blue-500">trailing_stop_rate</code>
-                                                    {isModified('trailing_stop_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                    활성화 (%) <code className="text-blue-500">trailing_stop_activation_pct</code>
+                                                    {isModified('trailing_stop_activation_pct') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
-                                                    step="0.5"
-                                                    min="0.5"
+                                                    step="0.1"
+                                                    min="0.1"
                                                     max="20"
-                                                    value={backtestConfig.trailing_stop_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    value={backtestConfig.trailing_stop_activation_pct}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_activation_pct: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     disabled={!backtestConfig.trailing_stop_enabled}
-                                                    className={paramInputClass('trailing_stop_rate', 'disabled:opacity-50')}
+                                                    className={paramInputClass('trailing_stop_activation_pct', 'disabled:opacity-50')}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    활성화 수익률 (%) <code className="text-blue-500">trailing_stop_activation</code>
-                                                    {isModified('trailing_stop_activation') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                    하락률 (%) <code className="text-blue-500">trailing_stop_rate_pct</code>
+                                                    {isModified('trailing_stop_rate_pct') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
-                                                    step="0.5"
-                                                    min="0.5"
+                                                    step="0.1"
+                                                    min="0.1"
                                                     max="20"
-                                                    value={backtestConfig.trailing_stop_activation}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_activation: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    value={backtestConfig.trailing_stop_rate_pct}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, trailing_stop_rate_pct: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                                                     disabled={!backtestConfig.trailing_stop_enabled}
-                                                    className={paramInputClass('trailing_stop_activation', 'disabled:opacity-50')}
+                                                    className={paramInputClass('trailing_stop_rate_pct', 'disabled:opacity-50')}
                                                 />
                                             </div>
                                         </div>
 
                                         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
-                                            모델 일치도 필터
+                                            수수료
                                         </h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    최소 일치도 (0~1) <code className="text-blue-500">min_model_agreement</code>
-                                                    {isModified('min_model_agreement') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
+                                                    수수료율 <code className="text-blue-500">trading_fee_rate</code>
+                                                    {isModified('trading_fee_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
                                                 </label>
                                                 <input
                                                     type="number"
-                                                    step="0.05"
+                                                    step="0.0001"
                                                     min="0"
-                                                    max="1"
-                                                    value={backtestConfig.min_model_agreement}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_model_agreement: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('min_model_agreement')}
+                                                    value={backtestConfig.trading_fee_rate}
+                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, trading_fee_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                                    className={paramInputClass('trading_fee_rate')}
                                                 />
-                                                <p className="text-xs text-slate-400 mt-1">0이면 필터 비활성화. 단일 모델 시 무효</p>
-                                            </div>
-                                        </div>
-
-                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
-                                            매도 조건
-                                        </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    익절 버퍼 (%) <code className="text-blue-500">take_profit_buffer</code>
-                                                    {isModified('take_profit_buffer') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.1"
-                                                    value={backtestConfig.take_profit_buffer}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, take_profit_buffer: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('take_profit_buffer')}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    손절 임계값 (%) <code className="text-blue-500">stop_loss_threshold</code>
-                                                    {isModified('stop_loss_threshold') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.1"
-                                                    value={backtestConfig.stop_loss_threshold}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, stop_loss_threshold: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('stop_loss_threshold')}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    최소 익절률 (%) <code className="text-blue-500">min_profit_rate</code>
-                                                    {isModified('min_profit_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.1"
-                                                    value={backtestConfig.min_profit_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, min_profit_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('min_profit_rate')}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    최대 익절률 (%) <code className="text-blue-500">max_profit_rate</code>
-                                                    {isModified('max_profit_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.1"
-                                                    value={backtestConfig.max_profit_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, max_profit_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('max_profit_rate')}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mt-4">
-                                            기타 설정
-                                        </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    예측 기간 (일) <code className="text-blue-500">prediction_days</code>
-                                                    {isModified('prediction_days') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={backtestConfig.prediction_days}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, prediction_days: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                                                    className={paramInputClass('prediction_days')}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    최대 보유(일) <code className="text-blue-500">max_holding_days</code>
-                                                    {isModified('max_holding_days') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="2"
-                                                    max="30"
-                                                    value={backtestConfig.max_holding_days}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, max_holding_days: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                                                    className={paramInputClass('max_holding_days')}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    매수 수수료 (%) <code className="text-blue-500">buy_fee_rate</code>
-                                                    {isModified('buy_fee_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.001"
-                                                    value={backtestConfig.buy_fee_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, buy_fee_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('buy_fee_rate')}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    매도 수수료 (%) <code className="text-blue-500">sell_fee_rate</code>
-                                                    {isModified('sell_fee_rate') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.001"
-                                                    value={backtestConfig.sell_fee_rate}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, sell_fee_rate: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                                                    className={paramInputClass('sell_fee_rate')}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    시퀀스 길이 <code className="text-blue-500">sequence_length</code>
-                                                    {isModified('sequence_length') && <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">● 수정됨</span>}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    value={backtestConfig.sequence_length}
-                                                    onChange={(e) => setBacktestConfig(prev => ({ ...prev, sequence_length: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-                                                    className={paramInputClass('sequence_length')}
-                                                />
+                                                <p className="text-xs text-slate-400 mt-1">0.0005 = 0.05%</p>
                                             </div>
                                         </div>
                                     </div>
@@ -2720,16 +2695,16 @@ function ResultSummary({ result, onExport }) {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
                     <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">총 수익률</div>
-                    <div className={`text-2xl font-bold ${portfolio.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    <div className={`text-2xl font-bold ${portfolio.total_return >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                         {portfolio.total_return.toFixed(2)}%
                     </div>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
                     <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">매수금 수익률</div>
-                    <div className={`text-2xl font-bold ${investedReturn != null ? (investedReturn >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-slate-400 dark:text-slate-500'}`}>
+                    <div className={`text-2xl font-bold ${investedReturn != null ? (investedReturn >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400') : 'text-slate-400 dark:text-slate-500'}`}>
                         {investedReturn != null ? `${investedReturn.toFixed(2)}%` : '-'}
                     </div>
                 </div>
@@ -2743,6 +2718,12 @@ function ResultSummary({ result, onExport }) {
                     <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">거래 횟수</div>
                     <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                         {portfolio.total_trades}
+                    </div>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">평균 보유 (분)</div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                        {portfolio.avg_hold_minutes != null ? portfolio.avg_hold_minutes.toFixed(1) : '-'}
                     </div>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
@@ -2776,19 +2757,19 @@ function ResultSummary({ result, onExport }) {
                     <div className="space-y-1">
                         <div className="flex justify-between">
                             <span className="text-sm text-slate-600 dark:text-slate-400">승리 거래</span>
-                            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                                 {portfolio.winning_trades}
                             </span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-sm text-slate-600 dark:text-slate-400">패배 거래</span>
-                            <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                            <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
                                 {portfolio.losing_trades}
                             </span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-sm text-slate-600 dark:text-slate-400">최대 낙폭 (MDD)</span>
-                            <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                            <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
                                 {(portfolio.max_drawdown * 100).toFixed(2)}%
                             </span>
                         </div>
@@ -2849,7 +2830,7 @@ function ComparisonView({ results }) {
                                     <td className={`px-4 py-3 text-center ${better === 2 ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-slate-100'}`}>
                                         {item.value2.toFixed(2)}{item.unit}
                                     </td>
-                                    <td className={`px-4 py-3 text-center font-medium ${diff > 0 ? 'text-green-600 dark:text-green-400' : diff < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                                    <td className={`px-4 py-3 text-center font-medium ${diff > 0 ? 'text-blue-600 dark:text-blue-400' : diff < 0 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-slate-400'}`}>
                                         {diff > 0 ? '+' : ''}{diff.toFixed(2)}{item.unit}
                                     </td>
                                 </tr>
@@ -2865,37 +2846,27 @@ function ComparisonView({ results }) {
 // 파라미터 한글 라벨 매핑 (대소문자 구분 없음)
 function getParamLabel(key) {
     const labels = {
-        INITIAL_CAPITAL: '초기 자본 (원)',  // 백테스트에만 사용하는 파라미터
-        SEQUENCE_LENGTH: '시퀀스 길이', // 백테스트에만 사용하는 파라미터
-
-        BUY_PROFIT_THRESHOLD: '매수 조건 (기대 수익률 %)',
-        TAKE_PROFIT_BUFFER: '익절 버퍼 (%)',
-        STOP_LOSS_THRESHOLD: '손절선 (%)',
+        INITIAL_CAPITAL: '초기 자본 (원)',
         BUY_AMOUNT_PER_COIN: '종목당 매수금액 (원)',
-        BUY_WAIT_SECONDS: '매수 체결 대기 (초)',
-        BUY_RETRY_COUNT: '매수 재시도 (회)',
-        SELL_CHECK_SECONDS: '매도 체결 확인 (초)',
-        PRICE_MONITOR_SECONDS: '가격 모니터링 주기 (초)',
-        BUY_CHECK_HOURS: '매수 체크 주기 (시간)',
-        MIN_UP_PROBABILITY: '최소 상승 확률 (%)',
-        MIN_PROFIT_RATE: '최소 익절률 (%)',
-        MAX_PROFIT_RATE: '최대 익절률 (%)',
-        MAX_HOLDING_DAYS: '최대 보유 기간 (일)',
+        BUY_MAX_CONCURRENT: '최대 동시보유',
+        SCANNER_VOLUME_RATIO_MIN: '거래량 배율',
+        SCANNER_PRICE_CHANGE_MIN: '가격변화율 (%)',
+        SCANNER_RSI_MIN: 'RSI 하한',
+        SCANNER_RSI_MAX: 'RSI 상한',
+        SCANNER_INTERVAL_SECONDS: '스캔 주기 (초)',
+        ML_ENABLED: 'ML 사용',
+        ML_MIN_CONFIDENCE: 'ML 최소 확률',
+        ML_CANDLE_UNIT: '분봉 단위 (분)',
+        TAKE_PROFIT_PCT: '익절 (%)',
+        STOP_LOSS_PCT: '손절 (%)',
+        TRAILING_STOP_ENABLED: '트레일링 스탑',
+        TRAILING_STOP_ACTIVATION_PCT: '트레일링 활성화 (%)',
+        TRAILING_STOP_RATE_PCT: '트레일링 하락률 (%)',
+        MAX_HOLD_MINUTES: '최대 보유 (분)',
+        TRADING_FEE_RATE: '수수료율',
         TARGET_MODE: '대상 모드 (ALL/SELECTED)',
-        PREDICTION_DAYS: '예측 기간 (일)',
-        TRAIN_SCHEDULE_ENABLED: '재학습 스케줄러 활성화 여부',
-        TRAIN_SCHEDULE_CRON: '모델 재학습 스케줄 (Cron)',
-        ENSEMBLE_MODE: '앙상블 모드',
         BUY_SCHEDULER_ENABLED: '매수 스케줄러 활성화 여부',
         SELL_SCHEDULER_ENABLED: '매도 스케줄러 활성화 여부',
-        BUY_FEE_RATE: '매수 수수료율(0.05%면 0.0005)',
-        SELL_FEE_RATE: '매도 수수료율(0.05%면 0.0005)',
-        BTC_FILTER_ENABLED: 'BTC 추세 필터',
-        BTC_TREND_MA_PERIOD: 'BTC MA 기간 (일)',
-        TRAILING_STOP_ENABLED: '트레일링 스탑',
-        TRAILING_STOP_RATE: '트레일링 스탑 하락률 (%)',
-        TRAILING_STOP_ACTIVATION: '트레일링 스탑 활성화 수익률 (%)',
-        MIN_MODEL_AGREEMENT: '모델 일치도 최소값 (0~1)',
     };
 
     // 대소문자 구분 없이 매칭
@@ -2904,27 +2875,11 @@ function getParamLabel(key) {
     return matchedKey ? labels[matchedKey] : key;
 }
 
-// 파라미터 값 포맷팅 (퍼센트 값 변환)
+// 파라미터 값 포맷팅
 function formatParamValue(key, value) {
-    // MIN_UP_PROBABILITY만 백엔드에서 0~1 비율로 저장됨
-    const percentParams = [
-        'MIN_UP_PROBABILITY'
-    ];
-
-    const upperKey = key.toUpperCase();
-
     if (typeof value === 'object') {
         return JSON.stringify(value);
     }
-
-    // 퍼센트 파라미터인 경우 100을 곱해서 표시
-    if (percentParams.some(param => upperKey === param)) {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-            return (numValue * 100).toFixed(2);
-        }
-    }
-
     return String(value);
 }
 
@@ -2941,7 +2896,7 @@ function CustomProfitTooltip({ active, payload, label }) {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                         수익/손실: {data.profit >= 0 ? '+' : '-'}<NumberWithBoldInteger value={Math.abs(data.profit)} decimals={0} suffix=" KRW" />
                         {data.dailyReturnPct !== undefined && (
-                            <span className={`ml-2 ${data.dailyReturnPct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            <span className={`ml-2 ${data.dailyReturnPct >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                 (<span className="font-bold">{data.dailyReturnPct >= 0 ? '+' : ''}{data.dailyReturnPct.toFixed(2)}%</span>)
                             </span>
                         )}
@@ -2951,7 +2906,7 @@ function CustomProfitTooltip({ active, payload, label }) {
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                         누적: {data.cumulativeProfit >= 0 ? '+' : '-'}<NumberWithBoldInteger value={Math.abs(data.cumulativeProfit)} decimals={0} suffix=" KRW" />
                         {data.cumulativeReturnPct !== undefined && (
-                            <span className={`ml-2 ${data.cumulativeReturnPct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            <span className={`ml-2 ${data.cumulativeReturnPct >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                 (<span className="font-bold">{data.cumulativeReturnPct >= 0 ? '+' : ''}{data.cumulativeReturnPct.toFixed(2)}%</span>)
                             </span>
                         )}
@@ -2983,8 +2938,8 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
 
     // 승률/패율 차트 데이터
     const winLossData = [
-        { name: '승리', value: portfolio.winning_trades, color: '#10b981' },
-        { name: '패배', value: portfolio.losing_trades, color: '#ef4444' },
+        { name: '승리', value: portfolio.winning_trades, color: '#3b82f6' },
+        { name: '패배', value: portfolio.losing_trades, color: '#f97316' },
     ];
 
     // 종목별 수익 기여도 (individual 데이터 기반)
@@ -3312,8 +3267,8 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                                                 <span className="font-medium text-slate-800 dark:text-slate-200">{coin.name}</span>
                                                             </div>
                                                             <span className={`font-semibold ${coin.return >= 0
-                                                                ? 'text-green-600 dark:text-green-400'
-                                                                : 'text-red-600 dark:text-red-400'
+                                                                ? 'text-blue-600 dark:text-blue-400'
+                                                                : 'text-orange-600 dark:text-orange-400'
                                                                 }`}>
                                                                 {coin.return >= 0 ? '+' : ''}{coin.return.toFixed(2)}%
                                                             </span>
@@ -3400,7 +3355,7 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-slate-600 dark:text-slate-400">일평균 매수:</span>
-                                                <span className="font-semibold text-red-600 dark:text-red-400">
+                                                <span className="font-semibold text-orange-600 dark:text-orange-400">
                                                     {dailyTradeAverage.avgBuy.toFixed(2)}건
                                                 </span>
                                             </div>
@@ -3518,7 +3473,7 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                                                 </span>
                                                                 <span className="font-medium text-slate-800 dark:text-slate-200">{day.date}</span>
                                                             </div>
-                                                            <span className={`${day.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            <span className={`${day.profit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                                                 {day.profit >= 0 ? '+' : ''}<NumberWithBoldInteger value={Math.abs(day.profit)} decimals={2} suffix=" KRW" /> (<span className="font-semibold">{day.dailyReturnPct >= 0 ? '+' : ''}{day.dailyReturnPct.toFixed(2)}%</span>) · {day.trades}건
                                                             </span>
                                                         </div>
@@ -3597,7 +3552,7 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                                                 </span>
                                                                 <span className="font-medium text-slate-800 dark:text-slate-200">{day.date}</span>
                                                             </div>
-                                                            <span className={`${day.cumulativeProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            <span className={`${day.cumulativeProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                                                 {day.cumulativeProfit >= 0 ? '+' : ''}<NumberWithBoldInteger value={Math.abs(day.cumulativeProfit)} decimals={2} suffix=" KRW" /> (<span className="font-semibold">{day.cumulativeReturnPct >= 0 ? '+' : ''}{day.cumulativeReturnPct.toFixed(2)}%</span>)
                                                             </span>
                                                         </div>
@@ -3629,8 +3584,8 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                                         })();
                                                     const sign = totalProfit >= 0 ? '+' : '';
                                                     const profitColor = totalProfit >= 0
-                                                        ? 'text-green-600 dark:text-green-400'
-                                                        : 'text-red-600 dark:text-red-400';
+                                                        ? 'text-blue-600 dark:text-blue-400'
+                                                        : 'text-orange-600 dark:text-orange-400';
 
                                                     return (
                                                         <span>
@@ -3642,20 +3597,20 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                             <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700">
                                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
                                                     <div>
-                                                        <div className="text-xs text-slate-600 dark:text-slate-400">평균 보유일</div>
+                                                        <div className="text-xs text-slate-600 dark:text-slate-400">평균 보유(분)</div>
                                                         <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                            {data.avg_holding_days.toFixed(1)}일
+                                                            {data.avg_hold_minutes != null ? `${data.avg_hold_minutes.toFixed(1)}분` : '-'}
                                                         </div>
                                                     </div>
                                                     <div>
                                                         <div className="text-xs text-slate-600 dark:text-slate-400">평균 수익</div>
-                                                        <div className="text-sm text-green-600 dark:text-green-400">
+                                                        <div className="text-sm text-blue-600 dark:text-blue-400">
                                                             <NumberWithBoldInteger value={data.avg_profit} decimals={2} suffix=" KRW" />
                                                         </div>
                                                     </div>
                                                     <div>
                                                         <div className="text-xs text-slate-600 dark:text-slate-400">평균 손실</div>
-                                                        <div className="text-sm text-red-600 dark:text-red-400">
+                                                        <div className="text-sm text-orange-600 dark:text-orange-400">
                                                             <NumberWithBoldInteger value={data.avg_loss} decimals={2} suffix=" KRW" />
                                                         </div>
                                                     </div>
@@ -3671,8 +3626,8 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                                                     return (data.avg_profit * winningTrades) + (data.avg_loss * losingTrades);
                                                                 })();
                                                             return totalProfit >= 0
-                                                                ? 'text-green-600 dark:text-green-400'
-                                                                : 'text-red-600 dark:text-red-400';
+                                                                ? 'text-blue-600 dark:text-blue-400'
+                                                                : 'text-orange-600 dark:text-orange-400';
                                                         })()}`}>
                                                             {(() => {
                                                                 // 실제 거래 내역이 있으면 정확한 합산, 없으면 평균값으로 근사치 계산
@@ -3718,11 +3673,11 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                                                         <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">수량</th>
                                                                         <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">손익</th>
                                                                         <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">수익률</th>
-                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">예측 고가</th>
-                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">예측 저가</th>
-                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">상승 확률</th>
-                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">기대 수익률</th>
-                                                                        <th className="px-3 py-2 text-center font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">사유</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">모멘텀</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">ML 확률</th>
+                                                                        <th className="px-3 py-2 text-center font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">진입사유</th>
+                                                                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">보유(초)</th>
+                                                                        <th className="px-3 py-2 text-center font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">청산사유</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -3739,27 +3694,29 @@ function DetailView({ result, onClose, onExport, onExportCsv }) {
                                                                             <td className="px-3 py-2 text-right whitespace-nowrap">
                                                                                 {trade.quantity.toFixed(8)}
                                                                             </td>
-                                                                            <td className={`px-3 py-2 text-right whitespace-nowrap ${trade.profit_loss >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                            <td className={`px-3 py-2 text-right whitespace-nowrap ${trade.profit_loss >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                                                                 <NumberWithBoldInteger value={trade.profit_loss} decimals={2} />
                                                                             </td>
-                                                                            <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${trade.profit_loss_rate >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                            <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${trade.profit_loss_rate >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                                                                 {trade.profit_loss_rate.toFixed(2)}%
                                                                             </td>
-                                                                            <td className="px-3 py-2 text-right whitespace-nowrap text-blue-600 dark:text-blue-400">
-                                                                                <NumberWithBoldInteger value={trade.predicted_high} decimals={2} />
-                                                                            </td>
-                                                                            <td className="px-3 py-2 text-right whitespace-nowrap text-orange-600 dark:text-orange-400">
-                                                                                <NumberWithBoldInteger value={trade.predicted_low} decimals={2} />
-                                                                            </td>
                                                                             <td className="px-3 py-2 text-right whitespace-nowrap text-purple-600 dark:text-purple-400">
-                                                                                {(trade.up_probability * 100).toFixed(2)}%
+                                                                                {trade.momentum_score != null ? trade.momentum_score.toFixed(2) : '-'}
                                                                             </td>
-                                                                            <td className="px-3 py-2 text-right font-medium whitespace-nowrap text-indigo-600 dark:text-indigo-400">
-                                                                                {trade.expected_return.toFixed(2)}%
+                                                                            <td className="px-3 py-2 text-right whitespace-nowrap text-indigo-600 dark:text-indigo-400">
+                                                                                {trade.ml_confidence != null ? `${(trade.ml_confidence * 100).toFixed(1)}%` : '-'}
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-center whitespace-nowrap">
+                                                                                <span className="text-xs px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                                                                                    {trade.entry_reason || '-'}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-right whitespace-nowrap text-slate-700 dark:text-slate-300">
+                                                                                {trade.hold_duration_sec != null ? trade.hold_duration_sec.toLocaleString() : '-'}
                                                                             </td>
                                                                             <td className="px-3 py-2 text-center whitespace-nowrap">
                                                                                 <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                                                                                    {trade.reason}
+                                                                                    {trade.reason || '-'}
                                                                                 </span>
                                                                             </td>
                                                                         </tr>

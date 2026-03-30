@@ -33,10 +33,11 @@ const COL_WIDTHS = {
     trainedAt: '180px',
     trainDataStart: '100px',
     trainDataEnd: '100px',
-    mseHigh: '100px',
-    mseLow: '100px',
-    lossUpProb: '100px',
-    accuracySurgeDay: '100px',
+    accuracy: '100px',
+    aucRoc: '100px',
+    featureCount: '100px',
+    trainSamples: '100px',
+    candleUnit: '80px',
     createdAt: '180px',
     updatedAt: '180px',
 };
@@ -69,17 +70,15 @@ const TABLE_COLUMNS = [
         sortable: true,
         align: 'center',
         render: (val) => {
-            const type = String(val || '').trim().toLowerCase();
-            let colorClass = 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+            const type = String(val || 'LightGBM').trim().toLowerCase();
+            let colorClass = 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
 
-            if (type === 'ensemble') colorClass = 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-            else if (type.includes('lstm')) colorClass = 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-            else if (type.includes('gru')) colorClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-            else if (type.includes('cnn')) colorClass = 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+            if (type.includes('lightgbm')) colorClass = 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+            else if (type.includes('xgboost')) colorClass = 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300';
 
             return (
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
-                    {val || '-'}
+                    {val || 'LightGBM'}
                 </span>
             );
         }
@@ -121,31 +120,49 @@ const TABLE_COLUMNS = [
         render: (val) => formatDate(val)
     },
     {
-        key: 'mseHigh',
-        label: 'MSE(고가)',
-        field: 'mseHigh',
-        width: COL_WIDTHS.mseHigh,
+        key: 'accuracy',
+        label: 'Accuracy',
+        field: 'accuracy',
+        width: COL_WIDTHS.accuracy,
         sortable: true,
         align: 'right',
-        render: (val) => val?.toFixed(8)
+        render: (val) => val != null ? `${(val * 100).toFixed(2)}%` : '-'
     },
     {
-        key: 'mseLow',
-        label: 'MSE(저가)',
-        field: 'mseLow',
-        width: COL_WIDTHS.mseLow,
+        key: 'aucRoc',
+        label: 'AUC-ROC',
+        field: 'aucRoc',
+        width: COL_WIDTHS.aucRoc,
         sortable: true,
         align: 'right',
-        render: (val) => val?.toFixed(8)
+        render: (val) => val != null ? val.toFixed(4) : '-'
     },
     {
-        key: 'lossUpProb',
-        label: 'Loss(상승확률)',
-        field: 'lossUpProb',
-        width: COL_WIDTHS.lossUpProb,
+        key: 'featureCount',
+        label: '피처 수',
+        field: 'featureCount',
+        width: COL_WIDTHS.featureCount,
         sortable: true,
         align: 'right',
-        render: (val) => val?.toFixed(8)
+        render: (val) => val ?? '-'
+    },
+    {
+        key: 'trainSamples',
+        label: '학습 샘플',
+        field: 'trainSamples',
+        width: COL_WIDTHS.trainSamples,
+        sortable: true,
+        align: 'right',
+        render: (val) => val != null ? val.toLocaleString() : '-'
+    },
+    {
+        key: 'candleUnit',
+        label: '분봉',
+        field: 'candleUnit',
+        width: COL_WIDTHS.candleUnit,
+        sortable: true,
+        align: 'center',
+        render: (val) => val != null ? `${val}분` : '-'
     },
     {
         key: 'createdAt',
@@ -492,38 +509,54 @@ export default function MlModelInfo() {
 
                         {/* 모델 성능 지표 */}
                         <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-4 sm:p-5 border border-purple-200 dark:border-purple-700">
-                            <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3">모델 성능 지표 (MSE & Accuracy)</h4>
+                            <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3">모델 성능 지표 (LightGBM)</h4>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                {/* MSE 고가 */}
+                                {/* Accuracy */}
                                 <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
-                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">MSE (고가)</div>
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">Accuracy</div>
                                     <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
-                                        {selectedModel.mseHigh != null ? selectedModel.mseHigh.toFixed(8) : '-'}
+                                        {selectedModel.accuracy != null ? `${(selectedModel.accuracy * 100).toFixed(2)}%` : '-'}
                                     </div>
                                 </div>
 
-                                {/* MSE 저가 */}
+                                {/* AUC-ROC */}
                                 <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
-                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">MSE (저가)</div>
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">AUC-ROC</div>
                                     <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
-                                        {selectedModel.mseLow != null ? selectedModel.mseLow.toFixed(8) : '-'}
+                                        {selectedModel.aucRoc != null ? selectedModel.aucRoc.toFixed(4) : '-'}
                                     </div>
                                 </div>
 
-                                {/* MSE 상승확률 */}
+                                {/* Feature Count */}
                                 <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
-                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">Loss (상승확률)</div>
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">피처 수</div>
                                     <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
-                                        {selectedModel.lossUpProb != null ? selectedModel.lossUpProb.toFixed(8) : '-'}
+                                        {selectedModel.featureCount ?? '-'}
+                                    </div>
+                                </div>
+
+                                {/* Train Samples */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">학습 샘플 수</div>
+                                    <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
+                                        {selectedModel.trainSamples != null ? selectedModel.trainSamples.toLocaleString() : '-'}
+                                    </div>
+                                </div>
+
+                                {/* Candle Unit */}
+                                <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                    <div className="text-xs text-purple-600 dark:text-purple-400 mb-1">분봉 단위</div>
+                                    <div className="text-sm font-mono text-purple-700 dark:text-purple-300">
+                                        {selectedModel.candleUnit != null ? `${selectedModel.candleUnit}분` : '-'}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* MSE 설명 */}
+                            {/* 설명 */}
                             <div className="mt-3 p-3 bg-purple-50/50 dark:bg-purple-900/10 rounded border border-purple-100 dark:border-purple-800">
                                 <p className="text-xs text-purple-700 dark:text-purple-300">
-                                    <strong>MSE (Mean Squared Error):</strong> 평균 제곱 오차로, 값이 낮을수록 모델 예측 성능이 우수합니다.
+                                    <strong>LightGBM:</strong> Accuracy는 전체 예측 정확도, AUC-ROC은 분류 성능 지표입니다. 값이 높을수록 우수합니다.
                                 </p>
                             </div>
                         </div>
@@ -570,7 +603,7 @@ export default function MlModelInfo() {
 
     return (
         <div className="px-2 py-8 md:px-4">
-            <PageTitle>모델 예측정보 조회</PageTitle>
+            <PageTitle>ML 모델 정보</PageTitle>
 
             <div>
                 {/* 툴바 */}

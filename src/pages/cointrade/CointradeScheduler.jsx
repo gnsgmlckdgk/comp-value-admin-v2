@@ -42,15 +42,12 @@ export default function CointradeScheduler() {
     const [status, setStatus] = useState({
         buySchedulerEnabled: false,
         sellSchedulerEnabled: false,
-        buyNextRun: null,
-        buyCheckHours: 24,
+        scannerIntervalSeconds: 30,
         sellCheckSeconds: 10,
-        priceMonitorSeconds: 10,
         holdings: [],
         totalInvestment: 0,
         totalValuation: 0,
         totalProfitRate: 0,
-        avgUpProbability: 0
     });
 
     // Toast auto-hide
@@ -85,9 +82,6 @@ export default function CointradeScheduler() {
             let totalProfitRate = 0;
 
             // 3. 보유 종목이 있는 경우 현재가 조회하여 평가금액 갱신
-            let totalUpProb = 0;
-            let probCount = 0;
-
             if (holdings.length > 0) {
                 try {
                     const marketCodes = holdings.map(h => h.coinCode).join(',');
@@ -107,12 +101,6 @@ export default function CointradeScheduler() {
                             totalInvestment += (holding.totalAmount || 0);
                             totalValuation += valuation;
 
-                            // 상승 확률 합계 계산
-                            if (holding.upProbability !== undefined && holding.upProbability !== null) {
-                                totalUpProb += holding.upProbability;
-                                probCount++;
-                            }
-
                             return { ...holding, currentPrice };
                         });
 
@@ -125,12 +113,6 @@ export default function CointradeScheduler() {
                             totalInvestment += (holding.totalAmount || 0);
                             const valuation = holding.currentPrice ? holding.currentPrice * holding.quantity : (holding.totalAmount || 0);
                             totalValuation += valuation;
-
-                            // 상승 확률 합계 계산
-                            if (holding.upProbability !== undefined && holding.upProbability !== null) {
-                                totalUpProb += holding.upProbability;
-                                probCount++;
-                            }
                         });
                     }
                 } catch (tickerError) {
@@ -138,22 +120,16 @@ export default function CointradeScheduler() {
                 }
             }
 
-            // 평균 상승 확률 계산
-            const calculatedAvgUpProb = probCount > 0 ? totalUpProb / probCount : 0;
-
             // 상태 업데이트
             setStatus({
                 buySchedulerEnabled: schedulerStatus.buySchedulerEnabled || false,
                 sellSchedulerEnabled: schedulerStatus.sellSchedulerEnabled || false,
-                buyNextRun: schedulerStatus.buyNextRun || null,
-                buyCheckHours: schedulerStatus.buyCheckHours || 24,
+                scannerIntervalSeconds: schedulerStatus.scannerIntervalSeconds || 30,
                 sellCheckSeconds: schedulerStatus.sellCheckSeconds || 10,
-                priceMonitorSeconds: schedulerStatus.priceMonitorSeconds || 10,
                 holdings: holdings,
                 totalInvestment: totalInvestment,
                 totalValuation: totalValuation,
                 totalProfitRate: totalProfitRate,
-                avgUpProbability: calculatedAvgUpProb
             });
 
         } catch (e) {
@@ -545,13 +521,13 @@ export default function CointradeScheduler() {
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                            매수 스케줄러
+                            스캐너 / 매수
                         </h2>
                         <button
                             onClick={handleBuySchedulerToggle}
                             disabled={loading}
                             className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.buySchedulerEnabled
-                                ? 'bg-green-500 focus:ring-green-500'
+                                ? 'bg-blue-500 focus:ring-blue-500'
                                 : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
                                 } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
@@ -567,7 +543,7 @@ export default function CointradeScheduler() {
                             <span className="text-sm text-slate-600 dark:text-slate-400">상태</span>
                             <span
                                 className={`px-3 py-1 rounded-full text-xs font-medium ${status.buySchedulerEnabled
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                                     : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
                                     }`}
                             >
@@ -578,16 +554,16 @@ export default function CointradeScheduler() {
                         {status.buySchedulerEnabled && (
                             <>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">실행 주기</span>
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">스캐너 주기</span>
                                     <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                                        {status.buyCheckHours}시간마다
+                                        {status.scannerIntervalSeconds}초마다
                                     </span>
                                 </div>
 
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">다음 실행</span>
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">동작 방식</span>
                                     <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                                        {formatNextRun(status.buyNextRun)}
+                                        연속 루프
                                     </span>
                                 </div>
                             </>
@@ -605,7 +581,7 @@ export default function CointradeScheduler() {
                             onClick={handleSellSchedulerToggle}
                             disabled={loading}
                             className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.sellSchedulerEnabled
-                                ? 'bg-green-500 focus:ring-green-500'
+                                ? 'bg-blue-500 focus:ring-blue-500'
                                 : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
                                 } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
@@ -621,7 +597,7 @@ export default function CointradeScheduler() {
                             <span className="text-sm text-slate-600 dark:text-slate-400">상태</span>
                             <span
                                 className={`px-3 py-1 rounded-full text-xs font-medium ${status.sellSchedulerEnabled
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                                     : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
                                     }`}
                             >
@@ -632,15 +608,15 @@ export default function CointradeScheduler() {
                         {status.sellSchedulerEnabled && (
                             <>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">매도 체결확인 주기</span>
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">매도 체크 주기</span>
                                     <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
                                         {status.sellCheckSeconds}초마다
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">가격 모니터링 주기</span>
-                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                                        {status.priceMonitorSeconds}초마다
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">동작 방식</span>
+                                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                        연속 루프
                                     </span>
                                 </div>
                             </>
@@ -704,7 +680,7 @@ export default function CointradeScheduler() {
                             매수 프로세스 진행도
                         </h2>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${buyProcessStatus.status === 'running' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 animate-pulse' :
-                            buyProcessStatus.status === 'finished' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                            buyProcessStatus.status === 'finished' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
                                 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                             }`}>
                             {buyProcessStatus.status}
@@ -778,7 +754,7 @@ export default function CointradeScheduler() {
                             매도 프로세스 진행도
                         </h2>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${sellProcessStatus.status === 'running' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 animate-pulse' :
-                            sellProcessStatus.status === 'finished' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                            sellProcessStatus.status === 'finished' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
                                 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                             }`}>
                             {sellProcessStatus.status}
@@ -860,7 +836,7 @@ export default function CointradeScheduler() {
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {/* 보유 종목 수 */}
                     <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                         <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">보유 종목 수</div>
@@ -887,7 +863,7 @@ export default function CointradeScheduler() {
                             const diff = Math.floor(status.totalValuation - status.totalInvestment);
                             const isPositive = diff >= 0;
                             return (
-                                <div className={`text-xs font-medium mt-1 ${isPositive ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`}>
+                                <div className={`text-xs font-medium mt-1 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
                                     {isPositive ? '+' : ''}{formatNumberWithComma(diff)}원
                                 </div>
                             );
@@ -899,8 +875,8 @@ export default function CointradeScheduler() {
                         <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 수익률</div>
                         <div
                             className={`text-2xl font-bold ${status.totalProfitRate >= 0
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-blue-600 dark:text-blue-400'
+                                ? 'text-blue-600 dark:text-blue-400'
+                                : 'text-orange-600 dark:text-orange-400'
                                 }`}
                         >
                             {status.totalProfitRate >= 0 ? '+' : ''}
@@ -908,18 +884,29 @@ export default function CointradeScheduler() {
                         </div>
                     </div>
 
-                    {/* 평균 상승 확률 */}
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
-                        <div className="text-xs text-red-700 dark:text-red-400 mb-1">평균 상승 확률</div>
-                        <div className="text-2xl font-bold text-red-800 dark:text-red-300">
-                            {status.avgUpProbability ? (status.avgUpProbability * 100).toFixed(1) : '0.0'}%
+                    {/* 스캐너 상태 */}
+                    <div className={`p-4 rounded-lg border ${status.buySchedulerEnabled
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
+                        : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-700'
+                    }`}>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">스캐너 상태</div>
+                        <div className={`text-lg font-bold ${status.buySchedulerEnabled
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-slate-500 dark:text-slate-400'
+                        }`}>
+                            {status.buySchedulerEnabled ? '스캔 중' : '중지'}
                         </div>
+                        {status.buySchedulerEnabled && (
+                            <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                                {status.scannerIntervalSeconds}초 주기
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* 자동 새로고침 안내 */}
                 <div className="mt-4 text-xs text-slate-500 dark:text-slate-400 text-center">
-                    ⏱️ 30초마다 자동으로 갱신됩니다
+                    30초마다 자동으로 갱신됩니다
                 </div>
             </div>
 

@@ -221,7 +221,7 @@ export default function CointradeScheduler() {
         if (Date.now() < cooldowns.buy) return;
         setCooldowns(prev => ({ ...prev, buy: Date.now() + 10000 }));
         try {
-            const { data, error } = await send('/dart/api/cointrade/trade/buy/start', {}, 'GET');
+            const { data, error } = await send('/dart/api/cointrade/trade/buy/start', {}, 'POST');
             if (error) {
                 setToast('매수 프로세스 실행 실패: ' + error);
             } else if (data?.success) {
@@ -240,7 +240,7 @@ export default function CointradeScheduler() {
         if (Date.now() < cooldowns.sell) return;
         setCooldowns(prev => ({ ...prev, sell: Date.now() + 10000 }));
         try {
-            const { data, error } = await send('/dart/api/cointrade/trade/sell/start', {}, 'GET');
+            const { data, error } = await send('/dart/api/cointrade/trade/sell/start', {}, 'POST');
             if (error) {
                 setToast('매도 프로세스 실행 실패: ' + error);
             } else if (data?.success) {
@@ -259,7 +259,7 @@ export default function CointradeScheduler() {
         if (Date.now() < cooldowns.stop) return;
         setCooldowns(prev => ({ ...prev, stop: Date.now() + 10000 }));
         try {
-            const { data, error } = await send('/dart/api/cointrade/trade/stop', {}, 'GET');
+            const { data, error } = await send('/dart/api/cointrade/trade/stop', {}, 'POST');
             if (error) {
                 setToast('중단 요청 실패: ' + error);
             } else if (data?.success) {

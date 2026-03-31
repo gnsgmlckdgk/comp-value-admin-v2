@@ -502,16 +502,13 @@ export default function CointradeDashboard() {
                 setConfig({
                     maxHoldMinutes: parseInt(configMap.MAX_HOLD_MINUTES || 60)
                 });
-            }
 
-            // 2. 상태 조회 (스케줄러 상태만 즉시 반영, 금액/수익률은 보유종목 계산 후 반영)
-            const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
-            if (statusResponse.data?.success && statusResponse.data?.response) {
-                const resp = statusResponse.data.response;
+                // config에서 스캐너/매도 상태 설정
                 setStatus(prev => ({
                     ...prev,
-                    buySchedulerEnabled: resp.buySchedulerEnabled || false,
-                    sellSchedulerEnabled: resp.sellSchedulerEnabled || false,
+                    buySchedulerEnabled: configMap.SCANNER_ENABLED === 'true',
+                    sellSchedulerEnabled: configMap.SELL_ENABLED === 'true',
+                    paperTrading: configMap.PAPER_TRADING === 'true',
                 }));
             }
 
@@ -520,8 +517,10 @@ export default function CointradeDashboard() {
                 const balanceResponse = await send('/dart/api/cointrade/account/balance', {}, 'GET');
                 if (balanceResponse.data?.success && balanceResponse.data?.response) {
                     const resp = balanceResponse.data.response;
-                    if (resp.status === 'success' && resp.data?.krw_balance != null) {
-                        setKrwBalance(resp.data.krw_balance);
+                    // CoinTrader가 {"balance": 864796.68} 형태로 반환
+                    const bal = resp.balance ?? resp.data?.krw_balance ?? resp.data?.balance;
+                    if (bal != null) {
+                        setKrwBalance(bal);
                     }
                 }
             } catch (balanceError) {

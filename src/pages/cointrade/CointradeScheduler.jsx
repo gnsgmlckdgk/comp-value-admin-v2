@@ -148,23 +148,28 @@ export default function CointradeScheduler() {
     // Config API를 통한 토글 핸들러
     const handleConfigToggle = async (paramName, currentValue, label) => {
         const newValue = !currentValue;
-        setLoading(true);
         try {
+            // UI 즉시 반영 (낙관적 업데이트)
+            const stateKey = paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
+                : paramName === 'SELL_ENABLED' ? 'sellEnabled' : 'paperTrading';
+            setStatus(prev => ({ ...prev, [stateKey]: newValue }));
+
             const configList = [{ configKey: paramName, configValue: String(newValue) }];
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
             if (error) {
+                // 실패 시 롤백
+                setStatus(prev => ({ ...prev, [stateKey]: currentValue }));
                 setToast(`${label} 설정 실패: ${error}`);
             } else if (data?.success) {
-                setToast(`${label}${newValue ? ' 활성화' : ' 비활성화'} 되었습니다.`);
-                await fetchStatus();
+                setToast(`${label}${newValue ? ' 활성화' : ' 비활성화'}`);
             } else {
+                setStatus(prev => ({ ...prev, [stateKey]: currentValue }));
                 setToast(data?.message || '설정 변경에 실패했습니다.');
             }
         } catch (e) {
-            console.error(`${label} 토글 실패:`, e);
+            setStatus(prev => ({ ...prev, [paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
+                : paramName === 'SELL_ENABLED' ? 'sellEnabled' : 'paperTrading']: currentValue }));
             setToast(`${label} 설정 중 오류가 발생했습니다.`);
-        } finally {
-            setLoading(false);
         }
     };
 

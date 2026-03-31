@@ -152,7 +152,11 @@ export default function Backtest() {
         configList.forEach(c => {
             configMap[c.configKey || c.paramName] = c.configValue || c.paramValue;
         });
-        setPaperEnabled(configMap.PAPER_TRADING === 'true');
+        // PAPER_TRADING + SCANNER_ENABLED + SELL_ENABLED 모두 true여야 실행 중
+        const isRunning = configMap.PAPER_TRADING === 'true'
+            && configMap.SCANNER_ENABLED === 'true'
+            && configMap.SELL_ENABLED === 'true';
+        setPaperEnabled(isRunning);
         if (configMap.PAPER_TRADING_STARTED_AT) {
             setPaperStartedAt(configMap.PAPER_TRADING_STARTED_AT);
         }
@@ -214,6 +218,8 @@ export default function Backtest() {
         try {
             const configList = [
                 { configKey: 'PAPER_TRADING', configValue: 'false' },
+                { configKey: 'SCANNER_ENABLED', configValue: 'false' },
+                { configKey: 'SELL_ENABLED', configValue: 'false' },
             ];
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
             if (error) {

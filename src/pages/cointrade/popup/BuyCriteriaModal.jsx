@@ -102,9 +102,8 @@ export default function BuyCriteriaModal({ isOpen, onClose }) {
                         <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
                             <h5 className="font-semibold text-sm mb-2 text-slate-800 dark:text-slate-200">동작 방식</h5>
                             <ul className="list-disc list-inside text-sm space-y-1.5 text-slate-700 dark:text-slate-300">
-                                <li><strong>ML 활성화 시:</strong> 확률이 <code>ML_MIN_CONFIDENCE</code> 이상이면 매수 진행</li>
+                                <li><strong>ML 활성화 시:</strong> 매수 직전 즉석 학습 후, 확률이 <code>ML_MIN_CONFIDENCE</code> 이상이면 매수 진행</li>
                                 <li><strong>ML 비활성화 시:</strong> 스캐너 시그널만으로 바로 매수</li>
-                                <li><strong>자동 재학습:</strong> <code>ML_RETRAIN_INTERVAL_HOURS</code> 주기로 최신 데이터 반영</li>
                             </ul>
                         </div>
                     </section>

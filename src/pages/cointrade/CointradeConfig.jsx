@@ -35,8 +35,6 @@ const PARAM_GROUPS = {
         params: [
             { key: 'ML_ENABLED', label: 'ML 확인', type: 'toggle' },
             { key: 'ML_MIN_CONFIDENCE', label: '최소 확률', type: 'number', step: 0.01 },
-            { key: 'ML_RETRAIN_ENABLED', label: '자동 재학습', type: 'toggle' },
-            { key: 'ML_RETRAIN_INTERVAL_HOURS', label: '재학습 주기(시간)', type: 'number' },
             { key: 'ML_CANDLE_UNIT', label: '분봉 단위', type: 'number' },
             { key: 'ML_TRAIN_LOOKBACK_CANDLES', label: '학습 데이터 수', type: 'number' },
             { key: 'ML_FEATURE_WINDOW', label: '피처 윈도우', type: 'number' },
@@ -113,8 +111,6 @@ const PARAM_DESCRIPTIONS = {
     SCANNER_MAX_SIGNALS: '한 주기에 생성할 최대 시그널 수',
     ML_ENABLED: 'ML 모델을 사용하여 매수 시그널을 확인',
     ML_MIN_CONFIDENCE: 'ML 모델의 최소 예측 확률 (0~1)',
-    ML_RETRAIN_ENABLED: '자동 재학습 활성화',
-    ML_RETRAIN_INTERVAL_HOURS: '모델 재학습 주기 (시간)',
     ML_CANDLE_UNIT: '학습/예측에 사용할 분봉 단위 (분)',
     ML_TRAIN_LOOKBACK_CANDLES: '학습에 사용할 캔들 수',
     ML_FEATURE_WINDOW: '피처 생성에 사용할 윈도우 크기 (캔들 수)',

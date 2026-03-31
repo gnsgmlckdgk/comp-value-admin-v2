@@ -189,8 +189,6 @@ export default function Backtest() {
         try {
             const configList = [
                 { configKey: 'PAPER_TRADING', configValue: 'true' },
-                { configKey: 'SCANNER_ENABLED', configValue: 'true' },
-                { configKey: 'SELL_ENABLED', configValue: 'true' },
             ];
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
             if (error) {
@@ -214,8 +212,6 @@ export default function Backtest() {
         try {
             const configList = [
                 { configKey: 'PAPER_TRADING', configValue: 'false' },
-                { configKey: 'SCANNER_ENABLED', configValue: 'false' },
-                { configKey: 'SELL_ENABLED', configValue: 'false' },
             ];
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
             if (error) {

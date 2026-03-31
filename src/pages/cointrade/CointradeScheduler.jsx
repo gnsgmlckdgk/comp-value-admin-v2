@@ -45,7 +45,7 @@ export default function CointradeScheduler() {
 
     // 상태 조회 함수
     const fetchStatus = useCallback(async () => {
-        if (toggling) return; // 토글 요청 중에는 폴링 스킵 (낙관적 업데이트 보호)
+        if (togglingRef.current) return; // 토글 요청 중에는 폴링 스킵
         try {
             // 1. Config에서 SCANNER_ENABLED, SELL_ENABLED, PAPER_TRADING 읽기
             let scannerEnabled = false;
@@ -114,6 +114,9 @@ export default function CointradeScheduler() {
                 }
             }
 
+            // 토글 중이면 낙관적 업데이트를 보호하기 위해 setStatus 스킵
+            if (togglingRef.current) return;
+
             setStatus({
                 scannerEnabled,
                 sellEnabled,
@@ -126,7 +129,7 @@ export default function CointradeScheduler() {
         } catch (e) {
             console.error('상태 조회 오류:', e);
         }
-    }, [toggling]);
+    }, []);
 
     // 페이지 로드 시 + 15초마다 자동 새로고침
     useEffect(() => {
@@ -150,11 +153,12 @@ export default function CointradeScheduler() {
 
     // Config API를 통한 토글 핸들러
     const handleConfigToggle = async (paramName, currentValue, label) => {
-        if (toggling) return; // 이전 토글 요청 완료 전 중복 클릭 방지
+        if (togglingRef.current) return; // ref로 중복 클릭 방지 (state보다 즉시 반영)
+        togglingRef.current = true;
+        setToggling(true);
         const newValue = !currentValue;
         const stateKey = paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
             : paramName === 'SELL_ENABLED' ? 'sellEnabled' : 'paperTrading';
-        setToggling(true);
         try {
             // UI 즉시 반영 (낙관적 업데이트)
             setStatus(prev => ({ ...prev, [stateKey]: newValue }));
@@ -175,6 +179,7 @@ export default function CointradeScheduler() {
             setStatus(prev => ({ ...prev, [stateKey]: currentValue }));
             setToast(`${label} 설정 중 오류가 발생했습니다.`);
         } finally {
+            togglingRef.current = false;
             setToggling(false);
         }
     };

@@ -307,7 +307,7 @@ export default function Backtest() {
     // 보유종목의 현재 손익률 계산
     const getHoldingPL = (holding) => {
         const market = holding.coinCode || holding.coin_code;
-        const buyPrice = holding.avgBuyPrice || holding.avg_buy_price;
+        const buyPrice = holding.avgBuyPrice || holding.avg_buy_price || holding.buyPrice || holding.buy_price;
         const currentPrice = currentPrices[market];
         if (!buyPrice || !currentPrice) return null;
         return ((currentPrice - buyPrice) / buyPrice) * 100;
@@ -418,11 +418,11 @@ export default function Backtest() {
                             ) : holdings.map((h, i) => {
                                 const pl = getHoldingPL(h);
                                 const coinCode = h.coinCode || h.coin_code || '';
-                                const avgPrice = h.avgBuyPrice || h.avg_buy_price;
+                                const avgPrice = h.avgBuyPrice || h.avg_buy_price || h.buyPrice || h.buy_price;
                                 const qty = h.quantity || h.amount;
                                 const totalAmt = avgPrice && qty ? avgPrice * qty : null;
                                 const momentum = h.momentumScore ?? h.momentum_score;
-                                const mlProb = h.mlProbability ?? h.ml_probability;
+                                const mlProb = h.mlProbability ?? h.ml_probability ?? h.mlConfidence ?? h.ml_confidence;
                                 const reason = h.entryReason || h.entry_reason || h.reason;
                                 const maxHold = h.maxHoldUntil || h.max_hold_until;
 
@@ -531,7 +531,7 @@ export default function Backtest() {
                                 const plRate = h.profitLossRate || h.profit_loss_rate;
                                 const reason = h.reason || h.sell_reason;
                                 const momentum = h.momentumScore ?? h.momentum_score;
-                                const mlProb = h.mlProbability ?? h.ml_probability;
+                                const mlProb = h.mlProbability ?? h.ml_probability ?? h.mlConfidence ?? h.ml_confidence;
                                 const holdSec = h.holdDurationSec || h.hold_duration_sec;
                                 const createdAt = h.createdAt || h.created_at;
 

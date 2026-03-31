@@ -12,9 +12,28 @@ const formatNumberWithComma = (value) => {
     return num.toLocaleString('en-US');
 };
 
+// 토글 버튼 — 컴포넌트 외부 정의 (인라인이면 re-render마다 DOM 재생성되어 클릭 씹힘)
+const ToggleSwitch = ({ enabled, onClick, loading }) => (
+    <button
+        onClick={onClick}
+        disabled={loading}
+        className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+            enabled
+                ? 'bg-blue-500 focus:ring-blue-500'
+                : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
+        } ${loading ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
+    >
+        <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                enabled ? 'translate-x-8' : 'translate-x-1'
+            } ${loading ? 'animate-pulse' : ''}`}
+        />
+    </button>
+);
+
 /**
  * 코인 자동매매 스케줄러 관리 페이지
- * v3.0 - config API 기반 토글, 로그 제거
+ * v3.1 - 토글 race condition 수정, 로딩 인디케이터 추가
  */
 export default function CointradeScheduler() {
     const [toast, setToast] = useState(null);
@@ -28,9 +47,11 @@ export default function CointradeScheduler() {
         totalProfitRate: 0,
     });
 
-    // 토글 요청 중 fetchStatus 충돌 방지 (ref: 이미 실행 중인 fetchStatus에서도 최신 값 참조 가능)
-    const togglingRef = useRef(false);
-    const [toggling, setToggling] = useState(false);
+    // fetchStatus가 stale 데이터로 덮어쓰는 것을 방지하는 버전 카운터
+    // 토글할 때마다 증가 → 실행 중이던 fetchStatus는 자기가 시작할 때 캡처한 버전과 현재 버전이 다르면 setStatus 스킵
+    const statusVersionRef = useRef(0);
+    // 어떤 토글이 처리 중인지 추적 (key: stateKey, 스피너 표시용)
+    const [togglingKey, setTogglingKey] = useState(null);
     // 쿨타임 상태 (타임스탬프)
     const [cooldowns, setCooldowns] = useState({ buy: 0, sell: 0, stop: 0 });
     // 남은 시간 상태 (초)
@@ -45,7 +66,7 @@ export default function CointradeScheduler() {
 
     // 상태 조회 함수
     const fetchStatus = useCallback(async () => {
-        if (togglingRef.current) return; // 토글 요청 중에는 폴링 스킵
+        const myVersion = statusVersionRef.current;
         try {
             // 1. Config에서 SCANNER_ENABLED, SELL_ENABLED, PAPER_TRADING 읽기
             let scannerEnabled = false;
@@ -114,8 +135,8 @@ export default function CointradeScheduler() {
                 }
             }
 
-            // 토글 중이면 낙관적 업데이트를 보호하기 위해 setStatus 스킵
-            if (togglingRef.current) return;
+            // 실행 도중 토글이 발생했으면 stale 데이터로 덮어쓰지 않음
+            if (myVersion !== statusVersionRef.current) return;
 
             setStatus({
                 scannerEnabled,
@@ -138,27 +159,36 @@ export default function CointradeScheduler() {
         return () => clearInterval(interval);
     }, [fetchStatus]);
 
-    // 쿨타임 타이머
+    // 쿨타임 타이머 (값이 바뀔 때만 re-render)
     useEffect(() => {
+        const hasCooldown = cooldowns.buy > 0 || cooldowns.sell > 0 || cooldowns.stop > 0;
+        if (!hasCooldown) return;
         const timer = setInterval(() => {
             const now = Date.now();
-            setRemainingTimes({
+            const next = {
                 buy: Math.max(0, Math.ceil((cooldowns.buy - now) / 1000)),
                 sell: Math.max(0, Math.ceil((cooldowns.sell - now) / 1000)),
                 stop: Math.max(0, Math.ceil((cooldowns.stop - now) / 1000)),
+            };
+            setRemainingTimes(prev => {
+                if (prev.buy === next.buy && prev.sell === next.sell && prev.stop === next.stop) return prev;
+                return next;
             });
-        }, 100);
+        }, 200);
         return () => clearInterval(timer);
     }, [cooldowns]);
 
-    // Config API를 통한 토글 핸들러
+    // Config API를 통한 토글 핸들러 — 항상 즉시 반응, fetchStatus와 충돌 없음
     const handleConfigToggle = async (paramName, currentValue, label) => {
-        if (togglingRef.current) return; // ref로 중복 클릭 방지 (state보다 즉시 반영)
-        togglingRef.current = true;
-        setToggling(true);
-        const newValue = !currentValue;
+        if (togglingKey) return; // 다른 토글 처리 중이면 스킵
         const stateKey = paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
             : paramName === 'SELL_ENABLED' ? 'sellEnabled' : 'paperTrading';
+        const newValue = !currentValue;
+
+        // 실행 중인 fetchStatus의 stale 데이터 무효화
+        statusVersionRef.current++;
+        setTogglingKey(stateKey);
+
         try {
             // UI 즉시 반영 (낙관적 업데이트)
             setStatus(prev => ({ ...prev, [stateKey]: newValue }));
@@ -166,7 +196,6 @@ export default function CointradeScheduler() {
             const configList = [{ configKey: paramName, configValue: String(newValue) }];
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
             if (error) {
-                // 실패 시 롤백
                 setStatus(prev => ({ ...prev, [stateKey]: currentValue }));
                 setToast(`${label} 설정 실패: ${error}`);
             } else if (data?.success) {
@@ -179,8 +208,7 @@ export default function CointradeScheduler() {
             setStatus(prev => ({ ...prev, [stateKey]: currentValue }));
             setToast(`${label} 설정 중 오류가 발생했습니다.`);
         } finally {
-            togglingRef.current = false;
-            setToggling(false);
+            setTogglingKey(null);
         }
     };
 
@@ -245,25 +273,6 @@ export default function CointradeScheduler() {
         }
     };
 
-    // 토글 버튼 컴포넌트
-    const ToggleSwitch = ({ enabled, onClick }) => (
-        <button
-            onClick={onClick}
-            disabled={toggling}
-            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                enabled
-                    ? 'bg-blue-500 focus:ring-blue-500'
-                    : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
-            } ${toggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        >
-            <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                    enabled ? 'translate-x-8' : 'translate-x-1'
-                }`}
-            />
-        </button>
-    );
-
     // 보유종목의 남은 보유시간 계산 (분)
     const getHoldingRemainingMinutes = (holding) => {
         if (!holding.buyDate) return null;
@@ -290,10 +299,10 @@ export default function CointradeScheduler() {
                                     ? 'text-blue-600 dark:text-blue-400'
                                     : 'text-slate-500 dark:text-slate-400'
                             }`}>
-                                {status.scannerEnabled ? '활성' : '비활성'}
+                                {togglingKey === 'scannerEnabled' ? '처리 중...' : status.scannerEnabled ? '활성' : '비활성'}
                             </span>
                         </div>
-                        <ToggleSwitch enabled={status.scannerEnabled} onClick={handleScannerToggle} />
+                        <ToggleSwitch enabled={status.scannerEnabled} onClick={handleScannerToggle} loading={togglingKey === 'scannerEnabled'} />
                     </div>
                 </div>
 
@@ -307,10 +316,10 @@ export default function CointradeScheduler() {
                                     ? 'text-blue-600 dark:text-blue-400'
                                     : 'text-slate-500 dark:text-slate-400'
                             }`}>
-                                {status.sellEnabled ? '활성' : '비활성'}
+                                {togglingKey === 'sellEnabled' ? '처리 중...' : status.sellEnabled ? '활성' : '비활성'}
                             </span>
                         </div>
-                        <ToggleSwitch enabled={status.sellEnabled} onClick={handleSellToggle} />
+                        <ToggleSwitch enabled={status.sellEnabled} onClick={handleSellToggle} loading={togglingKey === 'sellEnabled'} />
                     </div>
                 </div>
 
@@ -324,10 +333,10 @@ export default function CointradeScheduler() {
                                     ? 'text-amber-600 dark:text-amber-400'
                                     : 'text-slate-500 dark:text-slate-400'
                             }`}>
-                                {status.paperTrading ? '모의 매매' : '실매매'}
+                                {togglingKey === 'paperTrading' ? '처리 중...' : status.paperTrading ? '모의 매매' : '실매매'}
                             </span>
                         </div>
-                        <ToggleSwitch enabled={status.paperTrading} onClick={handlePaperTradingToggle} />
+                        <ToggleSwitch enabled={status.paperTrading} onClick={handlePaperTradingToggle} loading={togglingKey === 'paperTrading'} />
                     </div>
                 </div>
             </div>

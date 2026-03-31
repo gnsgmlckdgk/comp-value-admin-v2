@@ -72,7 +72,7 @@ export default function SellCriteriaModal({ isOpen, onClose }) {
                             현재 수익률이 설정한 목표에 도달하면 즉시 매도하여 수익을 확정합니다.
                         </p>
                         <ul className="list-disc list-inside text-sm space-y-1.5 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                            <li><strong>조건:</strong> 현재 수익률 >= <code>TAKE_PROFIT_PCT</code></li>
+                            <li><strong>조건:</strong> 현재 수익률 &gt;= <code>TAKE_PROFIT_PCT</code></li>
                             <li><strong>실행:</strong> 시장가 전량 매도</li>
                             <li className="list-none pt-2 font-semibold text-blue-600 dark:text-blue-400 italic">"목표 수익에 도달하면 욕심 부리지 않고 확정합니다."</li>
                         </ul>

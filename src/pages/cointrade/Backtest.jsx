@@ -174,7 +174,10 @@ export default function Backtest() {
 
     // 현재가 조회 (보유종목 손익 계산용)
     const fetchPrices = async () => {
-        const { data, error } = await send('/dart/api/upbit/v1/ticker', {}, 'GET');
+        if (holdings.length === 0) return;
+        const markets = holdings.map(h => h.coinCode || h.coin_code).filter(Boolean).join(',');
+        if (!markets) return;
+        const { data, error } = await send(`/dart/api/upbit/v1/ticker?markets=${markets}`, {}, 'GET');
         if (error || !data?.success) return;
         const priceMap = {};
         (data.response || []).forEach(t => {
@@ -399,19 +402,19 @@ export default function Backtest() {
                             <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300">
                                 <th className="px-4 py-3 text-left font-semibold">종목</th>
                                 <th className="px-4 py-3 text-right font-semibold">매수가</th>
+                                <th className="px-4 py-3 text-right font-semibold">현재가</th>
+                                <th className="px-4 py-3 text-right font-semibold">수익률</th>
                                 <th className="px-4 py-3 text-right font-semibold">수량</th>
                                 <th className="px-4 py-3 text-right font-semibold">금액</th>
                                 <th className="px-4 py-3 text-center font-semibold">모멘텀</th>
                                 <th className="px-4 py-3 text-center font-semibold">ML확률</th>
-                                <th className="px-4 py-3 text-left font-semibold">진입사유</th>
                                 <th className="px-4 py-3 text-center font-semibold">남은시간</th>
-                                <th className="px-4 py-3 text-right font-semibold">현재손익%</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {holdings.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
+                                    <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
                                         보유종목이 없습니다
                                     </td>
                                 </tr>
@@ -423,8 +426,8 @@ export default function Backtest() {
                                 const totalAmt = avgPrice && qty ? avgPrice * qty : null;
                                 const momentum = h.momentumScore ?? h.momentum_score;
                                 const mlProb = h.mlProbability ?? h.ml_probability ?? h.mlConfidence ?? h.ml_confidence;
-                                const reason = h.entryReason || h.entry_reason || h.reason;
                                 const maxHold = h.maxHoldUntil || h.max_hold_until;
+                                const curPrice = currentPrices[coinCode];
 
                                 return (
                                     <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
@@ -432,7 +435,13 @@ export default function Backtest() {
                                             {coinCode.replace('KRW-', '')}
                                         </td>
                                         <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">
-                                            {avgPrice != null ? formatNumber(Math.round(avgPrice)) : '-'}
+                                            {avgPrice != null ? formatNumber(avgPrice) : '-'}
+                                        </td>
+                                        <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">
+                                            {curPrice != null ? formatNumber(curPrice) : '-'}
+                                        </td>
+                                        <td className={`px-4 py-3 text-right font-bold ${plColor(pl)}`}>
+                                            {pl != null ? `${pl >= 0 ? '+' : ''}${pl.toFixed(2)}%` : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">
                                             {qty != null ? Number(qty).toFixed(4) : '-'}
@@ -441,23 +450,13 @@ export default function Backtest() {
                                             {totalAmt != null ? formatNumber(Math.round(totalAmt)) + '원' : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">
-                                            {momentum != null ? Number(momentum).toFixed(1) : '-'}
+                                            {momentum != null ? Number(momentum).toFixed(2) : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">
                                             {mlProb != null ? (Number(mlProb) * 100).toFixed(1) + '%' : '-'}
                                         </td>
-                                        <td className="px-4 py-3 text-left">
-                                            {reason ? (
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(reason)}`}>
-                                                    {getReasonLabel(reason)}
-                                                </span>
-                                            ) : '-'}
-                                        </td>
                                         <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-400">
                                             {maxHold ? formatRemainingTime(maxHold) : '-'}
-                                        </td>
-                                        <td className={`px-4 py-3 text-right font-medium ${plColor(pl)}`}>
-                                            {pl != null ? `${pl >= 0 ? '+' : ''}${pl.toFixed(2)}%` : '-'}
                                         </td>
                                     </tr>
                                 );

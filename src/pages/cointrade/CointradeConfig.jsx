@@ -37,7 +37,8 @@ const PARAM_GROUPS = {
             { key: 'ML_MIN_CONFIDENCE', label: '최소 확률', type: 'number', step: 0.01 },
             { key: 'ML_CANDLE_UNIT', label: '분봉 단위', type: 'number' },
             { key: 'ML_TRAIN_LOOKBACK_CANDLES', label: '학습 데이터 수', type: 'number' },
-            { key: 'ML_FEATURE_WINDOW', label: '피처 윈도우', type: 'number' },
+            { key: 'ML_FUTURE_CANDLES', label: '예측 캔들 수', type: 'number' },
+            { key: 'ML_RISE_THRESHOLD_PCT', label: '상승 기준(%)', type: 'number', step: 0.1 },
         ]
     },
     BUY: {
@@ -113,7 +114,8 @@ const PARAM_DESCRIPTIONS = {
     ML_MIN_CONFIDENCE: 'ML 모델의 최소 예측 확률 (0~1)',
     ML_CANDLE_UNIT: '학습/예측에 사용할 분봉 단위 (분)',
     ML_TRAIN_LOOKBACK_CANDLES: '학습에 사용할 캔들 수',
-    ML_FEATURE_WINDOW: '피처 생성에 사용할 윈도우 크기 (캔들 수)',
+    ML_FUTURE_CANDLES: '예측 대상 기간 (캔들 수, 5분봉 기준 24=2시간, 12=1시간)',
+    ML_RISE_THRESHOLD_PCT: '상승 판단 기준 % (낮추면 매수 빈도↑, 높이면 정확도↑)',
     BUY_ENABLED: '매수 기능 활성화',
     BUY_AMOUNT_PER_COIN: '한 종목당 매수 금액 (원)',
     BUY_MAX_CONCURRENT: '동시에 보유할 수 있는 최대 종목 수',

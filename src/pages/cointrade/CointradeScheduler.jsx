@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { send } from '@/util/ClientUtil';
 import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
@@ -12,43 +12,27 @@ const formatNumberWithComma = (value) => {
     return num.toLocaleString('en-US');
 };
 
-// 롤링 버퍼에서 새로운 로그 찾기
-const findNewLogs = (prevLogs, serverLogs) => {
-    if (serverLogs.length === 0) return [];
-
-    // 이전 로그의 마지막 부분에서 겹치는 지점 찾기
-    for (let i = Math.max(0, prevLogs.length - 100); i < prevLogs.length; i++) {
-        const searchText = prevLogs[i];
-        const serverIdx = serverLogs.indexOf(searchText);
-        if (serverIdx !== -1 && serverIdx < serverLogs.length - 1) {
-            // 겹치는 지점 발견: 그 이후만 추가
-            return serverLogs.slice(serverIdx + 1);
-        }
-    }
-
-    // 겹치는 부분 없음: 서버 로그에서 이전에 없던 새 로그만 추출
-    const prevSet = new Set(prevLogs);
-    const newLogs = serverLogs.filter(log => !prevSet.has(log));
-    return newLogs.length > 0 ? newLogs : serverLogs;
-};
-
 /**
  * 코인 자동매매 스케줄러 관리 페이지
- * v2.1 - 만료 임박, 급등 확률 정보 포함
+ * v3.0 - config API 기반 토글, 로그 제거
  */
 export default function CointradeScheduler() {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
     const [status, setStatus] = useState({
-        buySchedulerEnabled: false,
-        sellSchedulerEnabled: false,
-        scannerIntervalSeconds: 30,
-        sellCheckSeconds: 10,
+        scannerEnabled: false,
+        sellEnabled: false,
+        paperTrading: false,
         holdings: [],
         totalInvestment: 0,
         totalValuation: 0,
         totalProfitRate: 0,
     });
+
+    // 쿨타임 상태 (타임스탬프)
+    const [cooldowns, setCooldowns] = useState({ buy: 0, sell: 0, stop: 0 });
+    // 남은 시간 상태 (초)
+    const [remainingTimes, setRemainingTimes] = useState({ buy: 0, sell: 0, stop: 0 });
 
     // Toast auto-hide
     useEffect(() => {
@@ -60,23 +44,31 @@ export default function CointradeScheduler() {
     // 상태 조회 함수
     const fetchStatus = useCallback(async () => {
         try {
-            // 1. 스케줄러 상태 조회
-            const statusResponse = await send('/dart/api/cointrade/status', {}, 'GET');
-            let schedulerStatus = {};
+            // 1. Config에서 SCANNER_ENABLED, SELL_ENABLED, PAPER_TRADING 읽기
+            let scannerEnabled = false;
+            let sellEnabled = false;
+            let paperTrading = false;
 
-            if (statusResponse.data?.success && statusResponse.data?.response) {
-                schedulerStatus = statusResponse.data.response;
+            const configResponse = await send('/dart/api/cointrade/config', {}, 'GET');
+            if (configResponse.data?.success && configResponse.data?.response) {
+                const configMap = {};
+                configResponse.data.response.forEach(config => {
+                    const key = config.configKey || config.paramName;
+                    const value = config.configValue || config.paramValue;
+                    configMap[key] = value;
+                });
+                scannerEnabled = configMap.SCANNER_ENABLED === 'true';
+                sellEnabled = configMap.SELL_ENABLED === 'true';
+                paperTrading = configMap.PAPER_TRADING === 'true';
             }
 
-            // 2. 보유 종목 조회 (별도 API 호출)
+            // 2. 보유 종목 조회
             const holdingsResponse = await send('/dart/api/cointrade/holdings', {}, 'GET');
             let holdings = [];
-
             if (holdingsResponse.data?.success && holdingsResponse.data?.response) {
                 holdings = holdingsResponse.data.response;
             }
 
-            // 초기값 설정
             let totalInvestment = 0;
             let totalValuation = 0;
             let totalProfitRate = 0;
@@ -93,14 +85,11 @@ export default function CointradeScheduler() {
                             tickerMap[ticker.market] = ticker.trade_price;
                         });
 
-                        // 재계산
                         holdings = holdings.map(holding => {
                             const currentPrice = tickerMap[holding.coinCode] || holding.currentPrice;
                             const valuation = currentPrice ? currentPrice * holding.quantity : (holding.totalAmount || 0);
-
                             totalInvestment += (holding.totalAmount || 0);
                             totalValuation += valuation;
-
                             return { ...holding, currentPrice };
                         });
 
@@ -108,280 +97,40 @@ export default function CointradeScheduler() {
                             ? ((totalValuation - totalInvestment) / totalInvestment) * 100
                             : 0;
                     } else {
-                        // 티커 조회 실패 시 기존 데이터로 계산
                         holdings.forEach(holding => {
                             totalInvestment += (holding.totalAmount || 0);
                             const valuation = holding.currentPrice ? holding.currentPrice * holding.quantity : (holding.totalAmount || 0);
                             totalValuation += valuation;
                         });
+                        totalProfitRate = totalInvestment > 0
+                            ? ((totalValuation - totalInvestment) / totalInvestment) * 100
+                            : 0;
                     }
                 } catch (tickerError) {
                     console.error('현재가 조회 실패:', tickerError);
                 }
             }
 
-            // 상태 업데이트
             setStatus({
-                buySchedulerEnabled: schedulerStatus.buySchedulerEnabled || false,
-                sellSchedulerEnabled: schedulerStatus.sellSchedulerEnabled || false,
-                scannerIntervalSeconds: schedulerStatus.scannerIntervalSeconds || 30,
-                sellCheckSeconds: schedulerStatus.sellCheckSeconds || 10,
-                holdings: holdings,
-                totalInvestment: totalInvestment,
-                totalValuation: totalValuation,
-                totalProfitRate: totalProfitRate,
+                scannerEnabled,
+                sellEnabled,
+                paperTrading,
+                holdings,
+                totalInvestment,
+                totalValuation,
+                totalProfitRate,
             });
-
         } catch (e) {
             console.error('상태 조회 오류:', e);
         }
     }, []);
 
-    // 페이지 로드 시 + 30초마다 자동 새로고침
+    // 페이지 로드 시 + 15초마다 자동 새로고침
     useEffect(() => {
         fetchStatus();
-        const interval = setInterval(fetchStatus, 30000); // 30초
+        const interval = setInterval(fetchStatus, 15000);
         return () => clearInterval(interval);
     }, [fetchStatus]);
-
-    // 로그 복사
-    const handleCopyLogs = async (logs) => {
-        if (!logs || logs.length === 0) {
-            setToast('복사할 로그가 없습니다.');
-            return;
-        }
-
-        try {
-            const logText = logs.map(log => `[${log.time}] ${log.message}`).join('\n');
-            await navigator.clipboard.writeText(logText);
-            setToast('로그가 클립보드에 복사되었습니다.');
-        } catch (err) {
-            console.error('로그 복사 실패:', err);
-            setToast('로그 복사에 실패했습니다.');
-        }
-    };
-
-    // 매수 스케줄러 토글
-    const handleBuySchedulerToggle = async () => {
-        const newValue = !status.buySchedulerEnabled;
-        setLoading(true);
-
-        try {
-            const { data, error } = await send(
-                '/dart/api/cointrade/scheduler/buy',
-                { enabled: newValue },
-                'PUT'
-            );
-
-            if (error) {
-                setToast('매수 스케줄러 설정 실패: ' + error);
-            } else if (data?.success) {
-                setToast(`매수 스케줄러가 ${newValue ? '활성화' : '비활성화'} 되었습니다.`);
-
-                // 스케줄러 재로딩 호출
-                try {
-                    await send('/dart/api/cointrade/scheduler/reload', {}, 'POST');
-                } catch (reloadError) {
-                    console.error('스케줄러 재로딩 실패:', reloadError);
-                }
-
-                await fetchStatus(); // 상태 갱신
-            }
-        } catch (e) {
-            console.error('매수 스케줄러 토글 실패:', e);
-            setToast('매수 스케줄러 설정 중 오류가 발생했습니다.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // 매도 스케줄러 토글
-    const handleSellSchedulerToggle = async () => {
-        const newValue = !status.sellSchedulerEnabled;
-        setLoading(true);
-
-        try {
-            const { data, error } = await send(
-                '/dart/api/cointrade/scheduler/sell',
-                { enabled: newValue },
-                'PUT'
-            );
-
-            if (error) {
-                setToast('매도 스케줄러 설정 실패: ' + error);
-            } else if (data?.success) {
-                setToast(`매도 스케줄러가 ${newValue ? '활성화' : '비활성화'} 되었습니다.`);
-
-                // 스케줄러 재로딩 호출
-                try {
-                    await send('/dart/api/cointrade/scheduler/reload', {}, 'POST');
-                } catch (reloadError) {
-                    console.error('스케줄러 재로딩 실패:', reloadError);
-                }
-
-                await fetchStatus(); // 상태 갱신
-            }
-        } catch (e) {
-            console.error('매도 스케줄러 토글 실패:', e);
-            setToast('매도 스케줄러 설정 중 오류가 발생했습니다.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // 수동 새로고침
-    const handleRefresh = () => {
-        fetchStatus();
-        setToast('상태가 갱신되었습니다.');
-    };
-
-    // 쿨타임 상태 (타임스탬프)
-    const [cooldowns, setCooldowns] = useState({
-        buy: 0,
-        sell: 0,
-        stop: 0
-    });
-
-    // 남은 시간 상태 (초)
-    const [remainingTimes, setRemainingTimes] = useState({
-        buy: 0,
-        sell: 0,
-        stop: 0
-    });
-
-    // 매수 프로세스 상태 모니터링
-    const [buyProcessStatus, setBuyProcessStatus] = useState({
-        status: 'idle',
-        percent: 0,
-        message: '',
-        last_updated: '',
-        logs: []
-    });
-    const [buyProcessLogs, setBuyProcessLogs] = useState([]);
-    const buyLogContainerRef = useRef(null);
-    const buyLastServerLogsRef = useRef([]);
-    const buyPrevStatusRef = useRef('idle'); // 이전 상태 추적
-
-    // 매도 프로세스 상태 모니터링
-    const [sellProcessStatus, setSellProcessStatus] = useState({
-        status: 'idle',
-        percent: 0,
-        message: '',
-        last_updated: '',
-        logs: []
-    });
-    const [sellProcessLogs, setSellProcessLogs] = useState([]);
-    const sellLogContainerRef = useRef(null);
-    const sellLastServerLogsRef = useRef([]);
-    const sellPrevStatusRef = useRef('idle'); // 이전 상태 추적
-
-    // 로그 자동 스크롤
-    useEffect(() => {
-        if (buyLogContainerRef.current) {
-            buyLogContainerRef.current.scrollTop = buyLogContainerRef.current.scrollHeight;
-        }
-    }, [buyProcessLogs]);
-
-    useEffect(() => {
-        if (sellLogContainerRef.current) {
-            sellLogContainerRef.current.scrollTop = sellLogContainerRef.current.scrollHeight;
-        }
-    }, [sellProcessLogs]);
-
-    // 프로세스 상태 폴링 (500ms 간격으로 단축하여 로그 누락 방지)
-    useEffect(() => {
-        const fetchProcessStatus = async (mode) => {
-            try {
-                const { data } = await send(`/dart/api/cointrade/log/process/status?mode=${mode}`, {}, 'GET');
-                if (data?.success && data?.response) {
-                    const resp = data.response;
-                    const serverLogs = resp.logs || [];
-
-                    const setStatus = mode === 'buy' ? setBuyProcessStatus : setSellProcessStatus;
-                    const setLogs = mode === 'buy' ? setBuyProcessLogs : setSellProcessLogs;
-                    const lastServerLogsRef = mode === 'buy' ? buyLastServerLogsRef : sellLastServerLogsRef;
-                    const prevStatusRef = mode === 'buy' ? buyPrevStatusRef : sellPrevStatusRef;
-
-                    // 상태 변경 감지 (running → idle 또는 finished → idle로 변경될 때만 초기화)
-                    const statusChanged = prevStatusRef.current !== 'idle' && resp.status === 'idle';
-                    prevStatusRef.current = resp.status;
-
-                    // 상태 업데이트
-                    setStatus(resp);
-
-                    // 초기화 로직: 상태가 idle로 돌아갔을 때만 (프로세스 종료)
-                    if (statusChanged) {
-                        setLogs([]);
-                        lastServerLogsRef.current = [];
-                        return; // 더 이상 로그 처리하지 않음
-                    }
-
-                    // 로그 처리 (개선된 로직)
-                    const prevServerLogs = lastServerLogsRef.current;
-
-                    // 서버 로그가 변경되었는지 확인
-                    if (JSON.stringify(prevServerLogs) === JSON.stringify(serverLogs)) {
-                        // 변경 없음 - 스킵
-                        return;
-                    }
-
-                    let newLogsToAdd = [];
-
-                    // Case 1: 최초 로그 수신
-                    if (prevServerLogs.length === 0 && serverLogs.length > 0) {
-                        newLogsToAdd = serverLogs;
-                    }
-                    // Case 2: 서버 로그가 늘어난 경우 (정상적인 append)
-                    else if (serverLogs.length > prevServerLogs.length) {
-                        // 이전 로그가 서버 로그의 앞부분과 일치하는지 확인
-                        const isSequential = prevServerLogs.every((log, idx) => log === serverLogs[idx]);
-
-                        if (isSequential) {
-                            // 순차적 증가: 새로운 로그만 추가
-                            newLogsToAdd = serverLogs.slice(prevServerLogs.length);
-                        } else {
-                            // 버퍼가 롤링됨: 겹치는 부분 찾기
-                            newLogsToAdd = findNewLogs(prevServerLogs, serverLogs);
-                        }
-                    }
-                    // Case 3: 서버 로그가 줄어든 경우 (리셋)
-                    else if (serverLogs.length < prevServerLogs.length) {
-                        newLogsToAdd = serverLogs;
-                    }
-                    // Case 4: 길이는 같지만 내용이 다른 경우 (롤링 버퍼)
-                    else if (serverLogs.length === prevServerLogs.length) {
-                        // 이미 JSON.stringify로 내용이 다름을 확인했으므로
-                        // 롤링 버퍼에서 새로운 로그 찾기
-                        newLogsToAdd = findNewLogs(prevServerLogs, serverLogs);
-                    }
-
-                    if (newLogsToAdd.length > 0) {
-                        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-                        const formattedLogs = newLogsToAdd.map(msg => ({
-                            time: timeStr,
-                            message: msg
-                        }));
-
-                        setLogs(prev => {
-                            const combined = [...prev, ...formattedLogs];
-                            return combined.slice(-1000); // 최대 1000개 유지
-                        });
-                    }
-
-                    lastServerLogsRef.current = serverLogs;
-                }
-            } catch (e) {
-                console.error(`${mode} 프로세스 상태 조회 실패:`, e);
-            }
-        };
-
-        const interval = setInterval(() => {
-            fetchProcessStatus('buy');
-            fetchProcessStatus('sell');
-        }, 3000); // 3초마다
-
-        return () => clearInterval(interval);
-    }, []); // 의존성 배열 제거 - 인터벌 재설정 방지 (가장 중요한 수정!)
 
     // 쿨타임 타이머
     useEffect(() => {
@@ -390,20 +139,43 @@ export default function CointradeScheduler() {
             setRemainingTimes({
                 buy: Math.max(0, Math.ceil((cooldowns.buy - now) / 1000)),
                 sell: Math.max(0, Math.ceil((cooldowns.sell - now) / 1000)),
-                stop: Math.max(0, Math.ceil((cooldowns.stop - now) / 1000))
+                stop: Math.max(0, Math.ceil((cooldowns.stop - now) / 1000)),
             });
-        }, 100); // 0.1초마다 갱신하여 반응성 향상
-
+        }, 100);
         return () => clearInterval(timer);
     }, [cooldowns]);
+
+    // Config API를 통한 토글 핸들러
+    const handleConfigToggle = async (paramName, currentValue, label) => {
+        const newValue = !currentValue;
+        setLoading(true);
+        try {
+            const configList = [{ configKey: paramName, configValue: String(newValue) }];
+            const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
+            if (error) {
+                setToast(`${label} 설정 실패: ${error}`);
+            } else if (data?.success) {
+                setToast(`${label}${newValue ? ' 활성화' : ' 비활성화'} 되었습니다.`);
+                await fetchStatus();
+            } else {
+                setToast(data?.message || '설정 변경에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error(`${label} 토글 실패:`, e);
+            setToast(`${label} 설정 중 오류가 발생했습니다.`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleScannerToggle = () => handleConfigToggle('SCANNER_ENABLED', status.scannerEnabled, '스캐너');
+    const handleSellToggle = () => handleConfigToggle('SELL_ENABLED', status.sellEnabled, '매도');
+    const handlePaperTradingToggle = () => handleConfigToggle('PAPER_TRADING', status.paperTrading, '페이퍼 트레이딩');
 
     // 매수 프로세스 수동 실행
     const handleManualBuy = async () => {
         if (Date.now() < cooldowns.buy) return;
-
-        // 쿨타임 설정 (10초)
         setCooldowns(prev => ({ ...prev, buy: Date.now() + 10000 }));
-
         try {
             const { data, error } = await send('/dart/api/cointrade/trade/buy/start', {}, 'GET');
             if (error) {
@@ -422,10 +194,7 @@ export default function CointradeScheduler() {
     // 매도 프로세스 수동 실행
     const handleManualSell = async () => {
         if (Date.now() < cooldowns.sell) return;
-
-        // 쿨타임 설정 (10초)
         setCooldowns(prev => ({ ...prev, sell: Date.now() + 10000 }));
-
         try {
             const { data, error } = await send('/dart/api/cointrade/trade/sell/start', {}, 'GET');
             if (error) {
@@ -444,10 +213,7 @@ export default function CointradeScheduler() {
     // 프로세스 강제 중단
     const handleForceStop = async () => {
         if (Date.now() < cooldowns.stop) return;
-
-        // 쿨타임 설정 (10초)
         setCooldowns(prev => ({ ...prev, stop: Date.now() + 10000 }));
-
         try {
             const { data, error } = await send('/dart/api/cointrade/trade/stop', {}, 'GET');
             if (error) {
@@ -463,193 +229,202 @@ export default function CointradeScheduler() {
         }
     };
 
-    // 다음 실행 시간 포맷
-    // const formatNextRun = (nextRun) => {
-    //     if (!nextRun) return '-';
-    //     const date = new Date(nextRun);
-    //     const now = new Date();
-    //     const diff = date - now;
+    // 토글 버튼 컴포넌트
+    const ToggleSwitch = ({ enabled, onClick }) => (
+        <button
+            onClick={onClick}
+            disabled={loading}
+            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                enabled
+                    ? 'bg-blue-500 focus:ring-blue-500'
+                    : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
+            } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+            <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                    enabled ? 'translate-x-8' : 'translate-x-1'
+                }`}
+            />
+        </button>
+    );
 
-    //     if (diff < 0) return '곧 실행 예정';
-
-    //     const hours = Math.floor(diff / (1000 * 60 * 60));
-    //     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    //     return `${hours}시간 ${minutes}분 후`;
-    // };
-
-    const formatNextRun = (nextRun) => {
-        if (!nextRun) return '-';
-
-        // v2.1 변경: 백엔드에서 포맷팅된 메시지(display_message)를 포함한 객체를 반환함
-        if (nextRun.display_message) {
-            return nextRun.display_message;
-        }
-
-        // 기존 로직 (문자열인 경우)
-        if (typeof nextRun === 'string') {
-            const date = new Date(nextRun);
-            const now = new Date(
-                new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })
-            );
-            const diff = date - now;
-
-            // 절대 시간 (시:분) 계산
-            const HH = String(date.getHours()).padStart(2, '0');
-            const mm = String(date.getMinutes()).padStart(2, '0');
-            const absoluteTime = `${HH}:${mm}`;
-
-            if (diff < 0) return `곧 실행 예정 (${absoluteTime})`;
-
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-            // 결과: "2시간 15분 후 (18:00)" 형태
-            return `${hours}시간 ${minutes}분 후 (${absoluteTime})`;
-        }
-
-        return '-';
+    // 보유종목의 남은 보유시간 계산 (분)
+    const getHoldingRemainingMinutes = (holding) => {
+        if (!holding.buyDate) return null;
+        const buyTime = new Date(holding.buyDate).getTime();
+        const now = Date.now();
+        const elapsedMinutes = (now - buyTime) / (1000 * 60);
+        const maxHold = holding.maxHoldMinutes || 60;
+        return Math.max(0, Math.round(maxHold - elapsedMinutes));
     };
 
     return (
         <div className="p-2 md:p-4">
             <PageTitle>스케줄러 관리</PageTitle>
 
-            {/* 스케줄러 제어 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* 매수 스케줄러 */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                            스캐너 / 매수
-                        </h2>
-                        <button
-                            onClick={handleBuySchedulerToggle}
-                            disabled={loading}
-                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.buySchedulerEnabled
-                                ? 'bg-blue-500 focus:ring-blue-500'
-                                : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
-                                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                            <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${status.buySchedulerEnabled ? 'translate-x-8' : 'translate-x-1'
-                                    }`}
-                            />
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-slate-600 dark:text-slate-400">상태</span>
-                            <span
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${status.buySchedulerEnabled
-                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                                    }`}
-                            >
-                                {status.buySchedulerEnabled ? '실행 중' : '중지'}
+            {/* 토글 제어 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {/* 스캐너/매수 토글 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">스캐너 / 매수</h2>
+                            <span className={`text-xs font-medium ${
+                                status.scannerEnabled
+                                    ? 'text-blue-600 dark:text-blue-400'
+                                    : 'text-slate-500 dark:text-slate-400'
+                            }`}>
+                                {status.scannerEnabled ? '활성' : '비활성'}
                             </span>
                         </div>
-
-                        {status.buySchedulerEnabled && (
-                            <>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">스캐너 주기</span>
-                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                                        {status.scannerIntervalSeconds}초마다
-                                    </span>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">동작 방식</span>
-                                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                                        연속 루프
-                                    </span>
-                                </div>
-                            </>
-                        )}
+                        <ToggleSwitch enabled={status.scannerEnabled} onClick={handleScannerToggle} />
                     </div>
                 </div>
 
-                {/* 매도 스케줄러 */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                            매도 스케줄러
-                        </h2>
-                        <button
-                            onClick={handleSellSchedulerToggle}
-                            disabled={loading}
-                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.sellSchedulerEnabled
-                                ? 'bg-blue-500 focus:ring-blue-500'
-                                : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
-                                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                            <span
-                                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${status.sellSchedulerEnabled ? 'translate-x-8' : 'translate-x-1'
-                                    }`}
-                            />
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-slate-600 dark:text-slate-400">상태</span>
-                            <span
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${status.sellSchedulerEnabled
-                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                                    }`}
-                            >
-                                {status.sellSchedulerEnabled ? '실행 중' : '중지'}
+                {/* 매도 토글 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">매도</h2>
+                            <span className={`text-xs font-medium ${
+                                status.sellEnabled
+                                    ? 'text-blue-600 dark:text-blue-400'
+                                    : 'text-slate-500 dark:text-slate-400'
+                            }`}>
+                                {status.sellEnabled ? '활성' : '비활성'}
                             </span>
                         </div>
+                        <ToggleSwitch enabled={status.sellEnabled} onClick={handleSellToggle} />
+                    </div>
+                </div>
 
-                        {status.sellSchedulerEnabled && (
-                            <>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">매도 체크 주기</span>
-                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                                        {status.sellCheckSeconds}초마다
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">동작 방식</span>
-                                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                                        연속 루프
-                                    </span>
-                                </div>
-                            </>
-                        )}
+                {/* 페이퍼 트레이딩 토글 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">페이퍼 트레이딩</h2>
+                            <span className={`text-xs font-medium ${
+                                status.paperTrading
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-slate-500 dark:text-slate-400'
+                            }`}>
+                                {status.paperTrading ? '모의 매매' : '실매매'}
+                            </span>
+                        </div>
+                        <ToggleSwitch enabled={status.paperTrading} onClick={handlePaperTradingToggle} />
                     </div>
                 </div>
             </div>
 
-            {/* 프로세스 수동 제어 (v2.2 추가) */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
-                    프로세스 수동 제어
-                </h2>
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800 rounded-md p-3 mb-4">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
-                        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span>
-                            <strong>주의:</strong> 스케줄러 설정과 무관하게 프로세스를 즉시 실행하거나 중단합니다.<br />
-                            매수/매도 프로세스는 시스템 자원을 많이 사용할 수 있으므로 필요한 경우에만 실행해주세요.<br />
-                            강제 중단 시 현재 진행 중인 작업이 완료된 후 종료됩니다.
-                        </span>
-                    </p>
+            {/* 요약 카드 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">보유 종목 수</div>
+                    <div className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+                        {status.holdings.length}
+                    </div>
                 </div>
 
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 투자금액</div>
+                    <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                        {formatNumberWithComma(Math.floor(status.totalInvestment))}원
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 평가금액</div>
+                    <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                        {formatNumberWithComma(Math.floor(status.totalValuation))}원
+                    </div>
+                    {status.totalInvestment > 0 && (() => {
+                        const diff = Math.floor(status.totalValuation - status.totalInvestment);
+                        const isPositive = diff >= 0;
+                        return (
+                            <div className={`text-xs font-medium mt-1 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                                {isPositive ? '+' : ''}{formatNumberWithComma(diff)}원
+                            </div>
+                        );
+                    })()}
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 수익률</div>
+                    <div className={`text-2xl font-bold ${
+                        status.totalProfitRate >= 0
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-orange-600 dark:text-orange-400'
+                    }`}>
+                        {status.totalProfitRate >= 0 ? '+' : ''}
+                        {status.totalProfitRate.toFixed(2)}%
+                    </div>
+                </div>
+            </div>
+
+            {/* 보유종목 테이블 */}
+            {status.holdings.length > 0 && (
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 mb-6 overflow-x-auto">
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">보유 종목</h2>
+                    </div>
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
+                                <th className="text-left p-3 font-medium">종목</th>
+                                <th className="text-right p-3 font-medium">매수가</th>
+                                <th className="text-right p-3 font-medium">현재가</th>
+                                <th className="text-right p-3 font-medium">수익률</th>
+                                <th className="text-right p-3 font-medium">남은시간</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {status.holdings.map((holding, idx) => {
+                                const avgPrice = holding.totalAmount && holding.quantity
+                                    ? holding.totalAmount / holding.quantity
+                                    : 0;
+                                const profitRate = avgPrice > 0 && holding.currentPrice
+                                    ? ((holding.currentPrice - avgPrice) / avgPrice) * 100
+                                    : 0;
+                                const remainingMin = getHoldingRemainingMinutes(holding);
+                                const isPositive = profitRate >= 0;
+
+                                return (
+                                    <tr key={idx} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                        <td className="p-3 font-medium text-slate-800 dark:text-slate-200">
+                                            {holding.coinCode?.replace('KRW-', '') || '-'}
+                                        </td>
+                                        <td className="p-3 text-right text-slate-700 dark:text-slate-300">
+                                            {formatNumberWithComma(Math.floor(avgPrice))}
+                                        </td>
+                                        <td className="p-3 text-right text-slate-700 dark:text-slate-300">
+                                            {formatNumberWithComma(Math.floor(holding.currentPrice || 0))}
+                                        </td>
+                                        <td className={`p-3 text-right font-medium ${isPositive ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                            {isPositive ? '+' : ''}{profitRate.toFixed(2)}%
+                                        </td>
+                                        <td className="p-3 text-right text-slate-600 dark:text-slate-400">
+                                            {remainingMin !== null ? `${remainingMin}분` : '-'}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* 액션 버튼 */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+                <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-3">
+                    수동 제어
+                </h2>
                 <div className="flex flex-wrap gap-3">
                     <Button
                         onClick={handleManualBuy}
                         disabled={remainingTimes.buy > 0}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[140px]"
+                        className="bg-blue-600 hover:bg-blue-700 text-white min-w-[140px]"
                     >
-                        {remainingTimes.buy > 0 ? `대기 (${remainingTimes.buy}s)` : '매수 프로세스 실행'}
+                        {remainingTimes.buy > 0 ? `대기 (${remainingTimes.buy}s)` : '수동 스캔+매수'}
                     </Button>
 
                     <Button
@@ -657,7 +432,7 @@ export default function CointradeScheduler() {
                         disabled={remainingTimes.sell > 0}
                         className="bg-amber-600 hover:bg-amber-700 text-white min-w-[140px]"
                     >
-                        {remainingTimes.sell > 0 ? `대기 (${remainingTimes.sell}s)` : '매도 프로세스 실행'}
+                        {remainingTimes.sell > 0 ? `대기 (${remainingTimes.sell}s)` : '수동 매도 체크'}
                     </Button>
 
                     <Button
@@ -666,247 +441,13 @@ export default function CointradeScheduler() {
                         variant="danger"
                         className="min-w-[140px]"
                     >
-                        {remainingTimes.stop > 0 ? `대기 (${remainingTimes.stop}s)` : '강제 중단'}
+                        {remainingTimes.stop > 0 ? `대기 (${remainingTimes.stop}s)` : '비상 정지'}
                     </Button>
-                </div>
-            </div>
-
-            {/* 프로세스 진행도 (매수/매도 분리) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* 매수 프로세스 진행도 */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                            매수 프로세스 진행도
-                        </h2>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${buyProcessStatus.status === 'running' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 animate-pulse' :
-                            buyProcessStatus.status === 'finished' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                            }`}>
-                            {buyProcessStatus.status}
-                        </span>
-                    </div>
-
-                    <div className={`space-y-4 ${buyProcessStatus.status === 'idle' ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-                        {/* 프로그레스 바 */}
-                        <div className="relative pt-1">
-                            <div className="flex mb-2 items-center justify-between">
-                                <div>
-                                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200 dark:bg-blue-900 dark:text-blue-200">
-                                        Progress
-                                    </span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-xs font-semibold inline-block text-blue-600 dark:text-blue-400">
-                                        {buyProcessStatus.percent.toFixed(1)}%
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200 dark:bg-blue-900/50">
-                                <div
-                                    style={{ width: `${buyProcessStatus.percent}%` }}
-                                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500 ease-out"
-                                ></div>
-                            </div>
-                        </div>
-
-                        {/* 로그 창 */}
-                        <div className="relative">
-                            <div className="absolute top-2 right-4 flex items-center gap-2 z-10">
-                                <span className="text-[10px] text-slate-500 font-mono">
-                                    {buyProcessLogs.length.toLocaleString()} / 1,000 lines
-                                </span>
-                                <button
-                                    onClick={() => handleCopyLogs(buyProcessLogs)}
-                                    className="text-slate-500 hover:text-slate-300 transition-colors"
-                                    title="로그 복사"
-                                >
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <div
-                                ref={buyLogContainerRef}
-                                className="bg-slate-900 text-slate-300 rounded-md p-4 h-48 overflow-y-auto font-mono text-xs border border-slate-700 shadow-inner"
-                            >
-                                {buyProcessLogs.length === 0 ? (
-                                    <div className="text-slate-500 text-center mt-16 italic">대기 중...</div>
-                                ) : (
-                                    buyProcessLogs.map((log, index) => (
-                                        <div key={index} className="mb-1 last:mb-0 hover:bg-slate-800/50 px-1 rounded whitespace-pre-wrap break-all">
-                                            <span className="text-slate-500 mr-2">[{log.time}]</span>
-                                            <span className={log.message.includes('완료') || log.message.includes('성공') ? 'text-green-400' : 'text-slate-200'}>
-                                                {log.message}
-                                            </span>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 매도 프로세스 진행도 */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                            매도 프로세스 진행도
-                        </h2>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${sellProcessStatus.status === 'running' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 animate-pulse' :
-                            sellProcessStatus.status === 'finished' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                            }`}>
-                            {sellProcessStatus.status}
-                        </span>
-                    </div>
-
-                    <div className={`space-y-4 ${sellProcessStatus.status === 'idle' ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-                        {/* 프로그레스 바 */}
-                        <div className="relative pt-1">
-                            <div className="flex mb-2 items-center justify-between">
-                                <div>
-                                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-orange-600 bg-orange-200 dark:bg-orange-900 dark:text-orange-200">
-                                        Progress
-                                    </span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-xs font-semibold inline-block text-orange-600 dark:text-orange-400">
-                                        {sellProcessStatus.percent.toFixed(1)}%
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-orange-200 dark:bg-orange-900/50">
-                                <div
-                                    style={{ width: `${sellProcessStatus.percent}%` }}
-                                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-orange-500 transition-all duration-500 ease-out"
-                                ></div>
-                            </div>
-                        </div>
-
-                        {/* 로그 창 */}
-                        <div className="relative">
-                            <div className="absolute top-2 right-4 flex items-center gap-2 z-10">
-                                <span className="text-[10px] text-slate-500 font-mono">
-                                    {sellProcessLogs.length.toLocaleString()} / 1,000 lines
-                                </span>
-                                <button
-                                    onClick={() => handleCopyLogs(sellProcessLogs)}
-                                    className="text-slate-500 hover:text-slate-300 transition-colors"
-                                    title="로그 복사"
-                                >
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <div
-                                ref={sellLogContainerRef}
-                                className="bg-slate-900 text-slate-300 rounded-md p-4 h-48 overflow-y-auto font-mono text-xs border border-slate-700 shadow-inner"
-                            >
-                                {sellProcessLogs.length === 0 ? (
-                                    <div className="text-slate-500 text-center mt-16 italic">대기 중...</div>
-                                ) : (
-                                    sellProcessLogs.map((log, index) => (
-                                        <div key={index} className="mb-1 last:mb-0 hover:bg-slate-800/50 px-1 rounded whitespace-pre-wrap break-all">
-                                            <span className="text-slate-500 mr-2">[{log.time}]</span>
-                                            <span className={log.message.includes('완료') || log.message.includes('성공') ? 'text-green-400' : 'text-slate-200'}>
-                                                {log.message}
-                                            </span>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* 현재 상태 요약 */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                        현재 상태 요약
-                    </h2>
-                    <Button
-                        onClick={handleRefresh}
-                        className="px-4 py-2 text-sm"
-                    >
-                        새로고침
-                    </Button>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {/* 보유 종목 수 */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">보유 종목 수</div>
-                        <div className="text-2xl font-bold text-slate-800 dark:text-slate-200">
-                            {status.holdings.length}
-                        </div>
-                    </div>
-
-                    {/* 총 투자금액 */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 투자금액</div>
-                        <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                            {formatNumberWithComma(Math.floor(status.totalInvestment))}원
-                        </div>
-                    </div>
-
-                    {/* 총 평가금액 */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 평가금액</div>
-                        <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                            {formatNumberWithComma(Math.floor(status.totalValuation))}원
-                        </div>
-                        {status.totalInvestment > 0 && (() => {
-                            const diff = Math.floor(status.totalValuation - status.totalInvestment);
-                            const isPositive = diff >= 0;
-                            return (
-                                <div className={`text-xs font-medium mt-1 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                                    {isPositive ? '+' : ''}{formatNumberWithComma(diff)}원
-                                </div>
-                            );
-                        })()}
-                    </div>
-
-                    {/* 총 수익률 */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">총 수익률</div>
-                        <div
-                            className={`text-2xl font-bold ${status.totalProfitRate >= 0
-                                ? 'text-blue-600 dark:text-blue-400'
-                                : 'text-orange-600 dark:text-orange-400'
-                                }`}
-                        >
-                            {status.totalProfitRate >= 0 ? '+' : ''}
-                            {status.totalProfitRate.toFixed(2)}%
-                        </div>
-                    </div>
-
-                    {/* 스캐너 상태 */}
-                    <div className={`p-4 rounded-lg border ${status.buySchedulerEnabled
-                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800'
-                        : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-700'
-                    }`}>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">스캐너 상태</div>
-                        <div className={`text-lg font-bold ${status.buySchedulerEnabled
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-slate-500 dark:text-slate-400'
-                        }`}>
-                            {status.buySchedulerEnabled ? '스캔 중' : '중지'}
-                        </div>
-                        {status.buySchedulerEnabled && (
-                            <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">
-                                {status.scannerIntervalSeconds}초 주기
-                            </div>
-                        )}
-                    </div>
                 </div>
 
                 {/* 자동 새로고침 안내 */}
-                <div className="mt-4 text-xs text-slate-500 dark:text-slate-400 text-center">
-                    30초마다 자동으로 갱신됩니다
+                <div className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+                    15초마다 자동 갱신
                 </div>
             </div>
 

@@ -152,11 +152,7 @@ export default function Backtest() {
         configList.forEach(c => {
             configMap[c.configKey || c.paramName] = c.configValue || c.paramValue;
         });
-        // PAPER_TRADING + SCANNER_ENABLED + SELL_ENABLED 모두 true여야 실행 중
-        const isRunning = configMap.PAPER_TRADING === 'true'
-            && configMap.SCANNER_ENABLED === 'true'
-            && configMap.SELL_ENABLED === 'true';
-        setPaperEnabled(isRunning);
+        setPaperEnabled(configMap.PAPER_TRADING === 'true');
         if (configMap.PAPER_TRADING_STARTED_AT) {
             setPaperStartedAt(configMap.PAPER_TRADING_STARTED_AT);
         }

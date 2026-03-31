@@ -122,7 +122,7 @@ const routes = {
     },
     "Backtest": {
         section: SECTIONS[5],
-        label: '백테스트',
+        label: '페이퍼 트레이딩',
         path: '/cointrade/backtest',
         element: <Backtest />,
         accessRoles: ['ROLE_SUPER_ADMIN']

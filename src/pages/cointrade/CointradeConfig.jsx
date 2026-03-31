@@ -120,7 +120,7 @@ const PARAM_DESCRIPTIONS = {
     BUY_MIN_BALANCE: '이 금액 이하이면 매수하지 않음 (원)',
     BUY_COOLDOWN_MINUTES: '같은 종목 재매수까지 최소 대기 시간 (분)',
     BUY_USE_MARKET_ORDER: '시장가 주문 사용 여부 (true: 시장가, false: 지정가)',
-    TARGET_MODE: 'ALL: 전체 종목 매매, SELECTED: 선택 종목만 매매',
+    TARGET_MODE: 'ALL: KRW 마켓 전체 종목, SELECTED: 대상종목설정에서 선택한 종목만',
     BTC_FILTER_ENABLED: 'BTC 하락 추세 시 전체 매수 중단',
     BTC_TREND_MA_PERIOD: 'BTC 이동평균 기간 (분봉 단위)',
     SELL_ENABLED: '매도 기능 활성화',

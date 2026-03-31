@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { send } from '@/util/ClientUtil';
 import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
@@ -17,7 +17,6 @@ const formatNumberWithComma = (value) => {
  * v3.0 - config API 기반 토글, 로그 제거
  */
 export default function CointradeScheduler() {
-    const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
     const [status, setStatus] = useState({
         scannerEnabled: false,
@@ -29,6 +28,9 @@ export default function CointradeScheduler() {
         totalProfitRate: 0,
     });
 
+    // 토글 요청 중 fetchStatus 충돌 방지 (ref: 이미 실행 중인 fetchStatus에서도 최신 값 참조 가능)
+    const togglingRef = useRef(false);
+    const [toggling, setToggling] = useState(false);
     // 쿨타임 상태 (타임스탬프)
     const [cooldowns, setCooldowns] = useState({ buy: 0, sell: 0, stop: 0 });
     // 남은 시간 상태 (초)
@@ -43,6 +45,7 @@ export default function CointradeScheduler() {
 
     // 상태 조회 함수
     const fetchStatus = useCallback(async () => {
+        if (toggling) return; // 토글 요청 중에는 폴링 스킵 (낙관적 업데이트 보호)
         try {
             // 1. Config에서 SCANNER_ENABLED, SELL_ENABLED, PAPER_TRADING 읽기
             let scannerEnabled = false;
@@ -123,7 +126,7 @@ export default function CointradeScheduler() {
         } catch (e) {
             console.error('상태 조회 오류:', e);
         }
-    }, []);
+    }, [toggling]);
 
     // 페이지 로드 시 + 15초마다 자동 새로고침
     useEffect(() => {
@@ -147,11 +150,13 @@ export default function CointradeScheduler() {
 
     // Config API를 통한 토글 핸들러
     const handleConfigToggle = async (paramName, currentValue, label) => {
+        if (toggling) return; // 이전 토글 요청 완료 전 중복 클릭 방지
         const newValue = !currentValue;
+        const stateKey = paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
+            : paramName === 'SELL_ENABLED' ? 'sellEnabled' : 'paperTrading';
+        setToggling(true);
         try {
             // UI 즉시 반영 (낙관적 업데이트)
-            const stateKey = paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
-                : paramName === 'SELL_ENABLED' ? 'sellEnabled' : 'paperTrading';
             setStatus(prev => ({ ...prev, [stateKey]: newValue }));
 
             const configList = [{ configKey: paramName, configValue: String(newValue) }];
@@ -167,9 +172,10 @@ export default function CointradeScheduler() {
                 setToast(data?.message || '설정 변경에 실패했습니다.');
             }
         } catch (e) {
-            setStatus(prev => ({ ...prev, [paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
-                : paramName === 'SELL_ENABLED' ? 'sellEnabled' : 'paperTrading']: currentValue }));
+            setStatus(prev => ({ ...prev, [stateKey]: currentValue }));
             setToast(`${label} 설정 중 오류가 발생했습니다.`);
+        } finally {
+            setToggling(false);
         }
     };
 
@@ -238,12 +244,12 @@ export default function CointradeScheduler() {
     const ToggleSwitch = ({ enabled, onClick }) => (
         <button
             onClick={onClick}
-            disabled={loading}
+            disabled={toggling}
             className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                 enabled
                     ? 'bg-blue-500 focus:ring-blue-500'
                     : 'bg-slate-300 dark:bg-slate-600 focus:ring-slate-400'
-            } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            } ${toggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
             <span
                 className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${

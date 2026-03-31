@@ -214,7 +214,7 @@ export default function CointradeScheduler() {
 
     const handleScannerToggle = () => handleConfigToggle('SCANNER_ENABLED', status.scannerEnabled, '스캐너');
     const handleSellToggle = () => handleConfigToggle('SELL_ENABLED', status.sellEnabled, '매도');
-    const handlePaperTradingToggle = () => handleConfigToggle('PAPER_TRADING', status.paperTrading, '페이퍼 트레이딩');
+    // 페이퍼 트레이딩은 별도 페이지에서 관리
 
     // 매수 프로세스 수동 실행
     const handleManualBuy = async () => {
@@ -323,22 +323,7 @@ export default function CointradeScheduler() {
                     </div>
                 </div>
 
-                {/* 페이퍼 트레이딩 토글 */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-5">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">페이퍼 트레이딩</h2>
-                            <span className={`text-xs font-medium ${
-                                status.paperTrading
-                                    ? 'text-amber-600 dark:text-amber-400'
-                                    : 'text-slate-500 dark:text-slate-400'
-                            }`}>
-                                {togglingKey === 'paperTrading' ? '처리 중...' : status.paperTrading ? '모의 매매' : '실매매'}
-                            </span>
-                        </div>
-                        <ToggleSwitch enabled={status.paperTrading} onClick={handlePaperTradingToggle} loading={togglingKey === 'paperTrading'} />
-                    </div>
-                </div>
+                {/* 페이퍼 트레이딩은 별도 페이지에서 관리 */}
             </div>
 
             {/* 요약 카드 */}

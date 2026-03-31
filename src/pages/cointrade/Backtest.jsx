@@ -135,7 +135,8 @@ export default function Backtest() {
     const fetchAll = useCallback(async (isBackground = false) => {
         if (!isBackground) setLoading(true);
         try {
-            await Promise.all([fetchConfig(), fetchHoldings(), fetchHistory(), fetchPrices()]);
+            const [, holdingsList] = await Promise.all([fetchConfig(), fetchHoldings(), fetchHistory()]);
+            await fetchPrices(holdingsList);
         } catch (e) {
             console.error('데이터 조회 실패:', e);
         } finally {
@@ -161,8 +162,10 @@ export default function Backtest() {
     // 보유종목 조회
     const fetchHoldings = async () => {
         const { data, error } = await send('/dart/api/cointrade/paper/holdings', {}, 'GET');
-        if (error || !data?.success) return;
-        setHoldings(data.response || []);
+        if (error || !data?.success) return [];
+        const list = data.response || [];
+        setHoldings(list);
+        return list;
     };
 
     // 거래내역 조회
@@ -173,9 +176,10 @@ export default function Backtest() {
     };
 
     // 현재가 조회 (보유종목 손익 계산용)
-    const fetchPrices = async () => {
-        if (holdings.length === 0) return;
-        const markets = holdings.map(h => h.coinCode || h.coin_code).filter(Boolean).join(',');
+    const fetchPrices = async (holdingsList) => {
+        const list = holdingsList || holdings;
+        if (list.length === 0) return;
+        const markets = list.map(h => h.coinCode || h.coin_code).filter(Boolean).join(',');
         if (!markets) return;
         const { data, error } = await send(`/dart/api/upbit/v1/ticker?markets=${markets}`, {}, 'GET');
         if (error || !data?.success) return;

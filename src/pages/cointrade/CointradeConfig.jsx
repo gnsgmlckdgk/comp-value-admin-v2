@@ -44,15 +44,12 @@ const PARAM_GROUPS = {
     BUY: {
         label: '매수 설정',
         params: [
-            { key: 'BUY_ENABLED', label: '매수', type: 'toggle' },
             { key: 'BUY_AMOUNT_PER_COIN', label: '종목당 금액(원)', type: 'number' },
             { key: 'BUY_MAX_CONCURRENT', label: '최대 동시보유', type: 'number' },
             { key: 'BUY_MIN_BALANCE', label: '최소 잔고(원)', type: 'number' },
             { key: 'BUY_COOLDOWN_MINUTES', label: '재매수 쿨다운(분)', type: 'number' },
             { key: 'BUY_USE_MARKET_ORDER', label: '시장가 주문', type: 'toggle' },
             { key: 'TARGET_MODE', label: '대상 모드', type: 'select', options: ['ALL', 'SELECTED'] },
-            { key: 'BTC_FILTER_ENABLED', label: 'BTC 필터', type: 'toggle' },
-            { key: 'BTC_TREND_MA_PERIOD', label: 'BTC MA 기간', type: 'number' },
         ]
     },
     SELL: {
@@ -123,8 +120,6 @@ const PARAM_DESCRIPTIONS = {
     BUY_COOLDOWN_MINUTES: '같은 종목 재매수까지 최소 대기 시간 (분)',
     BUY_USE_MARKET_ORDER: '시장가 주문 사용 여부 (true: 시장가, false: 지정가)',
     TARGET_MODE: 'ALL: KRW 마켓 전체 종목, SELECTED: 대상종목설정에서 선택한 종목만',
-    BTC_FILTER_ENABLED: 'BTC 하락 추세 시 전체 매수 중단',
-    BTC_TREND_MA_PERIOD: 'BTC 이동평균 기간 (분봉 단위)',
     SELL_ENABLED: '매도 기능 활성화',
     SELL_CHECK_SECONDS: '보유 종목 매도 조건 체크 주기 (초)',
     TAKE_PROFIT_PCT: '목표 수익률 도달 시 매도 (%)',

@@ -401,9 +401,9 @@ export default function Backtest() {
                     <span className="text-xs text-slate-400">15초마다 자동 새로고침</span>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm min-w-[640px]">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300">
+                            <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                                 <th className="px-4 py-3 text-left font-semibold">종목</th>
                                 <th className="px-4 py-3 text-right font-semibold">매수가</th>
                                 <th className="px-4 py-3 text-right font-semibold">현재가</th>
@@ -502,9 +502,9 @@ export default function Backtest() {
                     </div>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm min-w-[800px]">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300">
+                            <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                                 <th className="px-4 py-3 text-left font-semibold">시간</th>
                                 <th className="px-4 py-3 text-left font-semibold">종목</th>
                                 <th className="px-4 py-3 text-center font-semibold">유형</th>

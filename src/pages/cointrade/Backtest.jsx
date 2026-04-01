@@ -434,7 +434,7 @@ export default function Backtest() {
                                 const curPrice = currentPrices[coinCode];
 
                                 return (
-                                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 whitespace-nowrap">
                                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                                             {coinCode.replace('KRW-', '')}
                                         </td>
@@ -539,8 +539,8 @@ export default function Backtest() {
                                 const createdAt = h.createdAt || h.created_at;
 
                                 return (
-                                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                                        <td className="px-4 py-3 whitespace-nowrap text-slate-700 dark:text-slate-300">
+                                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 whitespace-nowrap">
+                                        <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                                             {formatDateTime(createdAt)}
                                         </td>
                                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">

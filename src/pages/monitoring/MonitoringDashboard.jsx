@@ -1,9 +1,8 @@
 import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
 import useMonitoringSSE from './hooks/useMonitoringSSE';
 import ServiceStatusCard from './components/ServiceStatusCard';
-import ProcessStatusPanel from './components/ProcessStatusPanel';
-import TradeActivityFeed from './components/TradeActivityFeed';
 import ServiceTopology from './components/ServiceTopology';
+import ExternalApiStatusCard from './components/ExternalApiStatusCard';
 import ServiceActivityLog from './components/ServiceActivityLog';
 import ResourceGauges from './components/ResourceGauges';
 import ResourceTimeSeries from './components/ResourceTimeSeries';
@@ -80,24 +79,18 @@ export default function MonitoringDashboard() {
                     </GroupCard>
                 </div>
 
-                {/* Row 3: 코인거래 모니터링 */}
+                {/* Row 3: 외부 API 상태 */}
                 <div className="col-span-12">
-                    <GroupCard title="코인거래 모니터링">
-                        <div className="grid grid-cols-12 gap-3">
-                            <div className="col-span-12 md:col-span-7">
-                                <DashCard title="Trade Activity">
-                                    <TradeActivityFeed trades={trades} />
-                                </DashCard>
-                            </div>
-                            <div className="col-span-12 md:col-span-5">
-                                <DashCard title="Process Status">
-                                    <ProcessStatusPanel buyProcess={snapshot?.buyProcess} sellProcess={snapshot?.sellProcess} />
-                                    <div className="mt-4 grid grid-cols-2 gap-3">
-                                        <StatCard label="Holdings" value={snapshot?.holdingsCount ?? '-'} />
-                                        <StatCard label="Today Trades" value={snapshot?.todayTradeCount ?? '-'} />
-                                    </div>
-                                </DashCard>
-                            </div>
+                    <GroupCard title="외부 API 상태">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                            {(snapshot?.externalApis || []).map((api, i) => (
+                                <ExternalApiStatusCard key={api.name || i} api={api} />
+                            ))}
+                            {(!snapshot?.externalApis || snapshot.externalApis.length === 0) && (
+                                <div className="col-span-full text-center text-sm text-slate-400 py-4">
+                                    Checking external APIs...
+                                </div>
+                            )}
                         </div>
                     </GroupCard>
                 </div>
@@ -141,11 +134,3 @@ function GroupCard({ title, children }) {
     );
 }
 
-function StatCard({ label, value }) {
-    return (
-        <div className="rounded-lg bg-slate-100 border border-slate-200 dark:bg-slate-800/60 dark:border-slate-700/50 p-3 text-center">
-            <div className="text-2xl font-bold text-slate-900 dark:text-white transition-all duration-500">{value}</div>
-            <div className="text-xs text-slate-500 mt-1">{label}</div>
-        </div>
-    );
-}

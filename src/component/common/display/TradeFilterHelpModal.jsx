@@ -86,13 +86,7 @@ export default function TradeFilterHelpModal({ isOpen, onClose }) {
                                     <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 text-slate-600 dark:text-slate-400">매수</td>
                                         <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">SIGNAL</span>
-                                        </td>
-                                    </tr>
-                                    <tr className="bg-white dark:bg-slate-800">
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분매수</td>
-                                        <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400">PARTIAL_SIGNAL</span>
+                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">MOMENTUM_SIGNAL</span>
                                         </td>
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
@@ -114,51 +108,15 @@ export default function TradeFilterHelpModal({ isOpen, onClose }) {
                                         </td>
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">기간수익</td>
-                                        <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">NDAY_PROFIT</span>
-                                        </td>
-                                    </tr>
-                                    <tr className="bg-white dark:bg-slate-800">
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분익절</td>
-                                        <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400">PARTIAL_TAKE_PROFIT</span>
-                                        </td>
-                                    </tr>
-                                    <tr className="bg-white dark:bg-slate-800">
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분손절</td>
-                                        <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">PARTIAL_STOP_LOSS</span>
-                                        </td>
-                                    </tr>
-                                    <tr className="bg-white dark:bg-slate-800">
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분트레일링</td>
-                                        <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400">PARTIAL_TRAILING_STOP</span>
-                                        </td>
-                                    </tr>
-                                    <tr className="bg-white dark:bg-slate-800">
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분기간</td>
-                                        <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400">PARTIAL_NDAY_PROFIT</span>
-                                        </td>
-                                    </tr>
-                                    <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 text-slate-600 dark:text-slate-400">수동매도</td>
                                         <td className="px-4 py-2">
                                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300">MANUAL</span>
                                         </td>
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">부분수동</td>
-                                        <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400">PARTIAL_MANUAL</span>
-                                        </td>
-                                    </tr>
-                                    <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 text-slate-600 dark:text-slate-400">강제청산</td>
                                         <td className="px-4 py-2">
-                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">MAX_HOLDING_EXPIRED</span>
+                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">MAX_HOLD_EXPIRED</span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -167,8 +125,8 @@ export default function TradeFilterHelpModal({ isOpen, onClose }) {
                     </div>
 
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
-                        * 원본 값(BUY, SELL, SIGNAL 등)으로 입력해도 필터링됩니다.<br/>
-                        * NDAY_PROFIT의 N은 설정(PREDICTION_DAYS)에 따라 변동됩니다. (예: 3DAY_PROFIT, 5DAY_PROFIT)
+                        * 원본 값(BUY, SELL, MOMENTUM_SIGNAL 등)으로 입력해도 필터링됩니다.<br/>
+                        * 과거 데이터에 SIGNAL, MAX_HOLDING_EXPIRED 등 레거시 값이 남아있을 수 있으며, 해당 값으로도 필터링됩니다.
                     </p>
                 </div>
 

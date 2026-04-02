@@ -68,6 +68,7 @@ const formatDateTime = (dateStr) => {
 // 사유 색상
 const getReasonColor = (reason) => {
     const colors = {
+        'MOMENTUM_SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
         'SIGNAL': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
         'PARTIAL_SIGNAL': 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
         'TAKE_PROFIT': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
@@ -78,6 +79,7 @@ const getReasonColor = (reason) => {
         'PARTIAL_TRAILING_STOP': 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400',
         'MANUAL': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300',
         'PARTIAL_MANUAL': 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400',
+        'MAX_HOLD_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
         'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
     };
 
@@ -97,6 +99,7 @@ const getReasonColor = (reason) => {
 // 사유 라벨
 const getReasonLabel = (reason) => {
     const labels = {
+        'MOMENTUM_SIGNAL': '매수',
         'SIGNAL': '매수',
         'PARTIAL_SIGNAL': '부분매수',
         'TAKE_PROFIT': '익절',
@@ -107,6 +110,7 @@ const getReasonLabel = (reason) => {
         'PARTIAL_TRAILING_STOP': '부분트레일링',
         'MANUAL': '수동매도',
         'PARTIAL_MANUAL': '부분수동',
+        'MAX_HOLD_EXPIRED': '강제청산',
         'MAX_HOLDING_EXPIRED': '강제청산'
     };
 

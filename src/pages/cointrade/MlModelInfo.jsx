@@ -19,27 +19,37 @@ const formatDateTime = (dateStr) => {
     });
 };
 
-// 날짜 포맷 (YYYY-MM-DD)
+// 날짜 포맷 (YYYY-MM-DD HH:mm:ss)
 const formatDate = (dateStr) => {
     if (!dateStr) return '-';
-    return dateStr; // 이미 YYYY-MM-DD 형식이면 그대로, 아니면 변환 필요
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    // 시간이 00:00:00이면 날짜만 표시
+    if (hh === '00' && mm === '00' && ss === '00') return `${y}-${m}-${d}`;
+    return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
 };
 
 const COL_WIDTHS = {
     id: '60px',
     coinCode: '100px',
     modelType: '120px',
-    modelPath: '200px',
-    trainedAt: '180px',
-    trainDataStart: '100px',
-    trainDataEnd: '100px',
+    modelPath: '250px',
+    trainedAt: '170px',
+    trainDataStart: '170px',
+    trainDataEnd: '170px',
     accuracy: '100px',
     aucRoc: '100px',
-    featureCount: '100px',
+    featureCount: '90px',
     trainSamples: '100px',
-    candleUnit: '80px',
-    createdAt: '180px',
-    updatedAt: '180px',
+    candleUnit: '70px',
+    createdAt: '170px',
+    updatedAt: '170px',
 };
 
 // 테이블 컬럼 정의
@@ -663,7 +673,7 @@ export default function MlModelInfo() {
 
                 {/* 테이블 */}
                 <div className="overflow-x-auto overflow-y-auto scrollbar-always bg-white border border-slate-200 rounded-lg shadow-sm max-h-[75vh] dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
-                  <div style={{ minWidth: '1500px' }}>
+                  <div style={{ minWidth: '1700px' }}>
                     <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
                         <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md">
                             <tr>
@@ -731,7 +741,7 @@ export default function MlModelInfo() {
                                         {TABLE_COLUMNS.map((col) => (
                                             <td
                                                 key={`${row.id}-${col.key}`}
-                                                className={`px-3 py-2 whitespace-nowrap ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
+                                                className={`px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis ${col.sticky ? 'sticky z-[5] bg-white dark:bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''}`}
                                                 style={{
                                                     width: col.width,
                                                     left: col.sticky ? 0 : undefined,

@@ -68,7 +68,8 @@ export default function CointradeScheduler() {
     const fetchStatus = useCallback(async () => {
         const myVersion = statusVersionRef.current;
         try {
-            // 1. Config에서 SCANNER_ENABLED, SELL_ENABLED, PAPER_TRADING 읽기
+            // 1. Config에서 WS_ENABLED, SCANNER_ENABLED, SELL_ENABLED, PAPER_TRADING 읽기
+            let wsEnabled = false;
             let scannerEnabled = false;
             let sellEnabled = false;
             let paperTrading = false;
@@ -81,6 +82,7 @@ export default function CointradeScheduler() {
                     const value = config.configValue || config.paramValue;
                     configMap[key] = value;
                 });
+                wsEnabled = configMap.WS_ENABLED === 'true';
                 scannerEnabled = configMap.SCANNER_ENABLED === 'true';
                 sellEnabled = configMap.SELL_ENABLED === 'true';
                 paperTrading = configMap.PAPER_TRADING === 'true';
@@ -139,6 +141,7 @@ export default function CointradeScheduler() {
             if (myVersion !== statusVersionRef.current) return;
 
             setStatus({
+                wsEnabled,
                 scannerEnabled,
                 sellEnabled,
                 paperTrading,
@@ -181,7 +184,8 @@ export default function CointradeScheduler() {
     // Config API를 통한 토글 핸들러 — 항상 즉시 반응, fetchStatus와 충돌 없음
     const handleConfigToggle = async (paramName, currentValue, label) => {
         if (togglingKey) return; // 다른 토글 처리 중이면 스킵
-        const stateKey = paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
+        const stateKey = paramName === 'WS_ENABLED' ? 'wsEnabled'
+            : paramName === 'SCANNER_ENABLED' ? 'scannerEnabled'
             : paramName === 'SELL_ENABLED' ? 'sellEnabled' : 'paperTrading';
         const newValue = !currentValue;
 
@@ -212,7 +216,8 @@ export default function CointradeScheduler() {
         }
     };
 
-    const handleScannerToggle = () => handleConfigToggle('SCANNER_ENABLED', status.scannerEnabled, '스캐너');
+    const handleWsToggle = () => handleConfigToggle('WS_ENABLED', status.wsEnabled, 'WebSocket 매매');
+    const handleScannerToggle = () => handleConfigToggle('SCANNER_ENABLED', status.scannerEnabled, '스캐너(학습)');
     const handleSellToggle = () => handleConfigToggle('SELL_ENABLED', status.sellEnabled, '매도');
     // 페이퍼 트레이딩은 별도 페이지에서 관리
 
@@ -288,12 +293,31 @@ export default function CointradeScheduler() {
             <PageTitle>스케줄러 관리</PageTitle>
 
             {/* 토글 제어 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {/* 스캐너/매수 토글 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                {/* WebSocket 실시간 매매 토글 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-5">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">스캐너 / 매수</h2>
+                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">WS 매매</h2>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">실시간 매수/매도</p>
+                            <span className={`text-xs font-medium ${
+                                status.wsEnabled
+                                    ? 'text-blue-600 dark:text-blue-400'
+                                    : 'text-slate-500 dark:text-slate-400'
+                            }`}>
+                                {togglingKey === 'wsEnabled' ? '처리 중...' : status.wsEnabled ? '활성' : '비활성'}
+                            </span>
+                        </div>
+                        <ToggleSwitch enabled={status.wsEnabled} onClick={handleWsToggle} loading={togglingKey === 'wsEnabled'} />
+                    </div>
+                </div>
+
+                {/* 스캐너 (학습/수집 전용) 토글 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">스캐너</h2>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">ML 학습 / 데이터 수집</p>
                             <span className={`text-xs font-medium ${
                                 status.scannerEnabled
                                     ? 'text-blue-600 dark:text-blue-400'
@@ -311,6 +335,7 @@ export default function CointradeScheduler() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">매도</h2>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">REST 폴링 매도 보조</p>
                             <span className={`text-xs font-medium ${
                                 status.sellEnabled
                                     ? 'text-blue-600 dark:text-blue-400'

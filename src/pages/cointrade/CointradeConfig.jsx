@@ -15,8 +15,18 @@ import ConfigOverviewModal from '@/pages/cointrade/popup/ConfigOverviewModal';
  */
 
 const PARAM_GROUPS = {
+    WS: {
+        label: 'WebSocket 실시간 매매',
+        params: [
+            { key: 'WS_ENABLED', label: '실시간 매매', type: 'toggle' },
+            { key: 'WS_BUY_RATIO_MIN', label: '매수 비율 최소', type: 'number', step: 0.05 },
+            { key: 'WS_VOLUME_SPIKE_RATIO', label: '거래량 급증 배율', type: 'number', step: 0.5 },
+            { key: 'WS_SIGNAL_WINDOW_SEC', label: '감지 시간창(초)', type: 'number' },
+            { key: 'WS_MIN_TRADES', label: '최소 체결 건수', type: 'number' },
+        ]
+    },
     SCANNER: {
-        label: '스캐너 설정',
+        label: 'REST 스캐너 (백그라운드 학습용)',
         params: [
             { key: 'SCANNER_ENABLED', label: '스캐너', type: 'toggle' },
             { key: 'SCANNER_INTERVAL_SECONDS', label: '스캔 주기(초)', type: 'number' },
@@ -97,7 +107,12 @@ Object.entries(PARAM_GROUPS).forEach(([groupKey, group]) => {
 });
 
 const PARAM_DESCRIPTIONS = {
-    SCANNER_ENABLED: '모멘텀 스캐너 활성화 여부',
+    WS_ENABLED: 'WebSocket 실시간 체결 감지 매매 (REST 스캐너보다 빠름)',
+    WS_BUY_RATIO_MIN: '최근 체결 중 매수(BID) 비율 최소 (0.8 = 80%)',
+    WS_VOLUME_SPIKE_RATIO: '최근 거래량 / 1분 평균 거래량 비율',
+    WS_SIGNAL_WINDOW_SEC: '시그널 감지에 사용할 최근 시간 (초)',
+    WS_MIN_TRADES: '시그널 발생 최소 체결 건수',
+    SCANNER_ENABLED: 'REST 스캐너 (백그라운드 ML 학습 + 미시구조 저장)',
     SCANNER_INTERVAL_SECONDS: '전체 마켓을 스캔하는 주기 (초)',
     SCANNER_VOLUME_RATIO_MIN: '최근 거래량 / 평균 거래량 비율 (예: 2.0 = 평균 대비 2배)',
     SCANNER_PRICE_CHANGE_MIN: '스캔 시간창 내 최소 가격 변화율 (%)',

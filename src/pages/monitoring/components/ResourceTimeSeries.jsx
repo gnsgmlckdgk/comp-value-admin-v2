@@ -233,6 +233,7 @@ export default function ResourceTimeSeries({ resourceHistory = [] }) {
                                 stroke={axisColor}
                             />
                             <Tooltip
+                                wrapperStyle={{ zIndex: 50 }}
                                 contentStyle={{
                                     backgroundColor: tooltipBg,
                                     border: `1px solid ${tooltipBorder}`,

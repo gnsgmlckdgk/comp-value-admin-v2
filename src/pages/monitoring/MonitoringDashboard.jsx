@@ -69,7 +69,7 @@ export default function MonitoringDashboard() {
                                     <ServiceStatusCard key={svc.name || i} service={svc} />
                                 ))}
                             </div>
-                            <DashCard title="Resource Metrics (30min)">
+                            <DashCard title="Resource Metrics (30min)" className="relative z-10">
                                 <ResourceTimeSeries resourceHistory={resourceHistory} />
                             </DashCard>
                             <DashCard title="Resources">
@@ -112,9 +112,9 @@ function LiveIndicator({ isConnected }) {
     );
 }
 
-function DashCard({ title, children }) {
+function DashCard({ title, children, className = '' }) {
     return (
-        <div className="rounded-xl border border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 p-4 shadow-lg h-full">
+        <div className={`rounded-xl border border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 p-4 shadow-lg h-full ${className}`}>
             {title && (
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">{title}</div>
             )}

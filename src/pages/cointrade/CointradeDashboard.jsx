@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { send } from '@/util/ClientUtil';
 import useModalAnimation from '@/hooks/useModalAnimation';
 import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 import TradeFilterHelpModal from '@/component/common/display/TradeFilterHelpModal';
+import ColumnFilterDropdown from '@/component/common/display/ColumnFilterDropdown';
 import Button from '@/component/common/button/Button';
 import UpbitCandleChart from '@/pages/cointrade/UpbitCandleChart';
 
@@ -138,13 +139,10 @@ const TABLE_COLUMNS = [
         label: '유형',
         width: COL_WIDTHS.tradeType,
         sortable: true,
+        filterable: true,
         headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
-        filterType: 'select',
-        filterOptions: [
-            { value: 'BUY', label: '매수' },
-            { value: 'SELL', label: '매도' },
-        ],
+        filterLabelFn: (v) => v === 'BUY' ? '매수' : v === 'SELL' ? '매도' : v,
         render: (value) => (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${value === 'BUY'
                 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
@@ -159,20 +157,10 @@ const TABLE_COLUMNS = [
         label: '사유',
         width: COL_WIDTHS.reason,
         sortable: true,
+        filterable: true,
         headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
-        filterType: 'select',
-        filterOptions: [
-            { value: 'MOMENTUM_SIGNAL', label: '모멘텀 진입' },
-            { value: 'SIGNAL', label: '매수' },
-            { value: 'PARTIAL_SIGNAL', label: '부분매수' },
-            { value: 'TAKE_PROFIT', label: '익절' },
-            { value: 'STOP_LOSS', label: '손절' },
-            { value: 'PARTIAL_TAKE_PROFIT', label: '부분익절' },
-            { value: 'PARTIAL_STOP_LOSS', label: '부분손절' },
-            { value: 'TRAILING_STOP', label: '트레일링스탑' },
-            { value: 'MAX_HOLD_EXPIRED', label: '강제청산' },
-        ],
+        filterLabelFn: (v) => getReasonLabel(v),
         render: (value) => value ? (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(value)}`}>
                 {getReasonLabel(value)}
@@ -381,14 +369,9 @@ const HOLDINGS_TABLE_COLUMNS = [
         label: '진입 사유',
         width: HOLDINGS_COL_WIDTHS.entryReason,
         sortable: true,
+        filterable: true,
         headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
-        filterType: 'select',
-        filterOptions: [
-            { value: 'SCANNER', label: 'SCANNER' },
-            { value: 'ML_CONFIRMED', label: 'ML_CONFIRMED' },
-            { value: 'MANUAL', label: 'MANUAL' },
-        ],
         render: (value) => {
             if (!value) return '-';
             const colorMap = {
@@ -472,14 +455,17 @@ export default function CointradeDashboard() {
     const { shouldRender: renderSellResult, isAnimatingOut: isSellResultClosing } = useModalAnimation(!!sellResult, 250);
     const [isSelling, setIsSelling] = useState(false);
 
-    // 테이블 필터/정렬 상태
+    // 테이블 필터/정렬 상태 (값: Set 또는 null)
     const [columnFilters, setColumnFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+
+    // 필터 드롭다운 상태
+    const [filterDropdown, setFilterDropdown] = useState(null); // { tableId, colKey, anchorRect }
 
     // 필터 도움말 모달 상태
     const [isFilterHelpModalOpen, setIsFilterHelpModalOpen] = useState(false);
 
-    // 보유 종목 테이블 필터/정렬 상태
+    // 보유 종목 테이블 필터/정렬 상태 (값: Set 또는 null)
     const [holdingsColumnFilters, setHoldingsColumnFilters] = useState({});
     const [holdingsSortConfig, setHoldingsSortConfig] = useState({ key: 'profitRate', direction: 'desc' });
 
@@ -743,22 +729,12 @@ export default function CointradeDashboard() {
 
     // 보유 종목 데이터 처리 (필터링 -> 정렬)
     const processedHoldings = useMemo(() => {
-        // 셀렉트 필터 컬럼 목록
-        const selectFilterKeys = new Set(HOLDINGS_TABLE_COLUMNS.filter(c => c.filterType === 'select').map(c => c.key));
-
-        // 1. 필터링
+        // 1. 필터링 (Set 기반: 선택된 값만 통과)
         let data = holdings.filter(row => {
-            return Object.entries(holdingsColumnFilters).every(([key, filterValue]) => {
-                if (!filterValue) return true;
-                const cellValue = row[key];
-
-                // 셀렉트 필터: 정확 매칭
-                if (selectFilterKeys.has(key)) {
-                    return String(cellValue) === filterValue;
-                }
-
-                // 텍스트 필터: 부분 매칭
-                return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
+            return Object.entries(holdingsColumnFilters).every(([key, allowedSet]) => {
+                if (!allowedSet) return true;
+                const cellValue = String(row[key] ?? '');
+                return allowedSet.has(cellValue);
             });
         });
 
@@ -795,23 +771,12 @@ export default function CointradeDashboard() {
 
     // 최근 거래 데이터 처리 (필터링 -> 정렬)
     const processedData = useMemo(() => {
-        // 셀렉트 필터 컬럼 목록
-        const selectFilterKeys = new Set(TABLE_COLUMNS.filter(c => c.filterType === 'select').map(c => c.key));
-
-        // 1. 필터링
+        // 1. 필터링 (Set 기반: 선택된 값만 통과)
         let data = allRecentTrades.filter(row => {
-            return Object.entries(columnFilters).every(([key, filterValue]) => {
-                if (!filterValue) return true;
-                const cellValue = row[key];
-
-                // 셀렉트 필터: 정확 매칭
-                if (selectFilterKeys.has(key)) {
-                    return String(cellValue) === filterValue;
-                }
-
-                // 텍스트 필터: 부분 매칭
-                const filterLower = filterValue.toLowerCase();
-                return String(cellValue).toLowerCase().includes(filterLower);
+            return Object.entries(columnFilters).every(([key, allowedSet]) => {
+                if (!allowedSet) return true;
+                const cellValue = String(row[key] ?? '');
+                return allowedSet.has(cellValue);
             });
         });
 
@@ -844,12 +809,33 @@ export default function CointradeDashboard() {
     const currentRecords = processedData;
 
     // 핸들러들
-    const handleColumnFilterChange = useCallback((key, value) => {
-        setColumnFilters((prev) => ({ ...prev, [key]: value }));
+
+    // 필터 드롭다운 열기 (헤더 클릭 시)
+    const openFilterDropdown = useCallback((tableId, colKey, event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        setFilterDropdown({ tableId, colKey, anchorRect: rect });
+    }, []);
+
+    // 필터 적용 (Set 기반)
+    const applyFilter = useCallback((tableId, colKey, selectedValues) => {
+        const setter = tableId === 'trades' ? setColumnFilters : setHoldingsColumnFilters;
+        setter(prev => {
+            const next = { ...prev };
+            if (selectedValues === null) {
+                delete next[colKey]; // 전체 선택 = 필터 해제
+            } else {
+                next[colKey] = new Set(selectedValues);
+            }
+            return next;
+        });
     }, []);
 
     const clearColumnFilters = useCallback(() => {
         setColumnFilters({});
+    }, []);
+
+    const clearHoldingsColumnFilters = useCallback(() => {
+        setHoldingsColumnFilters({});
     }, []);
 
     const handleSort = useCallback((key) => {
@@ -859,15 +845,18 @@ export default function CointradeDashboard() {
         }));
     }, []);
 
-    const handleHoldingsColumnFilterChange = useCallback((key, value) => {
-        setHoldingsColumnFilters((prev) => ({ ...prev, [key]: value }));
-    }, []);
-
     const handleHoldingsSort = useCallback((key) => {
         setHoldingsSortConfig((prev) => ({
             key,
             direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
         }));
+    }, []);
+
+    // 컬럼의 고유값 추출
+    const getUniqueValues = useCallback((data, colKey) => {
+        const values = new Set();
+        data.forEach(row => values.add(String(row[colKey] ?? '')));
+        return Array.from(values).sort();
     }, []);
 
     // 페이지 변경 (서버에서 다시 조회)
@@ -1097,9 +1086,9 @@ export default function CointradeDashboard() {
                             매도
                         </Button>
 
-                        {Object.values(holdingsColumnFilters).some((v) => v !== '') && (
+                        {Object.keys(holdingsColumnFilters).length > 0 && (
 
-                            <Button variant="secondary" size="sm" onClick={() => setHoldingsColumnFilters({})}>
+                            <Button variant="secondary" size="sm" onClick={clearHoldingsColumnFilters}>
                                 필터 초기화
                             </Button>
 
@@ -1115,29 +1104,18 @@ export default function CointradeDashboard() {
                         <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
 
                             <tr>
-
                                 {HOLDINGS_TABLE_COLUMNS.map((col, index) => {
                                     const leftPosition = col.sticky
                                         ? (index === 0 ? 0 : index === 1 ? '50px' : undefined)
                                         : undefined;
+                                    const hasFilter = !!holdingsColumnFilters[col.key];
 
                                     return (
                                         <th
-
                                             key={col.key}
-
-                                            className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
-
-                                            style={{
-
-                                                width: col.width,
-
-                                                left: leftPosition
-
-                                            }}
-
-                                            onClick={() => col.sortable && handleHoldingsSort(col.key)}
-
+                                            className={`${col.headerClassName} ${col.sortable || col.filterable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                            style={{ width: col.width, left: leftPosition }}
+                                            onClick={(e) => col.sortable && handleHoldingsSort(col.key)}
                                         >
                                             {col.isCheckbox ? (
                                                 <input
@@ -1148,80 +1126,29 @@ export default function CointradeDashboard() {
                                                 />
                                             ) : (
                                                 <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
-
                                                     <span>{col.label}</span>
-
                                                     {col.sortable && (
-
                                                         <span className="flex flex-col text-[10px] leading-none opacity-60">
-
                                                             <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
-
                                                             <span className={holdingsSortConfig.key === col.key && holdingsSortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
-
                                                         </span>
-
                                                     )}
-
+                                                    {col.filterable && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); openFilterDropdown('holdings', col.key, e); }}
+                                                            className={`ml-0.5 p-0.5 rounded hover:bg-slate-500/50 ${hasFilter ? 'text-yellow-300' : 'text-white/40'}`}
+                                                            title="필터"
+                                                        >
+                                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
-
                                         </th>
                                     );
                                 })}
-
-                            </tr>
-
-                            <tr className="bg-slate-100 dark:bg-slate-700">
-
-                                {HOLDINGS_TABLE_COLUMNS.map((col, index) => {
-                                    const leftPosition = col.sticky
-                                        ? (index === 0 ? 0 : index === 1 ? '50px' : undefined)
-                                        : undefined;
-
-                                    return (
-                                        <th
-
-                                            key={`filter-${col.key}`}
-
-                                            className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
-
-                                            style={{
-
-                                                width: col.width,
-
-                                                left: leftPosition
-
-                                            }}
-
-                                        >
-                                            {!col.isCheckbox && (
-                                                col.filterType === 'select' ? (
-                                                    <select
-                                                        value={holdingsColumnFilters[col.key] || ''}
-                                                        onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
-                                                        className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white cursor-pointer"
-                                                    >
-                                                        <option value="">전체</option>
-                                                        {col.filterOptions.map(opt => (
-                                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                        ))}
-                                                    </select>
-                                                ) : (
-                                                    <input
-                                                        type="text"
-                                                        value={holdingsColumnFilters[col.key] || ''}
-                                                        onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
-                                                        placeholder="..."
-                                                        className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
-                                                    />
-                                                )
-                                            )}
-
-                                        </th>
-                                    );
-                                })}
-
                             </tr>
 
                         </thead>
@@ -1366,7 +1293,7 @@ export default function CointradeDashboard() {
                                 <option value={20}>20개씩</option>
                                 <option value={50}>50개씩</option>
                             </select>
-                            {Object.values(columnFilters).some((v) => v !== '') && (
+                            {Object.keys(columnFilters).length > 0 && (
                                 <button
                                     type="button"
                                     onClick={clearColumnFilters}
@@ -1388,60 +1315,41 @@ export default function CointradeDashboard() {
                         <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
                             <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white">
                                 <tr>
-                                    {TABLE_COLUMNS.map((col, index) => (
-                                        <th
-                                            key={col.key}
-                                            className={`${col.headerClassName} ${col.sortable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
-                                            style={{
-                                                width: col.width,
-                                                left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
-                                            }}
-                                            onClick={() => col.sortable && handleSort(col.key)}
-                                        >
-                                            <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
-                                                <span>{col.label}</span>
-                                                {col.sortable && (
-                                                    <span className="flex flex-col text-[10px] leading-none opacity-60">
-                                                        <span className={sortConfig.key === col.key && sortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
-                                                        <span className={sortConfig.key === col.key && sortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </th>
-                                    ))}
-                                </tr>
-                                <tr className="bg-slate-100 dark:bg-slate-700">
-                                    {TABLE_COLUMNS.map((col, index) => (
-                                        <th
-                                            key={`filter-${col.key}`}
-                                            className={`px-2 py-2 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
-                                            style={{
-                                                width: col.width,
-                                                left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
-                                            }}
-                                        >
-                                            {col.filterType === 'select' ? (
-                                                <select
-                                                    value={columnFilters[col.key] || ''}
-                                                    onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
-                                                    className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white cursor-pointer"
-                                                >
-                                                    <option value="">전체</option>
-                                                    {col.filterOptions.map(opt => (
-                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                    ))}
-                                                </select>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    value={columnFilters[col.key] || ''}
-                                                    onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
-                                                    placeholder="..."
-                                                    className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
-                                                />
-                                            )}
-                                        </th>
-                                    ))}
+                                    {TABLE_COLUMNS.map((col, index) => {
+                                        const hasFilter = !!columnFilters[col.key];
+                                        return (
+                                            <th
+                                                key={col.key}
+                                                className={`${col.headerClassName} ${col.sortable || col.filterable ? 'cursor-pointer hover:bg-slate-500 select-none' : ''} ${col.sticky ? 'sticky z-20 bg-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]' : ''}`}
+                                                style={{
+                                                    width: col.width,
+                                                    left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
+                                                }}
+                                                onClick={() => col.sortable && handleSort(col.key)}
+                                            >
+                                                <div className={`flex items-center gap-1 ${col.headerClassName.includes('text-center') ? 'justify-center' : col.headerClassName.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
+                                                    <span>{col.label}</span>
+                                                    {col.sortable && (
+                                                        <span className="flex flex-col text-[10px] leading-none opacity-60">
+                                                            <span className={sortConfig.key === col.key && sortConfig.direction === 'asc' ? 'opacity-100 text-yellow-300' : ''}>▲</span>
+                                                            <span className={sortConfig.key === col.key && sortConfig.direction === 'desc' ? 'opacity-100 text-yellow-300' : ''}>▼</span>
+                                                        </span>
+                                                    )}
+                                                    {col.filterable && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); openFilterDropdown('trades', col.key, e); }}
+                                                            className={`ml-0.5 p-0.5 rounded hover:bg-slate-500/50 ${hasFilter ? 'text-yellow-300' : 'text-white/40'}`}
+                                                            title="필터"
+                                                        >
+                                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-slate-200 dark:bg-slate-800 dark:divide-slate-700">
@@ -1678,6 +1586,28 @@ export default function CointradeDashboard() {
 
             {/* 필터 도움말 모달 */}
             <TradeFilterHelpModal isOpen={isFilterHelpModalOpen} onClose={() => setIsFilterHelpModalOpen(false)} />
+
+            {/* 엑셀 스타일 필터 드롭다운 */}
+            {filterDropdown && (() => {
+                const { tableId, colKey, anchorRect } = filterDropdown;
+                const data = tableId === 'trades' ? allRecentTrades : holdings;
+                const filters = tableId === 'trades' ? columnFilters : holdingsColumnFilters;
+                const columns = tableId === 'trades' ? TABLE_COLUMNS : HOLDINGS_TABLE_COLUMNS;
+                const col = columns.find(c => c.key === colKey);
+                const uniqueValues = getUniqueValues(data, colKey);
+                const currentFilter = filters[colKey] ? Array.from(filters[colKey]) : null;
+
+                return (
+                    <ColumnFilterDropdown
+                        anchorRect={anchorRect}
+                        uniqueValues={uniqueValues}
+                        currentFilter={currentFilter}
+                        labelFn={col?.filterLabelFn}
+                        onApply={(selected) => applyFilter(tableId, colKey, selected)}
+                        onClose={() => setFilterDropdown(null)}
+                    />
+                );
+            })()}
 
             {/* 상세보기 모달 */}
             <DetailModal

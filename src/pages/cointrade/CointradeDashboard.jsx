@@ -140,6 +140,11 @@ const TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        filterType: 'select',
+        filterOptions: [
+            { value: 'BUY', label: '매수' },
+            { value: 'SELL', label: '매도' },
+        ],
         render: (value) => (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${value === 'BUY'
                 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
@@ -156,6 +161,18 @@ const TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        filterType: 'select',
+        filterOptions: [
+            { value: 'MOMENTUM_SIGNAL', label: '모멘텀 진입' },
+            { value: 'SIGNAL', label: '매수' },
+            { value: 'PARTIAL_SIGNAL', label: '부분매수' },
+            { value: 'TAKE_PROFIT', label: '익절' },
+            { value: 'STOP_LOSS', label: '손절' },
+            { value: 'PARTIAL_TAKE_PROFIT', label: '부분익절' },
+            { value: 'PARTIAL_STOP_LOSS', label: '부분손절' },
+            { value: 'TRAILING_STOP', label: '트레일링스탑' },
+            { value: 'MAX_HOLD_EXPIRED', label: '강제청산' },
+        ],
         render: (value) => value ? (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(value)}`}>
                 {getReasonLabel(value)}
@@ -366,6 +383,12 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        filterType: 'select',
+        filterOptions: [
+            { value: 'SCANNER', label: 'SCANNER' },
+            { value: 'ML_CONFIRMED', label: 'ML_CONFIRMED' },
+            { value: 'MANUAL', label: 'MANUAL' },
+        ],
         render: (value) => {
             if (!value) return '-';
             const colorMap = {
@@ -720,11 +743,21 @@ export default function CointradeDashboard() {
 
     // 보유 종목 데이터 처리 (필터링 -> 정렬)
     const processedHoldings = useMemo(() => {
+        // 셀렉트 필터 컬럼 목록
+        const selectFilterKeys = new Set(HOLDINGS_TABLE_COLUMNS.filter(c => c.filterType === 'select').map(c => c.key));
+
         // 1. 필터링
         let data = holdings.filter(row => {
             return Object.entries(holdingsColumnFilters).every(([key, filterValue]) => {
                 if (!filterValue) return true;
                 const cellValue = row[key];
+
+                // 셀렉트 필터: 정확 매칭
+                if (selectFilterKeys.has(key)) {
+                    return String(cellValue) === filterValue;
+                }
+
+                // 텍스트 필터: 부분 매칭
                 return String(cellValue).toLowerCase().includes(filterValue.toLowerCase());
             });
         });
@@ -762,35 +795,23 @@ export default function CointradeDashboard() {
 
     // 최근 거래 데이터 처리 (필터링 -> 정렬)
     const processedData = useMemo(() => {
+        // 셀렉트 필터 컬럼 목록
+        const selectFilterKeys = new Set(TABLE_COLUMNS.filter(c => c.filterType === 'select').map(c => c.key));
+
         // 1. 필터링
         let data = allRecentTrades.filter(row => {
             return Object.entries(columnFilters).every(([key, filterValue]) => {
                 if (!filterValue) return true;
                 const cellValue = row[key];
+
+                // 셀렉트 필터: 정확 매칭
+                if (selectFilterKeys.has(key)) {
+                    return String(cellValue) === filterValue;
+                }
+
+                // 텍스트 필터: 부분 매칭
                 const filterLower = filterValue.toLowerCase();
-
-                // 원본 값으로 비교
-                if (String(cellValue).toLowerCase().includes(filterLower)) {
-                    return true;
-                }
-
-                // 유형(tradeType) 컬럼: 라벨 값으로도 비교
-                if (key === 'tradeType' && cellValue) {
-                    const label = getTradeTypeLabel(cellValue);
-                    if (label.toLowerCase().includes(filterLower)) {
-                        return true;
-                    }
-                }
-
-                // 사유(reason) 컬럼: 라벨 값으로도 비교
-                if (key === 'reason' && cellValue) {
-                    const label = getReasonLabel(cellValue);
-                    if (label.toLowerCase().includes(filterLower)) {
-                        return true;
-                    }
-                }
-
-                return false;
+                return String(cellValue).toLowerCase().includes(filterLower);
             });
         });
 
@@ -1175,19 +1196,26 @@ export default function CointradeDashboard() {
 
                                         >
                                             {!col.isCheckbox && (
-                                                <input
-
-                                                    type="text"
-
-                                                    value={holdingsColumnFilters[col.key] || ''}
-
-                                                    onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
-
-                                                    placeholder="..."
-
-                                                    className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
-
-                                                />
+                                                col.filterType === 'select' ? (
+                                                    <select
+                                                        value={holdingsColumnFilters[col.key] || ''}
+                                                        onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
+                                                        className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white cursor-pointer"
+                                                    >
+                                                        <option value="">전체</option>
+                                                        {col.filterOptions.map(opt => (
+                                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <input
+                                                        type="text"
+                                                        value={holdingsColumnFilters[col.key] || ''}
+                                                        onChange={(e) => handleHoldingsColumnFilterChange(col.key, e.target.value)}
+                                                        placeholder="..."
+                                                        className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+                                                    />
+                                                )
                                             )}
 
                                         </th>
@@ -1392,13 +1420,26 @@ export default function CointradeDashboard() {
                                                 left: col.sticky ? (index === 0 ? 0 : col.left) : undefined
                                             }}
                                         >
-                                            <input
-                                                type="text"
-                                                value={columnFilters[col.key] || ''}
-                                                onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
-                                                placeholder="..."
-                                                className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
-                                            />
+                                            {col.filterType === 'select' ? (
+                                                <select
+                                                    value={columnFilters[col.key] || ''}
+                                                    onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
+                                                    className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white cursor-pointer"
+                                                >
+                                                    <option value="">전체</option>
+                                                    {col.filterOptions.map(opt => (
+                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    value={columnFilters[col.key] || ''}
+                                                    onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
+                                                    placeholder="..."
+                                                    className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white dark:placeholder-slate-400"
+                                                />
+                                            )}
                                         </th>
                                     ))}
                                 </tr>

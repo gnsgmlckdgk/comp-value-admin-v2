@@ -84,7 +84,7 @@ export default function TradeFilterHelpModal({ isOpen, onClose }) {
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                     <tr className="bg-white dark:bg-slate-800">
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">매수</td>
+                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">모멘텀 진입</td>
                                         <td className="px-4 py-2">
                                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">MOMENTUM_SIGNAL</span>
                                         </td>

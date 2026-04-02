@@ -99,7 +99,7 @@ const getReasonColor = (reason) => {
 // 사유 라벨
 const getReasonLabel = (reason) => {
     const labels = {
-        'MOMENTUM_SIGNAL': '매수',
+        'MOMENTUM_SIGNAL': '모멘텀 진입',
         'SIGNAL': '매수',
         'PARTIAL_SIGNAL': '부분매수',
         'TAKE_PROFIT': '익절',

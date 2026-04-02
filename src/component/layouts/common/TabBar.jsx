@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTab } from '@/context/TabContext';
 
 export default function TabBar() {
-    const { tabs, activeKey, switchTab, closeTab, closeOtherTabs, closeRightTabs } = useTab();
+    const { tabs, activeKey, switchTab, closeTab, closeAllTabs, closeOtherTabs, closeRightTabs } = useTab();
     const [contextMenu, setContextMenu] = useState(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
@@ -83,9 +83,10 @@ export default function TabBar() {
         setContextMenu(null);
         if (!key) return;
         if (action === 'close') closeTab(key);
+        else if (action === 'closeAll') closeAllTabs();
         else if (action === 'closeOthers') closeOtherTabs(key);
         else if (action === 'closeRight') closeRightTabs(key);
-    }, [contextMenu, closeTab, closeOtherTabs, closeRightTabs]);
+    }, [contextMenu, closeTab, closeAllTabs, closeOtherTabs, closeRightTabs]);
 
     const ArrowButton = ({ direction, visible, onClick }) => (
         <button
@@ -152,6 +153,20 @@ export default function TabBar() {
                 </div>
 
                 <ArrowButton direction={1} visible={canScrollRight} onClick={() => scrollBy(1)} />
+
+                {/* 전체 닫기 버튼 - closable 탭이 1개 이상일 때만 표시 */}
+                {tabs.some(t => t.closable) && (
+                    <button
+                        onClick={closeAllTabs}
+                        className="flex h-10 w-8 shrink-0 items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-all duration-150 border-l border-slate-200 dark:border-slate-700"
+                        title="탭 전체 닫기"
+                        aria-label="탭 전체 닫기"
+                    >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                )}
             </div>
 
             {/* 우클릭 컨텍스트 메뉴 */}
@@ -169,6 +184,12 @@ export default function TabBar() {
                             닫기
                         </button>
                     )}
+                    <button
+                        onClick={() => handleMenuAction('closeAll')}
+                        className="flex w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                    >
+                        전체 닫기
+                    </button>
                     <button
                         onClick={() => handleMenuAction('closeOthers')}
                         className="flex w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"

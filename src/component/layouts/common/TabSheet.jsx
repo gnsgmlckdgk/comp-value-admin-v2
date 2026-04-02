@@ -3,7 +3,7 @@ import { useTab } from '@/context/TabContext';
 import useModalAnimation from '@/hooks/useModalAnimation';
 
 export default function TabSheet() {
-    const { tabs, activeKey, switchTab, closeTab } = useTab();
+    const { tabs, activeKey, switchTab, closeTab, closeAllTabs } = useTab();
     const [isOpen, setIsOpen] = useState(false);
     const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 200);
 
@@ -58,14 +58,24 @@ export default function TabSheet() {
                             <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                                 열린 탭 ({tabs.length})
                             </span>
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                            >
-                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+                            <div className="flex items-center gap-1">
+                                {tabs.some(t => t.closable) && (
+                                    <button
+                                        onClick={() => { closeAllTabs(); setIsOpen(false); }}
+                                        className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                                    >
+                                        전체 닫기
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
                         {/* 탭 목록 */}

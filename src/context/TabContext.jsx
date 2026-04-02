@@ -168,6 +168,13 @@ export function TabProvider({ children }) {
         navigate(targetPath);
     }, [navigate]);
 
+    const closeAllTabs = useCallback(() => {
+        setTabs([HOME_TAB]);
+        setActiveKey('/');
+        isNavigatingRef.current = true;
+        navigate('/');
+    }, [navigate]);
+
     const closeRightTabs = useCallback((key) => {
         setTabs(prev => {
             const idx = prev.findIndex(t => t.key === key);
@@ -189,7 +196,7 @@ export function TabProvider({ children }) {
     }, [navigate]);
 
     return (
-        <TabContext.Provider value={{ tabs, activeKey, openTab, switchTab, closeTab, closeTabAndNavigate, closeOtherTabs, closeRightTabs }}>
+        <TabContext.Provider value={{ tabs, activeKey, openTab, switchTab, closeTab, closeTabAndNavigate, closeAllTabs, closeOtherTabs, closeRightTabs }}>
             {children}
         </TabContext.Provider>
     );

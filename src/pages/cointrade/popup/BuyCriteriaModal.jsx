@@ -78,13 +78,10 @@ export default function BuyCriteriaModal({ isOpen, onClose }) {
                         </p>
 
                         <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-lg border border-slate-200 dark:border-slate-600">
-                            <h5 className="font-semibold text-sm mb-2 text-slate-800 dark:text-slate-200">감지 조건</h5>
+                            <h5 className="font-semibold text-sm mb-2 text-slate-800 dark:text-slate-200">스캐너 (ML 학습 전용)</h5>
                             <ul className="list-disc list-inside text-sm space-y-1.5 text-slate-700 dark:text-slate-300">
-                                <li><strong>거래량 배율:</strong> 최근 거래량이 평균 대비 <code>SCANNER_VOLUME_RATIO_MIN</code>배 이상</li>
-                                <li><strong>가격 변화율:</strong> 감지 시간창 내 <code>SCANNER_PRICE_CHANGE_MIN</code>% 이상 상승</li>
-                                <li><strong>RSI 범위:</strong> RSI가 <code>SCANNER_RSI_MIN</code> ~ <code>SCANNER_RSI_MAX</code> 사이</li>
-                                <li><strong>VWAP 이탈:</strong> VWAP 대비 이탈률이 <code>SCANNER_VWAP_DEVIATION_MAX</code>% 이내</li>
-                                <li><strong>거래대금:</strong> 최소 <code>SCANNER_MIN_TRADE_VALUE</code>원 이상</li>
+                                <li><strong>거래대금:</strong> 최소 <code>SCANNER_MIN_TRADE_VALUE</code>원 이상인 종목 대상</li>
+                                <li><strong>역할:</strong> 분봉 수집 + ML 미세조정 + 미시구조 스냅샷 저장</li>
                             </ul>
                         </div>
                     </section>

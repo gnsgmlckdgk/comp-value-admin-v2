@@ -56,6 +56,8 @@ export default function CointradeScheduler() {
     const [cooldowns, setCooldowns] = useState({ buy: 0, sell: 0, stop: 0 });
     // 남은 시간 상태 (초)
     const [remainingTimes, setRemainingTimes] = useState({ buy: 0, sell: 0, stop: 0 });
+    // 경고 모달 상태
+    const [warningModal, setWarningModal] = useState(null);
 
     // Toast auto-hide
     useEffect(() => {
@@ -219,7 +221,21 @@ export default function CointradeScheduler() {
     const handleWsToggle = () => handleConfigToggle('WS_ENABLED', status.wsEnabled, 'WebSocket 매매');
     const handleScannerToggle = () => handleConfigToggle('SCANNER_ENABLED', status.scannerEnabled, '스캐너(학습)');
     const handleSellToggle = () => handleConfigToggle('SELL_ENABLED', status.sellEnabled, '매도');
-    // 페이퍼 트레이딩은 별도 페이지에서 관리
+
+    // 페이퍼 토글: 실거래(WS) 켜져있으면 경고 모달
+    const handlePaperToggle = () => {
+        if (!status.paperTrading && status.wsEnabled) {
+            setWarningModal({
+                message: '실거래(WS 매매)가 활성화된 상태에서 페이퍼 트레이딩을 켜면 API Rate Limit에 걸릴 수 있습니다.\n계속하시겠습니까?',
+                onConfirm: () => {
+                    setWarningModal(null);
+                    handleConfigToggle('PAPER_TRADING', status.paperTrading, '페이퍼 트레이딩');
+                },
+            });
+            return;
+        }
+        handleConfigToggle('PAPER_TRADING', status.paperTrading, '페이퍼 트레이딩');
+    };
 
     // 매수 프로세스 수동 실행
     const handleManualBuy = async () => {
@@ -348,8 +364,44 @@ export default function CointradeScheduler() {
                     </div>
                 </div>
 
-                {/* 페이퍼 트레이딩은 별도 페이지에서 관리 */}
+                {/* 페이퍼 트레이딩 토글 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">페이퍼</h2>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">시뮬레이션 (주문 없음)</p>
+                            <span className={`text-xs font-medium ${
+                                status.paperTrading
+                                    ? 'text-orange-600 dark:text-orange-400'
+                                    : 'text-slate-500 dark:text-slate-400'
+                            }`}>
+                                {togglingKey === 'paperTrading' ? '처리 중...' : status.paperTrading ? '활성' : '비활성'}
+                            </span>
+                        </div>
+                        <ToggleSwitch enabled={status.paperTrading} onClick={handlePaperToggle} loading={togglingKey === 'paperTrading'} />
+                    </div>
+                </div>
             </div>
+
+            {/* 경고 모달 */}
+            {warningModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 max-w-sm mx-4">
+                        <h3 className="text-lg font-semibold text-orange-600 dark:text-orange-400 mb-3">경고</h3>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line mb-5">{warningModal.message}</p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setWarningModal(null)}
+                                className="px-4 py-2 text-sm rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600"
+                            >취소</button>
+                            <button
+                                onClick={warningModal.onConfirm}
+                                className="px-4 py-2 text-sm rounded-md bg-orange-500 text-white hover:bg-orange-600"
+                            >계속</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 요약 카드 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

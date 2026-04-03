@@ -438,6 +438,9 @@ export default function CointradeDashboard() {
     // KRW 잔액
     const [krwBalance, setKrwBalance] = useState(0);
 
+    // 모델 상태
+    const [modelStatus, setModelStatus] = useState({ numTrees: 0, maxTrees: 5000, trainedAt: null, accuracy: null, aucRoc: null });
+
     // 보유 종목
     const [holdings, setHoldings] = useState([]);
 
@@ -621,6 +624,23 @@ export default function CointradeDashboard() {
                 }
             } catch (signalError) {
                 console.error('스캐너 시그널 조회 실패:', signalError);
+            }
+
+            // 7. 모델 상태 조회
+            try {
+                const modelResponse = await send('/dart/api/cointrade/model-status', {}, 'GET');
+                if (modelResponse.data?.success && modelResponse.data?.response) {
+                    const r = modelResponse.data.response;
+                    setModelStatus({
+                        numTrees: r.num_trees ?? 0,
+                        maxTrees: r.max_trees ?? 5000,
+                        trainedAt: r.trained_at,
+                        accuracy: r.accuracy,
+                        aucRoc: r.auc_roc,
+                    });
+                }
+            } catch (modelError) {
+                console.error('모델 상태 조회 실패:', modelError);
             }
         } catch (e) {
             console.error('데이터 조회 실패:', e);
@@ -968,7 +988,7 @@ export default function CointradeDashboard() {
             </div>
 
             {/* 상단 카드 영역 */}
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
                 {/* 스케줄러 상태 */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">스케줄러 상태</div>
@@ -1062,6 +1082,33 @@ export default function CointradeDashboard() {
                         : 'text-orange-600 dark:text-orange-400'
                         }`}>
                         {status.totalProfitRate >= 0 ? '+' : ''}{status.totalProfitRate.toFixed(2)}%
+                    </div>
+                </div>
+
+                {/* 모델 상태 */}
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">ML 모델</div>
+                    <div className="flex items-end gap-1 mb-2">
+                        <span className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+                            {formatNumberWithComma(modelStatus.numTrees)}
+                        </span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 pb-0.5">
+                            / {formatNumberWithComma(modelStatus.maxTrees)}
+                        </span>
+                    </div>
+                    {/* 진행률 바 */}
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-1.5">
+                        <div
+                            className={`h-2 rounded-full transition-all duration-500 ${
+                                modelStatus.numTrees / modelStatus.maxTrees >= 0.9
+                                    ? 'bg-amber-500 dark:bg-amber-400'
+                                    : 'bg-sky-500 dark:bg-sky-400'
+                            }`}
+                            style={{ width: `${Math.min((modelStatus.numTrees / modelStatus.maxTrees) * 100, 100)}%` }}
+                        />
+                    </div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500">
+                        {modelStatus.trainedAt ? formatDateTime(modelStatus.trainedAt) : '-'}
                     </div>
                 </div>
             </div>

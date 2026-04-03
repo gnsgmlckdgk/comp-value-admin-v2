@@ -44,6 +44,7 @@ const getReasonColor = (reason) => {
         'PARTIAL_TRAILING_STOP': 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400',
         'MANUAL': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
         'PARTIAL_MANUAL': 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
+        'MANUAL_CLEANUP': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
         'MAX_HOLD_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
         'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
     };
@@ -74,6 +75,7 @@ const getReasonLabel = (reason) => {
         'TRAILING_STOP': '트레일링스탑',
         'PARTIAL_TRAILING_STOP': '부분트레일링',
         'MANUAL': '수동매도',
+        'MANUAL_CLEANUP': '수동정리',
         'PARTIAL_MANUAL': '부분수동',
         'MAX_HOLD_EXPIRED': '강제청산',
         'MAX_HOLDING_EXPIRED': '강제청산'

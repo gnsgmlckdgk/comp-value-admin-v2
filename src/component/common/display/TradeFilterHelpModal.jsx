@@ -114,6 +114,12 @@ export default function TradeFilterHelpModal({ isOpen, onClose }) {
                                         </td>
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
+                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">수동정리</td>
+                                        <td className="px-4 py-2">
+                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">MANUAL_CLEANUP</span>
+                                        </td>
+                                    </tr>
+                                    <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 text-slate-600 dark:text-slate-400">강제청산</td>
                                         <td className="px-4 py-2">
                                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">MAX_HOLD_EXPIRED</span>

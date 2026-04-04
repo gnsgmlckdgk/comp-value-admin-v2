@@ -195,15 +195,17 @@ export default function Backtest() {
     const handleStart = async () => {
         setConfigLoading(true);
         try {
+            const startedAt = new Date().toISOString();
             const configList = [
                 { configKey: 'PAPER_TRADING', configValue: 'true' },
+                { configKey: 'PAPER_TRADING_STARTED_AT', configValue: startedAt },
             ];
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
             if (error) {
                 setToast('시작 실패: ' + error);
             } else if (data?.success) {
                 setPaperEnabled(true);
-                setPaperStartedAt(new Date().toISOString());
+                setPaperStartedAt(startedAt);
                 setToast('페이퍼 트레이딩이 시작되었습니다.');
                 fetchAll(true);
             }

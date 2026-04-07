@@ -26,11 +26,13 @@ const PARAM_GROUPS = {
         ]
     },
     SCANNER: {
-        label: 'REST 스캐너 (백그라운드 학습용)',
+        label: 'REST 스캐너 (학습 + 예측 매수)',
         params: [
             { key: 'SCANNER_ENABLED', label: '스캐너', type: 'toggle' },
             { key: 'SCANNER_INTERVAL_SECONDS', label: '스캔 주기(초)', type: 'number' },
             { key: 'SCANNER_MIN_TRADE_VALUE', label: '최소 거래대금(원)', type: 'number' },
+            { key: 'SCANNER_BUY_ENABLED', label: '예측 매수', type: 'toggle' },
+            { key: 'SCANNER_BUY_MIN_CONFIDENCE', label: '예측 매수 최소 확률', type: 'number', step: 0.01 },
         ]
     },
     ML: {
@@ -105,9 +107,11 @@ const PARAM_DESCRIPTIONS = {
     WS_VOLUME_SPIKE_RATIO: '최근 거래량 / 1분 평균 거래량 비율',
     WS_SIGNAL_WINDOW_SEC: '시그널 감지에 사용할 최근 시간 (초)',
     WS_MIN_TRADES: '시그널 발생 최소 체결 건수',
-    SCANNER_ENABLED: 'REST 스캐너 (백그라운드 ML 학습 + 미시구조 저장)',
+    SCANNER_ENABLED: 'REST 스캐너 (ML 학습 + 미시구조 저장 + 예측 매수)',
     SCANNER_INTERVAL_SECONDS: '전체 마켓을 스캔하는 주기 (초)',
     SCANNER_MIN_TRADE_VALUE: '최소 거래대금 필터 (원)',
+    SCANNER_BUY_ENABLED: '스캐너 예측 매수 (전 종목 ML 예측 → 오르기 전 패턴 종목 매수)',
+    SCANNER_BUY_MIN_CONFIDENCE: '예측 매수 최소 ML 확률 (낮추면 매수 빈도↑, 높이면 정확도↑)',
     ML_ENABLED: 'ML 모델을 사용하여 매수 시그널을 확인',
     ML_MIN_CONFIDENCE: 'ML 모델의 최소 예측 확률 (0~1)',
     ML_CANDLE_UNIT: '학습/예측에 사용할 분봉 단위 (분)',

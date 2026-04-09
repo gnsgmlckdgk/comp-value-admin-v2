@@ -19,6 +19,7 @@ const PARAM_GROUPS = {
         label: 'WebSocket 실시간 매매',
         params: [
             { key: 'WS_ENABLED', label: '실시간 매매', type: 'toggle' },
+            { key: 'WS_BUY_ENABLED', label: 'WS 매수 사용', type: 'toggle' },
             { key: 'WS_BUY_RATIO_MIN', label: '매수 비율 최소', type: 'number', step: 0.05 },
             { key: 'WS_VOLUME_SPIKE_RATIO', label: '거래량 급증 배율', type: 'number', step: 0.5 },
             { key: 'WS_SIGNAL_WINDOW_SEC', label: '감지 시간창(초)', type: 'number' },
@@ -103,6 +104,7 @@ Object.entries(PARAM_GROUPS).forEach(([groupKey, group]) => {
 
 const PARAM_DESCRIPTIONS = {
     WS_ENABLED: 'WebSocket 실시간 체결 감지 매매 (REST 스캐너보다 빠름)',
+    WS_BUY_ENABLED: 'WS 매수 ON/OFF (false=스캐너 예측 매수만 사용, WS 매도체크는 유지)',
     WS_BUY_RATIO_MIN: '최근 체결 중 매수(BID) 비율 최소 (0.8 = 80%)',
     WS_VOLUME_SPIKE_RATIO: '최근 거래량 / 1분 평균 거래량 비율',
     WS_SIGNAL_WINDOW_SEC: '시그널 감지에 사용할 최근 시간 (초)',

@@ -27,13 +27,18 @@ const PARAM_GROUPS = {
         ]
     },
     SCANNER: {
-        label: 'REST 스캐너 (학습 + 예측 매수)',
+        label: 'REST 스캐너 (학습 + Mean Reversion 매수)',
         params: [
             { key: 'SCANNER_ENABLED', label: '스캐너', type: 'toggle' },
             { key: 'SCANNER_INTERVAL_SECONDS', label: '스캔 주기(초)', type: 'number' },
             { key: 'SCANNER_MIN_TRADE_VALUE', label: '최소 거래대금(원)', type: 'number' },
-            { key: 'SCANNER_BUY_ENABLED', label: '예측 매수', type: 'toggle' },
-            { key: 'SCANNER_BUY_MIN_CONFIDENCE', label: '예측 매수 최소 확률', type: 'number', step: 0.01 },
+            { key: 'SCANNER_BUY_ENABLED', label: 'MR 매수', type: 'toggle' },
+            { key: 'SCANNER_BUY_MIN_CONFIDENCE', label: '매수 최소 ML확률', type: 'number', step: 0.01 },
+            { key: 'MR_RECENT_CANDLES', label: '분석 봉 수', type: 'number' },
+            { key: 'MR_MIN_DOWN_CANDLES', label: '최소 하락 봉', type: 'number' },
+            { key: 'MR_MIN_DECLINE_PCT', label: '최대 하락폭(%)', type: 'number', step: 0.1 },
+            { key: 'MR_MAX_DECLINE_PCT', label: '최소 하락폭(%)', type: 'number', step: 0.1 },
+            { key: 'ORDERBOOK_BID_ASK_MIN', label: '호가 bid/ask 최소', type: 'number', step: 0.1 },
         ]
     },
     ML: {
@@ -112,8 +117,13 @@ const PARAM_DESCRIPTIONS = {
     SCANNER_ENABLED: 'REST 스캐너 (ML 학습 + 미시구조 저장 + 예측 매수)',
     SCANNER_INTERVAL_SECONDS: '전체 마켓을 스캔하는 주기 (초)',
     SCANNER_MIN_TRADE_VALUE: '최소 거래대금 필터 (원)',
-    SCANNER_BUY_ENABLED: '스캐너 예측 매수 (전 종목 ML 예측 → 오르기 전 패턴 종목 매수)',
-    SCANNER_BUY_MIN_CONFIDENCE: '예측 매수 최소 ML 확률 (낮추면 매수 빈도↑, 높이면 정확도↑)',
+    SCANNER_BUY_ENABLED: 'Mean Reversion 매수 (하락 후 반등 패턴 + 호가 필터)',
+    SCANNER_BUY_MIN_CONFIDENCE: '매수 최소 ML 확률 (낮추면 매수 빈도↑, 높이면 정확도↑)',
+    MR_RECENT_CANDLES: '최근 N봉에서 하락 패턴 분석 (기본 5)',
+    MR_MIN_DOWN_CANDLES: 'N봉 중 최소 M봉 하락해야 진입 (기본 3)',
+    MR_MIN_DECLINE_PCT: '최대 허용 하락폭 (이보다 더 빠지면 폭락으로 스킵)',
+    MR_MAX_DECLINE_PCT: '최소 하락폭 (이보다 덜 빠지면 약한 하락으로 무시)',
+    ORDERBOOK_BID_ASK_MIN: '호가 bid/ask 비율 최소 (1 이상이면 매수벽이 더 강함)',
     ML_ENABLED: 'ML 모델을 사용하여 매수 시그널을 확인',
     ML_MIN_CONFIDENCE: 'ML 모델의 최소 예측 확률 (0~1)',
     ML_CANDLE_UNIT: '학습/예측에 사용할 분봉 단위 (분)',

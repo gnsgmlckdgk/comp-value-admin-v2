@@ -257,6 +257,7 @@ export default function Backtest() {
     // 성과 지표 계산
     const metrics = useMemo(() => {
         const sellTrades = history.filter(h => h.tradeType === 'SELL' || h.trade_type === 'SELL');
+        const buyTrades = history.filter(h => h.tradeType === 'BUY' || h.trade_type === 'BUY');
         const totalTrades = history.length;
         const wins = sellTrades.filter(h => (h.profitLoss || h.profit_loss || 0) > 0).length;
         const winRate = sellTrades.length > 0 ? (wins / sellTrades.length) * 100 : 0;
@@ -268,7 +269,7 @@ export default function Backtest() {
             ? holdDurations.reduce((s, d) => s + d, 0) / holdDurations.length / 60
             : 0;
 
-        return { totalTrades, winRate, totalPL, avgHoldMin, sellCount: sellTrades.length };
+        return { totalTrades, winRate, totalPL, avgHoldMin, buyCount: buyTrades.length, sellCount: sellTrades.length };
     }, [history]);
 
     // 경과 시간 표시
@@ -374,7 +375,8 @@ export default function Backtest() {
 
             {/* 2. 성과 요약 카드 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <SummaryCard label="총 거래 수" value={metrics.totalTrades} suffix="건" />
+                <SummaryCard label="총 거래 수" value={metrics.totalTrades} suffix="건"
+                    sub={metrics.totalTrades > 0 ? `매수 ${metrics.buyCount} / 매도 ${metrics.sellCount}` : ''} />
                 <SummaryCard
                     label="승률"
                     value={metrics.sellCount > 0 ? metrics.winRate.toFixed(1) : '-'}

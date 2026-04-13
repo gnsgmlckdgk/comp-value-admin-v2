@@ -55,6 +55,7 @@ export default function TransactionOverview() {
     const [showCompValueModal, setShowCompValueModal] = useState(false);
     const [compValueData, setCompValueData] = useState({});
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
     const [sellModalData, setSellModalData] = useState({ open: false, data: null, targetRows: [] });
     const [transactionModalData, setTransactionModalData] = useState({ open: false, mode: 'add', data: null });
     const [detailModalData, setDetailModalData] = useState({ open: false, row: null, isGroupRow: false });
@@ -89,6 +90,7 @@ export default function TransactionOverview() {
         try {
             await mergePricesBySymbols(rows.map((r) => r.symbol));
             await refreshFxRate();
+            setLastRefreshedAt(new Date());
         } catch (e) {
             openAlert('현재가격/환율 갱신에 실패했습니다.');
         } finally {
@@ -361,6 +363,7 @@ export default function TransactionOverview() {
                     onRefresh={handleRefreshPrices}
                     onAddClick={handleOpenAddModal}
                     onExcelDownload={handleExcelDownload}
+                    lastRefreshedAt={lastRefreshedAt}
                 />
 
                 <SearchFilterBar

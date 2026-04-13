@@ -3,7 +3,7 @@ import Button from '@/component/common/button/Button';
 /**
  * 거래 페이지 헤더 (액션 버튼만)
  */
-export function TransactionHeader({ loading, rows, onRefresh, onAddClick, onExcelDownload }) {
+export function TransactionHeader({ loading, rows, onRefresh, onAddClick, onExcelDownload, lastRefreshedAt }) {
     return (
         <div className="mb-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -20,9 +20,16 @@ export function TransactionHeader({ loading, rows, onRefresh, onAddClick, onExce
                     <span>엑셀 다운로드</span>
                 </Button>
             </div>
-            <Button variant="secondary" size="sm" onClick={onRefresh} disabled={loading || rows.length === 0}>
-                {loading ? '갱신 중...' : '현재가격 갱신'}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+                <Button variant="secondary" size="sm" onClick={onRefresh} disabled={loading || rows.length === 0}>
+                    {loading ? '갱신 중...' : '현재가격 갱신'}
+                </Button>
+                {lastRefreshedAt && (
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                        {lastRefreshedAt.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                    </span>
+                )}
+            </div>
         </div>
     );
 }

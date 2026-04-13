@@ -594,24 +594,36 @@ const StockNewsSection = ({ symbol }) => {
     const [open, setOpen] = useState(false);
     const [news, setNews] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [fetched, setFetched] = useState(false);
+    const [fetchedSymbol, setFetchedSymbol] = useState(null);
+
+    // symbol이 바뀌면 state 리셋
+    useEffect(() => {
+        setNews([]);
+        setFetchedSymbol(null);
+        setOpen(false);
+        setLoading(false);
+    }, [symbol]);
+
+    const fetchNews = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await send('/dart/abroad/company/financial/fmp/stockNews', { tickers: symbol, limit: 7 }, 'POST');
+            if (!error && data?.success && Array.isArray(data.response)) {
+                setNews(data.response);
+            }
+        } catch (e) {
+            // 뉴스 로드 실패 — 무시
+        } finally {
+            setLoading(false);
+            setFetchedSymbol(symbol);
+        }
+    };
 
     const handleToggle = async () => {
         const next = !open;
         setOpen(next);
-        if (next && !fetched) {
-            setLoading(true);
-            try {
-                const { data, error } = await send('/dart/abroad/company/financial/fmp/stockNews', { tickers: symbol, limit: 7 }, 'POST');
-                if (!error && data?.success && Array.isArray(data.response)) {
-                    setNews(data.response);
-                }
-            } catch (e) {
-                // 뉴스 로드 실패 — 무시
-            } finally {
-                setLoading(false);
-                setFetched(true);
-            }
+        if (next && fetchedSymbol !== symbol) {
+            await fetchNews();
         }
     };
 
@@ -638,7 +650,7 @@ const StockNewsSection = ({ symbol }) => {
             >
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">최근 뉴스</span>
-                    {fetched && news.length > 0 && (
+                    {fetchedSymbol && news.length > 0 && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 font-medium">
                             {news.length}
                         </span>

@@ -24,6 +24,7 @@ const PARAM_GROUPS = {
             { key: 'WS_VOLUME_SPIKE_RATIO', label: '거래량 급증 배율', type: 'number', step: 0.5 },
             { key: 'WS_SIGNAL_WINDOW_SEC', label: '감지 시간창(초)', type: 'number' },
             { key: 'WS_MIN_TRADES', label: '최소 체결 건수', type: 'number' },
+            { key: 'WS_MAX_PRICE_CHANGE_PCT', label: '최대 가격변동(%)', type: 'number', step: 0.1 },
         ]
     },
     SCANNER: {
@@ -61,6 +62,9 @@ const PARAM_GROUPS = {
             { key: 'BUY_COOLDOWN_MINUTES', label: '재매수 쿨다운(분)', type: 'number' },
             { key: 'BUY_USE_MARKET_ORDER', label: '시장가 주문', type: 'toggle' },
             { key: 'TARGET_MODE', label: '대상 모드', type: 'select', options: ['ALL', 'SELECTED'] },
+            { key: 'SL_FILTER_ENABLED', label: 'SL방지 필터', type: 'toggle' },
+            { key: 'SL_FILTER_MIN_LARGE_BUYS', label: 'SL필터 대량매수 최소', type: 'number' },
+            { key: 'SL_FILTER_MIN_BUY_VOL_RATIO', label: 'SL필터 매수비율 최소', type: 'number', step: 0.01 },
         ]
     },
     SELL: {
@@ -114,6 +118,7 @@ const PARAM_DESCRIPTIONS = {
     WS_VOLUME_SPIKE_RATIO: '최근 거래량 / 1분 평균 거래량 비율',
     WS_SIGNAL_WINDOW_SEC: '시그널 감지에 사용할 최근 시간 (초)',
     WS_MIN_TRADES: '시그널 발생 최소 체결 건수',
+    WS_MAX_PRICE_CHANGE_PCT: '이미 급등한 종목 스킵 기준 (이 %보다 상승 시 매수 안 함)',
     SCANNER_ENABLED: 'REST 스캐너 (ML 학습 + 미시구조 저장 + 예측 매수)',
     SCANNER_INTERVAL_SECONDS: '전체 마켓을 스캔하는 주기 (초)',
     SCANNER_MIN_TRADE_VALUE: '최소 거래대금 필터 (원)',
@@ -137,6 +142,9 @@ const PARAM_DESCRIPTIONS = {
     BUY_COOLDOWN_MINUTES: '같은 종목 재매수까지 최소 대기 시간 (분)',
     BUY_USE_MARKET_ORDER: '시장가 주문 사용 여부 (true: 시장가, false: 지정가)',
     TARGET_MODE: 'ALL: KRW 마켓 전체 종목, SELECTED: 대상종목설정에서 선택한 종목만',
+    SL_FILTER_ENABLED: '손절 방지 필터 (시장 미시구조 기반, SL 가능성 높은 매수 사전 차단)',
+    SL_FILTER_MIN_LARGE_BUYS: '스냅샷 대량 매수 건수 최소 기준 (미달 시 매수 차단)',
+    SL_FILTER_MIN_BUY_VOL_RATIO: '스냅샷 매수 거래량 비율 최소 기준 (미달 시 매수 차단)',
     SELL_ENABLED: '매도 기능 활성화',
     SELL_CHECK_SECONDS: '보유 종목 매도 조건 체크 주기 (초)',
     TAKE_PROFIT_PCT: '목표 수익률 도달 시 매도 (%)',

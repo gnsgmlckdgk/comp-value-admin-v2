@@ -29,7 +29,8 @@ const { data, error } = await send(url, params, method);
 
 ### 인증
 ```javascript
-const { isLoggedIn, userName, nickName, roles, sessionTTL } = useAuth();
+const { isLoggedIn, userName, nickName, roles } = useAuth();
+const { sessionTTL } = useSession(); // SessionContext에서 별도 관리
 ```
 
 ### 다크모드 (필수)

@@ -146,6 +146,7 @@ export default function TransactionDetailModal({
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [companyProfile, setCompanyProfile] = useState(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [copiedName, setCopiedName] = useState(false);
 
     // row 데이터로 폼 초기화
     useEffect(() => {
@@ -325,8 +326,29 @@ export default function TransactionDetailModal({
                                         </span>
                                     )}
                                 </h2>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                     {formData.companyName}
+                                    {formData.companyName && (
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(formData.companyName);
+                                                setCopiedName(true);
+                                                setTimeout(() => setCopiedName(false), 1500);
+                                            }}
+                                            className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                            title="기업명 복사"
+                                        >
+                                            {copiedName ? (
+                                                <svg className="w-3.5 h-3.5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    )}
                                 </p>
                             </div>
                         </div>

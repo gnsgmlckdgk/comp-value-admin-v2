@@ -588,6 +588,121 @@ const TradingGuideSection = ({ data }) => {
 };
 
 /**
+ * 최근 뉴스 섹션 (아코디언, lazy fetch)
+ */
+const StockNewsSection = ({ symbol }) => {
+    const [open, setOpen] = useState(false);
+    const [news, setNews] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [fetched, setFetched] = useState(false);
+
+    const handleToggle = async () => {
+        const next = !open;
+        setOpen(next);
+        if (next && !fetched) {
+            setLoading(true);
+            try {
+                const { data, error } = await send('/dart/abroad/company/financial/fmp/stockNews', { tickers: symbol, limit: 7 }, 'POST');
+                if (!error && data?.success && Array.isArray(data.response)) {
+                    setNews(data.response);
+                }
+            } catch (e) {
+                // 뉴스 로드 실패 — 무시
+            } finally {
+                setLoading(false);
+                setFetched(true);
+            }
+        }
+    };
+
+    const formatRelativeTime = (dateStr) => {
+        if (!dateStr) return '';
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 60) return `${mins}분 전`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `${hours}시간 전`;
+        const days = Math.floor(hours / 24);
+        if (days < 30) return `${days}일 전`;
+        return new Date(dateStr).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+    };
+
+    if (!symbol) return null;
+
+    return (
+        <div className="mb-4 rounded-lg border bg-white shadow-sm dark:bg-slate-700 dark:border-slate-600">
+            <button
+                type="button"
+                className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-600/50 transition-colors rounded-lg"
+                onClick={handleToggle}
+            >
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">최근 뉴스</span>
+                    {fetched && news.length > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 font-medium">
+                            {news.length}
+                        </span>
+                    )}
+                </div>
+                <svg className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {open && (
+                <div className="px-4 pb-4">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-6 text-sm text-slate-400">
+                            <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            뉴스를 불러오는 중...
+                        </div>
+                    ) : news.length === 0 ? (
+                        <div className="text-center py-4 text-sm text-slate-400 dark:text-slate-500">
+                            최근 뉴스가 없습니다
+                        </div>
+                    ) : (
+                        <div className="space-y-0 divide-y divide-slate-100 dark:divide-slate-600">
+                            {news.map((article, idx) => (
+                                <a
+                                    key={idx}
+                                    href={article.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block py-3 first:pt-0 hover:bg-slate-50 dark:hover:bg-slate-600/30 -mx-1 px-1 rounded transition-colors group"
+                                >
+                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                        <h5 className="text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                            {article.title}
+                                        </h5>
+                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap flex-shrink-0 pt-0.5">
+                                            {formatRelativeTime(article.publishedDate)}
+                                        </span>
+                                    </div>
+                                    {article.text && (
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-1">
+                                            {article.text}
+                                        </p>
+                                    )}
+                                    <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500">
+                                        <span>{article.site}</span>
+                                        <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                    </div>
+                                </a>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
  * 투자 판단 상세 모달 컴포넌트
  */
 const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex = 50, fromCompanyValue = false }) => {
@@ -887,6 +1002,9 @@ const InvestmentDetailModal = ({ isOpen, data, onClose, onOpenFullDetail, zIndex
 
                     {/* 트레이딩 가이드 */}
                     <TradingGuideSection data={data} />
+
+                    {/* 최근 뉴스 */}
+                    <StockNewsSection symbol={data.symbol} />
 
                     {/* 가격 정보 */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">

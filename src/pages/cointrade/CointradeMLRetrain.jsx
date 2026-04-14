@@ -176,8 +176,8 @@ const CointradeMLRetrain = () => {
                 />
                 <InfoCard
                     icon={CheckCircle2}
-                    label="성공 / 실패"
-                    value={status ? `${status.success || 0} / ${status.fail || 0}` : '-'}
+                    label="성공 / 실패 / 스킵"
+                    value={status ? `${status.success || 0} / ${status.fail || 0} / ${status.skip || 0}` : '-'}
                     sub={status?.total ? `총 ${status.total}개 대상` : null}
                 />
                 <InfoCard
@@ -213,7 +213,7 @@ const CointradeMLRetrain = () => {
                         <div>시작: {status.started_at}</div>
                         <div>완료: {status.finished_at || '-'}</div>
                         <div>소요: {formatElapsed(status.elapsed_seconds)}</div>
-                        <div>결과: 성공 {status.success || 0} / 실패 {status.fail || 0}</div>
+                        <div>결과: 성공 {status.success || 0} / 실패 {status.fail || 0} / 스킵 {status.skip || 0}</div>
                     </div>
                 </div>
             )}

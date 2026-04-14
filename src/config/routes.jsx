@@ -25,6 +25,7 @@ import CointradeCoins from '@/pages/cointrade/CointradeCoins'
 import CointradeScheduler from '@/pages/cointrade/CointradeScheduler'
 import CointradeHistory from '@/pages/cointrade/CointradeHistory'
 import MlModelInfo from '@/pages/cointrade/MlModelInfo'
+import CointradeMLRetrain from '@/pages/cointrade/CointradeMLRetrain'
 import Backtest from '@/pages/cointrade/Backtest'
 // BacktestOptimizer 삭제됨 (v4.0 모멘텀 스캘핑 전환)
 import ExcelViewer from '@/pages/util/excel-viewer'
@@ -123,6 +124,13 @@ const routes = {
         label: '모델 예측정보 조회',
         path: '/cointrade/ml-models',
         element: <MlModelInfo />,
+        accessRoles: ['ROLE_SUPER_ADMIN']
+    },
+    "CointradeMLRetrain": {
+        section: SECTIONS[5],
+        label: 'AI 모델 관리',
+        path: '/cointrade/ml-retrain',
+        element: <CointradeMLRetrain />,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "Backtest": {

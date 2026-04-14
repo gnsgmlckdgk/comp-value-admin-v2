@@ -204,11 +204,6 @@ export default function MlModelInfo() {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
 
-    // 재학습 확인 모달 상태
-    const [isTrainConfirmModalOpen, setIsTrainConfirmModalOpen] = useState(false);
-    const { shouldRender: renderTrainConfirm, isAnimatingOut: isTrainConfirmClosing } = useModalAnimation(isTrainConfirmModalOpen, 250);
-    const [trainCoinCode, setTrainCoinCode] = useState('');
-
     // 테이블 필터/정렬 상태
     const [columnFilters, setColumnFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ key: 'coinCode', direction: 'asc' });
@@ -216,10 +211,6 @@ export default function MlModelInfo() {
     // 페이지네이션
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
-
-    // 모델 재학습 관련 상태
-    const [lastTrainRun, setLastTrainRun] = useState(null);
-    const TRAIN_RUN_KEY = 'lastMlModelTrainRun';
 
     // Toast auto-hide
     useEffect(() => {
@@ -231,22 +222,6 @@ export default function MlModelInfo() {
     // 초기 데이터 조회
     useEffect(() => {
         fetchData();
-
-        // 로컬스토리지에서 마지막 수동 학습 시간 확인 및 1시간 지난 값 삭제
-        const storedTime = localStorage.getItem(TRAIN_RUN_KEY);
-        if (storedTime) {
-            const runTime = new Date(storedTime);
-            const now = new Date();
-            const hoursDiff = (now - runTime) / (1000 * 60 * 60);
-
-            if (hoursDiff >= 1) {
-                // 1시간 이상 지났으면 삭제
-                localStorage.removeItem(TRAIN_RUN_KEY);
-                setLastTrainRun(null);
-            } else {
-                setLastTrainRun(runTime);
-            }
-        }
     }, []);
 
     const fetchData = async () => {
@@ -266,42 +241,6 @@ export default function MlModelInfo() {
             setDataList([]);
         } finally {
             setLoading(false);
-        }
-    };
-
-    // 모델 재학습 확인 모달 열기
-    const handleOpenTrainConfirmModal = () => {
-        setIsTrainConfirmModalOpen(true);
-    };
-
-    // 모델 재학습 확인 모달 닫기
-    const handleCloseTrainConfirmModal = () => {
-        setIsTrainConfirmModalOpen(false);
-    };
-
-    // 모델 재학습(수동) 요청
-    const handleManualTrain = async () => {
-        setIsTrainConfirmModalOpen(false); // 모달 닫기
-
-        try {
-            // coin_code 파라미터 추가
-            const params = trainCoinCode.trim() ? { coin_code: trainCoinCode.trim() } : {};
-            const { data, error } = await send('/dart/api/cointrade/trade/model/train', params, 'GET');
-
-            if (error) {
-                setToast('모델 재학습 요청 실패: ' + error);
-            } else if (data?.success) {
-                setToast('모델 재학습이 실행되었습니다.');
-                const now = new Date();
-                setLastTrainRun(now);
-                localStorage.setItem(TRAIN_RUN_KEY, now.toISOString());
-                setTrainCoinCode(''); // 입력 필드 초기화
-            } else {
-                setToast(data?.message || '모델 재학습 요청 실패');
-            }
-        } catch (e) {
-            console.error('모델 재학습 요청 오류:', e);
-            setToast('요청 중 오류가 발생했습니다.');
         }
     };
 
@@ -385,10 +324,9 @@ export default function MlModelInfo() {
         const handleEsc = (e) => {
             if (e.key === 'Escape') {
                 if (isDetailModalOpen) handleCloseDetailModal();
-                if (isTrainConfirmModalOpen) handleCloseTrainConfirmModal();
             }
         };
-        if (isDetailModalOpen || isTrainConfirmModalOpen) {
+        if (isDetailModalOpen) {
             window.addEventListener('keydown', handleEsc);
             document.body.style.overflow = 'hidden';
         }
@@ -396,12 +334,7 @@ export default function MlModelInfo() {
             window.removeEventListener('keydown', handleEsc);
             document.body.style.overflow = 'unset';
         };
-    }, [isDetailModalOpen, isTrainConfirmModalOpen]);
-
-    // Backdrop 클릭 핸들러
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) handleCloseTrainConfirmModal();
-    };
+    }, [isDetailModalOpen]);
 
     // 상세보기 모달 컴포넌트
     const DetailModal = () => {
@@ -632,18 +565,6 @@ export default function MlModelInfo() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                        {lastTrainRun && (
-                            <span className="text-xs text-amber-600 dark:text-amber-400 mr-2">
-                                마지막 실행: {formatDateTime(lastTrainRun)}
-                            </span>
-                        )}
-                        <button
-                            onClick={handleOpenTrainConfirmModal}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors mr-2"
-                        >
-                            모델 재학습(수동)
-                        </button>
-
                         <select
                             value={itemsPerPage}
                             onChange={handleItemsPerPageChange}
@@ -800,68 +721,6 @@ export default function MlModelInfo() {
             </div>
 
             <Toast message={toast} />
-
-            {/* 재학습 확인 모달 */}
-            {renderTrainConfirm && (
-                <div
-                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isTrainConfirmClosing ? 'animate__fadeOut' : 'animate__fadeIn'}`}
-                    style={{ animationDuration: '0.25s' }}
-                    onClick={handleBackdropClick}
-                >
-                    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md animate__animated ${isTrainConfirmClosing ? 'animate__zoomOut' : 'animate__zoomIn'}`} style={{ animationDuration: '0.25s' }}>
-                        {/* 헤더 */}
-                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                                모델 재학습 확인
-                            </h3>
-                        </div>
-
-                        {/* 콘텐츠 */}
-                        <div className="px-6 py-4">
-                            <p className="text-slate-700 dark:text-slate-300 mb-4">
-                                모델 재학습을 실행하시겠습니까?
-                            </p>
-
-                            {/* 종목코드 입력 필드 */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    종목코드 (선택)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={trainCoinCode}
-                                    onChange={(e) => setTrainCoinCode(e.target.value)}
-                                    placeholder="KRW-BTC,KRW-ETH"
-                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                                    빈값을 넘기면 활성화된 종목 전체를 학습합니다.
-                                </p>
-                            </div>
-
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                이 작업은 시간이 소요될 수 있습니다.
-                            </p>
-                        </div>
-
-                        {/* 버튼 */}
-                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-end gap-2">
-                            <button
-                                onClick={handleCloseTrainConfirmModal}
-                                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
-                            >
-                                취소
-                            </button>
-                            <button
-                                onClick={handleManualTrain}
-                                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
-                            >
-                                확인
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* 상세보기 모달 */}
             <DetailModal />

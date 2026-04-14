@@ -12,6 +12,7 @@ import TransactionOverview from '@/pages/transaction/TransactionOverview'
 import AbroadCompValue from '@/pages/trade/AbroadCompValue'
 import AbroadCompanyList from '@/pages/trade/AbroadCompanyList'
 import AbroadRecommendedStock from '@/pages/trade/AbroadRecommendedStock'
+import MLRetrainManagement from '@/pages/trade/MLRetrainManagement'
 import SellRecordHistory from '@/pages/trade/SellRecordHistory'
 import InvestmentEvaluation from '@/pages/trade/InvestmentEvaluation'
 import MyProfile from '@/pages/member/MyProfile'
@@ -27,6 +28,9 @@ import MlModelInfo from '@/pages/cointrade/MlModelInfo'
 import Backtest from '@/pages/cointrade/Backtest'
 // BacktestOptimizer 삭제됨 (v4.0 모멘텀 스캘핑 전환)
 import ExcelViewer from '@/pages/util/excel-viewer'
+import ExchangeRate from '@/pages/util/exchange-rate'
+import JsonViewer from '@/pages/util/json-viewer'
+import Memo from '@/pages/util/memo'
 import MonitoringDashboard from '@/pages/monitoring/MonitoringDashboard'
 
 import { SECTIONS } from '@/component/layouts/common/SideBar001';
@@ -56,6 +60,7 @@ const routes = {
     "AbroadCompanyList": { section: SECTIONS[2], label: '기업목록', path: '/complist/abroad', element: <AbroadCompanyList /> },
     "AbroadRecommendedStock": { section: SECTIONS[2], label: '기업추천', path: '/recommended/abroad', element: <AbroadRecommendedStock /> },
     "AbroadCompValue": { section: SECTIONS[2], label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
+    "MLRetrainManagement": { section: SECTIONS[2], label: 'AI 모델 관리', path: '/ml/retrain', element: <MLRetrainManagement /> },
 
     /* 거래 */
     "InvestmentEvaluation": { section: SECTIONS[3], label: '투자판단', path: '/trade/evaluation', element: <InvestmentEvaluation /> },
@@ -135,6 +140,24 @@ const routes = {
         label: '엑셀 보기',
         path: '/util/excel-viewer',
         element: <ExcelViewer />
+    },
+    "ExchangeRate": {
+        section: SECTIONS[6],
+        label: '환율 계산기',
+        path: '/util/exchange-rate',
+        element: <ExchangeRate />
+    },
+    "JsonViewer": {
+        section: SECTIONS[6],
+        label: 'JSON 뷰어',
+        path: '/util/json-viewer',
+        element: <JsonViewer />
+    },
+    "Memo": {
+        section: SECTIONS[6],
+        label: '메모',
+        path: '/util/memo',
+        element: <Memo />
     },
 
     /* 모니터링 */

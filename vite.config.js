@@ -19,6 +19,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/dart/, '/dart'),
       },
+      '/ml': {
+        target: 'http://localhost:18081', // ML 주가예측 서비스
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/ml/, ''),
+      },
     },
   }
 

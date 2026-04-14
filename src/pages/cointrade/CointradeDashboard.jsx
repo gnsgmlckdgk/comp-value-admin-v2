@@ -93,6 +93,39 @@ const getReasonLabel = (reason) => {
     return reason;
 };
 
+// 시그널 유형 스타일/라벨
+const getSignalTypeStyle = (type) => ({
+    'MEAN_REVERSION': 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300',
+    'WS_MOMENTUM': 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300',
+}[type] || 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400');
+
+const getSignalTypeLabel = (type) => ({
+    'MEAN_REVERSION': 'MR',
+    'WS_MOMENTUM': 'WS',
+}[type] || type);
+
+// 시그널 처리결과 스타일/라벨
+const getActionStyle = (action) => {
+    if (!action || action === 'NONE') return 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400';
+    if (action === 'BUY_EXECUTED' || action === 'PAPER_BUY') return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
+    if (action === 'BUY_FAILED') return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300';
+    return 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300';
+};
+
+const getActionLabel = (action) => ({
+    'BUY_EXECUTED': '매수 체결',
+    'PAPER_BUY': '모의 매수',
+    'BUY_FAILED': '매수 실패',
+    'SKIPPED_LIMIT': '한도 초과',
+    'SKIPPED_HELD': '보유 중',
+    'SKIPPED_BALANCE': '잔액 부족',
+    'SKIPPED_ML_FAIL': 'ML 실패',
+    'SKIPPED_ML': 'ML 미달',
+    'SKIPPED_SL_FILTER': 'SL 필터',
+    'SKIPPED_LOCKED': '잠금',
+    'NONE': '-',
+}[action] || action);
+
 // D-day 계산
 const calculateDday = (date) => {
     if (!date) return '-';
@@ -434,6 +467,17 @@ export default function CointradeDashboard() {
 
     // Scanner Signals
     const [scannerSignals, setScannerSignals] = useState([]);
+    const [signalTypeFilter, setSignalTypeFilter] = useState('ALL');
+    const [actionFilter, setActionFilter] = useState('ALL');
+
+    const filteredSignals = useMemo(() => {
+        return scannerSignals.filter(s => {
+            if (signalTypeFilter !== 'ALL' && s.signalType !== signalTypeFilter) return false;
+            if (actionFilter === 'BUY') return s.actionTaken === 'BUY_EXECUTED' || s.actionTaken === 'PAPER_BUY';
+            if (actionFilter === 'SKIPPED') return s.actionTaken?.startsWith('SKIPPED');
+            return true;
+        });
+    }, [scannerSignals, signalTypeFilter, actionFilter]);
 
     // KRW 잔액
     const [krwBalance, setKrwBalance] = useState(0);
@@ -620,7 +664,20 @@ export default function CointradeDashboard() {
             try {
                 const signalsResponse = await send('/dart/api/cointrade/scanner/signals', {}, 'GET');
                 if (signalsResponse.data?.success && signalsResponse.data?.response) {
-                    setScannerSignals(signalsResponse.data.response);
+                    setScannerSignals(signalsResponse.data.response.map(s => ({
+                        id: s.id,
+                        coinCode: s.coin_code,
+                        detectedAt: s.detected_at,
+                        signalType: s.signal_type,
+                        momentumScore: s.momentum_score,
+                        volumeRatio: s.volume_ratio,
+                        priceChangePct: s.price_change_pct,
+                        rsiValue: s.rsi_value,
+                        vwapDeviation: s.vwap_deviation,
+                        mlConfidence: s.ml_confidence,
+                        actionTaken: s.action_taken,
+                        currentPrice: s.current_price,
+                    })));
                 }
             } catch (signalError) {
                 console.error('스캐너 시그널 조회 실패:', signalError);
@@ -1574,47 +1631,95 @@ export default function CointradeDashboard() {
 
             {/* Scanner Signals Section */}
             <div className="mt-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                    Scanner Signals
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                        Scanner Signals
+                        <span className="ml-2 text-sm text-slate-500 dark:text-slate-400 font-normal">
+                            {filteredSignals.length}/{scannerSignals.length}건
+                        </span>
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {/* 시그널 유형 필터 */}
+                        {[['ALL', '전체'], ['MEAN_REVERSION', 'MR'], ['WS_MOMENTUM', 'WS']].map(([val, label]) => (
+                            <button key={val} onClick={() => setSignalTypeFilter(val)}
+                                className={`px-3 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
+                                    signalTypeFilter === val
+                                        ? 'bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-100 font-medium border-slate-400 dark:border-slate-500'
+                                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                }`}>
+                                {label}
+                            </button>
+                        ))}
+                        <span className="mx-1 text-slate-300 dark:text-slate-600">|</span>
+                        {/* 처리결과 필터 */}
+                        {[['ALL', '전체'], ['BUY', '매수체결'], ['SKIPPED', '스킵됨']].map(([val, label]) => (
+                            <button key={val} onClick={() => setActionFilter(val)}
+                                className={`px-3 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
+                                    actionFilter === val
+                                        ? 'bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-100 font-medium border-slate-400 dark:border-slate-500'
+                                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                }`}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 {scannerSignals.length === 0 ? (
                     <div className="text-center text-slate-500 dark:text-slate-400 py-8">
                         현재 감지된 시그널이 없습니다.
+                    </div>
+                ) : filteredSignals.length === 0 ? (
+                    <div className="text-center text-slate-500 dark:text-slate-400 py-8">
+                        선택한 필터 조건에 맞는 시그널이 없습니다.
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-slate-100 dark:bg-slate-700/50">
                                 <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">종목</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">가격변화율</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">거래량 배율</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">RSI</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">ML 확률</th>
-                                    <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">모멘텀 점수</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">감지시각</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">종목</th>
+                                    <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">유형</th>
+                                    <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">현재가</th>
+                                    <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">가격변화율</th>
+                                    <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">ML 확률</th>
+                                    <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">거래량</th>
+                                    <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">결과</th>
+                                    <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">감지시각</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                {scannerSignals.map((signal, idx) => (
-                                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                        <td className="px-4 py-2 font-medium text-slate-900 dark:text-slate-100">{signal.coinCode || signal.market}</td>
-                                        <td className="px-4 py-2 text-right">
-                                            <span className={`font-medium ${(signal.priceChange || 0) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                                                {signal.priceChange != null ? `${signal.priceChange >= 0 ? '+' : ''}${signal.priceChange.toFixed(2)}%` : '-'}
+                                {filteredSignals.map((signal) => (
+                                    <tr key={signal.id} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
+                                        signal.actionTaken === 'BUY_EXECUTED' || signal.actionTaken === 'PAPER_BUY' ? 'border-l-2 border-l-blue-500' : ''
+                                    }`}>
+                                        <td className="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">
+                                            {(signal.coinCode || '').replace('KRW-', '')}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getSignalTypeStyle(signal.signalType)}`}>
+                                                {getSignalTypeLabel(signal.signalType)}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2 text-right text-slate-700 dark:text-slate-300">{signal.volumeRatio != null ? `${signal.volumeRatio.toFixed(1)}x` : '-'}</td>
-                                        <td className="px-4 py-2 text-right text-slate-700 dark:text-slate-300">{signal.rsi != null ? signal.rsi.toFixed(1) : '-'}</td>
-                                        <td className="px-4 py-2 text-right text-blue-600 dark:text-blue-400 font-medium">{signal.mlConfidence != null ? `${(signal.mlConfidence * 100).toFixed(1)}%` : '-'}</td>
-                                        <td className="px-4 py-2 text-right">
-                                            {signal.momentumScore != null ? (
-                                                <span className={`font-medium ${signal.momentumScore >= 0.7 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                                                    {(signal.momentumScore * 100).toFixed(0)}%
-                                                </span>
-                                            ) : '-'}
+                                        <td className="px-3 py-2 text-right text-slate-700 dark:text-slate-300">
+                                            {signal.currentPrice != null ? Number(signal.currentPrice).toLocaleString('ko-KR') : '-'}
                                         </td>
-                                        <td className="px-4 py-2 text-center text-slate-500 dark:text-slate-400 text-xs">
+                                        <td className="px-3 py-2 text-right">
+                                            <span className={`font-medium ${(signal.priceChangePct || 0) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                {signal.priceChangePct != null ? `${signal.priceChangePct >= 0 ? '+' : ''}${signal.priceChangePct.toFixed(2)}%` : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2 text-right text-blue-600 dark:text-blue-400 font-medium">
+                                            {signal.mlConfidence != null ? `${(signal.mlConfidence * 100).toFixed(1)}%` : '-'}
+                                        </td>
+                                        <td className="px-3 py-2 text-right text-slate-700 dark:text-slate-300">
+                                            {signal.volumeRatio && signal.volumeRatio > 0 ? `${signal.volumeRatio.toFixed(1)}x` : '-'}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getActionStyle(signal.actionTaken)}`}>
+                                                {getActionLabel(signal.actionTaken)}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2 text-center text-slate-500 dark:text-slate-400 text-xs">
                                             {signal.detectedAt ? new Date(signal.detectedAt).toLocaleTimeString('ko-KR', { hour12: false }) : '-'}
                                         </td>
                                     </tr>

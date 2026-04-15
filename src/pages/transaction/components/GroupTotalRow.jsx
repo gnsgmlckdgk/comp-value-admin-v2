@@ -21,6 +21,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
                 totalQty: qtySum,
                 currentPrice: curUSD,
                 targetPrice: data.targetAvgUSD,
+                targetPriceSync: data.targetPriceSync,
                 buyExchangeRateAtTrade: buyExchangeRateAtTrade,
                 __type: 'groupTotal',
                 groupRows,

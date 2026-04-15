@@ -562,7 +562,7 @@ const AIPredictionSection = ({ data, predictionData, predictionLoading, onFetchP
                         </svg>
                         AI 예측
                     </h3>
-                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">(AI) 1주내 최고가 예상값</p>
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">(AI) 1주내 예측</p>
                 </div>
                 {!displayPrediction && (
                     <button
@@ -593,7 +593,7 @@ const AIPredictionSection = ({ data, predictionData, predictionLoading, onFetchP
 
             {displayPrediction ? (
                 <div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                         <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
                             <div className="text-xs text-purple-600 dark:text-purple-300">예측 시점 현재가</div>
                             <div className="mt-1 text-lg font-semibold text-purple-900 dark:text-white">
@@ -601,15 +601,27 @@ const AIPredictionSection = ({ data, predictionData, predictionLoading, onFetchP
                             </div>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
-                            <div className="text-xs text-purple-600 dark:text-purple-300">예측 최고가</div>
-                            <div className="mt-1 text-lg font-semibold text-purple-900 dark:text-white">
+                            <div className="text-xs text-purple-600 dark:text-purple-300">1주 내 예측 최고가</div>
+                            <div className="mt-1 text-lg font-semibold text-sky-600 dark:text-sky-400">
                                 {displayPrediction.predictedHigh ? `$${formatNumber(displayPrediction.predictedHigh, 2)}` : '-'}
                             </div>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
-                            <div className="text-xs text-purple-600 dark:text-purple-300">상승 여력</div>
-                            <div className="mt-1 text-lg font-semibold text-emerald-600 dark:text-emerald-400">
-                                {displayPrediction.upsidePercent || '-'}
+                            <div className="text-xs text-purple-600 dark:text-purple-300">1주 내 예측 최저가</div>
+                            <div className="mt-1 text-lg font-semibold text-amber-600 dark:text-amber-400">
+                                {displayPrediction.predictedLow ? `$${formatNumber(displayPrediction.predictedLow, 2)}` : '-'}
+                            </div>
+                        </div>
+                        <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
+                            <div className="text-xs text-purple-600 dark:text-purple-300">7일 후 상승확률</div>
+                            <div className={`mt-1 text-lg font-semibold ${
+                                displayPrediction.upProbability && parseFloat(displayPrediction.upProbability) >= 0.5
+                                    ? 'text-sky-600 dark:text-sky-400'
+                                    : 'text-amber-600 dark:text-amber-400'
+                            }`}>
+                                {displayPrediction.upProbability
+                                    ? `${(parseFloat(displayPrediction.upProbability) * 100).toFixed(0)}%`
+                                    : '-'}
                             </div>
                         </div>
                     </div>

@@ -595,15 +595,15 @@ const AIPredictionSection = ({ data, predictionData, predictionLoading, onFetchP
                 <div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                         <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
-                            <div className="text-xs text-purple-600 dark:text-purple-300">예측 최고가</div>
-                            <div className="mt-1 text-lg font-semibold text-purple-900 dark:text-white">
-                                {displayPrediction.predictedHigh ? `$${formatNumber(displayPrediction.predictedHigh, 2)}` : '-'}
-                            </div>
-                        </div>
-                        <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
                             <div className="text-xs text-purple-600 dark:text-purple-300">예측 시점 현재가</div>
                             <div className="mt-1 text-lg font-semibold text-purple-900 dark:text-white">
                                 {displayPrediction.currentPrice ? `$${formatNumber(displayPrediction.currentPrice, 2)}` : '-'}
+                            </div>
+                        </div>
+                        <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">
+                            <div className="text-xs text-purple-600 dark:text-purple-300">예측 최고가</div>
+                            <div className="mt-1 text-lg font-semibold text-purple-900 dark:text-white">
+                                {displayPrediction.predictedHigh ? `$${formatNumber(displayPrediction.predictedHigh, 2)}` : '-'}
                             </div>
                         </div>
                         <div className="rounded-lg bg-white dark:bg-purple-800/30 p-3 shadow-sm">

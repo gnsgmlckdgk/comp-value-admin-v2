@@ -269,10 +269,22 @@ const MLRetrainManagement = () => {
                 />
             </div>
 
-            {/* 진행률 */}
-            {isRunning && status?.total > 0 && (
+            {/* 진행률 — phase에 따라 다르게 표시 */}
+            {isRunning && (
                 <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 mb-4">
-                    <ProgressBar completed={status.completed || 0} total={status.total} />
+                    {status?.phase === 'collecting' && status?.total > 0 ? (
+                        <>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">1단계: 데이터 수집</p>
+                            <ProgressBar completed={status.completed || 0} total={status.total} />
+                        </>
+                    ) : status?.phase === 'training' ? (
+                        <>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">2단계: 통합 모델 학습 ({status?.success || 0}개 종목 데이터 통합)</p>
+                            <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 animate-pulse" style={{ width: '100%' }} />
+                            </div>
+                        </>
+                    ) : null}
                 </div>
             )}
 

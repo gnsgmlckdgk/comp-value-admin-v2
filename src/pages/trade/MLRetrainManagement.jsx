@@ -16,6 +16,13 @@ const formatMarketCap = (cap) => {
     return `$${cap.toLocaleString()}`;
 };
 
+/** 시총 구간 뱃지 */
+const CAP_BADGE = {
+    large: { label: '대형', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' },
+    mid: { label: '중형', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+    small: { label: '소형', cls: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' },
+};
+
 /** 상태 뱃지 */
 const StateBadge = ({ state }) => {
     const map = {
@@ -95,6 +102,7 @@ const SectorTargetTable = ({ sectors, isDetailed }) => {
                                         const symbol = typeof stock === 'string' ? stock : stock.symbol;
                                         const name = typeof stock === 'object' ? stock.companyName : null;
                                         const cap = typeof stock === 'object' ? stock.marketCap : null;
+                                        const capSize = typeof stock === 'object' ? stock.capSize : null;
 
                                         return (
                                             <span
@@ -102,6 +110,11 @@ const SectorTargetTable = ({ sectors, isDetailed }) => {
                                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-xs"
                                                 title={name ? `${name} (${formatMarketCap(cap)})` : symbol}
                                             >
+                                                {isDetailed && capSize && CAP_BADGE[capSize] && (
+                                                    <span className={`px-1 py-0.5 rounded text-[10px] font-medium ${CAP_BADGE[capSize].cls}`}>
+                                                        {CAP_BADGE[capSize].label}
+                                                    </span>
+                                                )}
                                                 <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{symbol}</span>
                                                 {isDetailed && cap && (
                                                     <span className="text-slate-400 dark:text-slate-500">{formatMarketCap(cap)}</span>
@@ -169,7 +182,7 @@ const MLRetrainManagement = () => {
     const startRetrain = useCallback(async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await send('/dart/ml/retrain', {}, 'POST');
+            const { error } = await send('/dart/ml/retrain', {}, 'POST');
             if (error) {
                 openAlert(error);
                 return;
@@ -186,7 +199,7 @@ const MLRetrainManagement = () => {
     /** 재학습 시작 확인 */
     const handleRetrainClick = useCallback(() => {
         openAlert(
-            `${targets?.total || '~55'}개 종목에 대해 재학습을 시작합니다.\nGPU 기준 약 30분 소요됩니다.\n\n진행하시겠습니까?`,
+            `${targets?.total || '~165'}개 종목 데이터를 통합하여 재학습을 시작합니다.\n(11개 섹터 × 대형/중형/소형 각 5개)\n\n진행하시겠습니까?`,
             startRetrain
         );
     }, [startRetrain, targets]);
@@ -219,8 +232,8 @@ const MLRetrainManagement = () => {
         <>
             <PageTitle />
             <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
-                AI 주가 예측 모델을 재학습합니다. 11개 GICS 섹터별 시가총액 상위 5개 종목을 대상으로
-                LSTM + LightGBM 앙상블 모델을 학습합니다.
+                AI 주가 예측 통합 모델을 재학습합니다. 11개 GICS 섹터 × 대형/중형/소형 각 5개 (약 165개) 종목 데이터를
+                통합하여 단일 LSTM + LightGBM 앙상블 모델을 학습합니다.
             </p>
 
             <Loading show={isLoading} />
@@ -236,7 +249,11 @@ const MLRetrainManagement = () => {
                     icon={Clock}
                     label="소요 시간"
                     value={formatElapsed(status?.elapsed_seconds)}
-                    sub={isRunning && status?.current_ticker ? `현재: ${status.current_ticker}` : null}
+                    sub={isRunning ? (
+                        status?.phase === 'training'
+                            ? '통합 모델 학습 중...'
+                            : status?.current_ticker ? `데이터 수집: ${status.current_ticker}` : null
+                    ) : null}
                 />
                 <InfoCard
                     icon={CheckCircle2}
@@ -277,7 +294,8 @@ const MLRetrainManagement = () => {
                         <div>시작: {status.started_at}</div>
                         <div>완료: {status.finished_at || '-'}</div>
                         <div>소요: {formatElapsed(status.elapsed_seconds)}</div>
-                        <div>결과: 성공 {status.success || 0} / 실패 {status.fail || 0}</div>
+                        <div>수집: 성공 {status.success || 0} / 실패 {status.fail || 0}</div>
+                        {status.total_samples > 0 && <div>학습 샘플: {status.total_samples.toLocaleString()}개</div>}
                     </div>
                 </div>
             )}
@@ -316,7 +334,7 @@ const MLRetrainManagement = () => {
                         ['피처', '20개 스케일 독립 지표 (v3.0)'],
                         ['자동 재학습', '매주 일요일 05:00'],
                         ['자동 평가', '매주 월요일 06:00'],
-                        ['대상 종목', `${targets?.total || '~55'}개 (11개 섹터 × ${targets?.stocks_per_sector || 5}개)`],
+                        ['대상 종목', `${targets?.total || '~165'}개 (11개 섹터 × 3구간 × ${targets?.stocks_per_cap || 5}개)`],
                         ['예상 소요', 'GPU 기준 약 30분'],
                     ].map(([label, value]) => (
                         <div key={label} className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-700">

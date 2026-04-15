@@ -159,6 +159,7 @@ export default function TransactionDetailModal({
                 totalBuyAmount: row.totalBuyAmount || row.totalQty || '',
                 currentPrice: row.currentPrice || '',
                 targetPrice: row.targetPrice || '',
+                targetPriceSync: row.targetPriceSync || false,
                 buyExchangeRateAtTrade: row.buyExchangeRateAtTrade || '',
                 rmk: (() => {
                     if (isGroupRow && row.groupRows) {
@@ -219,6 +220,7 @@ export default function TransactionDetailModal({
         if (String(formData.buyPrice) !== String(row.buyPrice)) updates.buyPrice = formData.buyPrice;
         if (String(formData.totalBuyAmount) !== String(row.totalBuyAmount)) updates.totalBuyAmount = formData.totalBuyAmount;
         if (String(formData.targetPrice) !== String(row.targetPrice)) updates.targetPrice = formData.targetPrice;
+        if (Boolean(formData.targetPriceSync) !== Boolean(row.targetPriceSync)) updates.targetPriceSync = formData.targetPriceSync;
         if (String(formData.buyExchangeRateAtTrade) !== String(row.buyExchangeRateAtTrade)) updates.buyExchangeRateAtTrade = formData.buyExchangeRateAtTrade;
         if (formData.rmk !== row.rmk) updates.rmk = formData.rmk.trim();
 
@@ -242,6 +244,7 @@ export default function TransactionDetailModal({
         if (newSymbol !== (row.symbol || '').toUpperCase()) updates.symbol = newSymbol;
         if (newCompanyName !== (row.companyName || '').trim()) updates.companyName = newCompanyName;
         if (String(formData.targetPrice) !== String(row.targetPrice || '')) updates.targetPrice = formData.targetPrice;
+        if (Boolean(formData.targetPriceSync) !== Boolean(row.targetPriceSync)) updates.targetPriceSync = formData.targetPriceSync;
 
         const originalRmks = (row.groupRows || []).map(r => r.rmk || '');
         const allSameRmk = originalRmks.every(r => r === originalRmks[0]);
@@ -435,7 +438,12 @@ export default function TransactionDetailModal({
                             )}
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">목표가</div>
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-xs text-slate-500 dark:text-slate-400">목표가</span>
+                                {formData.targetPriceSync && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">동기화</span>
+                                )}
+                            </div>
                             <div className={`${isTargetHit ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
                                 {targetPrice > 0 ? <BoldInt text={`$${targetPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} /> : '-'}
                             </div>
@@ -495,14 +503,34 @@ export default function TransactionDetailModal({
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">목표가 ($)</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.targetPrice}
-                                                onChange={(e) => handleChange('targetPrice', e.target.value)}
-                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                            />
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">목표가 ($)</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleChange('targetPriceSync', !formData.targetPriceSync)}
+                                                    className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                                        formData.targetPriceSync ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'
+                                                    }`}
+                                                    title="동기화: 기업가치 분석 목표매도가 자동 적용"
+                                                >
+                                                    <span className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
+                                                        formData.targetPriceSync ? 'translate-x-[14px]' : 'translate-x-[2px]'
+                                                    }`} />
+                                                </button>
+                                            </div>
+                                            {formData.targetPriceSync ? (
+                                                <div className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 text-blue-600 dark:text-blue-400">
+                                                    자동 동기화
+                                                </div>
+                                            ) : (
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={formData.targetPrice}
+                                                    onChange={(e) => handleChange('targetPrice', e.target.value)}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                     <div>
@@ -524,6 +552,7 @@ export default function TransactionDetailModal({
                                                     symbol: row.symbol || '',
                                                     companyName: row.companyName || '',
                                                     targetPrice: row.targetPrice || '',
+                                                    targetPriceSync: row.targetPriceSync || false,
                                                     rmk: allSame ? rmks[0] : '',
                                                 }));
                                                 setIsEditing(false);
@@ -557,7 +586,12 @@ export default function TransactionDetailModal({
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
                                         <div className="flex justify-between">
-                                            <span className="text-slate-500 dark:text-slate-400">목표가</span>
+                                            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                                목표가
+                                                {formData.targetPriceSync && (
+                                                    <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">동기화</span>
+                                                )}
+                                            </span>
                                             <span className="text-slate-900 dark:text-white font-medium">
                                                 {formData.targetPrice ? `$${parseFloat(formData.targetPrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
                                             </span>
@@ -631,14 +665,34 @@ export default function TransactionDetailModal({
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">목표가 ($)</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.targetPrice}
-                                                onChange={(e) => handleChange('targetPrice', e.target.value)}
-                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                            />
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">목표가 ($)</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleChange('targetPriceSync', !formData.targetPriceSync)}
+                                                    className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                                                        formData.targetPriceSync ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'
+                                                    }`}
+                                                    title="동기화: 기업가치 분석 목표매도가 자동 적용"
+                                                >
+                                                    <span className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
+                                                        formData.targetPriceSync ? 'translate-x-[14px]' : 'translate-x-[2px]'
+                                                    }`} />
+                                                </button>
+                                            </div>
+                                            {formData.targetPriceSync ? (
+                                                <div className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 text-blue-600 dark:text-blue-400">
+                                                    자동 동기화
+                                                </div>
+                                            ) : (
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={formData.targetPrice}
+                                                    onChange={(e) => handleChange('targetPrice', e.target.value)}
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                />
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">매수당시환율 (₩)</label>
@@ -671,6 +725,7 @@ export default function TransactionDetailModal({
                                                     totalBuyAmount: row.totalBuyAmount || '',
                                                     currentPrice: row.currentPrice || '',
                                                     targetPrice: row.targetPrice || '',
+                                                    targetPriceSync: row.targetPriceSync || false,
                                                     buyExchangeRateAtTrade: row.buyExchangeRateAtTrade || '',
                                                     rmk: row.rmk || '',
                                                 });

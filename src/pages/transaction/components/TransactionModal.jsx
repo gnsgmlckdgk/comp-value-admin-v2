@@ -10,6 +10,7 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
         buyPrice: '',
         totalBuyAmount: '',
         targetPrice: '',
+        targetPriceSync: false,
         buyExchangeRateAtTrade: '',
         rmk: '',
     });
@@ -44,6 +45,7 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
                 buyPrice: data.buyPrice || '',
                 totalBuyAmount: data.totalBuyAmount || '',
                 targetPrice: data.targetPrice || '',
+                targetPriceSync: data.targetPriceSync || false,
                 buyExchangeRateAtTrade: data.buyExchangeRateAtTrade || '',
                 rmk: data.rmk || '',
             });
@@ -56,6 +58,7 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
                 buyPrice: '',
                 totalBuyAmount: '',
                 targetPrice: '',
+                targetPriceSync: false,
                 buyExchangeRateAtTrade: fxRate || '',
                 rmk: '',
             });
@@ -129,6 +132,7 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
             buyPrice: formData.buyPrice,
             totalBuyAmount: formData.totalBuyAmount,
             targetPrice: formData.targetPrice || '',
+            targetPriceSync: formData.targetPriceSync,
             buyExchangeRateAtTrade: formData.buyExchangeRateAtTrade || '',
             rmk: formData.rmk.trim() || '',
         });
@@ -262,18 +266,38 @@ export default function TransactionModal({ isOpen, mode, data, onClose, onSave }
 
                         {/* 목표가 */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                목표가 ($)
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value={formData.targetPrice}
-                                onChange={(e) => handleChange('targetPrice', e.target.value)}
-                                placeholder="200.00"
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                            />
-                            {fxRate && formData.targetPrice && parseFloat(formData.targetPrice) > 0 && (
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    목표가 ($)
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => handleChange('targetPriceSync', !formData.targetPriceSync)}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                        formData.targetPriceSync ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'
+                                    }`}
+                                    title="동기화: 기업가치 분석 목표매도가 자동 적용"
+                                >
+                                    <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                                        formData.targetPriceSync ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                                    }`} />
+                                </button>
+                            </div>
+                            {formData.targetPriceSync ? (
+                                <div className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 text-sm text-blue-600 dark:text-blue-400">
+                                    기업가치 분석 목표매도가 자동 적용
+                                </div>
+                            ) : (
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={formData.targetPrice}
+                                    onChange={(e) => handleChange('targetPrice', e.target.value)}
+                                    placeholder="200.00"
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                />
+                            )}
+                            {!formData.targetPriceSync && fxRate && formData.targetPrice && parseFloat(formData.targetPrice) > 0 && (
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                     (₩{(parseFloat(formData.targetPrice) * fxRate).toLocaleString('ko-KR', { maximumFractionDigits: 0 })})
                                 </div>

@@ -49,5 +49,6 @@ export const INITIAL_NEW_ROW = {
     buyDate: '',
     currentPrice: '',
     targetPrice: '',
+    targetPriceSync: false,
     rmk: '',
 };

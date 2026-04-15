@@ -109,6 +109,9 @@ function createGroupTotalRow(slice, sym, end, n, rows, currentFxRate) {
     // 기업명 (첫 번째 행에서 가져옴)
     const companyName = slice[0]?.companyName || '';
 
+    // 그룹 내 동기화 상태: 하나라도 sync=true면 그룹도 sync
+    const targetPriceSync = slice.some(r => r.targetPriceSync);
+
     return {
         __type: 'groupTotal',
         symbol: sym,
@@ -121,6 +124,7 @@ function createGroupTotalRow(slice, sym, end, n, rows, currentFxRate) {
         buyAvgUSD,
         curUSD,
         targetAvgUSD,
+        targetPriceSync,
         buyExchangeRateAtTrade: buyExchangeRateAvg,
         hasNextGroupDivider: nextIsGroup,
         groupRows: slice, // 매도 처리를 위한 원본 행 데이터

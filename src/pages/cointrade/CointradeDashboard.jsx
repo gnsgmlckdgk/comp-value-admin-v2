@@ -469,23 +469,22 @@ export default function CointradeDashboard() {
         liveStartedAt: null,
     });
 
-    // 실매매 경과시간 (1분마다 갱신)
-    const [elapsedTick, setElapsedTick] = useState(0);
+    // 실매매 경과시간 (1분마다 갱신, config 전체를 dependency로)
+    const [liveElapsed, setLiveElapsed] = useState('');
     useEffect(() => {
-        const timer = setInterval(() => setElapsedTick(t => t + 1), 60000);
+        const calc = () => {
+            if (!config.wsEnabled || !config.liveStartedAt) return '';
+            const diff = Math.floor((Date.now() - new Date(config.liveStartedAt).getTime()) / 1000);
+            if (diff < 0) return '';
+            const d = Math.floor(diff / 86400);
+            const h = Math.floor((diff % 86400) / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            return d > 0 ? `${d}일 ${h}시간 ${m}분` : h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+        };
+        setLiveElapsed(calc());
+        const timer = setInterval(() => setLiveElapsed(calc()), 60000);
         return () => clearInterval(timer);
-    }, []);
-
-    const liveElapsed = useMemo(() => {
-        void elapsedTick; // 1분마다 재계산 트리거
-        if (!config.wsEnabled || !config.liveStartedAt) return '';
-        const diff = Math.floor((Date.now() - new Date(config.liveStartedAt).getTime()) / 1000);
-        if (diff < 0) return '';
-        const d = Math.floor(diff / 86400);
-        const h = Math.floor((diff % 86400) / 3600);
-        const m = Math.floor((diff % 3600) / 60);
-        return d > 0 ? `${d}일 ${h}시간 ${m}분` : h > 0 ? `${h}시간 ${m}분` : `${m}분`;
-    }, [config.wsEnabled, config.liveStartedAt, elapsedTick]);
+    }, [config]);
 
     // Scanner Signals
     const [scannerSignals, setScannerSignals] = useState([]);

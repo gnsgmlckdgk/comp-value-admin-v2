@@ -4,6 +4,7 @@ import useModalAnimation from '@/hooks/useModalAnimation';
 import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 import Button from '@/component/common/button/Button';
+import ExcelJS from 'exceljs';
 
 // 숫자를 천 단위 콤마 포맷으로 변환
 const formatNumber = (value) => {
@@ -315,6 +316,168 @@ export default function Backtest() {
         return Array.from(reasons).sort();
     }, [history]);
 
+    // ── 다운로드 유틸 ──
+    const triggerDownload = (blob, filename) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const getTimestamp = () => {
+        const now = new Date();
+        return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    };
+
+    const toCsv = (headers, rows) => {
+        const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+        const lines = [headers.map(escape).join(',')];
+        rows.forEach(r => lines.push(r.map(escape).join(',')));
+        return '\uFEFF' + lines.join('\n');
+    };
+
+    // 요약 데이터를 행 배열로 변환
+    const getSummaryRows = () => {
+        const sellTrades = history.filter(h => (h.tradeType || h.trade_type) === 'SELL');
+        const wins = sellTrades.filter(h => (h.profitLoss || h.profit_loss || 0) > 0).length;
+        const losses = sellTrades.filter(h => (h.profitLoss || h.profit_loss || 0) < 0).length;
+        const even = sellTrades.length - wins - losses;
+
+        // 사유별 카운트
+        const reasonCounts = {};
+        sellTrades.forEach(h => {
+            const r = h.reason || h.sell_reason || '기타';
+            reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+        });
+
+        const rows = [
+            ['시작 시간', paperStartedAt ? formatDateTimeFull(paperStartedAt) : '-'],
+            ['내보내기 시간', formatDateTimeFull(new Date().toISOString())],
+            ['상태', paperEnabled ? 'ON' : 'OFF'],
+            [''],
+            ['총 거래 수', `${metrics.totalTrades}건`],
+            ['매수 건수', `${metrics.buyCount}건`],
+            ['매도 건수', `${metrics.sellCount}건`],
+            ['승률', metrics.sellCount > 0 ? `${metrics.winRate.toFixed(1)}%` : '-'],
+            ['승/패/무', metrics.sellCount > 0 ? `${wins}승 / ${losses}패 / ${even}무` : '-'],
+            ['총 손익', metrics.sellCount > 0 ? `${metrics.totalPL >= 0 ? '+' : ''}${formatNumber(Math.round(metrics.totalPL))}원` : '-'],
+            ['평균 보유시간', metrics.sellCount > 0 ? `${metrics.avgHoldMin.toFixed(0)}분` : '-'],
+            [''],
+            ['보유 종목 수', `${holdings.length}건`],
+        ];
+
+        // 사유별 통계
+        if (Object.keys(reasonCounts).length > 0) {
+            rows.push(['']);
+            rows.push(['[매도 사유별 건수]', '']);
+            Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]).forEach(([reason, count]) => {
+                rows.push([getReasonLabel(reason), `${count}건`]);
+            });
+        }
+
+        return rows;
+    };
+
+    // 거래내역 헤더 및 행 변환
+    const TRADE_HEADERS = ['시간', '종목', '유형', '가격', '수량', '금액', '손익', '손익률', '사유', '모멘텀', 'ML확률', '보유시간'];
+
+    const getTradeRows = (data) => data.map(h => {
+        const tradeType = h.tradeType || h.trade_type;
+        const coinCode = h.coinCode || h.coin_code || '';
+        const price = h.price || h.trade_price;
+        const qty = h.quantity || h.amount;
+        const totalAmt = price && qty ? Math.round(price * qty) : null;
+        const pl = h.profitLoss || h.profit_loss;
+        const plRate = h.profitLossRate || h.profit_loss_rate;
+        const reason = h.reason || h.sell_reason;
+        const momentum = h.momentumScore ?? h.momentum_score;
+        const mlProb = h.mlProbability ?? h.ml_probability ?? h.mlConfidence ?? h.ml_confidence;
+        const holdSec = h.holdDurationSec || h.hold_duration_sec;
+        const createdAt = h.createdAt || h.created_at;
+
+        return [
+            createdAt ? formatDateTimeFull(createdAt) : '-',
+            coinCode,
+            tradeType === 'BUY' ? '매수' : '매도',
+            price != null ? `${formatNumber(Math.round(price))}원` : '-',
+            qty != null ? Number(qty).toFixed(4) : '-',
+            totalAmt != null ? `${formatNumber(totalAmt)}원` : '-',
+            pl != null ? `${pl >= 0 ? '+' : ''}${formatNumber(Math.round(pl))}원` : '-',
+            plRate != null ? `${plRate >= 0 ? '+' : ''}${Number(plRate).toFixed(2)}%` : '-',
+            reason ? getReasonLabel(reason) : '-',
+            momentum != null ? Number(momentum).toFixed(2) : '-',
+            mlProb != null ? `${(Number(mlProb) * 100).toFixed(1)}%` : '-',
+            holdSec != null ? formatDuration(holdSec) : '-',
+        ];
+    });
+
+    // ── 엑셀 다운로드 (요약 + 거래내역 시트 통합) ──
+    const handleDownloadExcel = async () => {
+        try {
+            const wb = new ExcelJS.Workbook();
+
+            // 요약 시트
+            const wsSummary = wb.addWorksheet('성과요약');
+            wsSummary.addRow(['항목', '값']);
+            wsSummary.getRow(1).eachCell(cell => {
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
+                cell.alignment = { horizontal: 'center' };
+            });
+            getSummaryRows().forEach(r => wsSummary.addRow(r));
+            wsSummary.getColumn(1).width = 22;
+            wsSummary.getColumn(2).width = 30;
+
+            // 거래내역 시트
+            const wsTrade = wb.addWorksheet('거래내역');
+            wsTrade.addRow(TRADE_HEADERS);
+            wsTrade.getRow(1).eachCell(cell => {
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
+                cell.alignment = { horizontal: 'center' };
+            });
+            getTradeRows(filteredHistory).forEach(r => wsTrade.addRow(r));
+            const colWidths = [20, 14, 8, 16, 12, 16, 14, 10, 12, 10, 10, 12];
+            colWidths.forEach((w, i) => { wsTrade.getColumn(i + 1).width = w; });
+
+            const buf = await wb.xlsx.writeBuffer();
+            triggerDownload(
+                new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+                `페이퍼트레이딩_${getTimestamp()}.xlsx`
+            );
+        } catch (e) {
+            console.error('엑셀 다운로드 실패:', e);
+            setToast('엑셀 다운로드에 실패했습니다.');
+        }
+    };
+
+    // ── CSV 다운로드 (요약 + 빈줄 + 거래내역 합본) ──
+    const handleDownloadCsv = () => {
+        try {
+            const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+            const lines = [];
+
+            // 요약 섹션
+            lines.push(['항목', '값'].map(escape).join(','));
+            getSummaryRows().forEach(r => lines.push(r.map(v => escape(v ?? '')).join(',')));
+            lines.push('');
+
+            // 거래내역 섹션
+            lines.push(TRADE_HEADERS.map(escape).join(','));
+            getTradeRows(filteredHistory).forEach(r => lines.push(r.map(escape).join(',')));
+
+            triggerDownload(
+                new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }),
+                `페이퍼트레이딩_${getTimestamp()}.csv`
+            );
+        } catch (e) {
+            console.error('CSV 다운로드 실패:', e);
+            setToast('CSV 다운로드에 실패했습니다.');
+        }
+    };
+
     // 보유종목의 현재 손익률 계산
     const getHoldingPL = (holding) => {
         const market = holding.coinCode || holding.coin_code;
@@ -368,6 +531,19 @@ export default function Backtest() {
                         </Button>
                         <Button onClick={() => fetchAll()} variant="ghost" size="sm" disabled={loading}>
                             새로고침
+                        </Button>
+                        <span className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+                        <Button variant="success" size="sm" onClick={handleDownloadExcel} disabled={history.length === 0} title="엑셀 다운로드">
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-6l2.5 3L13 14l3 4H8l2-3z" />
+                            </svg>
+                            Excel
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={handleDownloadCsv} disabled={history.length === 0} title="CSV 다운로드">
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-2h8v-2H8v2zm0-4h8v-2H8v2z" />
+                            </svg>
+                            CSV
                         </Button>
                     </div>
                 </div>

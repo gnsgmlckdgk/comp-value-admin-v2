@@ -79,6 +79,7 @@ const PARAM_GROUPS = {
             { key: 'TRAILING_STOP_RATE_PCT', label: '트레일링 하락(%)', type: 'number', step: 0.1 },
             { key: 'MAX_HOLD_MINUTES', label: '최대 보유(분)', type: 'number' },
             { key: 'SELL_CHECK_WAIT_SECONDS', label: '주문 확인 대기(초)', type: 'number' },
+            { key: 'LIMIT_SELL_TIMEOUT_SEC', label: '지정가 매도 타임아웃(초)', type: 'number' },
         ]
     },
     SYSTEM: {
@@ -154,6 +155,7 @@ const PARAM_DESCRIPTIONS = {
     TRAILING_STOP_RATE_PCT: '최고가 대비 이 비율 하락 시 매도 (%)',
     MAX_HOLD_MINUTES: '이 시간 초과 시 강제 매도 (분)',
     SELL_CHECK_WAIT_SECONDS: '매도 주문 후 체결 확인 대기 (초)',
+    LIMIT_SELL_TIMEOUT_SEC: '익절/트레일링 지정가 매도 미체결 시 시장가 전환까지 대기 (초)',
     MAX_CONCURRENT_REQUESTS: '업비트 API 동시 요청 수',
     MAX_CONCURRENT_PROCESS: '동시 처리할 종목 수',
     TRADING_FEE_RATE: '거래소 수수료율 (0.05%는 0.0005로 입력)',

@@ -1074,11 +1074,11 @@ export default function CointradeDashboard() {
                                 {status.sellSchedulerEnabled ? 'ON' : 'OFF'}
                             </span>
                         </div>
-                        {liveElapsed && (
-                            <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
-                                <span className="text-xs text-blue-600 dark:text-blue-400">{liveElapsed} 경과</span>
-                            </div>
-                        )}
+                        <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
+                            <span className="text-xs text-blue-600 dark:text-blue-400">
+                                {liveElapsed ? `${liveElapsed} 경과` : `ws=${String(config.wsEnabled)} live=${config.liveStartedAt || 'null'}`}
+                            </span>
+                        </div>
                     </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Delete, RotateCcw } from 'lucide-react';
 import PageTitle from '@/component/common/display/PageTitle';
 
@@ -115,6 +115,42 @@ const Calculator = () => {
     }, [display, waitingForOperand]);
 
     const clearHistory = useCallback(() => setHistory([]), []);
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const target = e.target;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+
+            const { key } = e;
+
+            if (key >= '0' && key <= '9') {
+                e.preventDefault();
+                inputDigit(Number(key));
+            } else if (key === '.') {
+                e.preventDefault();
+                inputDot();
+            } else if (key === '+' || key === '-' || key === '*' || key === '/') {
+                e.preventDefault();
+                handleOperator(key);
+            } else if (key === 'Enter' || key === '=') {
+                e.preventDefault();
+                handleEquals();
+            } else if (key === 'Backspace') {
+                e.preventDefault();
+                handleBackspace();
+            } else if (key === 'Escape' || key === 'c' || key === 'C') {
+                e.preventDefault();
+                handleClear();
+            } else if (key === '%') {
+                e.preventDefault();
+                inputPercent();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [inputDigit, inputDot, handleOperator, handleEquals, handleBackspace, handleClear, inputPercent]);
 
     const operatorLabels = { '+': '+', '-': '-', '*': '\u00d7', '/': '\u00f7' };
 

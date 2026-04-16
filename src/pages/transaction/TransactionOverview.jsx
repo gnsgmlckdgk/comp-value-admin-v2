@@ -46,6 +46,7 @@ export default function TransactionOverview() {
         lastUpdated,
         addTransaction,
         updateTransactionField,
+        updateTransactionFields,
         removeTransaction,
         mergePricesBySymbols,
         processSell,
@@ -108,13 +109,9 @@ export default function TransactionOverview() {
         setDetailModalData({ open: false, row: null, isGroupRow: false });
     };
 
-    // 상세 모달에서 필드 수정
+    // 상세 모달에서 필드 수정 (한 번의 API 호출로 모든 필드 전송)
     const handleDetailSave = async (id, updates) => {
-        let success = true;
-        for (const [field, value] of Object.entries(updates)) {
-            const result = await updateTransactionField(id, field, value);
-            if (!result) success = false;
-        }
+        const success = await updateTransactionFields(id, updates);
         if (success) {
             setDetailModalData({ open: false, row: null });
             openAlert('수정되었습니다.');
@@ -126,10 +123,8 @@ export default function TransactionOverview() {
     const handleGroupDetailSave = async (groupRows, updates) => {
         let success = true;
         for (const groupRow of groupRows) {
-            for (const [field, value] of Object.entries(updates)) {
-                const result = await updateTransactionField(groupRow.id, field, value);
-                if (!result) success = false;
-            }
+            const result = await updateTransactionFields(groupRow.id, updates);
+            if (!result) success = false;
         }
         if (success) {
             setDetailModalData({ open: false, row: null, isGroupRow: false });

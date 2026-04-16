@@ -219,8 +219,9 @@ export default function TransactionDetailModal({
         if (formData.buyDate !== row.buyDate) updates.buyDate = formData.buyDate;
         if (String(formData.buyPrice) !== String(row.buyPrice)) updates.buyPrice = formData.buyPrice;
         if (String(formData.totalBuyAmount) !== String(row.totalBuyAmount)) updates.totalBuyAmount = formData.totalBuyAmount;
-        if (String(formData.targetPrice) !== String(row.targetPrice)) updates.targetPrice = formData.targetPrice;
         if (Boolean(formData.targetPriceSync) !== Boolean(row.targetPriceSync)) updates.targetPriceSync = formData.targetPriceSync;
+        // 동기화 ON이면 targetPrice는 백엔드(Redis)에서 관리하므로 전송하지 않음
+        if (!formData.targetPriceSync && String(formData.targetPrice) !== String(row.targetPrice)) updates.targetPrice = formData.targetPrice;
         if (String(formData.buyExchangeRateAtTrade) !== String(row.buyExchangeRateAtTrade)) updates.buyExchangeRateAtTrade = formData.buyExchangeRateAtTrade;
         if (formData.rmk !== row.rmk) updates.rmk = formData.rmk.trim();
 
@@ -243,8 +244,9 @@ export default function TransactionDetailModal({
 
         if (newSymbol !== (row.symbol || '').toUpperCase()) updates.symbol = newSymbol;
         if (newCompanyName !== (row.companyName || '').trim()) updates.companyName = newCompanyName;
-        if (String(formData.targetPrice) !== String(row.targetPrice || '')) updates.targetPrice = formData.targetPrice;
         if (Boolean(formData.targetPriceSync) !== Boolean(row.targetPriceSync)) updates.targetPriceSync = formData.targetPriceSync;
+        // 동기화 ON이면 targetPrice는 백엔드(Redis)에서 관리하므로 전송하지 않음
+        if (!formData.targetPriceSync && String(formData.targetPrice) !== String(row.targetPrice || '')) updates.targetPrice = formData.targetPrice;
 
         const originalRmks = (row.groupRows || []).map(r => r.rmk || '');
         const allSameRmk = originalRmks.every(r => r === originalRmks[0]);

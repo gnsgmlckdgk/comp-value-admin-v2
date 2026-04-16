@@ -113,6 +113,30 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
         }
     };
 
+    // 복수 필드를 한 번의 API 호출로 수정
+    const updateTransactionFields = async (id, updates) => {
+        setSaving(true);
+        try {
+            const updated = await updateTransaction(id, updates);
+
+            setRows((prev) =>
+                prev.map((r) => {
+                    if (r.id === id) {
+                        const { currentPrice: _, ...backendData } = updated || {};
+                        return { ...r, ...backendData };
+                    }
+                    return r;
+                })
+            );
+            return true;
+        } catch (e) {
+            openAlert('수정에 실패했습니다.');
+            return false;
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const removeTransaction = async (id) => {
         setSaving(true);
         try {
@@ -279,6 +303,7 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
         lastUpdated,
         addTransaction,
         updateTransactionField,
+        updateTransactionFields,
         removeTransaction,
         mergePricesBySymbols,
         processSell,

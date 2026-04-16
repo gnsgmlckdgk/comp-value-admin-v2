@@ -200,6 +200,10 @@ export default function CointradeScheduler() {
             setStatus(prev => ({ ...prev, [stateKey]: newValue }));
 
             const configList = [{ configKey: paramName, configValue: String(newValue) }];
+            // WS_ENABLED가 false→true로 바뀌면 실매매 시작 시간 기록
+            if (paramName === 'WS_ENABLED' && newValue) {
+                configList.push({ configKey: 'LIVE_TRADING_STARTED_AT', configValue: new Date().toISOString() });
+            }
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
             if (error) {
                 setStatus(prev => ({ ...prev, [stateKey]: currentValue }));

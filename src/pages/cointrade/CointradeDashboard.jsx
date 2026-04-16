@@ -469,22 +469,7 @@ export default function CointradeDashboard() {
         liveStartedAt: null,
     });
 
-    // 실매매 경과시간 (1분마다 갱신, config 전체를 dependency로)
-    const [liveElapsed, setLiveElapsed] = useState('');
-    useEffect(() => {
-        const calc = () => {
-            if (!config.wsEnabled || !config.liveStartedAt) return '';
-            const diff = Math.floor((Date.now() - new Date(config.liveStartedAt).getTime()) / 1000);
-            if (diff < 0) return '';
-            const d = Math.floor(diff / 86400);
-            const h = Math.floor((diff % 86400) / 3600);
-            const m = Math.floor((diff % 3600) / 60);
-            return d > 0 ? `${d}일 ${h}시간 ${m}분` : h > 0 ? `${h}시간 ${m}분` : `${m}분`;
-        };
-        setLiveElapsed(calc());
-        const timer = setInterval(() => setLiveElapsed(calc()), 60000);
-        return () => clearInterval(timer);
-    }, [config]);
+    // 실매매 경과시간 — 렌더링마다 직접 계산 (background fetch로 주기적 갱신됨)
 
     // Scanner Signals
     const [scannerSignals, setScannerSignals] = useState([]);
@@ -1073,11 +1058,19 @@ export default function CointradeDashboard() {
                                 {status.sellSchedulerEnabled ? 'ON' : 'OFF'}
                             </span>
                         </div>
-                        {liveElapsed && (
-                            <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
-                                <span className="text-xs text-blue-600 dark:text-blue-400">{liveElapsed} 경과</span>
-                            </div>
-                        )}
+                        {config.wsEnabled && config.liveStartedAt && (() => {
+                            const diff = Math.floor((Date.now() - new Date(config.liveStartedAt).getTime()) / 1000);
+                            if (diff < 0) return null;
+                            const d = Math.floor(diff / 86400);
+                            const h = Math.floor((diff % 86400) / 3600);
+                            const m = Math.floor((diff % 3600) / 60);
+                            const text = d > 0 ? `${d}일 ${h}시간 ${m}분` : h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+                            return (
+                                <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
+                                    <span className="text-xs text-blue-600 dark:text-blue-400">{text} 경과</span>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 

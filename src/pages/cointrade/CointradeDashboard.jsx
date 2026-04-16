@@ -77,6 +77,7 @@ const getReasonLabel = (reason) => {
         'PARTIAL_TRAILING_STOP': '부분트레일링',
         'MANUAL': '수동매도',
         'MANUAL_CLEANUP': '수동정리',
+        'CLEANUP_NO_BALANCE': '잔고정리',
         'PARTIAL_MANUAL': '부분수동',
         'MAX_HOLD_EXPIRED': '강제청산',
         'MAX_HOLDING_EXPIRED': '강제청산'

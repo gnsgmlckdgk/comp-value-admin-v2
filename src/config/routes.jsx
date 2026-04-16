@@ -32,6 +32,7 @@ import ExcelViewer from '@/pages/util/excel-viewer'
 import ExchangeRate from '@/pages/util/exchange-rate'
 import JsonViewer from '@/pages/util/json-viewer'
 import Memo from '@/pages/util/memo'
+import Calculator from '@/pages/util/calculator'
 import MonitoringDashboard from '@/pages/monitoring/MonitoringDashboard'
 
 import { SECTIONS } from '@/component/layouts/common/SideBar001';
@@ -166,6 +167,12 @@ const routes = {
         label: '메모',
         path: '/util/memo',
         element: <Memo />
+    },
+    "Calculator": {
+        section: SECTIONS[6],
+        label: '계산기',
+        path: '/util/calculator',
+        element: <Calculator />
     },
 
     /* 모니터링 */

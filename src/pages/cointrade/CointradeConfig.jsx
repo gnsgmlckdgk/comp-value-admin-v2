@@ -60,7 +60,7 @@ const PARAM_GROUPS = {
             { key: 'BUY_MAX_CONCURRENT', label: '최대 동시보유', type: 'number' },
             { key: 'BUY_MIN_BALANCE', label: '최소 잔고(원)', type: 'number' },
             { key: 'BUY_COOLDOWN_MINUTES', label: '재매수 쿨다운(분)', type: 'number' },
-            { key: 'BUY_USE_MARKET_ORDER', label: '시장가 주문', type: 'toggle' },
+
             { key: 'TARGET_MODE', label: '대상 모드', type: 'select', options: ['ALL', 'SELECTED'] },
             { key: 'SL_FILTER_ENABLED', label: 'SL방지 필터', type: 'toggle' },
             { key: 'SL_FILTER_MIN_LARGE_BUYS', label: 'SL필터 대량매수 최소', type: 'number' },
@@ -140,7 +140,7 @@ const PARAM_DESCRIPTIONS = {
     BUY_MAX_CONCURRENT: '동시에 보유할 수 있는 최대 종목 수',
     BUY_MIN_BALANCE: '이 금액 이하이면 매수하지 않음 (원)',
     BUY_COOLDOWN_MINUTES: '같은 종목 재매수까지 최소 대기 시간 (분)',
-    BUY_USE_MARKET_ORDER: '시장가 주문 사용 여부 (true: 시장가, false: 지정가)',
+
     TARGET_MODE: 'ALL: KRW 마켓 전체 종목, SELECTED: 대상종목설정에서 선택한 종목만',
     SL_FILTER_ENABLED: '손절 방지 필터 (시장 미시구조 기반, SL 가능성 높은 매수 사전 차단)',
     SL_FILTER_MIN_LARGE_BUYS: '스냅샷 대량 매수 건수 최소 기준 (미달 시 매수 차단)',
@@ -267,6 +267,11 @@ export default function CointradeConfig() {
                 configKey: key,
                 configValue: value?.toString() || ''
             }));
+
+            // WS_ENABLED가 false→true로 바뀌면 실매매 시작 시간 기록
+            if (params['WS_ENABLED'] === 'true' && initialParams['WS_ENABLED'] !== 'true') {
+                configList.push({ configKey: 'LIVE_TRADING_STARTED_AT', configValue: new Date().toISOString() });
+            }
 
             const { data, error } = await send('/dart/api/cointrade/config', configList, 'PUT');
 

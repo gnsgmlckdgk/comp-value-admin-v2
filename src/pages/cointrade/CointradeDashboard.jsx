@@ -462,8 +462,30 @@ export default function CointradeDashboard() {
 
     // 설정 정보
     const [config, setConfig] = useState({
-        maxHoldMinutes: 60  // 최대 보유 시간 기본값 60분
+        maxHoldMinutes: 60,
+        wsEnabled: false,
+        liveStartedAt: null,
     });
+
+    // 실매매 경과시간
+    const [liveElapsed, setLiveElapsed] = useState('');
+    useEffect(() => {
+        if (!config.wsEnabled || !config.liveStartedAt) {
+            setLiveElapsed('');
+            return;
+        }
+        const update = () => {
+            const diff = Math.floor((Date.now() - new Date(config.liveStartedAt).getTime()) / 1000);
+            if (diff < 0) { setLiveElapsed(''); return; }
+            const d = Math.floor(diff / 86400);
+            const h = Math.floor((diff % 86400) / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            setLiveElapsed(d > 0 ? `${d}일 ${h}시간 ${m}분` : h > 0 ? `${h}시간 ${m}분` : `${m}분`);
+        };
+        update();
+        const timer = setInterval(update, 60000);
+        return () => clearInterval(timer);
+    }, [config.wsEnabled, config.liveStartedAt]);
 
     // Scanner Signals
     const [scannerSignals, setScannerSignals] = useState([]);
@@ -559,7 +581,9 @@ export default function CointradeDashboard() {
                 });
 
                 setConfig({
-                    maxHoldMinutes: parseInt(configMap.MAX_HOLD_MINUTES || 60)
+                    maxHoldMinutes: parseInt(configMap.MAX_HOLD_MINUTES || 60),
+                    wsEnabled: configMap.WS_ENABLED === 'true',
+                    liveStartedAt: configMap.LIVE_TRADING_STARTED_AT || null,
                 });
 
                 // config에서 스캐너/매도 상태 설정
@@ -1050,6 +1074,11 @@ export default function CointradeDashboard() {
                                 {status.sellSchedulerEnabled ? 'ON' : 'OFF'}
                             </span>
                         </div>
+                        {liveElapsed && (
+                            <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
+                                <span className="text-xs text-blue-600 dark:text-blue-400">{liveElapsed} 경과</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

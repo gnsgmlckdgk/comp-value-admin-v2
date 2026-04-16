@@ -45,6 +45,7 @@ const getReasonColor = (reason) => {
         'MANUAL': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
         'PARTIAL_MANUAL': 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
         'MANUAL_CLEANUP': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
+        'CLEANUP_NO_BALANCE': 'bg-slate-200 dark:bg-slate-600/30 text-slate-700 dark:text-slate-300',
         'MAX_HOLD_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
         'MAX_HOLDING_EXPIRED': 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
     };
@@ -467,25 +468,23 @@ export default function CointradeDashboard() {
         liveStartedAt: null,
     });
 
-    // 실매매 경과시간
-    const [liveElapsed, setLiveElapsed] = useState('');
+    // 실매매 경과시간 (1분마다 갱신)
+    const [elapsedTick, setElapsedTick] = useState(0);
     useEffect(() => {
-        if (!config.wsEnabled || !config.liveStartedAt) {
-            setLiveElapsed('');
-            return;
-        }
-        const update = () => {
-            const diff = Math.floor((Date.now() - new Date(config.liveStartedAt).getTime()) / 1000);
-            if (diff < 0) { setLiveElapsed(''); return; }
-            const d = Math.floor(diff / 86400);
-            const h = Math.floor((diff % 86400) / 3600);
-            const m = Math.floor((diff % 3600) / 60);
-            setLiveElapsed(d > 0 ? `${d}일 ${h}시간 ${m}분` : h > 0 ? `${h}시간 ${m}분` : `${m}분`);
-        };
-        update();
-        const timer = setInterval(update, 60000);
+        const timer = setInterval(() => setElapsedTick(t => t + 1), 60000);
         return () => clearInterval(timer);
-    }, [config.wsEnabled, config.liveStartedAt]);
+    }, []);
+
+    const liveElapsed = useMemo(() => {
+        void elapsedTick; // 1분마다 재계산 트리거
+        if (!config.wsEnabled || !config.liveStartedAt) return '';
+        const diff = Math.floor((Date.now() - new Date(config.liveStartedAt).getTime()) / 1000);
+        if (diff < 0) return '';
+        const d = Math.floor(diff / 86400);
+        const h = Math.floor((diff % 86400) / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        return d > 0 ? `${d}일 ${h}시간 ${m}분` : h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+    }, [config.wsEnabled, config.liveStartedAt, elapsedTick]);
 
     // Scanner Signals
     const [scannerSignals, setScannerSignals] = useState([]);
@@ -1074,11 +1073,11 @@ export default function CointradeDashboard() {
                                 {status.sellSchedulerEnabled ? 'ON' : 'OFF'}
                             </span>
                         </div>
-                        <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
-                            <span className="text-xs text-blue-600 dark:text-blue-400">
-                                {liveElapsed ? `${liveElapsed} 경과` : `ws=${String(config.wsEnabled)} live=${config.liveStartedAt || 'null'}`}
-                            </span>
-                        </div>
+                        {liveElapsed && (
+                            <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
+                                <span className="text-xs text-blue-600 dark:text-blue-400">{liveElapsed} 경과</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

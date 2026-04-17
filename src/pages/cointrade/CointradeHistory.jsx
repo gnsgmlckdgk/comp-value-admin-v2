@@ -1288,113 +1288,111 @@ export default function CointradeHistory() {
                     검색 조건
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                    {/* 시작일 */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            시작일
-                        </label>
-                        <Input
-                            type="date"
-                            value={filters.startDate}
-                            onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                            className="w-full"
-                        />
-                    </div>
+                <div className="space-y-4 mb-4">
+                    {/* 기간 그룹 */}
+                    <fieldset className="rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50/40 dark:bg-blue-900/10 px-4 pt-3 pb-4">
+                        <legend className="px-2 text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
+                            기간
+                        </legend>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    시작
+                                </label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="date"
+                                        value={filters.startDate}
+                                        onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                                        className="flex-1 min-w-0"
+                                    />
+                                    <Input
+                                        type="time"
+                                        value={filters.startTime}
+                                        onChange={(e) => handleFilterChange('startTime', e.target.value)}
+                                        className="w-28 flex-shrink-0"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    종료
+                                </label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="date"
+                                        value={filters.endDate}
+                                        onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                                        className="flex-1 min-w-0"
+                                    />
+                                    <Input
+                                        type="time"
+                                        value={filters.endTime}
+                                        onChange={(e) => handleFilterChange('endTime', e.target.value)}
+                                        className="w-28 flex-shrink-0"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
 
-                    {/* 시작 시간 */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            시작 시간
-                        </label>
-                        <Input
-                            type="time"
-                            value={filters.startTime}
-                            onChange={(e) => handleFilterChange('startTime', e.target.value)}
-                            className="w-full"
-                        />
-                    </div>
-
-                    {/* 종료일 */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            종료일
-                        </label>
-                        <Input
-                            type="date"
-                            value={filters.endDate}
-                            onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                            className="w-full"
-                        />
-                    </div>
-
-                    {/* 종료 시간 */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            종료 시간
-                        </label>
-                        <Input
-                            type="time"
-                            value={filters.endTime}
-                            onChange={(e) => handleFilterChange('endTime', e.target.value)}
-                            className="w-full"
-                        />
-                    </div>
-
-                    {/* 종목 선택 */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            종목
-                        </label>
-                        <select
-                            value={filters.coinCode}
-                            onChange={(e) => handleFilterChange('coinCode', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="all">전체</option>
-                            {coinList.map(coin => (
-                                <option key={coin.coinCode} value={coin.coinCode}>
-                                    {coin.coinCode} {coin.coinName && `(${coin.coinName})`}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* 거래 유형 */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            거래 유형
-                        </label>
-                        <select
-                            value={filters.tradeType}
-                            onChange={(e) => handleFilterChange('tradeType', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="all">전체</option>
-                            <option value="BUY">매수</option>
-                            <option value="SELL">매도</option>
-                        </select>
-                    </div>
-
-                    {/* 매도 사유 */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            매도 사유
-                        </label>
-                        <select
-                            value={filters.reason}
-                            onChange={(e) => handleFilterChange('reason', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="all">전체</option>
-                            <option value="SIGNAL">매수 (SIGNAL)</option>
-                            <option value="TAKE_PROFIT">익절 (TAKE_PROFIT)</option>
-                            <option value="STOP_LOSS">손절 (STOP_LOSS)</option>
-                            <option value="TRAILING_STOP">트레일링스탑 (TRAILING_STOP)</option>
-                            <option value="EXPIRED">만료 (EXPIRED)</option>
-                            <option value="MAX_HOLDING_EXPIRED">강제청산 (MAX_HOLDING_EXPIRED)</option>
-                        </select>
-                    </div>
+                    {/* 거래 조건 그룹 */}
+                    <fieldset className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-900/10 px-4 pt-3 pb-4">
+                        <legend className="px-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                            거래 조건
+                        </legend>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    종목
+                                </label>
+                                <select
+                                    value={filters.coinCode}
+                                    onChange={(e) => handleFilterChange('coinCode', e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="all">전체</option>
+                                    {coinList.map(coin => (
+                                        <option key={coin.coinCode} value={coin.coinCode}>
+                                            {coin.coinCode} {coin.coinName && `(${coin.coinName})`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    거래 유형
+                                </label>
+                                <select
+                                    value={filters.tradeType}
+                                    onChange={(e) => handleFilterChange('tradeType', e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="all">전체</option>
+                                    <option value="BUY">매수</option>
+                                    <option value="SELL">매도</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    매도 사유
+                                </label>
+                                <select
+                                    value={filters.reason}
+                                    onChange={(e) => handleFilterChange('reason', e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="all">전체</option>
+                                    <option value="SIGNAL">매수 (SIGNAL)</option>
+                                    <option value="TAKE_PROFIT">익절 (TAKE_PROFIT)</option>
+                                    <option value="STOP_LOSS">손절 (STOP_LOSS)</option>
+                                    <option value="TRAILING_STOP">트레일링스탑 (TRAILING_STOP)</option>
+                                    <option value="EXPIRED">만료 (EXPIRED)</option>
+                                    <option value="MAX_HOLDING_EXPIRED">강제청산 (MAX_HOLDING_EXPIRED)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
                 </div>
 
                 {/* 검색 버튼 */}

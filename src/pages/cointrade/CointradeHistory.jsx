@@ -337,8 +337,10 @@ export default function CointradeHistory() {
         realizedProfitRate: 0,
         takeProfitCount: 0,
         stopLossCount: 0,
-        expiredCount: 0,
         trailingStopCount: 0,
+        expiredCount: 0,
+        maxHoldExpiredCount: 0,
+        manualCount: 0,
         // 보유 종목 수익 정보
         holdingsProfit: 0,
         holdingsInvestment: 0,
@@ -476,8 +478,10 @@ export default function CointradeHistory() {
 
         const takeProfitCount = sellRecords.filter(r => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(r.reason)).length;
         const stopLossCount = sellRecords.filter(r => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(r.reason)).length;
-        const expiredCount = sellRecords.filter(r => ['7DAY_PROFIT', 'PARTIAL_7DAY_PROFIT', 'EXPIRED'].includes(r.reason)).length;
-        const trailingStopCount = sellRecords.filter(r => r.reason === 'TRAILING_STOP').length;
+        const trailingStopCount = sellRecords.filter(r => ['TRAILING_STOP', 'PARTIAL_TRAILING_STOP'].includes(r.reason)).length;
+        const expiredCount = sellRecords.filter(r => ['EXPIRED'].includes(r.reason) || /^(PARTIAL_)?\d+DAY_PROFIT$/.test(r.reason)).length;
+        const maxHoldExpiredCount = sellRecords.filter(r => ['MAX_HOLD_EXPIRED', 'MAX_HOLDING_EXPIRED'].includes(r.reason)).length;
+        const manualCount = sellRecords.filter(r => ['MANUAL', 'PARTIAL_MANUAL', 'MANUAL_CLEANUP', 'CLEANUP_NO_BALANCE'].includes(r.reason)).length;
 
         // 보유 종목 수익 정보 조회
         let holdingsProfit = 0;
@@ -535,8 +539,10 @@ export default function CointradeHistory() {
             realizedProfitRate,
             takeProfitCount,
             stopLossCount,
-            expiredCount,
             trailingStopCount,
+            expiredCount,
+            maxHoldExpiredCount,
+            manualCount,
             holdingsProfit,
             holdingsInvestment,
             holdingsProfitRate,
@@ -677,7 +683,9 @@ export default function CointradeHistory() {
         ['익절 건수', `${summary.takeProfitCount}건`],
         ['손절 건수', `${summary.stopLossCount}건`],
         ['트레일링스탑 건수', `${summary.trailingStopCount}건`],
-        ['만료 매도 건수', `${summary.expiredCount}건`],
+        ['강제청산 건수', `${summary.maxHoldExpiredCount}건`],
+        ['수동매도 건수', `${summary.manualCount}건`],
+        ['만료매도 건수', `${summary.expiredCount}건`],
         ['실현 수익률', `${summary.realizedProfitRate >= 0 ? '+' : ''}${summary.realizedProfitRate.toFixed(2)}%`],
         ['보유 종목 수', `${summary.holdingsCount}종목`],
         ['보유 투자금', `${Math.floor(summary.holdingsInvestment).toLocaleString()}원`],
@@ -1398,7 +1406,7 @@ export default function CointradeHistory() {
 
                     {itemsPerPage === 9999 ? (
                         <>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {/* 매수 건수 */}
                                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                                     <div className="text-xs text-blue-700 dark:text-blue-400 mb-1">매수 건수</div>
@@ -1438,28 +1446,58 @@ export default function CointradeHistory() {
                                         {summary.totalProfit >= 0 ? '+' : ''}{formatNumberWithComma(Math.floor(summary.totalProfit))}원
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* 익절 */}
-                                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
-                                    <div className="text-xs text-green-700 dark:text-green-400 mb-1">익절</div>
-                                    <div className="text-xl font-bold text-green-800 dark:text-green-300">
-                                        {summary.takeProfitCount}건
+                            {/* 매도 사유별 건수 */}
+                            <div className="mt-4">
+                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">매도 사유별 건수</div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                    {/* 익절 */}
+                                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
+                                        <div className="text-xs text-green-700 dark:text-green-400 mb-1">익절</div>
+                                        <div className="text-xl font-bold text-green-800 dark:text-green-300">
+                                            {summary.takeProfitCount}건
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* 손절 */}
-                                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
-                                    <div className="text-xs text-red-700 dark:text-red-400 mb-1">손절</div>
-                                    <div className="text-xl font-bold text-red-800 dark:text-red-300">
-                                        {summary.stopLossCount}건
+                                    {/* 손절 */}
+                                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
+                                        <div className="text-xs text-red-700 dark:text-red-400 mb-1">손절</div>
+                                        <div className="text-xl font-bold text-red-800 dark:text-red-300">
+                                            {summary.stopLossCount}건
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* 트레일링스탑 */}
-                                <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-100 dark:border-teal-800">
-                                    <div className="text-xs text-teal-700 dark:text-teal-400 mb-1">트레일링스탑</div>
-                                    <div className="text-xl font-bold text-teal-800 dark:text-teal-300">
-                                        {summary.trailingStopCount}건
+                                    {/* 트레일링스탑 */}
+                                    <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-100 dark:border-teal-800">
+                                        <div className="text-xs text-teal-700 dark:text-teal-400 mb-1">트레일링스탑</div>
+                                        <div className="text-xl font-bold text-teal-800 dark:text-teal-300">
+                                            {summary.trailingStopCount}건
+                                        </div>
+                                    </div>
+
+                                    {/* 강제청산 */}
+                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
+                                        <div className="text-xs text-amber-700 dark:text-amber-400 mb-1">강제청산</div>
+                                        <div className="text-xl font-bold text-amber-800 dark:text-amber-300">
+                                            {summary.maxHoldExpiredCount}건
+                                        </div>
+                                    </div>
+
+                                    {/* 수동매도 */}
+                                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-800">
+                                        <div className="text-xs text-orange-700 dark:text-orange-400 mb-1">수동매도</div>
+                                        <div className="text-xl font-bold text-orange-800 dark:text-orange-300">
+                                            {summary.manualCount}건
+                                        </div>
+                                    </div>
+
+                                    {/* 만료매도 */}
+                                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
+                                        <div className="text-xs text-purple-700 dark:text-purple-400 mb-1">만료매도</div>
+                                        <div className="text-xl font-bold text-purple-800 dark:text-purple-300">
+                                            {summary.expiredCount}건
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1506,9 +1544,6 @@ export default function CointradeHistory() {
                                 </div>
                             </div>
 
-                            <div className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                                만료 매도: <span className="font-medium text-slate-700 dark:text-slate-300">{summary.expiredCount}건</span>
-                            </div>
                         </>
                     ) : (
                         <div className="text-center py-4 text-slate-500 dark:text-slate-400">

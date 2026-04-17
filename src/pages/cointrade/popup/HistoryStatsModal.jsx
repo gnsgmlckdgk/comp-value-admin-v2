@@ -1,0 +1,347 @@
+import { useEffect, useMemo } from 'react';
+import {
+    AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
+import useModalAnimation from '@/hooks/useModalAnimation';
+
+// 적록색약 친화 팔레트 (파랑/주황/청록/호박/보라/노랑/슬레이트)
+const PALETTE = {
+    profit: '#3b82f6',      // 파랑 — 익절/이익
+    loss: '#f97316',        // 주황 — 손절/손실
+    trailing: '#14b8a6',    // 청록 — 트레일링스탑
+    expired: '#a855f7',     // 보라 — 만료매도
+    maxHold: '#f59e0b',     // 호박 — 강제청산
+    manual: '#eab308',      // 노랑 — 수동매도
+    neutral: '#64748b',     // 슬레이트
+};
+
+const REASON_META = [
+    { key: 'takeProfit', label: '익절', color: PALETTE.profit, match: ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'] },
+    { key: 'stopLoss', label: '손절', color: PALETTE.loss, match: ['STOP_LOSS', 'PARTIAL_STOP_LOSS'] },
+    { key: 'trailingStop', label: '트레일링', color: PALETTE.trailing, match: ['TRAILING_STOP', 'PARTIAL_TRAILING_STOP'] },
+    { key: 'maxHoldExpired', label: '강제청산', color: PALETTE.maxHold, match: ['MAX_HOLD_EXPIRED', 'MAX_HOLDING_EXPIRED'] },
+    { key: 'manual', label: '수동매도', color: PALETTE.manual, match: ['MANUAL', 'PARTIAL_MANUAL', 'MANUAL_CLEANUP', 'CLEANUP_NO_BALANCE'] },
+    { key: 'expired', label: '만료매도', color: PALETTE.expired, match: null /* 하단에서 패턴 매칭 */ },
+];
+
+const formatNumber = (n) => Math.floor(n || 0).toLocaleString('en-US');
+const formatSignedNumber = (n) => `${(n || 0) >= 0 ? '+' : ''}${formatNumber(n)}`;
+
+const classifyReason = (reason) => {
+    if (!reason) return null;
+    for (const meta of REASON_META) {
+        if (meta.match && meta.match.includes(reason)) return meta.key;
+    }
+    if (reason === 'EXPIRED' || /^(PARTIAL_)?\d+DAY_PROFIT$/.test(reason)) return 'expired';
+    return null;
+};
+
+export default function HistoryStatsModal({ isOpen, onClose, records = [], periodLabel = '' }) {
+    const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 250);
+
+    // ESC 닫기 + 스크롤 잠금
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handleEsc);
+        document.body.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen, onClose]);
+
+    // 통계 계산
+    const stats = useMemo(() => {
+        const sells = records.filter(r => r.tradeType === 'SELL');
+        const buys = records.filter(r => r.tradeType === 'BUY');
+
+        const totalProfit = sells.reduce((s, r) => s + (r.profitLoss || 0), 0);
+        const winCount = sells.filter(r => (r.profitLoss || 0) > 0).length;
+        const lossCount = sells.filter(r => (r.profitLoss || 0) < 0).length;
+        const winRate = sells.length > 0 ? (winCount / sells.length) * 100 : 0;
+        const avgProfitPerTrade = sells.length > 0 ? totalProfit / sells.length : 0;
+
+        // 매도 사유별 집계
+        const reasonAgg = REASON_META.reduce((acc, m) => {
+            acc[m.key] = { label: m.label, color: m.color, count: 0, profit: 0 };
+            return acc;
+        }, {});
+        sells.forEach(r => {
+            const key = classifyReason(r.reason);
+            if (!key) return;
+            reasonAgg[key].count += 1;
+            reasonAgg[key].profit += (r.profitLoss || 0);
+        });
+        const reasonData = Object.entries(reasonAgg)
+            .map(([key, v]) => ({ key, ...v }))
+            .filter(d => d.count > 0);
+
+        // 누적 손익 곡선 (매도 시간순)
+        const sortedSells = [...sells].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        let cumulative = 0;
+        const cumulativeSeries = sortedSells.map(r => {
+            cumulative += (r.profitLoss || 0);
+            return {
+                time: r.createdAt,
+                cumulative,
+            };
+        });
+
+        // 종목별 기여 Top 10 (|profitLoss| 내림차순)
+        const byCoin = new Map();
+        sells.forEach(r => {
+            const code = (r.coinCode || '-').replace('KRW-', '');
+            const cur = byCoin.get(code) || { coinCode: code, profit: 0, count: 0 };
+            cur.profit += (r.profitLoss || 0);
+            cur.count += 1;
+            byCoin.set(code, cur);
+        });
+        const coinTop10 = Array.from(byCoin.values())
+            .sort((a, b) => Math.abs(b.profit) - Math.abs(a.profit))
+            .slice(0, 10);
+
+        return {
+            buyCount: buys.length,
+            sellCount: sells.length,
+            totalProfit,
+            winCount,
+            lossCount,
+            winRate,
+            avgProfitPerTrade,
+            reasonData,
+            cumulativeSeries,
+            coinTop10,
+        };
+    }, [records]);
+
+    if (!shouldRender) return null;
+
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) onClose();
+    };
+
+    const hasData = stats.sellCount > 0;
+
+    return (
+        <div
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 animate__animated ${isAnimatingOut ? 'animate__fadeOut' : 'animate__fadeIn'}`}
+            style={{ animationDuration: '0.25s' }}
+            onClick={handleBackdropClick}
+        >
+            <div
+                className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto flex flex-col animate__animated ${isAnimatingOut ? 'animate__zoomOut' : 'animate__zoomIn'}`}
+                style={{ animationDuration: '0.25s' }}
+            >
+                {/* 헤더 */}
+                <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">📊 통계 보기</h3>
+                        {periodLabel && (
+                            <span className="text-xs text-slate-500 dark:text-slate-400">{periodLabel}</span>
+                        )}
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                        aria-label="닫기"
+                    >
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {!hasData ? (
+                    <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+                        통계를 계산할 매도 거래가 없습니다.
+                    </div>
+                ) : (
+                    <div className="p-4 sm:p-6 space-y-6">
+                        {/* ① KPI 카드 */}
+                        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <KpiCard label="총 매도 거래" value={`${stats.sellCount}건`} sub={`매수 ${stats.buyCount}건`} />
+                            <KpiCard
+                                label="승률"
+                                value={`${stats.winRate.toFixed(1)}%`}
+                                sub={`익 ${stats.winCount} · 손 ${stats.lossCount}`}
+                                tone={stats.winRate >= 50 ? 'profit' : 'loss'}
+                            />
+                            <KpiCard
+                                label="총 실현손익"
+                                value={`${formatSignedNumber(stats.totalProfit)}원`}
+                                tone={stats.totalProfit >= 0 ? 'profit' : 'loss'}
+                            />
+                            <KpiCard
+                                label="거래당 평균 손익"
+                                value={`${formatSignedNumber(stats.avgProfitPerTrade)}원`}
+                                tone={stats.avgProfitPerTrade >= 0 ? 'profit' : 'loss'}
+                            />
+                        </section>
+
+                        {/* ② 누적 손익 곡선 */}
+                        <section className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">누적 실현손익 추이</h4>
+                            <div style={{ width: '100%', height: 260 }}>
+                                <ResponsiveContainer>
+                                    <AreaChart data={stats.cumulativeSeries}>
+                                        <defs>
+                                            <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor={PALETTE.profit} stopOpacity={0.4} />
+                                                <stop offset="100%" stopColor={PALETTE.profit} stopOpacity={0.05} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" strokeOpacity={0.3} />
+                                        <XAxis
+                                            dataKey="time"
+                                            tick={{ fontSize: 10, fill: '#64748b' }}
+                                            tickFormatter={(v) => {
+                                                const d = new Date(v);
+                                                return `${d.getMonth() + 1}/${d.getDate()}`;
+                                            }}
+                                            minTickGap={30}
+                                        />
+                                        <YAxis
+                                            tick={{ fontSize: 10, fill: '#64748b' }}
+                                            tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                                            formatter={(v) => [`${formatSignedNumber(v)}원`, '누적 손익']}
+                                            labelFormatter={(v) => new Date(v).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="cumulative"
+                                            stroke={PALETTE.profit}
+                                            strokeWidth={2}
+                                            fill="url(#profitGradient)"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </section>
+
+                        {/* ③ 매도 사유 분포 + 기여 */}
+                        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* 건수 도넛 */}
+                            <div className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">매도 사유별 건수 분포</h4>
+                                <div style={{ width: '100%', height: 260 }}>
+                                    <ResponsiveContainer>
+                                        <PieChart>
+                                            <Pie
+                                                data={stats.reasonData}
+                                                dataKey="count"
+                                                nameKey="label"
+                                                innerRadius={50}
+                                                outerRadius={90}
+                                                paddingAngle={2}
+                                                label={({ label, count }) => `${label} ${count}`}
+                                                labelLine={false}
+                                            >
+                                                {stats.reasonData.map((d) => (
+                                                    <Cell key={d.key} fill={d.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                                                formatter={(v, name) => [`${v}건`, name]}
+                                            />
+                                            <Legend wrapperStyle={{ fontSize: 12 }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* 수익 기여 막대 */}
+                            <div className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">매도 사유별 실현손익 기여</h4>
+                                <div style={{ width: '100%', height: 260 }}>
+                                    <ResponsiveContainer>
+                                        <BarChart data={stats.reasonData} layout="vertical" margin={{ left: 16 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" strokeOpacity={0.3} />
+                                            <XAxis
+                                                type="number"
+                                                tick={{ fontSize: 10, fill: '#64748b' }}
+                                                tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`}
+                                            />
+                                            <YAxis
+                                                type="category"
+                                                dataKey="label"
+                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                width={70}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                                                formatter={(v) => [`${formatSignedNumber(v)}원`, '손익']}
+                                            />
+                                            <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
+                                                {stats.reasonData.map((d) => (
+                                                    <Cell key={d.key} fill={d.color} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* ④ 종목별 기여 Top 10 */}
+                        <section className="bg-slate-50 dark:bg-slate-900/30 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+                                종목별 실현손익 Top 10 <span className="text-xs text-slate-400">(절대값 기준)</span>
+                            </h4>
+                            <div style={{ width: '100%', height: Math.max(260, stats.coinTop10.length * 32) }}>
+                                <ResponsiveContainer>
+                                    <BarChart data={stats.coinTop10} layout="vertical" margin={{ left: 8 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" strokeOpacity={0.3} />
+                                        <XAxis
+                                            type="number"
+                                            tick={{ fontSize: 10, fill: '#64748b' }}
+                                            tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`}
+                                        />
+                                        <YAxis
+                                            type="category"
+                                            dataKey="coinCode"
+                                            tick={{ fontSize: 11, fill: '#64748b' }}
+                                            width={80}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                                            formatter={(v, _name, entry) => [
+                                                `${formatSignedNumber(v)}원 (${entry?.payload?.count ?? 0}건)`,
+                                                '손익',
+                                            ]}
+                                        />
+                                        <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
+                                            {stats.coinTop10.map((d) => (
+                                                <Cell key={d.coinCode} fill={d.profit >= 0 ? PALETTE.profit : PALETTE.loss} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </section>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function KpiCard({ label, value, sub, tone = 'neutral' }) {
+    const toneClass = tone === 'profit'
+        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300'
+        : tone === 'loss'
+            ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-300'
+            : 'bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200';
+    return (
+        <div className={`p-4 rounded-lg border ${toneClass}`}>
+            <div className="text-xs opacity-80 mb-1">{label}</div>
+            <div className="text-lg font-bold">{value}</div>
+            {sub && <div className="text-[11px] opacity-70 mt-1">{sub}</div>}
+        </div>
+    );
+}

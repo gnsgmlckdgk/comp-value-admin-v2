@@ -75,16 +75,20 @@ export default function ExcelFilter({
         const handleKey = (e) => {
             if (e.key === 'Escape') setIsOpen(false);
         };
-        const handleScroll = () => setIsOpen(false);
+        const handleScroll = (e) => {
+            if (popoverRef.current?.contains(e.target)) return;
+            setIsOpen(false);
+        };
+        const handleResize = () => setIsOpen(false);
         document.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('keydown', handleKey);
         window.addEventListener('scroll', handleScroll, true);
-        window.addEventListener('resize', handleScroll);
+        window.addEventListener('resize', handleResize);
         return () => {
             document.removeEventListener('mousedown', handleMouseDown);
             document.removeEventListener('keydown', handleKey);
             window.removeEventListener('scroll', handleScroll, true);
-            window.removeEventListener('resize', handleScroll);
+            window.removeEventListener('resize', handleResize);
         };
     }, [isOpen]);
 

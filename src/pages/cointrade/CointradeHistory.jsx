@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { send } from '@/util/ClientUtil';
 import useModalAnimation from '@/hooks/useModalAnimation';
+import HistoryStatsModal from './popup/HistoryStatsModal';
 import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 import ExcelFilter from '@/component/common/table/ExcelFilter';
@@ -310,6 +311,7 @@ export default function CointradeHistory() {
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
+    const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
 
     // 검색 필터 (서버 조회용)
     const [filters, setFilters] = useState({
@@ -350,6 +352,13 @@ export default function CointradeHistory() {
         expiredCount: 0,
         maxHoldExpiredCount: 0,
         manualCount: 0,
+        // 매도 사유별 손익 합계
+        takeProfitAmount: 0,
+        stopLossAmount: 0,
+        trailingStopAmount: 0,
+        expiredAmount: 0,
+        maxHoldExpiredAmount: 0,
+        manualAmount: 0,
         // 보유 종목 수익 정보
         holdingsProfit: 0,
         holdingsInvestment: 0,
@@ -485,12 +494,25 @@ export default function CointradeHistory() {
         const sellCostBasis = sellAmount - totalProfit;
         const realizedProfitRate = sellCostBasis > 0 ? (totalProfit / sellCostBasis * 100) : 0;
 
-        const takeProfitCount = sellRecords.filter(r => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(r.reason)).length;
-        const stopLossCount = sellRecords.filter(r => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(r.reason)).length;
-        const trailingStopCount = sellRecords.filter(r => ['TRAILING_STOP', 'PARTIAL_TRAILING_STOP'].includes(r.reason)).length;
-        const expiredCount = sellRecords.filter(r => ['EXPIRED'].includes(r.reason) || /^(PARTIAL_)?\d+DAY_PROFIT$/.test(r.reason)).length;
-        const maxHoldExpiredCount = sellRecords.filter(r => ['MAX_HOLD_EXPIRED', 'MAX_HOLDING_EXPIRED'].includes(r.reason)).length;
-        const manualCount = sellRecords.filter(r => ['MANUAL', 'PARTIAL_MANUAL', 'MANUAL_CLEANUP', 'CLEANUP_NO_BALANCE'].includes(r.reason)).length;
+        // 사유별 분류 (카운트 + 손익 합계)
+        const sumBy = (predicate) => {
+            const filtered = sellRecords.filter(predicate);
+            const amount = filtered.reduce((s, r) => s + (r.profitLoss || 0), 0);
+            return { count: filtered.length, amount };
+        };
+        const takeProfit = sumBy(r => ['TAKE_PROFIT', 'PARTIAL_TAKE_PROFIT'].includes(r.reason));
+        const stopLoss = sumBy(r => ['STOP_LOSS', 'PARTIAL_STOP_LOSS'].includes(r.reason));
+        const trailingStop = sumBy(r => ['TRAILING_STOP', 'PARTIAL_TRAILING_STOP'].includes(r.reason));
+        const expired = sumBy(r => ['EXPIRED'].includes(r.reason) || /^(PARTIAL_)?\d+DAY_PROFIT$/.test(r.reason));
+        const maxHoldExpired = sumBy(r => ['MAX_HOLD_EXPIRED', 'MAX_HOLDING_EXPIRED'].includes(r.reason));
+        const manual = sumBy(r => ['MANUAL', 'PARTIAL_MANUAL', 'MANUAL_CLEANUP', 'CLEANUP_NO_BALANCE'].includes(r.reason));
+
+        const takeProfitCount = takeProfit.count;
+        const stopLossCount = stopLoss.count;
+        const trailingStopCount = trailingStop.count;
+        const expiredCount = expired.count;
+        const maxHoldExpiredCount = maxHoldExpired.count;
+        const manualCount = manual.count;
 
         // 보유 종목 수익 정보 조회
         let holdingsProfit = 0;
@@ -552,6 +574,12 @@ export default function CointradeHistory() {
             expiredCount,
             maxHoldExpiredCount,
             manualCount,
+            takeProfitAmount: takeProfit.amount,
+            stopLossAmount: stopLoss.amount,
+            trailingStopAmount: trailingStop.amount,
+            expiredAmount: expired.amount,
+            maxHoldExpiredAmount: maxHoldExpired.amount,
+            manualAmount: manual.amount,
             holdingsProfit,
             holdingsInvestment,
             holdingsProfitRate,
@@ -674,25 +702,39 @@ export default function CointradeHistory() {
     };
 
     // 요약 데이터를 행 배열로 변환
-    const getSummaryRows = () => [
-        ['매수 건수', `${summary.buyCount}건`],
-        ['매수 금액', `${Math.floor(summary.buyAmount).toLocaleString()}원`],
-        ['매도 건수', `${summary.sellCount}건`],
-        ['매도 금액', `${Math.floor(summary.sellAmount).toLocaleString()}원`],
-        ['실현 손익', `${summary.totalProfit >= 0 ? '+' : ''}${Math.floor(summary.totalProfit).toLocaleString()}원`],
-        ['익절 건수', `${summary.takeProfitCount}건`],
-        ['손절 건수', `${summary.stopLossCount}건`],
-        ['트레일링스탑 건수', `${summary.trailingStopCount}건`],
-        ['강제청산 건수', `${summary.maxHoldExpiredCount}건`],
-        ['수동매도 건수', `${summary.manualCount}건`],
-        ['만료매도 건수', `${summary.expiredCount}건`],
-        ['실현 수익률', `${summary.realizedProfitRate >= 0 ? '+' : ''}${summary.realizedProfitRate.toFixed(2)}%`],
-        ['보유 종목 수', `${summary.holdingsCount}종목`],
-        ['보유 투자금', `${Math.floor(summary.holdingsInvestment).toLocaleString()}원`],
-        ['보유 평가손익', `${summary.holdingsProfit >= 0 ? '+' : ''}${Math.floor(summary.holdingsProfit).toLocaleString()}원`],
-        ['보유 수익률', `${summary.holdingsProfitRate >= 0 ? '+' : ''}${summary.holdingsProfitRate.toFixed(2)}%`],
-        ['합산 수익률', `${summary.combinedProfitRate >= 0 ? '+' : ''}${summary.combinedProfitRate.toFixed(2)}%`],
-    ];
+    const getSummaryRows = () => {
+        const fmtAmount = (v) => `${v >= 0 ? '+' : ''}${Math.floor(v).toLocaleString()}원`;
+        const fmtPct = (count) => summary.sellCount > 0
+            ? `${(count / summary.sellCount * 100).toFixed(1)}%`
+            : '0.0%';
+        const reasonRows = [
+            ['익절', summary.takeProfitCount, summary.takeProfitAmount],
+            ['손절', summary.stopLossCount, summary.stopLossAmount],
+            ['트레일링스탑', summary.trailingStopCount, summary.trailingStopAmount],
+            ['강제청산', summary.maxHoldExpiredCount, summary.maxHoldExpiredAmount],
+            ['수동매도', summary.manualCount, summary.manualAmount],
+            ['만료매도', summary.expiredCount, summary.expiredAmount],
+        ].flatMap(([label, count, amount]) => [
+            [`${label} 건수`, `${count}건`],
+            [`${label} 비율`, fmtPct(count)],
+            [`${label} 손익`, count === 0 ? '-' : fmtAmount(amount)],
+        ]);
+
+        return [
+            ['매수 건수', `${summary.buyCount}건`],
+            ['매수 금액', `${Math.floor(summary.buyAmount).toLocaleString()}원`],
+            ['매도 건수', `${summary.sellCount}건`],
+            ['매도 금액', `${Math.floor(summary.sellAmount).toLocaleString()}원`],
+            ['실현 손익', fmtAmount(summary.totalProfit)],
+            ...reasonRows,
+            ['실현 수익률', `${summary.realizedProfitRate >= 0 ? '+' : ''}${summary.realizedProfitRate.toFixed(2)}%`],
+            ['보유 종목 수', `${summary.holdingsCount}종목`],
+            ['보유 투자금', `${Math.floor(summary.holdingsInvestment).toLocaleString()}원`],
+            ['보유 평가손익', fmtAmount(summary.holdingsProfit)],
+            ['보유 수익률', `${summary.holdingsProfitRate >= 0 ? '+' : ''}${summary.holdingsProfitRate.toFixed(2)}%`],
+            ['합산 수익률', `${summary.combinedProfitRate >= 0 ? '+' : ''}${summary.combinedProfitRate.toFixed(2)}%`],
+        ];
+    };
 
     // 거래 목록 → plain 값 행 배열 변환
     const getTradeRows = (data) => data.map(row => [
@@ -1400,7 +1442,17 @@ export default function CointradeHistory() {
                             </div>
                         </div>
                         {itemsPerPage === 9999 && (
-                            <DownloadButtons onExcel={handleDownloadSummaryExcel} onCsv={handleDownloadSummaryCsv} />
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsStatsModalOpen(true)}
+                                    className="px-3 py-1.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                                    title="통계 보기"
+                                >
+                                    📊 통계 보기
+                                </button>
+                                <DownloadButtons onExcel={handleDownloadSummaryExcel} onCsv={handleDownloadSummaryCsv} />
+                            </div>
                         )}
                     </div>
 
@@ -1450,55 +1502,58 @@ export default function CointradeHistory() {
 
                             {/* 매도 사유별 건수 */}
                             <div className="mt-4">
-                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">매도 사유별 건수</div>
+                                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+                                    매도 사유별 건수 · 비율 · 손익
+                                    <span className="ml-2 font-normal text-[10px] text-slate-400 dark:text-slate-500">
+                                        (비율은 전체 매도 {summary.sellCount}건 대비)
+                                    </span>
+                                </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                                    {/* 익절 */}
-                                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
-                                        <div className="text-xs text-green-700 dark:text-green-400 mb-1">익절</div>
-                                        <div className="text-xl font-bold text-green-800 dark:text-green-300">
-                                            {summary.takeProfitCount}건
-                                        </div>
-                                    </div>
-
-                                    {/* 손절 */}
-                                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800">
-                                        <div className="text-xs text-red-700 dark:text-red-400 mb-1">손절</div>
-                                        <div className="text-xl font-bold text-red-800 dark:text-red-300">
-                                            {summary.stopLossCount}건
-                                        </div>
-                                    </div>
-
-                                    {/* 트레일링스탑 */}
-                                    <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-100 dark:border-teal-800">
-                                        <div className="text-xs text-teal-700 dark:text-teal-400 mb-1">트레일링스탑</div>
-                                        <div className="text-xl font-bold text-teal-800 dark:text-teal-300">
-                                            {summary.trailingStopCount}건
-                                        </div>
-                                    </div>
-
-                                    {/* 강제청산 */}
-                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
-                                        <div className="text-xs text-amber-700 dark:text-amber-400 mb-1">강제청산</div>
-                                        <div className="text-xl font-bold text-amber-800 dark:text-amber-300">
-                                            {summary.maxHoldExpiredCount}건
-                                        </div>
-                                    </div>
-
-                                    {/* 수동매도 */}
-                                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-800">
-                                        <div className="text-xs text-orange-700 dark:text-orange-400 mb-1">수동매도</div>
-                                        <div className="text-xl font-bold text-orange-800 dark:text-orange-300">
-                                            {summary.manualCount}건
-                                        </div>
-                                    </div>
-
-                                    {/* 만료매도 */}
-                                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-                                        <div className="text-xs text-purple-700 dark:text-purple-400 mb-1">만료매도</div>
-                                        <div className="text-xl font-bold text-purple-800 dark:text-purple-300">
-                                            {summary.expiredCount}건
-                                        </div>
-                                    </div>
+                                    {[
+                                        { label: '익절', count: summary.takeProfitCount, amount: summary.takeProfitAmount,
+                                          bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-100 dark:border-green-800',
+                                          labelColor: 'text-green-700 dark:text-green-400', valueColor: 'text-green-800 dark:text-green-300' },
+                                        { label: '손절', count: summary.stopLossCount, amount: summary.stopLossAmount,
+                                          bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-100 dark:border-red-800',
+                                          labelColor: 'text-red-700 dark:text-red-400', valueColor: 'text-red-800 dark:text-red-300' },
+                                        { label: '트레일링스탑', count: summary.trailingStopCount, amount: summary.trailingStopAmount,
+                                          bg: 'bg-teal-50 dark:bg-teal-900/20', border: 'border-teal-100 dark:border-teal-800',
+                                          labelColor: 'text-teal-700 dark:text-teal-400', valueColor: 'text-teal-800 dark:text-teal-300' },
+                                        { label: '강제청산', count: summary.maxHoldExpiredCount, amount: summary.maxHoldExpiredAmount,
+                                          bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-100 dark:border-amber-800',
+                                          labelColor: 'text-amber-700 dark:text-amber-400', valueColor: 'text-amber-800 dark:text-amber-300' },
+                                        { label: '수동매도', count: summary.manualCount, amount: summary.manualAmount,
+                                          bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-100 dark:border-orange-800',
+                                          labelColor: 'text-orange-700 dark:text-orange-400', valueColor: 'text-orange-800 dark:text-orange-300' },
+                                        { label: '만료매도', count: summary.expiredCount, amount: summary.expiredAmount,
+                                          bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-800',
+                                          labelColor: 'text-purple-700 dark:text-purple-400', valueColor: 'text-purple-800 dark:text-purple-300' },
+                                    ].map(({ label, count, amount, bg, border, labelColor, valueColor }) => {
+                                        const pct = summary.sellCount > 0 ? (count / summary.sellCount * 100) : 0;
+                                        const profitClass = amount >= 0
+                                            ? 'text-red-700 dark:text-red-400'
+                                            : 'text-blue-700 dark:text-blue-400';
+                                        return (
+                                            <div key={label} className={`p-4 rounded-lg border ${bg} ${border}`}>
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className={`text-xs ${labelColor}`}>{label}</span>
+                                                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded bg-white/60 dark:bg-slate-900/40 ${labelColor}`}>
+                                                        {pct.toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                                <div className={`text-xl font-bold ${valueColor}`}>
+                                                    {count}건
+                                                </div>
+                                                <div className={`text-xs mt-1 font-medium ${profitClass}`}>
+                                                    {count === 0 ? (
+                                                        <span className="text-slate-400 dark:text-slate-500">-</span>
+                                                    ) : (
+                                                        <>{amount >= 0 ? '+' : ''}{formatNumberWithComma(Math.floor(amount))}원</>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -1764,6 +1819,14 @@ export default function CointradeHistory() {
 
             {/* 상세보기 모달 */}
             <DetailModal />
+
+            {/* 통계 보기 모달 */}
+            <HistoryStatsModal
+                isOpen={isStatsModalOpen}
+                onClose={() => setIsStatsModalOpen(false)}
+                records={records}
+                periodLabel={`${filters.startDate} ${filters.startTime} ~ ${filters.endDate} ${filters.endTime}`}
+            />
         </div>
     );
 }

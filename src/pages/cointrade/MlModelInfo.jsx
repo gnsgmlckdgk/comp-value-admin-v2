@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Filter } from 'lucide-react';
 import { send } from '@/util/ClientUtil';
 import useModalAnimation from '@/hooks/useModalAnimation';
 import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
-import ColumnFilterDropdown from '@/pages/util/excel-viewer/components/ColumnFilterDropdown';
+import ExcelFilter from '@/component/common/table/ExcelFilter';
 
 // 날짜 포맷 (YYYY-MM-DD HH:MM:SS)
 const formatDateTime = (dateStr) => {
@@ -35,19 +34,6 @@ const formatDate = (dateStr) => {
     // 시간이 00:00:00이면 날짜만 표시
     if (hh === '00' && mm === '00' && ss === '00') return `${y}-${m}-${d}`;
     return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
-};
-
-// 엑셀 스타일 필터용 셀 표시 텍스트 추출 (render 결과 JSX와 무관하게 plain text 값을 반환)
-const extractDisplayText = (colKey, val) => {
-    if (val == null) return '';
-    if (colKey === 'modelType') return String(val || 'LightGBM');
-    if (['trainedAt', 'createdAt', 'updatedAt'].includes(colKey)) return formatDateTime(val);
-    if (['trainDataStart', 'trainDataEnd'].includes(colKey)) return formatDate(val);
-    if (colKey === 'accuracy') return `${(val * 100).toFixed(2)}%`;
-    if (colKey === 'aucRoc') return Number(val).toFixed(4);
-    if (colKey === 'trainSamples') return Number(val).toLocaleString();
-    if (colKey === 'candleUnit') return `${val}분`;
-    return String(val);
 };
 
 const COL_WIDTHS = {
@@ -106,7 +92,8 @@ const TABLE_COLUMNS = [
                     {val || 'LightGBM'}
                 </span>
             );
-        }
+        },
+        getFilterLabel: (v) => (v ? String(v) : 'LightGBM'),
     },
     {
         key: 'modelPath',
@@ -115,7 +102,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.modelPath,
         sortable: true,
         align: 'left',
-        render: (val) => <span className="text-xs truncate" title={val}>{val}</span>
+        render: (val) => <span className="text-xs truncate" title={val}>{val}</span>,
+        getFilterLabel: (v) => (v == null ? '(비어있음)' : String(v)),
     },
     {
         key: 'trainedAt',
@@ -124,7 +112,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.trainedAt,
         sortable: true,
         align: 'center',
-        render: (val) => formatDateTime(val)
+        render: (val) => formatDateTime(val),
+        getFilterLabel: (v) => (v ? formatDateTime(v) : '(비어있음)'),
     },
     {
         key: 'trainDataStart',
@@ -133,7 +122,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.trainDataStart,
         sortable: true,
         align: 'center',
-        render: (val) => formatDate(val)
+        render: (val) => formatDate(val),
+        getFilterLabel: (v) => (v ? formatDate(v) : '(비어있음)'),
     },
     {
         key: 'trainDataEnd',
@@ -142,7 +132,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.trainDataEnd,
         sortable: true,
         align: 'center',
-        render: (val) => formatDate(val)
+        render: (val) => formatDate(val),
+        getFilterLabel: (v) => (v ? formatDate(v) : '(비어있음)'),
     },
     {
         key: 'accuracy',
@@ -151,7 +142,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.accuracy,
         sortable: true,
         align: 'right',
-        render: (val) => val != null ? `${(val * 100).toFixed(2)}%` : '-'
+        render: (val) => val != null ? `${(val * 100).toFixed(2)}%` : '-',
+        getFilterLabel: (v) => (v == null ? '(비어있음)' : `${(v * 100).toFixed(2)}%`),
     },
     {
         key: 'aucRoc',
@@ -160,7 +152,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.aucRoc,
         sortable: true,
         align: 'right',
-        render: (val) => val != null ? val.toFixed(4) : '-'
+        render: (val) => val != null ? val.toFixed(4) : '-',
+        getFilterLabel: (v) => (v == null ? '(비어있음)' : Number(v).toFixed(4)),
     },
     {
         key: 'featureCount',
@@ -169,7 +162,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.featureCount,
         sortable: true,
         align: 'right',
-        render: (val) => val ?? '-'
+        render: (val) => val ?? '-',
+        getFilterLabel: (v) => (v == null ? '(비어있음)' : String(v)),
     },
     {
         key: 'trainSamples',
@@ -178,7 +172,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.trainSamples,
         sortable: true,
         align: 'right',
-        render: (val) => val != null ? val.toLocaleString() : '-'
+        render: (val) => val != null ? val.toLocaleString() : '-',
+        getFilterLabel: (v) => (v == null ? '(비어있음)' : Number(v).toLocaleString()),
     },
     {
         key: 'candleUnit',
@@ -187,7 +182,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.candleUnit,
         sortable: true,
         align: 'center',
-        render: (val) => val != null ? `${val}분` : '-'
+        render: (val) => val != null ? `${val}분` : '-',
+        getFilterLabel: (v) => (v == null ? '(비어있음)' : `${v}분`),
     },
     {
         key: 'createdAt',
@@ -196,7 +192,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.createdAt,
         sortable: true,
         align: 'center',
-        render: (val) => formatDateTime(val)
+        render: (val) => formatDateTime(val),
+        getFilterLabel: (v) => (v ? formatDateTime(v) : '(비어있음)'),
     },
     {
         key: 'updatedAt',
@@ -205,7 +202,8 @@ const TABLE_COLUMNS = [
         width: COL_WIDTHS.updatedAt,
         sortable: true,
         align: 'center',
-        render: (val) => formatDateTime(val)
+        render: (val) => formatDateTime(val),
+        getFilterLabel: (v) => (v ? formatDateTime(v) : '(비어있음)'),
     },
 ];
 
@@ -219,12 +217,9 @@ export default function MlModelInfo() {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
 
-    // 테이블 필터/정렬 상태 (엑셀 스타일: columnFilters[key] = string[] | null/undefined)
+    // 테이블 필터/정렬 상태 (엑셀 스타일: columnFilters[key] = (string|null)[] | undefined)
     const [columnFilters, setColumnFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ key: 'coinCode', direction: 'asc' });
-
-    // 필터 드롭다운 상태: { colKey, rect } | null
-    const [filterDropdown, setFilterDropdown] = useState(null);
 
     // 페이지네이션
     const [currentPage, setCurrentPage] = useState(1);
@@ -262,12 +257,12 @@ export default function MlModelInfo() {
         }
     };
 
-    // 필터/정렬 처리 (엑셀 스타일: values = 선택된 표시값 배열 or null=해제)
-    const handleColumnFilterApply = useCallback((key, values) => {
+    // 필터/정렬 처리 (엑셀 스타일: selectedValues === undefined → 필터 해제)
+    const handleColumnFilterChange = useCallback((key, selectedValues) => {
         setColumnFilters(prev => {
             const next = { ...prev };
-            if (values == null) delete next[key];
-            else next[key] = values;
+            if (selectedValues === undefined) delete next[key];
+            else next[key] = selectedValues;
             return next;
         });
         setCurrentPage(1);
@@ -278,40 +273,38 @@ export default function MlModelInfo() {
         setCurrentPage(1);
     }, []);
 
-    const openFilterDropdown = useCallback((colKey, btnEl) => {
-        const rect = btnEl.getBoundingClientRect();
-        setFilterDropdown({ colKey, rect });
+    // 정렬 핸들러 (direction 지정 시 토글 대신 그대로 적용)
+    const handleSort = useCallback((key, direction) => {
+        setSortConfig(prev => {
+            if (direction) return { key, direction };
+            return {
+                key,
+                direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+            };
+        });
     }, []);
 
-    const closeFilterDropdown = useCallback(() => setFilterDropdown(null), []);
-
-    // 각 컬럼의 고유 표시값 목록 (엑셀 필터 드롭다운용)
-    const uniqueValuesByColumn = useMemo(() => {
+    // 컬럼별 전체 원본 값 (엑셀 필터 옵션용)
+    const columnValuesMap = useMemo(() => {
         const map = {};
         TABLE_COLUMNS.forEach(col => {
-            const set = new Set();
-            dataList.forEach(row => set.add(extractDisplayText(col.key, row[col.key])));
-            map[col.key] = Array.from(set).sort((a, b) => a.localeCompare(b, 'ko'));
+            map[col.key] = dataList.map(r => r[col.key]);
         });
         return map;
     }, [dataList]);
 
-    const handleSort = useCallback((key) => {
-        setSortConfig(prev => ({
-            key,
-            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
-        }));
-    }, []);
-
     const processedData = useMemo(() => {
-        // 1. 필터링 (엑셀 스타일: 선택된 표시값 집합과 정확 매칭)
-        const filterSets = Object.entries(columnFilters).reduce((acc, [key, values]) => {
-            if (Array.isArray(values) && values.length > 0) acc[key] = new Set(values);
-            return acc;
-        }, {});
+        // 1. 필터링 (엑셀 스타일: 선택된 원본 값 배열과 셀 값 문자열화 후 매칭)
         let filtered = dataList.filter(row => {
-            return Object.entries(filterSets).every(([key, allowed]) => {
-                return allowed.has(extractDisplayText(key, row[key]));
+            return Object.entries(columnFilters).every(([key, selectedValues]) => {
+                if (selectedValues === undefined) return true;
+                if (selectedValues.length === 0) return false;
+                const cellValue = row[key];
+                const cellKey = cellValue === null || cellValue === undefined ? null : String(cellValue);
+                return selectedValues.some((sv) => {
+                    if (sv === null) return cellKey === null;
+                    return sv === cellKey;
+                });
             });
         });
 
@@ -642,35 +635,38 @@ export default function MlModelInfo() {
                         <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md">
                             <tr>
                                 {TABLE_COLUMNS.map((col) => {
-                                    const hasFilter = Array.isArray(columnFilters[col.key]) && columnFilters[col.key].length > 0;
+                                    const isSorted = sortConfig.key === col.key;
+                                    const sortDir = isSorted ? sortConfig.direction : null;
                                     return (
                                         <th
                                             key={col.key}
-                                            className={`px-3 py-3 text-xs font-semibold uppercase tracking-wider select-none ${col.sticky ? 'sticky z-20 bg-slate-700' : ''} ${col.sortable ? 'cursor-pointer hover:bg-slate-600' : ''}`}
+                                            className={`px-3 py-3 text-xs font-semibold uppercase tracking-wider select-none ${col.sticky ? 'sticky z-20 bg-slate-700' : ''}`}
                                             style={{
                                                 width: col.width,
                                                 left: col.sticky ? 0 : undefined,
                                                 textAlign: col.align || 'left'
                                             }}
-                                            onClick={() => col.sortable && handleSort(col.key)}
                                         >
                                             <div className={`flex flex-col ${col.align === 'center' ? 'items-center' : col.align === 'right' ? 'items-end' : 'items-start'}`}>
                                                 <div className="flex items-center gap-1">
-                                                    <span>{col.label}</span>
-                                                    {col.sortable && sortConfig.key === col.key && (
-                                                        <span className="text-yellow-300">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openFilterDropdown(col.key, e.currentTarget);
-                                                        }}
-                                                        className={`ml-1 p-0.5 rounded hover:bg-slate-500/60 transition-colors ${hasFilter ? 'text-yellow-300' : 'text-slate-300'}`}
-                                                        title="필터"
+                                                    <span
+                                                        className={col.sortable ? 'cursor-pointer hover:text-yellow-300' : ''}
+                                                        onClick={() => col.sortable && handleSort(col.key)}
+                                                        title={col.sortable ? '클릭하여 정렬' : undefined}
                                                     >
-                                                        <Filter className="w-3.5 h-3.5" />
-                                                    </button>
+                                                        {col.label}
+                                                    </span>
+                                                    {col.sortable && isSorted && (
+                                                        <span className="text-[10px] leading-none text-yellow-300">{sortDir === 'asc' ? '▲' : '▼'}</span>
+                                                    )}
+                                                    <ExcelFilter
+                                                        allValues={columnValuesMap[col.key] || []}
+                                                        selectedValues={columnFilters[col.key]}
+                                                        onApply={(values) => handleColumnFilterChange(col.key, values)}
+                                                        onSort={col.sortable ? (dir) => handleSort(col.key, dir) : undefined}
+                                                        sortDirection={sortDir}
+                                                        getOptionLabel={col.getFilterLabel}
+                                                    />
                                                 </div>
                                                 <span className="text-[10px] text-slate-300 font-normal lowercase opacity-80">({col.field})</span>
                                             </div>
@@ -764,21 +760,6 @@ export default function MlModelInfo() {
 
             {/* 상세보기 모달 */}
             <DetailModal />
-
-            {/* 엑셀 스타일 컬럼 필터 드롭다운 */}
-            {filterDropdown && (
-                <ColumnFilterDropdown
-                    anchorRect={filterDropdown.rect}
-                    uniqueValues={uniqueValuesByColumn[filterDropdown.colKey] || []}
-                    currentFilter={
-                        Array.isArray(columnFilters[filterDropdown.colKey])
-                            ? new Set(columnFilters[filterDropdown.colKey])
-                            : null
-                    }
-                    onApply={(values) => handleColumnFilterApply(filterDropdown.colKey, values)}
-                    onClose={closeFilterDropdown}
-                />
-            )}
         </div>
     );
 }

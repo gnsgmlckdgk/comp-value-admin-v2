@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { send } from '@/util/ClientUtil';
 import useModalAnimation from '@/hooks/useModalAnimation';
 import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
 import TradeFilterHelpModal from '@/component/common/display/TradeFilterHelpModal';
+import ScannerSignalsHelpModal from '@/component/common/display/ScannerSignalsHelpModal';
 import ColumnFilterDropdown from '@/component/common/display/ColumnFilterDropdown';
 import Button from '@/component/common/button/Button';
 import UpbitCandleChart from '@/pages/cointrade/UpbitCandleChart';
@@ -517,6 +519,7 @@ export default function CointradeDashboard() {
 
     // 필터 도움말 모달 상태
     const [isFilterHelpModalOpen, setIsFilterHelpModalOpen] = useState(false);
+    const [isScannerHelpModalOpen, setIsScannerHelpModalOpen] = useState(false);
 
     // 보유 종목 테이블 필터/정렬 상태 (값: Set 또는 null)
     const [holdingsColumnFilters, setHoldingsColumnFilters] = useState({});
@@ -1352,7 +1355,16 @@ export default function CointradeDashboard() {
                 <div>
                     <div className="px-2 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-semibold text-slate-800 dark:text-white">최근 거래 내역</h3>
+                            <Link
+                                to="/cointrade/history"
+                                className="group inline-flex items-center gap-1 text-lg font-semibold text-slate-800 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                title="거래기록 조회 페이지로 이동"
+                            >
+                                <span className="group-hover:underline">최근 거래 내역</span>
+                                <svg className="w-4 h-4 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </Link>
                             <span className="text-sm text-slate-500 dark:text-slate-400">(최근 30일)</span>
                             <button
                                 type="button"
@@ -1609,9 +1621,18 @@ export default function CointradeDashboard() {
             {/* Scanner Signals Section */}
             <div className="mt-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                         Scanner Signals
-                        <span className="ml-2 text-sm text-slate-500 dark:text-slate-400 font-normal">
+                        <button
+                            type="button"
+                            onClick={() => setIsScannerHelpModalOpen(true)}
+                            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-blue-500 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white transition-colors text-xs font-bold"
+                            title="용어 설명 (MR, WS, 가격변화율 등)"
+                            aria-label="Scanner Signals 용어 설명"
+                        >
+                            ?
+                        </button>
+                        <span className="text-sm text-slate-500 dark:text-slate-400 font-normal">
                             {filteredSignals.length}/{scannerSignals.length}건
                         </span>
                     </h2>
@@ -1779,6 +1800,9 @@ export default function CointradeDashboard() {
 
             {/* 필터 도움말 모달 */}
             <TradeFilterHelpModal isOpen={isFilterHelpModalOpen} onClose={() => setIsFilterHelpModalOpen(false)} />
+
+            {/* Scanner Signals 용어 설명 모달 */}
+            <ScannerSignalsHelpModal isOpen={isScannerHelpModalOpen} onClose={() => setIsScannerHelpModalOpen(false)} />
 
             {/* 엑셀 스타일 필터 드롭다운 */}
             {filterDropdown && (() => {

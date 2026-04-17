@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { hasAnyRole } from '@/util/RoleUtil';
 import { useAuth } from '@/context/AuthContext';
 import { useTab } from '@/context/TabContext';
+import GlobalSearchBar from './GlobalSearchBar';
+import CommandPalette from './CommandPalette';
 
 function useIsMobile(breakpoint = 768) {
     const [isMobile, setIsMobile] = useState(window.innerWidth <= breakpoint);
@@ -22,9 +24,19 @@ export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned,
     const location = useLocation();
     const { roles: userRoles } = useAuth();
     const { openTab } = useTab();
+    const [isPaletteOpen, setPaletteOpen] = useState(false);
 
     const handleLinkClick = (path) => {
         openTab(path);
+        if (isMobile && setSidebarOpen) {
+            setSidebarOpen(false);
+            setIsPinned && setIsPinned(false);
+        }
+    };
+
+    const handlePaletteOpen = () => setPaletteOpen(true);
+    const handlePaletteClose = () => {
+        setPaletteOpen(false);
         if (isMobile && setSidebarOpen) {
             setSidebarOpen(false);
             setIsPinned && setIsPinned(false);
@@ -94,8 +106,12 @@ export default function SideBar001({ isSidebarOpen, setSidebarOpen, setIsPinned,
             onMouseLeave={onMouseLeave}
         >
             <nav className="scrollbar-always flex h-full flex-col overflow-y-auto pb-6">
+                <div className="sticky top-0 z-10 -mx-3 mb-2 bg-white/95 px-3 pb-2 pt-1 dark:bg-slate-900/95">
+                    <GlobalSearchBar onOpen={handlePaletteOpen} />
+                </div>
                 {SECTIONS.map(renderSection)}
             </nav>
+            <CommandPalette open={isPaletteOpen} onClose={handlePaletteClose} />
         </aside>
     );
 }

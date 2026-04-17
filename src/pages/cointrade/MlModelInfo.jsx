@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Filter } from 'lucide-react';
 import { send } from '@/util/ClientUtil';
 import useModalAnimation from '@/hooks/useModalAnimation';
 import Toast from '@/component/common/display/Toast';
 import PageTitle from '@/component/common/display/PageTitle';
+import ColumnFilterDropdown from '@/pages/util/excel-viewer/components/ColumnFilterDropdown';
 
 // 날짜 포맷 (YYYY-MM-DD HH:MM:SS)
 const formatDateTime = (dateStr) => {
@@ -33,6 +35,19 @@ const formatDate = (dateStr) => {
     // 시간이 00:00:00이면 날짜만 표시
     if (hh === '00' && mm === '00' && ss === '00') return `${y}-${m}-${d}`;
     return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+};
+
+// 엑셀 스타일 필터용 셀 표시 텍스트 추출 (render 결과 JSX와 무관하게 plain text 값을 반환)
+const extractDisplayText = (colKey, val) => {
+    if (val == null) return '';
+    if (colKey === 'modelType') return String(val || 'LightGBM');
+    if (['trainedAt', 'createdAt', 'updatedAt'].includes(colKey)) return formatDateTime(val);
+    if (['trainDataStart', 'trainDataEnd'].includes(colKey)) return formatDate(val);
+    if (colKey === 'accuracy') return `${(val * 100).toFixed(2)}%`;
+    if (colKey === 'aucRoc') return Number(val).toFixed(4);
+    if (colKey === 'trainSamples') return Number(val).toLocaleString();
+    if (colKey === 'candleUnit') return `${val}분`;
+    return String(val);
 };
 
 const COL_WIDTHS = {
@@ -204,9 +219,12 @@ export default function MlModelInfo() {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const { shouldRender: renderDetailModal, isAnimatingOut: isDetailModalClosing } = useModalAnimation(isDetailModalOpen, 250);
 
-    // 테이블 필터/정렬 상태
+    // 테이블 필터/정렬 상태 (엑셀 스타일: columnFilters[key] = string[] | null/undefined)
     const [columnFilters, setColumnFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ key: 'coinCode', direction: 'asc' });
+
+    // 필터 드롭다운 상태: { colKey, rect } | null
+    const [filterDropdown, setFilterDropdown] = useState(null);
 
     // 페이지네이션
     const [currentPage, setCurrentPage] = useState(1);
@@ -244,9 +262,14 @@ export default function MlModelInfo() {
         }
     };
 
-    // 필터/정렬 처리
-    const handleColumnFilterChange = useCallback((key, value) => {
-        setColumnFilters(prev => ({ ...prev, [key]: value }));
+    // 필터/정렬 처리 (엑셀 스타일: values = 선택된 표시값 배열 or null=해제)
+    const handleColumnFilterApply = useCallback((key, values) => {
+        setColumnFilters(prev => {
+            const next = { ...prev };
+            if (values == null) delete next[key];
+            else next[key] = values;
+            return next;
+        });
         setCurrentPage(1);
     }, []);
 
@@ -254,6 +277,24 @@ export default function MlModelInfo() {
         setColumnFilters({});
         setCurrentPage(1);
     }, []);
+
+    const openFilterDropdown = useCallback((colKey, btnEl) => {
+        const rect = btnEl.getBoundingClientRect();
+        setFilterDropdown({ colKey, rect });
+    }, []);
+
+    const closeFilterDropdown = useCallback(() => setFilterDropdown(null), []);
+
+    // 각 컬럼의 고유 표시값 목록 (엑셀 필터 드롭다운용)
+    const uniqueValuesByColumn = useMemo(() => {
+        const map = {};
+        TABLE_COLUMNS.forEach(col => {
+            const set = new Set();
+            dataList.forEach(row => set.add(extractDisplayText(col.key, row[col.key])));
+            map[col.key] = Array.from(set).sort((a, b) => a.localeCompare(b, 'ko'));
+        });
+        return map;
+    }, [dataList]);
 
     const handleSort = useCallback((key) => {
         setSortConfig(prev => ({
@@ -263,12 +304,14 @@ export default function MlModelInfo() {
     }, []);
 
     const processedData = useMemo(() => {
-        // 1. 필터링
+        // 1. 필터링 (엑셀 스타일: 선택된 표시값 집합과 정확 매칭)
+        const filterSets = Object.entries(columnFilters).reduce((acc, [key, values]) => {
+            if (Array.isArray(values) && values.length > 0) acc[key] = new Set(values);
+            return acc;
+        }, {});
         let filtered = dataList.filter(row => {
-            return Object.entries(columnFilters).every(([key, filterValue]) => {
-                if (!filterValue) return true;
-                const cellValue = row[key];
-                return String(cellValue ?? '').toLowerCase().includes(filterValue.toLowerCase());
+            return Object.entries(filterSets).every(([key, allowed]) => {
+                return allowed.has(extractDisplayText(key, row[key]));
             });
         });
 
@@ -576,7 +619,7 @@ export default function MlModelInfo() {
                             <option value={100}>100개씩</option>
                         </select>
 
-                        {Object.values(columnFilters).some(v => v !== '') && (
+                        {Object.values(columnFilters).some(v => Array.isArray(v) && v.length > 0) && (
                             <button
                                 onClick={clearColumnFilters}
                                 className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
@@ -598,45 +641,42 @@ export default function MlModelInfo() {
                     <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
                         <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md">
                             <tr>
-                                {TABLE_COLUMNS.map((col) => (
-                                    <th
-                                        key={col.key}
-                                        className={`px-3 py-3 text-xs font-semibold uppercase tracking-wider select-none ${col.sticky ? 'sticky z-20 bg-slate-700' : ''} ${col.sortable ? 'cursor-pointer hover:bg-slate-600' : ''}`}
-                                        style={{
-                                            width: col.width,
-                                            left: col.sticky ? 0 : undefined,
-                                            textAlign: col.align || 'left'
-                                        }}
-                                        onClick={() => col.sortable && handleSort(col.key)}
-                                    >
-                                        <div className={`flex flex-col ${col.align === 'center' ? 'items-center' : col.align === 'right' ? 'items-end' : 'items-start'}`}>
-                                            <div className="flex items-center gap-1">
-                                                <span>{col.label}</span>
-                                                {col.sortable && sortConfig.key === col.key && (
-                                                    <span className="text-yellow-300">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
-                                                )}
+                                {TABLE_COLUMNS.map((col) => {
+                                    const hasFilter = Array.isArray(columnFilters[col.key]) && columnFilters[col.key].length > 0;
+                                    return (
+                                        <th
+                                            key={col.key}
+                                            className={`px-3 py-3 text-xs font-semibold uppercase tracking-wider select-none ${col.sticky ? 'sticky z-20 bg-slate-700' : ''} ${col.sortable ? 'cursor-pointer hover:bg-slate-600' : ''}`}
+                                            style={{
+                                                width: col.width,
+                                                left: col.sticky ? 0 : undefined,
+                                                textAlign: col.align || 'left'
+                                            }}
+                                            onClick={() => col.sortable && handleSort(col.key)}
+                                        >
+                                            <div className={`flex flex-col ${col.align === 'center' ? 'items-center' : col.align === 'right' ? 'items-end' : 'items-start'}`}>
+                                                <div className="flex items-center gap-1">
+                                                    <span>{col.label}</span>
+                                                    {col.sortable && sortConfig.key === col.key && (
+                                                        <span className="text-yellow-300">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openFilterDropdown(col.key, e.currentTarget);
+                                                        }}
+                                                        className={`ml-1 p-0.5 rounded hover:bg-slate-500/60 transition-colors ${hasFilter ? 'text-yellow-300' : 'text-slate-300'}`}
+                                                        title="필터"
+                                                    >
+                                                        <Filter className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                                <span className="text-[10px] text-slate-300 font-normal lowercase opacity-80">({col.field})</span>
                                             </div>
-                                            <span className="text-[10px] text-slate-300 font-normal lowercase opacity-80">({col.field})</span>
-                                        </div>
-                                    </th>
-                                ))}
-                            </tr>
-                            <tr className="bg-slate-100 dark:bg-slate-700">
-                                {TABLE_COLUMNS.map((col) => (
-                                    <th
-                                        key={`filter-${col.key}`}
-                                        className={`px-1 py-1 ${col.sticky ? 'sticky z-20 bg-slate-100 dark:bg-slate-700' : ''}`}
-                                        style={{ width: col.width, left: col.sticky ? 0 : undefined }}
-                                    >
-                                        <input
-                                            type="text"
-                                            value={columnFilters[col.key] || ''}
-                                            onChange={(e) => handleColumnFilterChange(col.key, e.target.value)}
-                                            className="w-full px-2 py-1 text-xs rounded border border-slate-300 bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500 dark:text-white"
-                                            placeholder="..."
-                                        />
-                                    </th>
-                                ))}
+                                        </th>
+                                    );
+                                })}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-200 dark:bg-slate-800 dark:divide-slate-700">
@@ -724,6 +764,21 @@ export default function MlModelInfo() {
 
             {/* 상세보기 모달 */}
             <DetailModal />
+
+            {/* 엑셀 스타일 컬럼 필터 드롭다운 */}
+            {filterDropdown && (
+                <ColumnFilterDropdown
+                    anchorRect={filterDropdown.rect}
+                    uniqueValues={uniqueValuesByColumn[filterDropdown.colKey] || []}
+                    currentFilter={
+                        Array.isArray(columnFilters[filterDropdown.colKey])
+                            ? new Set(columnFilters[filterDropdown.colKey])
+                            : null
+                    }
+                    onApply={(values) => handleColumnFilterApply(filterDropdown.colKey, values)}
+                    onClose={closeFilterDropdown}
+                />
+            )}
         </div>
     );
 }

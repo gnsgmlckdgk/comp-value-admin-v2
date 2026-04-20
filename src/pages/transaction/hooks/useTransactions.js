@@ -42,6 +42,33 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
         }
     };
 
+    // 목록 재조회 (현재가는 기존 값 보존)
+    // 기업가치 분석 후 targetPriceSync로 갱신된 목표가 반영 용도
+    const refetchTransactions = async () => {
+        setLoading(true);
+        try {
+            const prevPriceBySym = new Map(
+                rows.map((r) => [String(r.symbol || '').toUpperCase(), r.currentPrice])
+            );
+            const list = await fetchTransactions();
+            const merged = list.map((r) => {
+                const sym = String(r.symbol || '').toUpperCase();
+                const prevCp = prevPriceBySym.get(sym);
+                return (prevCp !== undefined && prevCp !== null && prevCp !== '')
+                    ? { ...r, currentPrice: prevCp }
+                    : r;
+            });
+            const sorted = sortRowsBySymbolAndDate(merged);
+            setRows(sorted);
+            setLastUpdated(new Date());
+            return sorted;
+        } catch (e) {
+            return null;
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const addTransaction = async (payload, mergePricesBySymbols) => {
         if (!payload.symbol) {
             openAlert('티커를 입력해주세요.');
@@ -307,5 +334,6 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
         removeTransaction,
         mergePricesBySymbols,
         processSell,
+        refetchTransactions,
     };
 }

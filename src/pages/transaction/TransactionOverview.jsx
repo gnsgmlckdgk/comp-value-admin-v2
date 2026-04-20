@@ -50,6 +50,7 @@ export default function TransactionOverview() {
         removeTransaction,
         mergePricesBySymbols,
         processSell,
+        refetchTransactions,
     } = useTransactions(openAlert);
 
     const { fxRate, fxUpdatedAt, refreshFxRate } = useFxRate();
@@ -131,6 +132,31 @@ export default function TransactionOverview() {
             openAlert('그룹 내 모든 항목이 수정되었습니다.');
         }
         return success;
+    };
+
+    // 기업가치 분석 결과 모달 닫기
+    // 동기화된 목표가를 반영하기 위해 목록 재조회 + 상세 모달 row도 갱신
+    const handleCloseCompValueModal = async () => {
+        setShowCompValueModal(false);
+
+        const list = await refetchTransactions();
+        if (!list || !detailModalData.open || !detailModalData.row) return;
+
+        if (detailModalData.isGroupRow) {
+            const symbol = String(detailModalData.row.symbol || '').toUpperCase();
+            const regrouped = groupRowsBySymbol(list, fxRate);
+            const newGroupRow = regrouped.find(
+                (r) => r.__type === 'groupTotal' && String(r.symbol || '').toUpperCase() === symbol
+            );
+            if (newGroupRow) {
+                setDetailModalData((prev) => ({ ...prev, row: newGroupRow }));
+            }
+        } else {
+            const updatedRow = list.find((r) => r.id === detailModalData.row.id);
+            if (updatedRow) {
+                setDetailModalData((prev) => ({ ...prev, row: updatedRow }));
+            }
+        }
     };
 
     // 기업가치 분석 (상세 모달에서 호출)
@@ -458,7 +484,7 @@ export default function TransactionOverview() {
 
             <CompanyValueResultModal
                 isOpen={showCompValueModal}
-                onClose={() => setShowCompValueModal(false)}
+                onClose={handleCloseCompValueModal}
                 data={compValueData}
             />
 

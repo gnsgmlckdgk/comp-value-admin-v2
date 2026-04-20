@@ -344,6 +344,8 @@ export default function CointradeHistory() {
         buyAmount: 0,
         sellCount: 0,
         sellAmount: 0,
+        winCount: 0,
+        winRate: 0,
         totalProfit: 0,
         realizedProfitRate: 0,
         takeProfitCount: 0,
@@ -490,6 +492,10 @@ export default function CointradeHistory() {
         const sellAmount = sellRecords.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
         const totalProfit = sellRecords.reduce((sum, r) => sum + (r.profitLoss || 0), 0);
 
+        // 승률: 수익 매도(profitLoss > 0) 건수 / 전체 매도 건수
+        const winCount = sellRecords.filter(r => (r.profitLoss || 0) > 0).length;
+        const winRate = sellRecords.length > 0 ? (winCount / sellRecords.length * 100) : 0;
+
         // 실현 수익률: 매도 원금 = 매도금액 - 손익, 수익률 = 손익 / 원금 * 100
         const sellCostBasis = sellAmount - totalProfit;
         const realizedProfitRate = sellCostBasis > 0 ? (totalProfit / sellCostBasis * 100) : 0;
@@ -566,6 +572,8 @@ export default function CointradeHistory() {
             buyAmount,
             sellCount: sellRecords.length,
             sellAmount,
+            winCount,
+            winRate,
             totalProfit,
             realizedProfitRate,
             takeProfitCount,
@@ -725,6 +733,7 @@ export default function CointradeHistory() {
             ['매수 금액', `${Math.floor(summary.buyAmount).toLocaleString()}원`],
             ['매도 건수', `${summary.sellCount}건`],
             ['매도 금액', `${Math.floor(summary.sellAmount).toLocaleString()}원`],
+            ['승률', `${summary.winRate.toFixed(1)}% (${summary.winCount}/${summary.sellCount}건)`],
             ['실현 손익', fmtAmount(summary.totalProfit)],
             ...reasonRows,
             ['실현 수익률', `${summary.realizedProfitRate >= 0 ? '+' : ''}${summary.realizedProfitRate.toFixed(2)}%`],
@@ -1456,7 +1465,7 @@ export default function CointradeHistory() {
 
                     {itemsPerPage === 9999 ? (
                         <>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                                 {/* 매수 건수 */}
                                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                                     <div className="text-xs text-blue-700 dark:text-blue-400 mb-1">매수 건수</div>
@@ -1486,6 +1495,17 @@ export default function CointradeHistory() {
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">매도 금액</div>
                                     <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
                                         {formatNumberWithComma(Math.floor(summary.sellAmount))}원
+                                    </div>
+                                </div>
+
+                                {/* 승률 */}
+                                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
+                                    <div className="text-xs text-amber-700 dark:text-amber-400 mb-1">승률</div>
+                                    <div className="text-xl font-bold text-amber-800 dark:text-amber-300">
+                                        {summary.winRate.toFixed(1)}%
+                                    </div>
+                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                                        {summary.winCount} / {summary.sellCount}건
                                     </div>
                                 </div>
 

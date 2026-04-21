@@ -66,6 +66,19 @@ const formatDateTime = (dateStr) => {
     });
 };
 
+// 보유 시간 포맷 (초 → "Xh Ym Zs" 중 유효한 단위만)
+const formatHoldDuration = (sec) => {
+    if (sec == null) return '-';
+    const s = Math.floor(Number(sec));
+    if (!Number.isFinite(s) || s < 0) return '-';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const r = s % 60;
+    if (h > 0) return `${h}시간 ${m}분`;
+    if (m > 0) return `${m}분 ${r}초`;
+    return `${r}초`;
+};
+
 // 사유 색상
 const getReasonColor = (reason) => {
     const colors = {
@@ -142,10 +155,10 @@ const COL_WIDTHS = {
     reason: '100px',
     profitLoss: '120px',
     profitLossRate: '100px',
-    predictedHigh: '120px',
-    predictedLow: '120px',
-    upProbability: '100px',
-    expectedReturn: '100px',
+    momentumScore: '110px',
+    mlConfidence: '100px',
+    entryReason: '180px',
+    holdDurationSec: '110px',
 };
 
 // 테이블 컬럼 정의
@@ -258,44 +271,44 @@ const TABLE_COLUMNS = [
         getFilterLabel: (v) => (v == null ? '(비어있음)' : `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`),
     },
     {
-        key: 'predictedHigh',
-        label: '예측고가',
-        width: COL_WIDTHS.predictedHigh,
+        key: 'momentumScore',
+        label: '모멘텀점수',
+        width: COL_WIDTHS.momentumScore,
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value) => value != null ? renderFormattedPrice(value, '원') : '-',
-        getFilterLabel: (v) => (v == null ? '(비어있음)' : `${formatNumberWithComma(v)}원`),
+        render: (value) => value != null ? Number(value).toFixed(4) : '-',
+        getFilterLabel: (v) => (v == null ? '(비어있음)' : Number(v).toFixed(4)),
     },
     {
-        key: 'predictedLow',
-        label: '예측저가',
-        width: COL_WIDTHS.predictedLow,
+        key: 'mlConfidence',
+        label: 'ML확률',
+        width: COL_WIDTHS.mlConfidence,
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value) => value != null ? renderFormattedPrice(value, '원') : '-',
-        getFilterLabel: (v) => (v == null ? '(비어있음)' : `${formatNumberWithComma(v)}원`),
-    },
-    {
-        key: 'upProbability',
-        label: '상승확률',
-        width: COL_WIDTHS.upProbability,
-        sortable: true,
-        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-red-600 dark:text-red-400 font-medium',
-        render: (value) => value != null ? `${(value * 100).toFixed(1)}%` : '-',
+        render: (value) => value != null ? `${(Number(value) * 100).toFixed(1)}%` : '-',
         getFilterLabel: (v) => (v == null ? '(비어있음)' : `${(Number(v) * 100).toFixed(1)}%`),
     },
     {
-        key: 'expectedReturn',
-        label: '기대수익',
-        width: COL_WIDTHS.expectedReturn,
+        key: 'entryReason',
+        label: '진입사유',
+        width: COL_WIDTHS.entryReason,
+        sortable: true,
+        headerClassName: 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-left text-slate-700 dark:text-slate-300 overflow-hidden text-ellipsis',
+        render: (value) => value || '-',
+        getFilterLabel: (v) => (v == null || v === '' ? '(비어있음)' : v),
+    },
+    {
+        key: 'holdDurationSec',
+        label: '보유시간',
+        width: COL_WIDTHS.holdDurationSec,
         sortable: true,
         headerClassName: 'px-4 py-3 pr-8 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 pr-8 whitespace-nowrap text-right text-slate-700 dark:text-slate-300',
-        render: (value) => value != null ? `${value.toFixed(2)}%` : '-',
-        getFilterLabel: (v) => (v == null ? '(비어있음)' : `${Number(v).toFixed(2)}%`),
+        render: (value) => formatHoldDuration(value),
+        getFilterLabel: (v) => (v == null ? '(비어있음)' : formatHoldDuration(v)),
     }
 ];
 
@@ -752,13 +765,13 @@ export default function CointradeHistory() {
         row.reason ? getReasonLabel(row.reason) : '-',
         row.profitLoss != null ? `${row.profitLoss >= 0 ? '+' : ''}${formatNumberWithComma(row.profitLoss)}원` : '-',
         row.profitLossRate != null ? `${row.profitLossRate >= 0 ? '+' : ''}${row.profitLossRate.toFixed(2)}%` : '-',
-        row.predictedHigh != null ? `${formatNumberWithComma(row.predictedHigh)}원` : '-',
-        row.predictedLow != null ? `${formatNumberWithComma(row.predictedLow)}원` : '-',
-        row.upProbability != null ? `${(row.upProbability * 100).toFixed(1)}%` : '-',
-        row.expectedReturn != null ? `${row.expectedReturn.toFixed(2)}%` : '-',
+        row.momentumScore != null ? Number(row.momentumScore).toFixed(4) : '-',
+        row.mlConfidence != null ? `${(Number(row.mlConfidence) * 100).toFixed(1)}%` : '-',
+        row.entryReason || '-',
+        formatHoldDuration(row.holdDurationSec),
     ]);
 
-    const TRADE_HEADERS = ['일시', '종목', '유형', '가격', '수량', '금액', '사유', '손익', '손익률', '예측고가', '예측저가', '상승확률', '기대수익'];
+    const TRADE_HEADERS = ['일시', '종목', '유형', '가격', '수량', '금액', '사유', '손익', '손익률', '모멘텀점수', 'ML확률', '진입사유', '보유시간'];
 
     // CSV 문자열 생성
     const toCsv = (headers, rows) => {
@@ -1069,77 +1082,63 @@ export default function CointradeHistory() {
                             </div>
                         )}
 
-                        {/* AI 예측 정보 (매수/매도 모두) */}
+                        {/* 매수 진입 정보 (매수/매도 모두 - 매도는 보유 당시 진입 정보 유지) */}
                         <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-800/50 rounded-lg p-4 sm:p-5 border border-slate-200 dark:border-slate-700">
-                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">AI 예측 정보</h4>
+                            <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">매수 진입 정보</h4>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                {/* 상승확률 */}
-                                {selectedRecord.upProbability != null && (
-                                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                                        <div className="text-xs text-red-700 dark:text-red-400 mb-2">상승 확률</div>
+                                {/* 모멘텀 점수 */}
+                                {selectedRecord.momentumScore != null && (
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                                        <div className="text-xs text-amber-700 dark:text-amber-400 mb-2">모멘텀 점수</div>
                                         <div className="flex items-center gap-2">
                                             <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                                                 <div
-                                                    className="bg-red-500 dark:bg-red-400 h-2 rounded-full"
-                                                    style={{ width: `${selectedRecord.upProbability * 100}%` }}
+                                                    className="bg-amber-500 dark:bg-amber-400 h-2 rounded-full"
+                                                    style={{ width: `${Math.min(Number(selectedRecord.momentumScore) * 100, 100)}%` }}
                                                 />
                                             </div>
-                                            <span className="text-sm text-red-600 dark:text-red-400 font-bold">
-                                                {(selectedRecord.upProbability * 100).toFixed(1)}%
+                                            <span className="text-sm text-amber-700 dark:text-amber-400 font-bold">
+                                                {Number(selectedRecord.momentumScore).toFixed(4)}
                                             </span>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* 하락확률 */}
-                                {selectedRecord.downProbability != null && (
+                                {/* ML 확률 */}
+                                {selectedRecord.mlConfidence != null && (
                                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                        <div className="text-xs text-blue-700 dark:text-blue-400 mb-2">하락 확률</div>
+                                        <div className="text-xs text-blue-700 dark:text-blue-400 mb-2">ML 확률</div>
                                         <div className="flex items-center gap-2">
                                             <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2">
                                                 <div
                                                     className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full"
-                                                    style={{ width: `${selectedRecord.downProbability * 100}%` }}
+                                                    style={{ width: `${Math.min(Number(selectedRecord.mlConfidence) * 100, 100)}%` }}
                                                 />
                                             </div>
                                             <span className="text-sm text-blue-600 dark:text-blue-400 font-bold">
-                                                {(selectedRecord.downProbability * 100).toFixed(1)}%
+                                                {(Number(selectedRecord.mlConfidence) * 100).toFixed(1)}%
                                             </span>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* 기대수익률 */}
-                                {selectedRecord.expectedReturn != null && (
-                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">기대 수익률</div>
-                                        <div className={`text-base sm:text-lg font-bold ${
-                                            selectedRecord.expectedReturn >= 0 
-                                            ? 'text-red-600 dark:text-red-400' 
-                                            : 'text-blue-600 dark:text-blue-400'
-                                        }`}>
-                                            {selectedRecord.expectedReturn.toFixed(2)}%
+                                {/* 진입 사유 */}
+                                {selectedRecord.entryReason && (
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 sm:col-span-2">
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">진입 사유</div>
+                                        <div className="text-sm text-slate-800 dark:text-slate-200 break-all">
+                                            {selectedRecord.entryReason}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* 예측저가 */}
-                                {selectedRecord.predictedLow != null && (
+                                {/* 보유 시간 (hold_duration_sec 우선 사용) */}
+                                {selectedRecord.holdDurationSec != null && (
                                     <div className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">예측저가</div>
-                                        <div className="text-base text-slate-800 dark:text-slate-200">
-                                            {renderFormattedPrice(selectedRecord.predictedLow, '원')}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* 예측고가 */}
-                                {selectedRecord.predictedHigh != null && (
-                                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                                        <div className="text-xs text-green-700 dark:text-green-400 mb-1">예측고가</div>
-                                        <div className="text-base text-green-700 dark:text-green-400 font-bold">
-                                            {renderFormattedPrice(selectedRecord.predictedHigh, '원')}
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">보유 시간</div>
+                                        <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">
+                                            {formatHoldDuration(selectedRecord.holdDurationSec)}
                                         </div>
                                     </div>
                                 )}
@@ -1240,10 +1239,10 @@ export default function CointradeHistory() {
                                 {/* 나머지 모든 필드 동적 렌더링 */}
                                 {Object.keys(selectedRecord).map(key => {
                                     const displayedKeys = [
-                                        'coinCode', 'tradeType', 'reason', 'createdAt', 'price', 
+                                        'coinCode', 'tradeType', 'reason', 'createdAt', 'price',
                                         'quantity', 'totalAmount', 'buyPrice', 'profitLoss', 'profitLossRate',
-                                        'upProbability', 'downProbability', 'expectedReturn', 
-                                        'predictedLow', 'predictedHigh', 'buyDate',
+                                        'momentumScore', 'mlConfidence', 'entryReason', 'holdDurationSec',
+                                        'buyDate',
                                         'id', 'uuid', 'orderId', 'fee', 'note', 'errorMessage'
                                     ];
                                     
@@ -1315,7 +1314,7 @@ export default function CointradeHistory() {
                                         type="time"
                                         value={filters.startTime}
                                         onChange={(e) => handleFilterChange('startTime', e.target.value)}
-                                        className="w-28 flex-shrink-0"
+                                        className="w-36 flex-shrink-0"
                                     />
                                 </div>
                             </div>
@@ -1334,7 +1333,7 @@ export default function CointradeHistory() {
                                         type="time"
                                         value={filters.endTime}
                                         onChange={(e) => handleFilterChange('endTime', e.target.value)}
-                                        className="w-28 flex-shrink-0"
+                                        className="w-36 flex-shrink-0"
                                     />
                                 </div>
                             </div>

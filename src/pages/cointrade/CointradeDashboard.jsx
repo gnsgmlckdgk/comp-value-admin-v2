@@ -513,6 +513,10 @@ export default function CointradeDashboard() {
     // 업비트 미추적 보유 (DB holdings에는 없으나 업비트 계좌에 잔액이 있는 코인)
     const [unaccountedBalances, setUnaccountedBalances] = useState([]);
 
+    // 먼지(dust) 격리 잔량 — 업비트 최소주문(5,000원) 미만이라 API 매도 불가
+    const [dustBalances, setDustBalances] = useState([]);
+    const [resolvingDustId, setResolvingDustId] = useState(null);
+
 
     // 보유 종목
     const [holdings, setHoldings] = useState([]);
@@ -720,11 +724,28 @@ export default function CointradeDashboard() {
                 });
                 setHoldings(calculatedHoldings);
 
-                // DB에 없는 업비트 보유코인 추출 (KRW 제외, 잔액 > 0)
+                // 먼지(dust) 격리 목록 조회 — 업비트 경고 배너/미추적 목록에서 제외하기 위해 먼저 load
+                let dustCoinSet = new Set();
+                try {
+                    const dustResponse = await send('/dart/api/cointrade/dust?status=ACTIVE', {}, 'GET');
+                    if (dustResponse.data?.success && Array.isArray(dustResponse.data?.response)) {
+                        const dustList = dustResponse.data.response;
+                        setDustBalances(dustList);
+                        dustCoinSet = new Set(dustList.map(d => d.coin_code));
+                    }
+                } catch (dustError) {
+                    console.error('먼지 잔량 조회 실패:', dustError);
+                }
+
+                // DB에 없는 업비트 보유코인 추출 (KRW 제외, 잔액 > 0, 먼지 격리 종목 제외)
                 if (balancesCallOk) {
                     const trackedCoins = new Set(calculatedHoldings.map(h => h.coinCode));
                     const untracked = Object.entries(upbitBalanceByCoin)
-                        .filter(([coinCode, v]) => !trackedCoins.has(coinCode) && ((v.balance || 0) + (v.locked || 0)) > QUANTITY_MISMATCH_TOLERANCE)
+                        .filter(([coinCode, v]) =>
+                            !trackedCoins.has(coinCode)
+                            && !dustCoinSet.has(coinCode)
+                            && ((v.balance || 0) + (v.locked || 0)) > QUANTITY_MISMATCH_TOLERANCE
+                        )
                         .map(([coinCode, v]) => ({
                             coinCode,
                             quantity: (v.balance || 0) + (v.locked || 0),
@@ -1098,6 +1119,27 @@ export default function CointradeDashboard() {
         fetchData(false); // 매도 후 데이터 새로고침
     };
 
+    // 먼지 정리완료 처리
+    const handleResolveDust = async (dustId, coinCode) => {
+        if (!window.confirm(`${coinCode} 먼지 잔량을 정리 완료로 처리하시겠습니까?\n(업비트에서 수동으로 정리한 뒤 누르세요)`)) return;
+        setResolvingDustId(dustId);
+        try {
+            const { data, error } = await send(`/dart/api/cointrade/dust/${dustId}/resolve`, {}, 'POST');
+            if (error) {
+                setToast(error.message || '먼지 정리완료 처리 중 오류가 발생했습니다.');
+            } else if (data?.response?.status === 'success') {
+                setToast(data.response.message || '정리완료 처리됨');
+                await fetchData(true);
+            } else {
+                setToast(data?.response?.message || '정리완료 처리 결과를 확인하세요.');
+            }
+        } catch (err) {
+            setToast('먼지 정리완료 처리 중 오류가 발생했습니다.');
+        } finally {
+            setResolvingDustId(null);
+        }
+    };
+
     // 페이지 로드 시 + 30초마다 자동 새로고침
     useEffect(() => {
         fetchData(false); // 초기 로딩은 loading 표시
@@ -1449,6 +1491,61 @@ export default function CointradeDashboard() {
                 </div>
 
             </div>
+
+            {/* 먼지(dust) 격리 목록 — 업비트 최소주문(5,000원) 미만 잔량, 수동 정리 대기 */}
+            {dustBalances.length > 0 && (
+                <div className="mb-6">
+                    <div className="px-2 py-3 flex items-center justify-between gap-2">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                            먼지 격리 잔량 ({dustBalances.length})
+                            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                                업비트 최소주문(5,000원) 미만이라 API 매도 불가 — 수동 정리 후 "정리완료" 처리
+                            </span>
+                        </h2>
+                    </div>
+                    <div className="overflow-x-auto bg-white border border-slate-200 rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                        <table className="w-full text-sm">
+                            <thead className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                                <tr>
+                                    <th className="px-3 py-2 text-left font-semibold">종목</th>
+                                    <th className="px-3 py-2 text-right font-semibold">잔량</th>
+                                    <th className="px-3 py-2 text-right font-semibold">감지 당시 현재가</th>
+                                    <th className="px-3 py-2 text-right font-semibold">평가액(원)</th>
+                                    <th className="px-3 py-2 text-left font-semibold">사유</th>
+                                    <th className="px-3 py-2 text-left font-semibold">감지 시각</th>
+                                    <th className="px-3 py-2 text-center font-semibold">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {dustBalances.map(d => (
+                                    <tr key={d.id} className="border-t border-slate-200 dark:border-slate-700">
+                                        <td className="px-3 py-2 font-mono text-slate-800 dark:text-slate-200">{d.coin_code}</td>
+                                        <td className="px-3 py-2 text-right font-mono">{Number(d.quantity).toFixed(8)}</td>
+                                        <td className="px-3 py-2 text-right font-mono">
+                                            {d.last_price != null ? formatNumberWithComma(Number(d.last_price).toFixed(4)) : '-'}
+                                        </td>
+                                        <td className="px-3 py-2 text-right font-mono text-amber-700 dark:text-amber-300">
+                                            {d.value_krw != null ? formatNumberWithComma(Math.round(d.value_krw)) : '-'}
+                                        </td>
+                                        <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">{d.reason || '-'}</td>
+                                        <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">{formatDateTime(d.detected_at)}</td>
+                                        <td className="px-3 py-2 text-center">
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
+                                                onClick={() => handleResolveDust(d.id, d.coin_code)}
+                                                disabled={resolvingDustId === d.id}
+                                            >
+                                                {resolvingDustId === d.id ? '처리 중...' : '정리완료'}
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* 최근 거래 내역 테이블 */}

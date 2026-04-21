@@ -277,6 +277,9 @@ const calculateTimeRemaining = (maxHoldUntil) => {
     return <span className="text-slate-600 dark:text-slate-400">{hours}시간 {mins}분</span>;
 };
 
+// 업비트 보유량 대조 허용 오차 (업비트 소수점 정밀도 8자리 고려)
+const QUANTITY_MISMATCH_TOLERANCE = 1e-8;
+
 // 보유 종목 컬럼 너비 정의
 const HOLDINGS_COL_WIDTHS = {
     checkbox: '50px',
@@ -352,7 +355,24 @@ const HOLDINGS_TABLE_COLUMNS = [
         sortable: true,
         headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-right text-slate-900 dark:text-slate-100',
-        render: (value) => value ? value.toFixed(8) : '-'
+        render: (value, row) => {
+            const db = value ? value.toFixed(8) : '-';
+            if (!row.quantityMismatch) return db;
+            // 업비트 실제 수량과 불일치: 색각이상 친화 amber 팔레트
+            const upbitText = row.upbitQuantity != null ? row.upbitQuantity.toFixed(8) : '0';
+            const label = row.quantityMismatch === 'missing' ? '업비트 미보유' : `업비트: ${upbitText}`;
+            return (
+                <div className="flex flex-col items-end gap-0.5">
+                    <span>{db}</span>
+                    <span
+                        title="DB 보유량과 업비트 실제 보유량이 다릅니다. 수동 매매·장애·미동기화 가능성."
+                        className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700"
+                    >
+                        {label}
+                    </span>
+                </div>
+            );
+        }
     },
     {
         key: 'valuation',
@@ -490,6 +510,9 @@ export default function CointradeDashboard() {
     // KRW 잔액
     const [krwBalance, setKrwBalance] = useState(0);
 
+    // 업비트 미추적 보유 (DB holdings에는 없으나 업비트 계좌에 잔액이 있는 코인)
+    const [unaccountedBalances, setUnaccountedBalances] = useState([]);
+
 
     // 보유 종목
     const [holdings, setHoldings] = useState([]);
@@ -582,19 +605,44 @@ export default function CointradeDashboard() {
                 }));
             }
 
-            // 3. KRW 잔액 조회
+            // 3. 업비트 전체 계좌 조회 (KRW 잔액 + 보유 코인 잔액)
+            //    balances 호출 실패 시에만 기존 KRW 전용 API로 폴백
+            const upbitBalanceByCoin = {}; // coinCode → {balance, avgBuyPrice, locked}
+            let balancesCallOk = false;
             try {
-                const balanceResponse = await send('/dart/api/cointrade/account/balance', {}, 'GET');
-                if (balanceResponse.data?.success && balanceResponse.data?.response) {
-                    const resp = balanceResponse.data.response;
-                    // CoinTrader가 {"balance": 864796.68} 형태로 반환
-                    const bal = resp.balance ?? resp.data?.krw_balance ?? resp.data?.balance;
-                    if (bal != null) {
-                        setKrwBalance(bal);
-                    }
+                const balancesResponse = await send('/dart/api/cointrade/account/balances', {}, 'GET');
+                if (balancesResponse.data?.success && balancesResponse.data?.response) {
+                    const resp = balancesResponse.data.response;
+                    const balances = resp.balances || [];
+                    // 업비트 인증 실패 시 대조를 건너뛴다 (balances가 빈 배열이어도 전체 holding을 "미보유"로 오인 방지)
+                    balancesCallOk = resp.authenticated !== false;
+                    balances.forEach(b => {
+                        if (b.currency === 'KRW') {
+                            setKrwBalance((b.balance || 0) + (b.locked || 0));
+                        } else if (b.coin_code) {
+                            upbitBalanceByCoin[b.coin_code] = {
+                                balance: b.balance || 0,
+                                locked: b.locked || 0,
+                                avgBuyPrice: b.avg_buy_price || 0,
+                            };
+                        }
+                    });
                 }
-            } catch (balanceError) {
-                console.error('KRW 잔액 조회 실패:', balanceError);
+            } catch (balancesError) {
+                console.error('업비트 전체 계좌 조회 실패:', balancesError);
+            }
+
+            if (!balancesCallOk) {
+                try {
+                    const balanceResponse = await send('/dart/api/cointrade/account/balance', {}, 'GET');
+                    if (balanceResponse.data?.success && balanceResponse.data?.response) {
+                        const resp = balanceResponse.data.response;
+                        const bal = resp.balance ?? resp.data?.krw_balance ?? resp.data?.balance;
+                        if (bal != null) setKrwBalance(bal);
+                    }
+                } catch (balanceError) {
+                    console.error('KRW 잔액 조회 실패:', balanceError);
+                }
             }
 
             // 4. 보유 종목 조회
@@ -644,13 +692,48 @@ export default function CointradeDashboard() {
                     newTotalInvestment += (holding.totalAmount || 0);
                     newTotalValuation += valuation;
 
+                    // 업비트 실제 수량과 대조 (balances 호출 성공 시에만 의미 있음)
+                    let upbitQuantity = null;
+                    let quantityMismatch = null; // 'missing' | 'diff' | null
+                    if (balancesCallOk) {
+                        const upbit = upbitBalanceByCoin[holding.coinCode];
+                        if (!upbit) {
+                            upbitQuantity = 0;
+                            quantityMismatch = 'missing';
+                        } else {
+                            const totalQty = (upbit.balance || 0) + (upbit.locked || 0);
+                            upbitQuantity = totalQty;
+                            const diff = Math.abs((holding.quantity || 0) - totalQty);
+                            if (diff > QUANTITY_MISMATCH_TOLERANCE) {
+                                quantityMismatch = 'diff';
+                            }
+                        }
+                    }
+
                     return {
                         ...holding,
                         profitRate,
-                        valuation
+                        valuation,
+                        upbitQuantity,
+                        quantityMismatch
                     };
                 });
                 setHoldings(calculatedHoldings);
+
+                // DB에 없는 업비트 보유코인 추출 (KRW 제외, 잔액 > 0)
+                if (balancesCallOk) {
+                    const trackedCoins = new Set(calculatedHoldings.map(h => h.coinCode));
+                    const untracked = Object.entries(upbitBalanceByCoin)
+                        .filter(([coinCode, v]) => !trackedCoins.has(coinCode) && ((v.balance || 0) + (v.locked || 0)) > QUANTITY_MISMATCH_TOLERANCE)
+                        .map(([coinCode, v]) => ({
+                            coinCode,
+                            quantity: (v.balance || 0) + (v.locked || 0),
+                            avgBuyPrice: v.avgBuyPrice || 0,
+                        }));
+                    setUnaccountedBalances(untracked);
+                } else {
+                    setUnaccountedBalances([]);
+                }
 
                 // 상단 카드 상태 업데이트 (실시간 평가금액 반영)
                 const newTotalProfitRate = newTotalInvestment > 0
@@ -1153,6 +1236,23 @@ export default function CointradeDashboard() {
             {/* 보유 종목 테이블 */}
 
             <div className="mb-6">
+                {unaccountedBalances.length > 0 && (
+                    <div className="mb-3 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200 text-sm">
+                        <div className="font-semibold mb-1">
+                            업비트에만 있는 보유 코인 {unaccountedBalances.length}건 (DB 미추적)
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                            {unaccountedBalances.map(u => (
+                                <span key={u.coinCode} className="font-mono">
+                                    {u.coinCode}: {u.quantity.toFixed(8)}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="mt-1 text-xs opacity-80">
+                            자동매매 대상이 아니거나 수동 매매/외부 경로로 취득한 코인일 수 있습니다.
+                        </div>
+                    </div>
+                )}
                 <div className="px-2 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
 
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">

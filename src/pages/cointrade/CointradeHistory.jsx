@@ -377,7 +377,7 @@ export default function CointradeHistory() {
         return () => clearTimeout(timer);
     }, [toast]);
 
-    // 페이지 로드 시 기본 기간 설정 (시작일: 한달전 00:00, 종료일: 오늘 현재시간)
+    // 페이지 로드 시 기본 기간 설정 (시작일: 한달전 00:00, 종료일: 오늘 23:59 — 하루 전체 범위)
     useEffect(() => {
         const today = new Date();
         const oneMonthAgo = new Date(today);
@@ -391,16 +391,12 @@ export default function CointradeHistory() {
             return `${yyyy}-${mm}-${dd}`;
         };
 
-        // 로컬 시간 문자열 (HH:mm)
-        const currentTime = today.getHours().toString().padStart(2, '0') + ':' +
-                            today.getMinutes().toString().padStart(2, '0');
-
         setFilters(prev => ({
             ...prev,
             startDate: formatDate(oneMonthAgo),
             startTime: '00:00',
             endDate: formatDate(today),
-            endTime: currentTime
+            endTime: '23:59'
         }));
 
         fetchCoinList();

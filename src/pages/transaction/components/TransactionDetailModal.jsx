@@ -783,45 +783,51 @@ export default function TransactionDetailModal({
                         </>
                     )}
 
-                    {/* 기업 프로파일 */}
-                    {loadingProfile && (
-                        <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-2">
-                            기업 정보 로딩 중...
-                        </div>
-                    )}
-                    {companyProfile && (
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 rounded-lg p-4 border border-blue-100 dark:border-slate-600">
-                            <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">기업 정보</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                {companyProfile.exchange && (
-                                    <div>
-                                        <div className="text-slate-500 dark:text-slate-400">거래소</div>
-                                        <div className="font-medium text-slate-900 dark:text-white">{companyProfile.exchange}</div>
+                    {/* 기업 프로파일 - 로딩/성공/실패 모두 동일한 높이를 유지해 모달 shift 방지 */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 rounded-lg p-4 border border-blue-100 dark:border-slate-600">
+                        <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">기업 정보</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                            {loadingProfile ? (
+                                [0, 1, 2, 3].map((i) => (
+                                    <div key={i} className="animate-pulse">
+                                        <div className="h-3 w-12 bg-slate-200 dark:bg-slate-600 rounded mb-1.5" />
+                                        <div className="h-4 w-16 bg-slate-200 dark:bg-slate-600 rounded" />
                                     </div>
-                                )}
-                                {companyProfile.sector && (
-                                    <div>
-                                        <div className="text-slate-500 dark:text-slate-400">섹터</div>
-                                        <div className="font-medium text-slate-900 dark:text-white">{companyProfile.sector}</div>
-                                    </div>
-                                )}
-                                {companyProfile.marketCap && (
-                                    <div>
-                                        <div className="text-slate-500 dark:text-slate-400">시가총액</div>
-                                        <div className="font-medium text-slate-900 dark:text-white">
-                                            ${(companyProfile.marketCap / 1e9).toFixed(2)}B
+                                ))
+                            ) : companyProfile ? (
+                                <>
+                                    {companyProfile.exchange && (
+                                        <div>
+                                            <div className="text-slate-500 dark:text-slate-400">거래소</div>
+                                            <div className="font-medium text-slate-900 dark:text-white">{companyProfile.exchange}</div>
                                         </div>
-                                    </div>
-                                )}
-                                {companyProfile.beta && (
-                                    <div>
-                                        <div className="text-slate-500 dark:text-slate-400">베타</div>
-                                        <div className="font-medium text-slate-900 dark:text-white">{companyProfile.beta.toFixed(2)}</div>
-                                    </div>
-                                )}
-                            </div>
+                                    )}
+                                    {companyProfile.sector && (
+                                        <div>
+                                            <div className="text-slate-500 dark:text-slate-400">섹터</div>
+                                            <div className="font-medium text-slate-900 dark:text-white">{companyProfile.sector}</div>
+                                        </div>
+                                    )}
+                                    {companyProfile.marketCap && (
+                                        <div>
+                                            <div className="text-slate-500 dark:text-slate-400">시가총액</div>
+                                            <div className="font-medium text-slate-900 dark:text-white">
+                                                ${(companyProfile.marketCap / 1e9).toFixed(2)}B
+                                            </div>
+                                        </div>
+                                    )}
+                                    {companyProfile.beta && (
+                                        <div>
+                                            <div className="text-slate-500 dark:text-slate-400">베타</div>
+                                            <div className="font-medium text-slate-900 dark:text-white">{companyProfile.beta.toFixed(2)}</div>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="col-span-full text-center text-slate-400 dark:text-slate-500">기업 정보를 불러올 수 없습니다</div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* 푸터 */}

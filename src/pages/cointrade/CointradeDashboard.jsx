@@ -1265,7 +1265,7 @@ export default function CointradeDashboard() {
                         }`}>
                         총 수익률
                     </div>
-                    <div className={`text-3xl font-bold ${status.totalProfitRate >= 0
+                    <div className={`text-2xl font-bold leading-tight truncate ${status.totalProfitRate >= 0
                         ? 'text-blue-600 dark:text-blue-400'
                         : 'text-orange-600 dark:text-orange-400'
                         }`}>

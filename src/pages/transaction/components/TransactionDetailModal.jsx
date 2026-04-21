@@ -304,7 +304,7 @@ export default function TransactionDetailModal({
             style={{ animationDuration: '0.25s' }}
             onClick={handleOverlayClick}
         >
-            <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-auto rounded-xl bg-white shadow-2xl dark:bg-slate-800 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s' }}>
+            <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-auto rounded-xl bg-white shadow-2xl dark:bg-slate-800 animate__animated ${isAnimatingOut ? 'animate__fadeOutDown' : 'animate__fadeInUp'}`} style={{ animationDuration: '0.25s', scrollbarGutter: 'stable' }}>
                 {/* 헤더 */}
                 <div className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-4 dark:border-slate-700 dark:from-slate-800 dark:to-slate-800">
                     <div className="flex items-center justify-between">

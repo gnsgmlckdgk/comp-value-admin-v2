@@ -70,6 +70,9 @@ function createGroupTotalRow(slice, sym, end, n, rows, currentFxRate) {
     const curList = slice.map(r => toNum(r.currentPrice)).filter(v => v > 0);
     const curUSD = curList.length ? (curList.reduce((a, b) => a + b, 0) / curList.length) : 0;
 
+    // 전일 종가: 같은 종목이므로 그룹 내 모든 행이 동일 (첫 번째 유효값 사용)
+    const prevCloseUSD = slice.map(r => toNum(r.previousClose)).find(v => v > 0) || 0;
+
     // 매도목표가: 평균값 (빈 값 제외)
     const tgtList = slice.map(r => toNum(r.targetPrice)).filter(v => v > 0);
     const targetAvgUSD = tgtList.length ? (tgtList.reduce((a, b) => a + b, 0) / tgtList.length) : 0;
@@ -123,6 +126,7 @@ function createGroupTotalRow(slice, sym, end, n, rows, currentFxRate) {
         diffPct,
         buyAvgUSD,
         curUSD,
+        prevCloseUSD,
         targetAvgUSD,
         targetPriceSync,
         buyExchangeRateAtTrade: buyExchangeRateAvg,

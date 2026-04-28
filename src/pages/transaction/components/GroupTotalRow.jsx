@@ -1,11 +1,13 @@
 import { Td, FmtAmount } from './TableCells';
 import { fmtNum, fmtUsd } from '../utils/formatters';
+import { DayChangeBadge } from './DayChangeBadge';
 
 /**
  * 그룹 합계 행 (8컬럼)
  */
 export function GroupTotalRow({ data, fx, onRowClick }) {
-    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, buyAvgUSD, buyExchangeRateAtTrade, hasNextGroupDivider, companyName, groupRows, targetAvgUSD } = data;
+    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, prevCloseUSD, buyAvgUSD, buyExchangeRateAtTrade, hasNextGroupDivider, companyName, groupRows, targetAvgUSD } = data;
+    const dayChangePct = (prevCloseUSD > 0 && curUSD > 0) ? ((curUSD - prevCloseUSD) / prevCloseUSD) * 100 : null;
 
     const hasTarget = targetAvgUSD > 0 && buyAvgUSD > 0 && targetAvgUSD > buyAvgUSD;
     const progress = hasTarget
@@ -103,7 +105,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
                 </div>
             </Td>
 
-            {/* 현재가($) */}
+            {/* 현재가($) + 전일 대비 등락 */}
             <Td>
                 <div className="leading-tight text-right">
                     <div className="text-slate-700 dark:text-slate-200 tabular-nums">
@@ -114,6 +116,9 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
                             ₩ {Math.round(curUSD * fx).toLocaleString()}
                         </div>
                     ) : null}
+                    {dayChangePct != null && (
+                        <DayChangeBadge pct={dayChangePct} />
+                    )}
                 </div>
             </Td>
 

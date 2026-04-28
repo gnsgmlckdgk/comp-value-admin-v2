@@ -1,5 +1,6 @@
 import { Td, PnlCell, FmtAmount } from './TableCells';
 import { toNum, fmtUsd, fmtDate } from '../utils/formatters';
+import { DayChangeBadge } from './DayChangeBadge';
 
 /**
  * 거래 데이터 행 (8컬럼, 읽기전용)
@@ -30,8 +31,10 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
 
     const buyPrice = toNum(row.buyPrice);
     const curPrice = toNum(row.currentPrice);
+    const prevClose = toNum(row.previousClose);
     const qty = toNum(row.totalBuyAmount);
     const targetPrice = toNum(row.targetPrice);
+    const dayChangePct = (prevClose > 0 && curPrice > 0) ? ((curPrice - prevClose) / prevClose) * 100 : null;
     const hasTarget = targetPrice > 0 && buyPrice > 0 && targetPrice > buyPrice;
     const progress = hasTarget
         ? ((curPrice - buyPrice) / (targetPrice - buyPrice)) * 100
@@ -98,7 +101,7 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
                 </div>
             </Td>
 
-            {/* 현재가($) */}
+            {/* 현재가($) + 전일 대비 등락 */}
             <Td>
                 <div className="leading-tight text-right">
                     <div className="text-slate-700 dark:text-slate-200 font-medium tabular-nums">
@@ -109,6 +112,9 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
                             ₩ {Math.round(curPrice * fx).toLocaleString()}
                         </div>
                     ) : null}
+                    {dayChangePct != null && (
+                        <DayChangeBadge pct={dayChangePct} />
+                    )}
                 </div>
             </Td>
 

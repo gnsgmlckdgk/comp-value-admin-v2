@@ -11,6 +11,25 @@ import {
 import { sortRowsBySymbolAndDate } from '../utils/sorting';
 import { INITIAL_NEW_ROW } from '../constants';
 
+// 심볼 → {currentPrice, previousClose} 보존 맵 생성
+function buildPrevPriceMap(rows) {
+    return new Map(
+        rows.map((r) => [
+            String(r.symbol || '').toUpperCase(),
+            { currentPrice: r.currentPrice, previousClose: r.previousClose },
+        ])
+    );
+}
+
+// 백엔드 재조회 결과(r)에 보존된 가격 정보를 머지
+function mergePreservedPrices(r, prevPriceBySym) {
+    const prev = prevPriceBySym.get(String(r.symbol || '').toUpperCase());
+    if (!prev) return r;
+    const cp = prev.currentPrice;
+    if (cp === undefined || cp === null || cp === '') return r;
+    return { ...r, currentPrice: cp, previousClose: prev.previousClose };
+}
+
 /**
  * 거래 목록 관리 커스텀 훅
  */
@@ -42,22 +61,14 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
         }
     };
 
-    // 목록 재조회 (현재가는 기존 값 보존)
+    // 목록 재조회 (현재가/전일종가는 기존 값 보존)
     // 기업가치 분석 후 targetPriceSync로 갱신된 목표가 반영 용도
     const refetchTransactions = async () => {
         setLoading(true);
         try {
-            const prevPriceBySym = new Map(
-                rows.map((r) => [String(r.symbol || '').toUpperCase(), r.currentPrice])
-            );
+            const prevPriceBySym = buildPrevPriceMap(rows);
             const list = await fetchTransactions();
-            const merged = list.map((r) => {
-                const sym = String(r.symbol || '').toUpperCase();
-                const prevCp = prevPriceBySym.get(sym);
-                return (prevCp !== undefined && prevCp !== null && prevCp !== '')
-                    ? { ...r, currentPrice: prevCp }
-                    : r;
-            });
+            const merged = list.map((r) => mergePreservedPrices(r, prevPriceBySym));
             const sorted = sortRowsBySymbolAndDate(merged);
             setRows(sorted);
             setLastUpdated(new Date());
@@ -77,25 +88,15 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
 
         setSaving(true);
         try {
-            // 기존 현재가 보존
-            const prevPriceBySym = new Map(
-                rows.map((r) => [String(r.symbol || '').toUpperCase(), r.currentPrice])
-            );
+            // 기존 현재가/전일종가 보존
+            const prevPriceBySym = buildPrevPriceMap(rows);
 
             // 등록
             await createTransaction(payload);
 
-            // 목록 재조회
+            // 목록 재조회 + 기존 가격 머지
             const list = await fetchTransactions();
-
-            // 기존 현재가 머지
-            const merged = list.map((r) => {
-                const sym = String(r.symbol || '').toUpperCase();
-                const prevCp = prevPriceBySym.get(sym);
-                return (prevCp !== undefined && prevCp !== null && prevCp !== '')
-                    ? { ...r, currentPrice: prevCp }
-                    : r;
-            });
+            const merged = list.map((r) => mergePreservedPrices(r, prevPriceBySym));
             setRows(sortRowsBySymbolAndDate(merged));
 
             // 모든 심볼의 현재가 동기화
@@ -167,22 +168,12 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
     const removeTransaction = async (id) => {
         setSaving(true);
         try {
-            // 기존 현재가 보존
-            const prevPriceBySym = new Map(
-                rows.map((r) => [String(r.symbol || '').toUpperCase(), r.currentPrice])
-            );
+            // 기존 현재가/전일종가 보존
+            const prevPriceBySym = buildPrevPriceMap(rows);
 
             await deleteTransaction(id);
             const list = await fetchTransactions();
-
-            // 기존 현재가 머지
-            const merged = list.map((r) => {
-                const sym = String(r.symbol || '').toUpperCase();
-                const prevCp = prevPriceBySym.get(sym);
-                return (prevCp !== undefined && prevCp !== null && prevCp !== '')
-                    ? { ...r, currentPrice: prevCp }
-                    : r;
-            });
+            const merged = list.map((r) => mergePreservedPrices(r, prevPriceBySym));
             setRows(sortRowsBySymbolAndDate(merged));
             setLastUpdated(new Date());
             return true;
@@ -207,7 +198,12 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
             prev.map((r) => {
                 const sym = String(r.symbol || '').toUpperCase();
                 const hit = bySym.get(sym);
-                return hit ? { ...r, currentPrice: Number(hit.currentPrice) } : r;
+                if (!hit) return r;
+                return {
+                    ...r,
+                    currentPrice: Number(hit.currentPrice),
+                    previousClose: hit.previousClose != null ? Number(hit.previousClose) : r.previousClose,
+                };
             })
         );
         setLastUpdated(new Date());
@@ -298,16 +294,8 @@ export function useTransactions(openAlert = (msg) => alert(msg)) {
             // 6. 백그라운드에서 목록 갱신 시도 (실패해도 무시)
             try {
                 const list = await fetchTransactions();
-                const prevPriceBySym = new Map(
-                    rows.map((r) => [String(r.symbol || '').toUpperCase(), r.currentPrice])
-                );
-                const merged = list.map((r) => {
-                    const sym = String(r.symbol || '').toUpperCase();
-                    const prevCp = prevPriceBySym.get(sym);
-                    return (prevCp !== undefined && prevCp !== null && prevCp !== '')
-                        ? { ...r, currentPrice: prevCp }
-                        : r;
-                });
+                const prevPriceBySym = buildPrevPriceMap(rows);
+                const merged = list.map((r) => mergePreservedPrices(r, prevPriceBySym));
                 setRows(sortRowsBySymbolAndDate(merged));
             } catch (refreshError) {
                 console.warn('목록 갱신 실패 (로컬 상태는 이미 업데이트됨):', refreshError);

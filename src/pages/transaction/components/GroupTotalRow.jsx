@@ -50,7 +50,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
             title="클릭하여 상세정보 보기"
         >
             {/* 종목 */}
-            <Td className="sticky left-0 z-10 bg-indigo-50 group-hover:bg-indigo-100 dark:bg-[#222a49] dark:group-hover:bg-[#2b3355]">
+            <Td className="sticky left-0 z-10 bg-indigo-50 group-hover:bg-indigo-100 dark:bg-[#222a49] dark:group-hover:bg-[#2b3355] border-l-4 border-indigo-500 dark:border-indigo-400">
                 <div>
                     <div className="flex items-center gap-1.5">
                         <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-800/50">

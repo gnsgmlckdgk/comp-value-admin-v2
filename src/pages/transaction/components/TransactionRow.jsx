@@ -40,6 +40,9 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
         ? ((curPrice - buyPrice) / (targetPrice - buyPrice)) * 100
         : 0;
 
+    const isInGroup = !!row.__groupKey;
+    const groupAccentCls = isInGroup ? 'border-l-4 border-indigo-400 dark:border-indigo-500' : '';
+
     return (
         <tr
             onClick={() => onRowClick && onRowClick(row)}
@@ -51,7 +54,7 @@ export function TransactionRow({ row, index, fx, onRowClick }) {
             title="클릭하여 상세정보 보기"
         >
             {/* 종목: ticker(bold) + company(subtitle) */}
-            <Td className={`sticky left-0 z-10 ${getStickyBg()}`}>
+            <Td className={`sticky left-0 z-10 ${getStickyBg()} ${groupAccentCls}`}>
                 <div className="leading-tight">
                     <div className="font-bold text-slate-800 dark:text-slate-100">{row.symbol}</div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[160px]">

@@ -3,7 +3,9 @@ import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import Loading from '@/component/common/display/Loading';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
-import { RefreshCw, Play, Clock, CheckCircle2, XCircle, Brain, Server, Calendar, TreeDeciduous } from 'lucide-react';
+import { RefreshCw, Play, Clock, CheckCircle2, XCircle, Brain, Server, Calendar, TreeDeciduous, Power } from 'lucide-react';
+
+const ML_LEARNING_KEY = 'ML_LEARNING_ENABLED';
 
 const POLL_INTERVAL = 3000;
 
@@ -61,6 +63,8 @@ const CointradeMLRetrain = () => {
     const [status, setStatus] = useState(null);
     const [modelStatus, setModelStatus] = useState(null);
     const [trainCoinCode, setTrainCoinCode] = useState('');
+    const [learningEnabled, setLearningEnabled] = useState(false);
+    const [toggleLoading, setToggleLoading] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
     const pollRef = useRef(null);
 
@@ -90,6 +94,45 @@ const CointradeMLRetrain = () => {
             // 연결 실패 시 무시
         }
     }, []);
+
+    /** ML 학습 ON/OFF 상태 조회 */
+    const fetchLearningEnabled = useCallback(async () => {
+        try {
+            const { data, error } = await send('/dart/api/cointrade/config', {}, 'GET');
+            if (!error && data?.success && Array.isArray(data?.response)) {
+                const cfg = data.response.find(c => c.paramName === ML_LEARNING_KEY);
+                setLearningEnabled(cfg?.paramValue === 'true');
+            }
+        } catch {
+            // 연결 실패 시 무시
+        }
+    }, []);
+
+    /** ML 학습 ON/OFF 토글 (자동 재학습 + 실시간 미세조정 통제) */
+    const toggleLearning = useCallback(async () => {
+        const next = !learningEnabled;
+        setToggleLoading(true);
+        try {
+            const body = [{ configKey: ML_LEARNING_KEY, configValue: next ? 'true' : 'false' }];
+            const { data, error } = await send('/dart/api/cointrade/config', body, 'PUT');
+            if (error) {
+                openAlert(error);
+                return;
+            }
+            if (data?.success) {
+                setLearningEnabled(next);
+                openAlert(`ML 학습이 ${next ? 'ON' : 'OFF'} 되었습니다.\n\n${next
+                    ? '자동 재학습(6시간 주기)과 실시간 미세조정이 다시 동작합니다.'
+                    : '자동 재학습과 실시간 미세조정이 정지됩니다. (수동 재학습은 영향 없음)'}`);
+            } else {
+                openAlert(data?.message || '변경 실패');
+            }
+        } catch {
+            openAlert('변경 실패');
+        } finally {
+            setToggleLoading(false);
+        }
+    }, [learningEnabled]);
 
     /** 재학습 시작 */
     const startRetrain = useCallback(async () => {
@@ -128,13 +171,14 @@ const CointradeMLRetrain = () => {
     useEffect(() => {
         fetchStatus();
         fetchModelStatus();
+        fetchLearningEnabled();
 
         pollRef.current = setInterval(() => {
             fetchStatus();
             fetchModelStatus();
         }, POLL_INTERVAL);
         return () => clearInterval(pollRef.current);
-    }, [fetchStatus, fetchModelStatus]);
+    }, [fetchStatus, fetchModelStatus, fetchLearningEnabled]);
 
     const isRunning = status?.state === 'running';
     const isCompleted = status?.state === 'completed';
@@ -160,6 +204,47 @@ const CointradeMLRetrain = () => {
             </p>
 
             <Loading show={isLoading} />
+
+            {/* ML 학습 ON/OFF 토글 */}
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 mb-4">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                        <div className={`flex-shrink-0 p-2 rounded-lg ${learningEnabled ? 'bg-sky-100 dark:bg-sky-900/40' : 'bg-slate-100 dark:bg-slate-700'}`}>
+                            <Power size={18} className={learningEnabled ? 'text-sky-600 dark:text-sky-300' : 'text-slate-400 dark:text-slate-500'} />
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                                ML 학습 ON / OFF
+                            </h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                자동 재학습(6시간 주기) + 실시간 미세조정(매 스캔)을 한꺼번에 제어합니다.
+                                OFF여도 위 "수동 재학습" 버튼은 정상 동작합니다.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={learningEnabled}
+                        onClick={toggleLearning}
+                        disabled={toggleLoading}
+                        className={`relative inline-flex h-7 w-14 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed ${learningEnabled
+                                ? 'bg-sky-500'
+                                : 'bg-slate-300 dark:bg-slate-600'
+                            }`}
+                    >
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${learningEnabled ? 'translate-x-8' : 'translate-x-1'}`} />
+                    </button>
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-xs">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-medium ${learningEnabled
+                            ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                        }`}>
+                        현재 상태: {learningEnabled ? 'ON (학습 진행)' : 'OFF (학습 정지)'}
+                    </span>
+                </div>
+            </div>
 
             {/* 상태 카드 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">

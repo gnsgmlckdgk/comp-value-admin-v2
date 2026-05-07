@@ -136,6 +136,27 @@ function createGroupTotalRow(slice, sym, end, n, rows, currentFxRate) {
 }
 
 /**
+ * 그룹합계 행을 상세 모달이 기대하는 필드명으로 매핑
+ * - 그룹합계 row 는 targetAvgUSD/buyAvgUSD/curUSD/qtySum 필드를 사용하지만
+ *   상세 모달은 targetPrice/buyPrice/currentPrice/totalQty 필드를 본다.
+ * - GroupTotalRow 클릭 진입과 분석 모달 닫힘 후 갱신 진입 양쪽에서 같은 매핑이 필요해 공통화한다.
+ */
+export function mapGroupRowForDetailModal(groupTotalRow) {
+    return {
+        symbol: groupTotalRow.symbol,
+        companyName: groupTotalRow.companyName,
+        buyPrice: groupTotalRow.buyAvgUSD,
+        totalQty: groupTotalRow.qtySum,
+        currentPrice: groupTotalRow.curUSD,
+        targetPrice: groupTotalRow.targetAvgUSD,
+        targetPriceSync: groupTotalRow.targetPriceSync,
+        buyExchangeRateAtTrade: groupTotalRow.buyExchangeRateAtTrade,
+        __type: 'groupTotal',
+        groupRows: groupTotalRow.groupRows,
+    };
+}
+
+/**
  * 다음 청크가 그룹인지 확인
  */
 function isNextChunkGroup(end, n, rows) {

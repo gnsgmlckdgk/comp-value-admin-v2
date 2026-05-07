@@ -1,12 +1,13 @@
 import { Td, FmtAmount } from './TableCells';
 import { fmtNum, fmtUsd } from '../utils/formatters';
 import { DayChangeBadge } from './DayChangeBadge';
+import { mapGroupRowForDetailModal } from '../utils/grouping';
 
 /**
  * 그룹 합계 행 (8컬럼)
  */
 export function GroupTotalRow({ data, fx, onRowClick }) {
-    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, prevCloseUSD, buyAvgUSD, buyExchangeRateAtTrade, hasNextGroupDivider, companyName, groupRows, targetAvgUSD } = data;
+    const { symbol, qtySum, buySumUSD, curSumUSD, diffUSD, curUSD, prevCloseUSD, buyAvgUSD, hasNextGroupDivider, targetAvgUSD } = data;
     const dayChangePct = (prevCloseUSD > 0 && curUSD > 0) ? ((curUSD - prevCloseUSD) / prevCloseUSD) * 100 : null;
 
     const hasTarget = targetAvgUSD > 0 && buyAvgUSD > 0 && targetAvgUSD > buyAvgUSD;
@@ -16,18 +17,7 @@ export function GroupTotalRow({ data, fx, onRowClick }) {
 
     const handleRowClick = () => {
         if (onRowClick) {
-            onRowClick({
-                symbol,
-                companyName,
-                buyPrice: buyAvgUSD,
-                totalQty: qtySum,
-                currentPrice: curUSD,
-                targetPrice: data.targetAvgUSD,
-                targetPriceSync: data.targetPriceSync,
-                buyExchangeRateAtTrade: buyExchangeRateAtTrade,
-                __type: 'groupTotal',
-                groupRows,
-            });
+            onRowClick(mapGroupRowForDetailModal(data));
         }
     };
 

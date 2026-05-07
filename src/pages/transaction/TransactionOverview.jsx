@@ -8,7 +8,7 @@ import { PortfolioDashboard } from './components/PortfolioDashboard';
 import { SearchFilterBar } from './components/SearchFilterBar';
 import { useTransactions } from './hooks/useTransactions';
 import { useFxRate } from './hooks/useFxRate';
-import { groupRowsBySymbol } from './utils/grouping';
+import { groupRowsBySymbol, mapGroupRowForDetailModal } from './utils/grouping';
 import { calculateTotals, calculateDiffAndPercent } from './utils/calculations';
 import { sortTransactionRows } from './utils/sorting';
 import { filterBySearch, filterByPnl } from './utils/filtering';
@@ -149,7 +149,10 @@ export default function TransactionOverview() {
                 (r) => r.__type === 'groupTotal' && String(r.symbol || '').toUpperCase() === symbol
             );
             if (newGroupRow) {
-                setDetailModalData((prev) => ({ ...prev, row: newGroupRow }));
+                // groupTotal raw 객체는 targetAvgUSD/buyAvgUSD/curUSD/qtySum 필드를 쓰는데
+                // 상세 모달은 targetPrice/buyPrice/currentPrice/totalQty 필드를 보므로 매핑 필요
+                // (없으면 동기화된 새 목표가가 detail modal 에 반영되지 않음)
+                setDetailModalData((prev) => ({ ...prev, row: mapGroupRowForDetailModal(newGroupRow) }));
             }
         } else {
             const updatedRow = list.find((r) => r.id === detailModalData.row.id);

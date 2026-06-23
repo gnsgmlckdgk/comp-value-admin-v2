@@ -36,11 +36,17 @@ import Calculator from '@/pages/util/calculator'
 import MonitoringDashboard from '@/pages/monitoring/MonitoringDashboard'
 
 import { SECTIONS } from '@/component/layouts/common/SideBar001';
+import {
+    Home as HomeIcon, List, BarChart3, Pencil, Sparkles, Brain, Scale, Briefcase,
+    Receipt, MessageSquare, LayoutDashboard, Settings, Coins, CalendarClock,
+    History, LineChart, FlaskConical, FileSpreadsheet, DollarSign, Braces,
+    StickyNote, Calculator as CalculatorIcon, Activity
+} from 'lucide-react';
 
 const routes = {
 
     "Home": {
-        section: SECTIONS[0], label: 'Home', path: '/', element: <Home />
+        section: SECTIONS[0], label: 'Home', path: '/', element: <Home />, icon: HomeIcon
     },
     "NotFound": {
         section: 'None', show: false, label: 'NotFound', path: '*', element: <NotFound />
@@ -54,20 +60,20 @@ const routes = {
     "MemberManagement": { section: '회원정보', show: false, label: '회원 관리 (관리자)', path: '/member/management', element: <MemberManagement /> },
 
     /* 기업분석(국내) */
-    "CompList": { section: SECTIONS[1], label: '기업목록', path: '/complist', element: <CompList /> },
-    "CompValue": { section: SECTIONS[1], label: '기업분석', path: '/compvalue', element: <CompValue /> },
-    "CompValueCustom": { section: SECTIONS[1], label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom /> },
+    "CompList": { section: SECTIONS[1], label: '기업목록', path: '/complist', element: <CompList />, icon: List },
+    "CompValue": { section: SECTIONS[1], label: '기업분석', path: '/compvalue', element: <CompValue />, icon: BarChart3 },
+    "CompValueCustom": { section: SECTIONS[1], label: '기업분석(수동)', path: '/compvalue/custom', element: <CompValueCustom />, icon: Pencil },
 
     /* 기업분석(미국) */
-    "AbroadCompanyList": { section: SECTIONS[2], label: '기업목록', path: '/complist/abroad', element: <AbroadCompanyList /> },
-    "AbroadRecommendedStock": { section: SECTIONS[2], label: '기업추천', path: '/recommended/abroad', element: <AbroadRecommendedStock /> },
-    "AbroadCompValue": { section: SECTIONS[2], label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue /> },
-    "MLRetrainManagement": { section: SECTIONS[2], label: 'AI 모델 관리', path: '/ml/retrain', element: <MLRetrainManagement /> },
+    "AbroadCompanyList": { section: SECTIONS[2], label: '기업목록', path: '/complist/abroad', element: <AbroadCompanyList />, icon: List },
+    "AbroadRecommendedStock": { section: SECTIONS[2], label: '기업추천', path: '/recommended/abroad', element: <AbroadRecommendedStock />, icon: Sparkles },
+    "AbroadCompValue": { section: SECTIONS[2], label: '기업분석', path: '/compvalue/abroad', element: <AbroadCompValue />, icon: BarChart3 },
+    "MLRetrainManagement": { section: SECTIONS[2], label: 'AI 모델 관리', path: '/ml/retrain', element: <MLRetrainManagement />, icon: Brain },
 
     /* 거래 */
-    "InvestmentEvaluation": { section: SECTIONS[3], label: '투자판단', path: '/trade/evaluation', element: <InvestmentEvaluation /> },
-    "TransactionOverview": { section: SECTIONS[3], label: '보유종목관리', path: '/transaction/overview', element: <TransactionOverview /> },
-    "SellRecordHistory": { section: SECTIONS[3], label: '매도현황기록', path: '/trade/sellrecord', element: <SellRecordHistory /> },
+    "InvestmentEvaluation": { section: SECTIONS[3], label: '투자판단', path: '/trade/evaluation', element: <InvestmentEvaluation />, icon: Scale },
+    "TransactionOverview": { section: SECTIONS[3], label: '보유종목관리', path: '/transaction/overview', element: <TransactionOverview />, icon: Briefcase },
+    "SellRecordHistory": { section: SECTIONS[3], label: '매도현황기록', path: '/trade/sellrecord', element: <SellRecordHistory />, icon: Receipt },
 
     /* 게시판 */
     "FreeBoard": {
@@ -75,6 +81,7 @@ const routes = {
         label: '자유게시판',
         path: '/freeboard/',
         element: <FreeBoard />,
+        icon: MessageSquare,
         children: [
             { section: SECTIONS[4], show: false, label: '게시글목록', path: '', element: <FreeBoardList /> },
             { section: SECTIONS[4], show: false, label: '게시글등록', path: 'regi', element: <Register /> },
@@ -90,6 +97,7 @@ const routes = {
         label: '자동매매 대시보드',
         path: '/cointrade/dashboard',
         element: <CointradeDashboard />,
+        icon: LayoutDashboard,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeConfig": {
@@ -97,6 +105,7 @@ const routes = {
         label: '자동매매 파라미터 설정',
         path: '/cointrade/config',
         element: <CointradeConfig />,
+        icon: Settings,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeCoins": {
@@ -104,6 +113,7 @@ const routes = {
         label: '대상 종목 설정',
         path: '/cointrade/coins',
         element: <CointradeCoins />,
+        icon: Coins,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeScheduler": {
@@ -111,6 +121,7 @@ const routes = {
         label: '스케줄러 관리',
         path: '/cointrade/scheduler',
         element: <CointradeScheduler />,
+        icon: CalendarClock,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeHistory": {
@@ -118,6 +129,7 @@ const routes = {
         label: '거래기록 조회',
         path: '/cointrade/history',
         element: <CointradeHistory />,
+        icon: History,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "MlModelInfo": {
@@ -125,6 +137,7 @@ const routes = {
         label: '모델 예측정보 조회',
         path: '/cointrade/ml-models',
         element: <MlModelInfo />,
+        icon: LineChart,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "CointradeMLRetrain": {
@@ -132,6 +145,7 @@ const routes = {
         label: 'AI 모델 관리',
         path: '/cointrade/ml-retrain',
         element: <CointradeMLRetrain />,
+        icon: Brain,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     "Backtest": {
@@ -139,6 +153,7 @@ const routes = {
         label: '페이퍼 트레이딩',
         path: '/cointrade/backtest',
         element: <Backtest />,
+        icon: FlaskConical,
         accessRoles: ['ROLE_SUPER_ADMIN']
     },
     // BacktestOptimizer 라우트 삭제됨 (v4.0)
@@ -148,31 +163,36 @@ const routes = {
         section: SECTIONS[6],
         label: '엑셀 보기',
         path: '/util/excel-viewer',
-        element: <ExcelViewer />
+        element: <ExcelViewer />,
+        icon: FileSpreadsheet
     },
     "ExchangeRate": {
         section: SECTIONS[6],
         label: '환율 계산기',
         path: '/util/exchange-rate',
-        element: <ExchangeRate />
+        element: <ExchangeRate />,
+        icon: DollarSign
     },
     "JsonViewer": {
         section: SECTIONS[6],
         label: 'JSON 뷰어',
         path: '/util/json-viewer',
-        element: <JsonViewer />
+        element: <JsonViewer />,
+        icon: Braces
     },
     "Memo": {
         section: SECTIONS[6],
         label: '메모',
         path: '/util/memo',
-        element: <Memo />
+        element: <Memo />,
+        icon: StickyNote
     },
     "Calculator": {
         section: SECTIONS[6],
         label: '계산기',
         path: '/util/calculator',
-        element: <Calculator />
+        element: <Calculator />,
+        icon: CalculatorIcon
     },
 
     /* 모니터링 */
@@ -181,6 +201,7 @@ const routes = {
         label: '실시간 대시보드',
         path: '/monitoring',
         element: <MonitoringDashboard />,
+        icon: Activity,
         accessRoles: ['ROLE_SUPER_ADMIN']
     }
 }

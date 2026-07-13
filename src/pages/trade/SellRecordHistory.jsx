@@ -6,6 +6,7 @@ import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import Button from '@/component/common/button/Button';
 import SellRecordModal from './popup/SellRecordModal';
 import SellRecordDetailModal from './popup/SellRecordDetailModal';
+import SellRecordStatsModal from './popup/SellRecordStatsModal';
 
 // 테이블 컬럼 너비 설정
 // Tailwind 유효한 width 값: w-12, w-14, w-16, w-20, w-24, w-28, w-32, w-36, w-40, w-44, w-48 등
@@ -32,6 +33,7 @@ export default function SellRecordHistory() {
     const [confirmConfig, setConfirmConfig] = useState({ open: false, message: '', onConfirm: null });
     const [modalConfig, setModalConfig] = useState({ open: false, mode: 'add', data: null });
     const [detailModalConfig, setDetailModalConfig] = useState({ open: false, data: null });
+    const [statsModalOpen, setStatsModalOpen] = useState(false);
     const [sortConfig, setSortConfig] = useState({ field: 'sellDate', direction: 'desc' });
     const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 'YYYY-MM'
     const [selectedSymbol, setSelectedSymbol] = useState('all'); // 'all' or ticker symbol
@@ -323,6 +325,16 @@ export default function SellRecordHistory() {
                                     </option>
                                 ))}
                             </select>
+                            <button
+                                onClick={() => setStatsModalOpen(true)}
+                                disabled={filteredRecords.length === 0}
+                                className="flex items-center gap-1.5 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-600"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2h14" />
+                                </svg>
+                                <span className="hidden sm:inline">통계 보기</span>
+                            </button>
                             <Button onClick={handleAdd}>
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -362,7 +374,7 @@ export default function SellRecordHistory() {
                         </div>
                         <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-lg p-3 dark:from-slate-700 dark:to-slate-600">
                             <div className="text-xs text-slate-600 dark:text-slate-300 mb-1">총손익 (가격+환차)</div>
-                            <div className={`text-xl font-bold ${stats.totalPnlKrw >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                            <div className={`text-xl font-bold ${stats.totalPnlKrw >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                                 {stats.totalPnlKrw >= 0 ? '+' : ''}₩{Math.round(stats.totalPnlKrw).toLocaleString()}
                             </div>
                         </div>
@@ -469,7 +481,7 @@ export default function SellRecordHistory() {
                                                     const fxPnl = calcFxPnl(record);
                                                     if (fxPnl === null) return <span className="text-slate-400 dark:text-slate-500">-</span>;
                                                     return (
-                                                        <span className={`font-medium ${fxPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                        <span className={`font-medium ${fxPnl >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                                                             {fxPnl >= 0 ? '+' : ''}₩{Math.round(fxPnl).toLocaleString()}
                                                         </span>
                                                     );
@@ -480,7 +492,7 @@ export default function SellRecordHistory() {
                                                     const totalPnl = calcTotalPnlKrw(record, fxRate);
                                                     if (totalPnl === null) return <span className="text-slate-400 dark:text-slate-500">-</span>;
                                                     return (
-                                                        <span className={`font-bold ${totalPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                        <span className={`font-bold ${totalPnl >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                                                             {totalPnl >= 0 ? '+' : ''}₩{Math.round(totalPnl).toLocaleString()}
                                                         </span>
                                                     );
@@ -552,6 +564,16 @@ export default function SellRecordHistory() {
                     data={detailModalConfig.data}
                     fxRate={fxRate}
                     onClose={() => setDetailModalConfig({ open: false, data: null })}
+                />
+            )}
+
+            {statsModalOpen && (
+                <SellRecordStatsModal
+                    isOpen={statsModalOpen}
+                    records={sortedRecords}
+                    fxRate={fxRate}
+                    periodLabel={`${selectedMonth === 'all' ? '전체 기간' : selectedMonth} · ${selectedSymbol === 'all' ? '전체 티커' : selectedSymbol}`}
+                    onClose={() => setStatsModalOpen(false)}
                 />
             )}
         </>

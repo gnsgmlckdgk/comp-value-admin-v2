@@ -224,7 +224,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                             {fxPnl === null ? (
                                 <div className="text-lg font-semibold text-slate-400 dark:text-slate-500">-</div>
                             ) : (
-                                <div className={`text-lg font-bold ${fxPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                <div className={`text-lg font-bold ${fxPnl >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                                     {fxPnl >= 0 ? '+' : ''}₩{Math.round(fxPnl).toLocaleString()}
                                 </div>
                             )}
@@ -235,7 +235,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                             {totalPnl === null ? (
                                 <div className="text-xl font-bold text-slate-400 dark:text-slate-500">-</div>
                             ) : (
-                                <div className={`text-xl font-bold ${totalPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                <div className={`text-xl font-bold ${totalPnl >= 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                                     {totalPnl >= 0 ? '+' : ''}₩{Math.round(totalPnl).toLocaleString()}
                                 </div>
                             )}

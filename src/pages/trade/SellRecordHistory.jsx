@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
+import { calcFxPnl } from '@/util/SellRecordUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import Button from '@/component/common/button/Button';
@@ -18,6 +19,7 @@ const COLUMN_WIDTHS = {
     realizedPnl: 'w-28',            // 실현손익
     buyExchangeRateAtTrade: 'w-20', // 매수당시환율
     sellExchangeRateAtTrade: 'w-20',// 매도당시환율
+    fxPnl: 'w-24',                  // 환차손익
     rmk: 'w-30',                    // 비고
     manage: 'w-25',                 // 관리
 };
@@ -33,7 +35,6 @@ export default function SellRecordHistory() {
     const [selectedMonth, setSelectedMonth] = useState('all'); // 'all' or 'YYYY-MM'
     const [selectedSymbol, setSelectedSymbol] = useState('all'); // 'all' or ticker symbol
     const [fxRate, setFxRate] = useState(null);
-    const [fxLoading, setFxLoading] = useState(false);
 
     const openAlert = (message, onConfirm, onAfterClose) => {
         setAlertConfig({
@@ -71,7 +72,7 @@ export default function SellRecordHistory() {
             } else {
                 setRecords([]);
             }
-        } catch (e) {
+        } catch {
             openAlert('데이터를 불러오는 중 오류가 발생했습니다.');
             setRecords([]);
         } finally {
@@ -82,6 +83,7 @@ export default function SellRecordHistory() {
     useEffect(() => {
         fetchRecords();
         fetchFxRate();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // 선택된 필터값이 유효하지 않으면 자동으로 'all'로 리셋
@@ -111,7 +113,6 @@ export default function SellRecordHistory() {
 
     // 환율 조회
     const fetchFxRate = async () => {
-        setFxLoading(true);
         try {
             const { data, error } = await send('/dart/tranrecord/rate', { currency: 'USDKRW' }, 'POST');
             if (!error && data?.success && data?.response) {
@@ -119,8 +120,6 @@ export default function SellRecordHistory() {
             }
         } catch (e) {
             console.error('환율 조회 실패:', e);
-        } finally {
-            setFxLoading(false);
         }
     };
 
@@ -211,7 +210,7 @@ export default function SellRecordHistory() {
                 } else {
                     openAlert('삭제에 실패했습니다.');
                 }
-            } catch (e) {
+            } catch {
                 openAlert('삭제 중 오류가 발생했습니다.');
             }
         });
@@ -240,7 +239,7 @@ export default function SellRecordHistory() {
                 openAlert(`${isEdit ? '수정' : '등록'}에 실패했습니다.`);
                 return false;
             }
-        } catch (e) {
+        } catch {
             openAlert(`${isEdit ? '수정' : '등록'} 중 오류가 발생했습니다.`);
             return false;
         }
@@ -267,7 +266,19 @@ export default function SellRecordHistory() {
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 dark:bg-slate-800 dark:border-slate-700">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">매도 현황 기록</h2>
+                            <div className="flex items-center gap-2 mb-2">
+                                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">매도 현황 기록</h2>
+                                <button
+                                    onClick={() => { fetchRecords(); fetchFxRate(); }}
+                                    disabled={loading}
+                                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors disabled:opacity-50"
+                                    title="재조회"
+                                >
+                                    <svg className={`w-5 h-5 text-slate-500 dark:text-slate-400 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </button>
+                            </div>
                             <div className="space-y-1">
                                 {fxRate && (
                                     <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
@@ -365,10 +376,10 @@ export default function SellRecordHistory() {
                             <p className="text-sm mt-1">상단의 '기록 추가' 버튼을 눌러 첫 번째 기록을 추가해보세요</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto scrollbar-always bg-white border border-slate-200 rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
-                          <div style={{ minWidth: '1000px' }}>
+                        <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[70vh] bg-white border border-slate-200 rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
+                          <div style={{ minWidth: '1100px' }}>
                             <table className="w-full table-fixed border-separate border-spacing-0">
-                                <thead className="bg-slate-50 dark:bg-slate-700/50">
+                                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-700/50">
                                     <tr>
                                         <SortableHeader field="sellDate" label="매도일" sortConfig={sortConfig} onSort={handleSort} width={COLUMN_WIDTHS.sellDate} />
                                         <SortableHeader field="symbol" label="티커" sortConfig={sortConfig} onSort={handleSort} width={COLUMN_WIDTHS.symbol} />
@@ -379,6 +390,7 @@ export default function SellRecordHistory() {
                                         <SortableHeader field="realizedPnl" label="실현손익" sortConfig={sortConfig} onSort={handleSort} width={COLUMN_WIDTHS.realizedPnl} />
                                         <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.buyExchangeRateAtTrade}`}>매수당시환율</th>
                                         <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.sellExchangeRateAtTrade}`}>매도당시환율</th>
+                                        <th className={`px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.fxPnl}`}>환차손익</th>
                                         <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.rmk}`}>비고</th>
                                         <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.manage}`}>관리</th>
                                     </tr>
@@ -442,6 +454,17 @@ export default function SellRecordHistory() {
                                             </td>
                                             <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 text-center">
                                                 {record.sellExchangeRateAtTrade ? `₩${record.sellExchangeRateAtTrade.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-right">
+                                                {(() => {
+                                                    const fxPnl = calcFxPnl(record);
+                                                    if (fxPnl === null) return <span className="text-slate-400 dark:text-slate-500">-</span>;
+                                                    return (
+                                                        <span className={`font-medium ${fxPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                            {fxPnl >= 0 ? '+' : ''}₩{Math.round(fxPnl).toLocaleString()}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
                                                 {record.rmk || '-'}

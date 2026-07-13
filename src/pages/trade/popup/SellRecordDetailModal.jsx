@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import useModalAnimation from '@/hooks/useModalAnimation';
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
+import { calcFxPnl } from '@/util/SellRecordUtil';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
@@ -74,7 +75,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
             } else {
                 openAlert('조회 결과가 존재하지 않거나 서버 응답을 받지 못했습니다.');
             }
-        } catch (e) {
+        } catch {
             openAlert('요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
         } finally {
             setCompanyValueLoading(false);
@@ -86,6 +87,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
     const sellAmount = data.sellPrice * data.sellQty;
     // 매도당시환율 우선, 없으면 현재환율 사용
     const sellRate = data.sellExchangeRateAtTrade || fxRate;
+    const fxPnl = calcFxPnl(data);
 
     return (
         <>
@@ -214,6 +216,17 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                                     {data.sellExchangeRateAtTrade ? `₩${data.sellExchangeRateAtTrade.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}` : '-'}
                                 </div>
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">환차손익</label>
+                            {fxPnl === null ? (
+                                <div className="text-lg font-semibold text-slate-400 dark:text-slate-500">-</div>
+                            ) : (
+                                <div className={`text-lg font-bold ${fxPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                    {fxPnl >= 0 ? '+' : ''}₩{Math.round(fxPnl).toLocaleString()}
+                                </div>
+                            )}
                         </div>
 
                         {data.rmk && (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import useModalAnimation from '@/hooks/useModalAnimation';
 import { send, API_ENDPOINTS } from '@/util/ClientUtil';
-import { calcFxPnl } from '@/util/SellRecordUtil';
+import { calcFxPnl, calcTotalPnlKrw } from '@/util/SellRecordUtil';
 import CompanyValueResultModal from '@/pages/trade/popup/CompanyValueResultModal';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 
@@ -88,6 +88,7 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
     // 매도당시환율 우선, 없으면 현재환율 사용
     const sellRate = data.sellExchangeRateAtTrade || fxRate;
     const fxPnl = calcFxPnl(data);
+    const totalPnl = calcTotalPnlKrw(data, fxRate);
 
     return (
         <>
@@ -225,6 +226,17 @@ export default function SellRecordDetailModal({ isOpen, data, fxRate, onClose })
                             ) : (
                                 <div className={`text-lg font-bold ${fxPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                     {fxPnl >= 0 ? '+' : ''}₩{Math.round(fxPnl).toLocaleString()}
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">총손익 (가격손익 + 환차손익)</label>
+                            {totalPnl === null ? (
+                                <div className="text-xl font-bold text-slate-400 dark:text-slate-500">-</div>
+                            ) : (
+                                <div className={`text-xl font-bold ${totalPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                    {totalPnl >= 0 ? '+' : ''}₩{Math.round(totalPnl).toLocaleString()}
                                 </div>
                             )}
                         </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { send } from '@/util/ClientUtil';
-import { calcFxPnl } from '@/util/SellRecordUtil';
+import { calcFxPnl, calcTotalPnlKrw } from '@/util/SellRecordUtil';
 import PageTitle from '@/component/common/display/PageTitle';
 import AlertModal from '@/component/layouts/common/popup/AlertModal';
 import Button from '@/component/common/button/Button';
@@ -20,6 +20,7 @@ const COLUMN_WIDTHS = {
     buyExchangeRateAtTrade: 'w-20', // 매수당시환율
     sellExchangeRateAtTrade: 'w-20',// 매도당시환율
     fxPnl: 'w-24',                  // 환차손익
+    totalPnl: 'w-28',               // 총손익
     rmk: 'w-30',                    // 비고
     manage: 'w-25',                 // 관리
 };
@@ -250,6 +251,7 @@ export default function SellRecordHistory() {
         totalRecords: filteredRecords.length,
         totalRealizedPnl: filteredRecords.reduce((sum, r) => sum + (r.realizedPnl || 0), 0),
         totalSellAmount: filteredRecords.reduce((sum, r) => sum + (r.sellPrice * r.sellQty || 0), 0),
+        totalPnlKrw: filteredRecords.reduce((sum, r) => sum + (calcTotalPnlKrw(r, fxRate) || 0), 0),
     };
 
     // 평균 매도당시환율 계산 (없는 데이터는 현재환율 사용)
@@ -331,7 +333,7 @@ export default function SellRecordHistory() {
                     </div>
 
                     {/* 통계 카드 */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 dark:from-slate-700 dark:to-slate-600">
                             <div className="text-xs text-slate-600 dark:text-slate-300 mb-1">총 매도 건수</div>
                             <div className="text-xl font-bold text-slate-900 dark:text-white">{stats.totalRecords}건</div>
@@ -358,6 +360,12 @@ export default function SellRecordHistory() {
                                 </div>
                             )}
                         </div>
+                        <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-lg p-3 dark:from-slate-700 dark:to-slate-600">
+                            <div className="text-xs text-slate-600 dark:text-slate-300 mb-1">총손익 (가격+환차)</div>
+                            <div className={`text-xl font-bold ${stats.totalPnlKrw >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                {stats.totalPnlKrw >= 0 ? '+' : ''}₩{Math.round(stats.totalPnlKrw).toLocaleString()}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -377,7 +385,7 @@ export default function SellRecordHistory() {
                         </div>
                     ) : (
                         <div className="overflow-x-auto overflow-y-auto scrollbar-always max-h-[70vh] bg-white border border-slate-200 rounded-lg shadow-sm dark:bg-slate-800 dark:border-slate-700" style={{ scrollbarGutter: 'stable' }}>
-                          <div style={{ minWidth: '1100px' }}>
+                          <div style={{ minWidth: '1200px' }}>
                             <table className="w-full table-fixed border-separate border-spacing-0">
                                 <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-700/50">
                                     <tr>
@@ -391,6 +399,7 @@ export default function SellRecordHistory() {
                                         <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.buyExchangeRateAtTrade}`}>매수당시환율</th>
                                         <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.sellExchangeRateAtTrade}`}>매도당시환율</th>
                                         <th className={`px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.fxPnl}`}>환차손익</th>
+                                        <th className={`px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.totalPnl}`}>총손익</th>
                                         <th className={`px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.rmk}`}>비고</th>
                                         <th className={`px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap ${COLUMN_WIDTHS.manage}`}>관리</th>
                                     </tr>
@@ -462,6 +471,17 @@ export default function SellRecordHistory() {
                                                     return (
                                                         <span className={`font-medium ${fxPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                                             {fxPnl >= 0 ? '+' : ''}₩{Math.round(fxPnl).toLocaleString()}
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-right">
+                                                {(() => {
+                                                    const totalPnl = calcTotalPnlKrw(record, fxRate);
+                                                    if (totalPnl === null) return <span className="text-slate-400 dark:text-slate-500">-</span>;
+                                                    return (
+                                                        <span className={`font-bold ${totalPnl >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                            {totalPnl >= 0 ? '+' : ''}₩{Math.round(totalPnl).toLocaleString()}
                                                         </span>
                                                     );
                                                 })()}

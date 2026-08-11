@@ -115,6 +115,32 @@ const getGradeStyle = (grade) => {
     return styles[grade] || 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200';
 };
 
+// [2-1] 투자판정 배지 스타일 (색각이상 친화: 파랑/노랑/회색)
+const getInvestmentSignalStyle = (signal) => {
+    const styles = {
+        '매수 후보': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+        '관심목록': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+        '관망': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+    };
+    return styles[signal] || 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+};
+const getInvestmentSignalIcon = (signal) => {
+    if (signal === '매수 후보') return '🔵';  // 🔵 파랑 (초록 대신)
+    if (signal === '관심목록') return '🟡';   // 🟡 노랑
+    return '⚪';                                    // ⚪ 회색
+};
+
+// [2-1] 타이밍 신호 스타일 (양호=파랑, 대기=노랑, 하락=주황, 관망=회색)
+const getTimingStyle = (timing) => {
+    const styles = {
+        '양호': 'text-blue-600 dark:text-blue-400 font-semibold',
+        '대기': 'text-amber-600 dark:text-amber-400 font-medium',
+        '하락': 'text-orange-600 dark:text-orange-400 font-semibold',
+        '관망': 'text-slate-500 dark:text-slate-400',
+    };
+    return styles[timing] || 'text-slate-500 dark:text-slate-400';
+};
+
 // 테이블 컬럼 정의
 const TABLE_COLUMNS = [
     {
@@ -154,27 +180,60 @@ const TABLE_COLUMNS = [
         ),
     },
     {
-        key: 'grade',
-        label: '등급',
-        width: '70px',
+        key: 'investmentSignal',
+        label: '투자판정',
+        width: '120px',
         sortable: true,
         hasDropdown: true,
         headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
         cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
         render: (value) => (
-            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${getGradeStyle(value)}`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${getInvestmentSignalStyle(value)}`}>
+                <span>{getInvestmentSignalIcon(value)}</span>
                 {value || '-'}
             </span>
         ),
     },
     {
-        key: 'totalScore',
-        label: '총점',
+        key: 'valueGrade',
+        label: '가치등급',
+        width: '90px',
+        sortable: true,
+        hasDropdown: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value, row) => (
+            <span className="inline-flex items-center gap-1">
+                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${getGradeStyle(value)}`}>
+                    {value || '-'}
+                </span>
+                {row?.valueScore != null && (
+                    <span className="text-xs text-slate-400">{row.valueScore.toFixed(0)}</span>
+                )}
+            </span>
+        ),
+    },
+    {
+        key: 'timingSignal',
+        label: '타이밍',
         width: '80px',
         sortable: true,
-        headerClassName: 'px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider',
-        cellClassName: 'px-4 py-3 whitespace-nowrap text-right font-semibold text-slate-700 dark:text-slate-200',
-        render: (value) => (value != null ? value.toFixed(1) : '-'),
+        hasDropdown: true,
+        headerClassName: 'px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider',
+        cellClassName: 'px-4 py-3 whitespace-nowrap text-center',
+        render: (value, row, { onMouseEnter, onMouseLeave }) => {
+            if (!value) return '-';
+            const timingScore = row?.timingScore;
+            return (
+                <span
+                    className={`cursor-help ${getTimingStyle(value)}`}
+                    onMouseEnter={(e) => onMouseEnter(e, row?.entryTiming?.description || (timingScore != null ? `타이밍 점수 ${timingScore}` : value))}
+                    onMouseLeave={onMouseLeave}
+                >
+                    {value}
+                </span>
+            );
+        },
     },
     {
         key: 'currentPrice',
@@ -491,7 +550,7 @@ const InvestmentEvaluation = () => {
 
     const [recentQueries, setRecentQueries] = useState([]);
     const [alertConfig, setAlertConfig] = useState({ open: false, message: '', onConfirm: null });
-    const [sortConfig, setSortConfig] = useState({ key: 'totalScore', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState({ key: 'investmentSignal', direction: 'desc' });
     const [columnFilters, setColumnFilters] = useState({}); // {key: string[]} 멀티셀렉트
     const [filterSearch, setFilterSearch] = useState({}); // 드롭다운 내 검색어
     const [openDropdown, setOpenDropdown] = useState(null);
@@ -810,6 +869,12 @@ const InvestmentEvaluation = () => {
     const sortedData = useMemo(() => {
         if (!sortConfig.key) return filteredData;
 
+        // [2-1] 카테고리형 컬럼은 의미 순서로 정렬 (알파벳순 방지)
+        const SIGNAL_RANK = { '매수 후보': 3, '관심목록': 2, '관망': 1 };
+        const TIMING_RANK = { '양호': 4, '대기': 3, '관망': 2, '하락': 1 };
+        const rankMap = sortConfig.key === 'investmentSignal' ? SIGNAL_RANK
+            : sortConfig.key === 'timingSignal' ? TIMING_RANK : null;
+
         return [...filteredData].sort((a, b) => {
             const aVal = a[sortConfig.key];
             const bVal = b[sortConfig.key];
@@ -817,6 +882,16 @@ const InvestmentEvaluation = () => {
             if (aVal == null && bVal == null) return 0;
             if (aVal == null) return 1;
             if (bVal == null) return -1;
+
+            // 카테고리형: 랭크 우선 정렬, 동순위는 가치점수 내림차순 보조
+            if (rankMap) {
+                const aRank = rankMap[aVal] || 0;
+                const bRank = rankMap[bVal] || 0;
+                if (aRank !== bRank) return sortConfig.direction === 'asc' ? aRank - bRank : bRank - aRank;
+                const aScore = a.valueScore ?? 0;
+                const bScore = b.valueScore ?? 0;
+                return bScore - aScore;
+            }
 
             // 숫자 정렬 (문자열 숫자도 처리)
             const aNum = typeof aVal === 'string' ? parseFloat(aVal) : aVal;
@@ -939,8 +1014,12 @@ const InvestmentEvaluation = () => {
             ws.columns = [
                 { header: '심볼', key: 'symbol', width: 10 },
                 { header: '기업명', key: 'companyName', width: 30 },
-                { header: '등급', key: 'grade', width: 8 },
-                { header: '총점', key: 'totalScore', width: 10 },
+                { header: '투자판정', key: 'investmentSignal', width: 12 },
+                { header: '가치등급', key: 'valueGrade', width: 10 },
+                { header: '가치점수', key: 'valueScore', width: 10 },
+                { header: '타이밍', key: 'timingSignal', width: 8 },
+                { header: '등급(레거시)', key: 'grade', width: 12 },
+                { header: '총점(레거시)', key: 'totalScore', width: 12 },
                 { header: '현재가', key: 'currentPrice', width: 12 },
                 { header: '시총', key: 'marketCap', width: 14 },
                 { header: '평균거래량', key: 'averageVolume', width: 14 },
@@ -972,6 +1051,10 @@ const InvestmentEvaluation = () => {
                 const dataRow = ws.addRow({
                     symbol: row.symbol || '',
                     companyName: row.companyName || '',
+                    investmentSignal: row.investmentSignal || '',
+                    valueGrade: row.valueGrade || '',
+                    valueScore: row.valueScore != null ? Number(row.valueScore.toFixed(1)) : '',
+                    timingSignal: row.timingSignal || '',
                     grade: row.grade || '',
                     totalScore: row.totalScore != null ? Number(row.totalScore.toFixed(1)) : '',
                     currentPrice: row.currentPrice ? `$${row.currentPrice}` : '',
@@ -1126,13 +1209,17 @@ const InvestmentEvaluation = () => {
         }
 
         try {
-            const headers = ['심볼', '기업명', '등급', '총점', '현재가', '시총', '평균거래량', '적정가치', '가격차이율', '섹터', '거래소', '국가', '추천'];
+            const headers = ['심볼', '기업명', '투자판정', '가치등급', '가치점수', '타이밍', '등급(레거시)', '총점(레거시)', '현재가', '시총', '평균거래량', '적정가치', '가격차이율', '섹터', '거래소', '국가', '추천'];
             const rows = sortedData.map((row) => {
                 const w = getPriceGapWarning(row.priceGapPercent, row);
                 const capRisk = getMarketCapRisk(row.marketCap);
                 return [
                     row.symbol || '',
                     row.companyName || '',
+                    row.investmentSignal || '',
+                    row.valueGrade || '',
+                    row.valueScore != null ? row.valueScore.toFixed(1) : '',
+                    row.timingSignal || '',
                     row.grade || '',
                     row.totalScore != null ? row.totalScore.toFixed(1) : '',
                     row.currentPrice ? `$${row.currentPrice}` : '',

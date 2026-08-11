@@ -1299,6 +1299,9 @@ const HighlightCard = ({ label, value }) => (
 /**
  * 프로파일 설정 모달 컴포넌트
  */
+// 신규 프로파일 섹터 쿼터 기본값 (%) - 한 섹터가 결과의 30%를 초과하지 않도록 제한
+const DEFAULT_SECTOR_QUOTA_PCT = 30;
+
 const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, isLoading, setIsLoading, send, filterOptions, filterOptionsLoading }) => {
     const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 250);
     const [selectedProfile, setSelectedProfile] = useState(null);
@@ -1324,6 +1327,7 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
         isFund: 'N',
         isActivelyTrading: 'Y',
         excludeNonCommonStock: 'Y',
+        sectorQuotaPct: DEFAULT_SECTOR_QUOTA_PCT,
         exchange: ['NASDAQ', 'NYSE'],
         sector: [],
         industry: [],
@@ -1492,6 +1496,8 @@ const ProfileSettingModal = ({ isOpen, onClose, profiles, onRefresh, openAlert, 
                 revenueGrowthMax: formData.revenueGrowthEnabled ? formData.revenueGrowthMax : null,
                 netIncomeGrowthMin: formData.netIncomeGrowthEnabled ? formData.netIncomeGrowthMin : null,
                 netIncomeGrowthMax: formData.netIncomeGrowthEnabled ? formData.netIncomeGrowthMax : null,
+                // 섹터 쿼터: 빈 값이면 null (미적용)
+                sectorQuotaPct: formData.sectorQuotaPct === '' ? null : formData.sectorQuotaPct,
             };
             // enabled 상태 필드는 백엔드에 보내지 않음
             delete dataToSend.marketCapEnabled;
@@ -1866,6 +1872,13 @@ const ProfileForm = ({ formData, onChange, isCreating, onSave, onDelete, onCance
                         onChange={(v) => onChange('screenerLimit', v)}
                         placeholder="10000"
                         required
+                    />
+                    <FormInput
+                        label="섹터 쿼터 % (sectorQuotaPct)"
+                        type="number"
+                        value={formData.sectorQuotaPct}
+                        onChange={(v) => onChange('sectorQuotaPct', v)}
+                        placeholder="30 (빈 값 = 미적용, 한 섹터가 결과에서 차지하는 비중 상한)"
                     />
                 </div>
             </section>

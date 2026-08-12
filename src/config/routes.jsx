@@ -15,6 +15,8 @@ import AbroadRecommendedStock from '@/pages/trade/AbroadRecommendedStock'
 import MLRetrainManagement from '@/pages/trade/MLRetrainManagement'
 import SellRecordHistory from '@/pages/trade/SellRecordHistory'
 import InvestmentEvaluation from '@/pages/trade/InvestmentEvaluation'
+import DailyPicks from '@/pages/trade/DailyPicks'
+import EvaluationPerformance from '@/pages/trade/EvaluationPerformance'
 import MyProfile from '@/pages/member/MyProfile'
 import EditProfile from '@/pages/member/EditProfile'
 import MemberManagement from '@/pages/member/MemberManagement'
@@ -72,6 +74,8 @@ const routes = {
 
     /* 거래 */
     "InvestmentEvaluation": { section: SECTIONS[3], label: '투자판단', path: '/trade/evaluation', element: <InvestmentEvaluation />, icon: Scale },
+    "DailyPicks": { section: SECTIONS[3], label: '오늘의 매수후보', path: '/trade/daily-picks', element: <DailyPicks />, icon: LayoutDashboard },
+    "EvaluationPerformance": { section: SECTIONS[3], label: '성과 추적', path: '/trade/performance', element: <EvaluationPerformance />, icon: LineChart },
     "TransactionOverview": { section: SECTIONS[3], label: '보유종목관리', path: '/transaction/overview', element: <TransactionOverview />, icon: Briefcase },
     "SellRecordHistory": { section: SECTIONS[3], label: '매도현황기록', path: '/trade/sellrecord', element: <SellRecordHistory />, icon: Receipt },
 

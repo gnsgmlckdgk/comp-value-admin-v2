@@ -3,6 +3,16 @@ import useModalAnimation from '@/hooks/useModalAnimation';
 /**
  * 오늘의 매수후보 페이지 설명 모달
  * - 데이터 생성 경로(야간 전수평가), 투자판정/가치등급/타이밍 산출 기준, 컬럼 의미 설명
+ *
+ * ⚠️ 아래 수치는 백엔드 상수를 사람이 옮겨 적은 값이라 자동 동기화되지 않는다.
+ *    해당 상수를 바꾸면 이 파일도 함께 고칠 것 (comp-value-service 기준 원본 위치):
+ *    - Step 배점(12/18/20/15/17/18), 게이트($300M·200%·2000%), 타이밍 상한(77/65),
+ *      타이밍 폴백(13/9) → EvaluationConst
+ *    - 가치등급 임계값(92/83/73/63/50)  → StockEvaluationService.calculateGrade()
+ *    - 타이밍 신호 임계값(70/50/30)     → TechnicalAnalysisService (진입 타이밍 점수)
+ *    - 배치 크기(50종목)                → RecommendedStocksEvaluator.EVAL_BATCH_SIZE
+ *    - 실행 시각(매일 00:00)            → RecommendedStocks @Scheduled(cron)
+ *    주당가치 계산 버전(V8 등)은 버전업 시 문구가 상하지 않도록 의도적으로 표기하지 않는다.
  */
 export default function DailyPicksHelpModal({ isOpen, onClose }) {
     const { shouldRender, isAnimatingOut } = useModalAnimation(isOpen, 250);
@@ -61,9 +71,9 @@ export default function DailyPicksHelpModal({ isOpen, onClose }) {
                             <li className="flex gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
                                 <span className="shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-bold flex items-center justify-center">2</span>
                                 <div>
-                                    <div className="font-semibold">추천 종목 전수 V8 평가</div>
+                                    <div className="font-semibold">추천 종목 전수 평가</div>
                                     <div className="text-xs text-slate-600 dark:text-slate-400">
-                                        모든 활성 프로파일의 추천 종목을 <strong>중복 제거</strong>한 뒤, 50종목씩 배치로 6단계 평가(V8 주당가치 + 기술적 분석)를 돌립니다.
+                                        모든 활성 프로파일의 추천 종목을 <strong>중복 제거</strong>한 뒤, 50종목씩 배치로 6단계 평가(주당가치 계산 + 기술적 분석)를 돌립니다.
                                     </div>
                                 </div>
                             </li>
@@ -299,7 +309,7 @@ export default function DailyPicksHelpModal({ isOpen, onClose }) {
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">적정가</td>
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">V8 주당가치 계산이 산출한 내재가치</td>
+                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">주당가치 계산 로직이 산출한 내재가치</td>
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">매수적정가</td>

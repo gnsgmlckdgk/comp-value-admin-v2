@@ -33,6 +33,78 @@ const formatTime = (timeStr) => {
     return `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:${timeStr.slice(4, 6)}`;
 };
 
+// 데이터 신선도 판정 기준 (추천 스케줄은 매일 1회 실행 → 하루 이상 지나면 갱신 누락 의심)
+const DATE_STR_LENGTH = 8;   // YYYYMMDD
+const TIME_STR_LENGTH = 6;   // HHMMSS
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const STALE_WARN_DAYS = 2;   // 2일 이상 경과 → 주의(노랑)
+const STALE_ALERT_DAYS = 7;  // 7일 이상 경과 → 경고(주황)
+
+// 목록의 trscDt/trscTm 중 가장 최근 값으로 "이 데이터가 언제 만들어졌는지" 산출
+const getSnapshotInfo = (rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+
+    let latest = null;
+    for (const row of rows) {
+        const dt = row?.trscDt;
+        if (typeof dt !== 'string' || dt.length !== DATE_STR_LENGTH) continue;
+        const tm = typeof row?.trscTm === 'string' ? row.trscTm : '';
+        const key = dt + tm.padEnd(TIME_STR_LENGTH, '0').slice(0, TIME_STR_LENGTH);
+        if (latest === null || key > latest) latest = key;
+    }
+    if (latest === null) return null;
+
+    const dateStr = latest.slice(0, DATE_STR_LENGTH);
+    const timeStr = latest.slice(DATE_STR_LENGTH);
+    const snapshot = new Date(
+        Number(dateStr.slice(0, 4)),
+        Number(dateStr.slice(4, 6)) - 1,
+        Number(dateStr.slice(6, 8)),
+    );
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const daysAgo = Math.floor((today - snapshot) / MS_PER_DAY);
+
+    return { dateStr, timeStr, daysAgo };
+};
+
+// 경과일 라벨 (0일=오늘, 1일=어제, 그 외 N일 전)
+const formatDaysAgo = (daysAgo) => {
+    if (daysAgo <= 0) return '오늘';
+    if (daysAgo === 1) return '어제';
+    return `${daysAgo}일 전`;
+};
+
+/**
+ * 조회 시점 배지
+ * - 스케줄 미실행 시 과거 스냅샷(Redis 24h 캐시 → DB 최신 스냅샷 폴백)이 그대로 표시되므로,
+ *   목록이 언제 만들어진 데이터인지 상단에서 바로 확인할 수 있게 한다.
+ * - 색상: 색각이상 친화 팔레트 (파랑=최신 / 노랑=주의 / 주황=오래됨)
+ */
+const SnapshotBadge = ({ info }) => {
+    if (!info) return null;
+
+    const { dateStr, timeStr, daysAgo } = info;
+    const tone = daysAgo >= STALE_ALERT_DAYS
+        ? 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800'
+        : daysAgo >= STALE_WARN_DAYS
+            ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+            : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
+
+    return (
+        <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${tone}`}
+            title="추천 스케줄이 실제로 실행된 시각입니다. 스케줄이 돌지 않으면 마지막 실행 결과가 그대로 표시됩니다."
+        >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            조회 {formatDate(dateStr)} {formatTime(timeStr)} · {formatDaysAgo(daysAgo)}
+            {daysAgo >= STALE_ALERT_DAYS && <span className="font-semibold">· 갱신 안 됨</span>}
+        </span>
+    );
+};
+
 // 필드 레이블 매핑 (영문 -> 한글)
 const FIELD_LABELS = {
     symbol: '심볼',
@@ -440,6 +512,9 @@ const AbroadRecommendedStock = () => {
     // - AND 검색: "fin&tech" → fin과 tech 모두 포함된 데이터
     // - 제외 OR 검색: "!fin|tech" → fin 또는 tech 포함된 데이터 제외 (= fin도 제외, tech도 제외)
     // - 제외 AND 검색: "!fin&tech" → fin도 제외, tech도 제외
+    // 목록 데이터의 생성 시점 (스케줄 실행 시각)
+    const snapshotInfo = useMemo(() => getSnapshotInfo(resultData), [resultData]);
+
     const filteredData = useMemo(() => {
         const activeFilters = Object.entries(columnFilters).filter(([_, value]) => value !== '');
         if (activeFilters.length === 0) return resultData;
@@ -747,7 +822,10 @@ const AbroadRecommendedStock = () => {
             {/* 조회 결과 테이블 */}
             <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700">
                 <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">추천 기업 목록</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-semibold text-slate-800 dark:text-white">추천 기업 목록</h3>
+                        <SnapshotBadge info={snapshotInfo} />
+                    </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
                             type="button"

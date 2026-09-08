@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
+import EvaluationPerformanceHelpModal from '@/component/common/display/EvaluationPerformanceHelpModal';
 
 const fmtPct = (v) => {
     if (v == null) return '-';
@@ -57,6 +58,7 @@ const EvaluationPerformance = () => {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -69,7 +71,19 @@ const EvaluationPerformance = () => {
 
     return (
         <div className="p-4 md:p-6">
-            <PageTitle />
+            <div className="flex items-start justify-between gap-3">
+                <PageTitle />
+                <button
+                    type="button"
+                    onClick={() => setIsHelpModalOpen(true)}
+                    className="mt-1 shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    title="성과 추적 페이지 설명"
+                    aria-label="성과 추적 페이지 설명"
+                >
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-xs font-bold">?</span>
+                    페이지 설명
+                </button>
+            </div>
 
             <div className="flex flex-wrap items-end gap-3 mb-4">
                 <div>
@@ -108,6 +122,8 @@ const EvaluationPerformance = () => {
             {!result && !loading && (
                 <div className="text-sm text-slate-400">기준일을 선택하고 조회하세요. 수익률은 며칠 이상 데이터가 쌓여야 유의미합니다.</div>
             )}
+
+            <EvaluationPerformanceHelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
         </div>
     );
 };

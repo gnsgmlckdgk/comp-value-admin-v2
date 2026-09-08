@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { send } from '@/util/ClientUtil';
 import PageTitle from '@/component/common/display/PageTitle';
+import DailyPicksHelpModal from '@/component/common/display/DailyPicksHelpModal';
 
 // 색각이상 친화 팔레트 (파랑/노랑/회색) — 초록 대신 파랑
 const SIGNAL_STYLE = {
@@ -37,6 +38,7 @@ const DailyPicks = () => {
     const [baseDate, setBaseDate] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [signalFilter, setSignalFilter] = useState('매수 후보');  // 기본: 매수후보만
     const [sortKey, setSortKey] = useState('valueScore');
     const [sortDir, setSortDir] = useState('desc');
@@ -98,7 +100,19 @@ const DailyPicks = () => {
 
     return (
         <div className="p-4 md:p-6">
-            <PageTitle />
+            <div className="flex items-start justify-between gap-3">
+                <PageTitle />
+                <button
+                    type="button"
+                    onClick={() => setIsHelpModalOpen(true)}
+                    className="mt-1 shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    title="오늘의 매수후보 페이지 설명"
+                    aria-label="오늘의 매수후보 페이지 설명"
+                >
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-xs font-bold">?</span>
+                    페이지 설명
+                </button>
+            </div>
 
             {/* 요약 타일 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -191,6 +205,8 @@ const DailyPicks = () => {
                     </tbody>
                 </table>
             </div>
+
+            <DailyPicksHelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
         </div>
     );
 };

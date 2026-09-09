@@ -293,7 +293,7 @@ const TABLE_COLUMNS = [
 
 /**
  * 미국 추천기업 페이지
- * - 매일 새벽 조회된 추천기업 데이터를 표시
+ * - 매일 오전 10시에 조회된 추천기업 데이터를 표시
  */
 const AbroadRecommendedStock = () => {
     const [resultData, setResultData] = useState([]);
@@ -754,7 +754,7 @@ const AbroadRecommendedStock = () => {
             <PageTitle />
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                    매일 새벽 자동으로 조회된 추천 기업 목록입니다. 행을 클릭하면 상세 정보를 볼 수 있습니다.
+                    매일 오전 10시에 자동으로 조회된 추천 기업 목록입니다. 행을 클릭하면 상세 정보를 볼 수 있습니다.
                 </p>
                 {isSuperAdmin && (
                     <div className="flex items-center gap-2">

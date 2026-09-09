@@ -2,7 +2,7 @@ import useModalAnimation from '@/hooks/useModalAnimation';
 
 /**
  * 오늘의 매수후보 페이지 설명 모달
- * - 데이터 생성 경로(야간 전수평가), 투자판정/가치등급/타이밍 산출 기준, 컬럼 의미 설명
+ * - 데이터 생성 경로(일별 전수평가), 투자판정/가치등급/타이밍 산출 기준, 컬럼 의미 설명
  *
  * ⚠️ 아래 수치는 백엔드 상수를 사람이 옮겨 적은 값이라 자동 동기화되지 않는다.
  *    해당 상수를 바꾸면 이 파일도 함께 고칠 것 (comp-value-service 기준 원본 위치):
@@ -305,7 +305,7 @@ export default function DailyPicksHelpModal({ isOpen, onClose }) {
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">현재가</td>
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400"><strong>평가 시점(야간 배치)의 주가</strong>. 실시간 가격이 아닙니다</td>
+                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400"><strong>평가 시점(오전 10시 배치)의 주가</strong>. 실시간 가격이 아닙니다</td>
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">적정가</td>
@@ -329,9 +329,9 @@ export default function DailyPicksHelpModal({ isOpen, onClose }) {
                     <section className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 p-4">
                         <div className="font-semibold text-slate-800 dark:text-slate-200 mb-2">읽을 때 주의할 점</div>
                         <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
-                            <li>표가 비어 있다면 야간 스케줄이 아직 실행되지 않았거나, 활성 추천 프로파일이 없는 경우입니다.</li>
+                            <li>표가 비어 있다면 오전 10시 스케줄이 아직 실행되지 않았거나, 활성 추천 프로파일이 없는 경우입니다.</li>
                             <li>평가 대상은 <strong>추천 프로파일이 뽑아낸 종목</strong>뿐입니다. 전 종목을 평가하는 화면이 아닙니다.</li>
-                            <li>가격·판정 모두 야간 평가 시점 기준이므로, 장중 급변한 종목은 실제와 다를 수 있습니다.</li>
+                            <li>가격·판정 모두 평가 시점(오전 10시) 기준이므로, 장중 급변한 종목은 실제와 다를 수 있습니다.</li>
                             <li>"매수 후보"는 최종 매수 지시가 아니라 <strong>1차 선별 결과</strong>입니다. 실제 성과는 성과 추적 페이지에서 검증하세요.</li>
                         </ul>
                     </section>

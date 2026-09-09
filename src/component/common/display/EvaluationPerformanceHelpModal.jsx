@@ -58,7 +58,7 @@ export default function EvaluationPerformanceHelpModal({ isOpen, onClose }) {
                         <ul className="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300">
                             <li><strong>기준일</strong>: 내가 선택한 날짜의 평가 스냅샷 (기본값은 7일 전)</li>
                             <li><strong>비교 시점</strong>: 항상 <strong>가장 최근 평가일</strong>. 즉 "기준일 → 오늘까지"의 성과입니다</li>
-                            <li>가격은 야간 평가가 이미 저장해 둔 값을 그대로 사용합니다 — <strong>조회 시 외부 시세 API를 다시 호출하지 않습니다</strong> (그래서 빠르고 FMP 호출량도 늘지 않음)</li>
+                            <li>가격은 일별 평가가 이미 저장해 둔 값을 그대로 사용합니다 — <strong>조회 시 외부 시세 API를 다시 호출하지 않습니다</strong> (그래서 빠르고 FMP 호출량도 늘지 않음)</li>
                             <li>기준일 또는 최신일 스냅샷에 가격이 없거나 기준가가 0 이하인 종목은 집계에서 제외됩니다 — 제외된 수는 <strong>추적불가</strong> 컬럼에 표시됩니다</li>
                         </ul>
                     </section>

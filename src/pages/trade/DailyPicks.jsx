@@ -31,7 +31,7 @@ const fmtPrice = (v) => (v == null ? '-' : `$${Number(v).toLocaleString('en-US',
 
 /**
  * 오늘의 매수후보 (2-2)
- * 야간 자동 전수평가 결과를 투자판정(매수후보>관심목록>관망) 순으로 표시
+ * 자동 전수평가 결과를 투자판정(매수후보>관심목록>관망) 순으로 표시
  */
 const DailyPicks = () => {
     const [rows, setRows] = useState([]);
@@ -143,7 +143,7 @@ const DailyPicks = () => {
 
             <div className="flex items-center justify-between mb-3">
                 <div className="text-sm text-slate-500 dark:text-slate-400">
-                    {baseDate && `평가 기준일: ${baseDate}`} · 야간 자동 전수평가 결과
+                    {baseDate && `평가 기준일: ${baseDate}`} · 매일 오전 10시 자동 전수평가 결과
                 </div>
                 <button
                     onClick={fetchData}
@@ -179,7 +179,7 @@ const DailyPicks = () => {
                     <tbody>
                         {filtered.length === 0 && !loading && (
                             <tr><td colSpan={COLUMNS.length} className="px-4 py-8 text-center text-slate-400">
-                                데이터가 없습니다. (야간 스케줄 실행 후 표시됩니다)
+                                데이터가 없습니다. (매일 오전 10시 스케줄 실행 후 표시됩니다)
                             </td></tr>
                         )}
                         {filtered.map((r) => (

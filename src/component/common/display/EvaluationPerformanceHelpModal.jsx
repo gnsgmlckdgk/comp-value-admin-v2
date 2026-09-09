@@ -59,7 +59,7 @@ export default function EvaluationPerformanceHelpModal({ isOpen, onClose }) {
                             <li><strong>기준일</strong>: 내가 선택한 날짜의 평가 스냅샷 (기본값은 7일 전)</li>
                             <li><strong>비교 시점</strong>: 항상 <strong>가장 최근 평가일</strong>. 즉 "기준일 → 오늘까지"의 성과입니다</li>
                             <li>가격은 야간 평가가 이미 저장해 둔 값을 그대로 사용합니다 — <strong>조회 시 외부 시세 API를 다시 호출하지 않습니다</strong> (그래서 빠르고 FMP 호출량도 늘지 않음)</li>
-                            <li>기준일 또는 최신일 스냅샷에 가격이 없거나 기준가가 0 이하인 종목은 집계에서 제외됩니다</li>
+                            <li>기준일 또는 최신일 스냅샷에 가격이 없거나 기준가가 0 이하인 종목은 집계에서 제외됩니다 — 제외된 수는 <strong>추적불가</strong> 컬럼에 표시됩니다</li>
                         </ul>
                     </section>
 
@@ -83,12 +83,30 @@ export default function EvaluationPerformanceHelpModal({ isOpen, onClose }) {
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">종목수</td>
-                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">해당 그룹에서 실제로 수익률이 계산된 종목 수 (표본 크기)</td>
+                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">
+                                            해당 그룹에서 실제로 수익률이 계산된 종목 수 (표본 크기).
+                                            뒤의 <span className="text-amber-600 dark:text-amber-400 font-semibold">(-N)</span>은 분할·병합 의심으로 제외된 종목 수
+                                        </td>
+                                    </tr>
+                                    <tr className="bg-white dark:bg-slate-800">
+                                        <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">추적불가</td>
+                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">
+                                            기준일엔 평가됐지만 <strong>최신일 스냅샷에 없어</strong> 수익률을 못 낸 종목 수
+                                            (기준가가 없던 종목 포함 — 숫자에 마우스를 올리면 내역이 나옵니다).
+                                            <strong>표본에서 통째로 빠진 종목</strong>이므로, 이 값이 크면 옆의 통계를 그대로 믿으면 안 됩니다
+                                        </td>
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
                                         <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">평균수익률</td>
                                         <td className="px-4 py-2 text-slate-600 dark:text-slate-400">
                                             그룹 내 종목 수익률의 <strong>단순 평균</strong> (금액 가중 아님 — 동일 비중으로 샀다고 가정)
+                                        </td>
+                                    </tr>
+                                    <tr className="bg-white dark:bg-slate-800">
+                                        <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">중앙값</td>
+                                        <td className="px-4 py-2 text-slate-600 dark:text-slate-400">
+                                            수익률을 크기순으로 줄세웠을 때 <strong>정확히 가운데</strong> 오는 값.
+                                            한두 종목이 크게 튀어도 흔들리지 않으므로, <strong>평균과 중앙값이 크게 다르면 평균 쪽을 의심</strong>합니다
                                         </td>
                                     </tr>
                                     <tr className="bg-white dark:bg-slate-800">
@@ -106,6 +124,30 @@ export default function EvaluationPerformanceHelpModal({ isOpen, onClose }) {
                             색상은 색각이상 친화 팔레트를 사용합니다 — <span className="text-blue-600 dark:text-blue-400 font-semibold">파랑 = 플러스</span>,
                             <span className="text-orange-600 dark:text-orange-400 font-semibold"> 주황 = 마이너스</span>.
                         </p>
+                        <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
+                            <div className="font-semibold text-slate-800 dark:text-slate-200 mb-1 text-sm">분할·병합 종목 제외</div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">
+                                액면분할·주식병합이 일어나면 실제 손익이 없어도 주가가 배수로 점프해 평균이 크게 왜곡됩니다.
+                                그래서 <strong>1일 기준 ±50%</strong>(경과일수의 제곱근에 비례해 완화 — 4일 ±100%, 25일 ±250%)를 넘는 변동은
+                                아래 순서로 성격을 따져 <strong>진짜 급등락만 집계에 남깁니다</strong>.
+                                <ol className="list-decimal ml-4 mt-1.5 space-y-0.5">
+                                    <li><strong>발행주식수</strong>가 그대로면 실제 주가 변동 → 집계에 포함. 배수로 변했으면 분할·병합 → 제외</li>
+                                    <li>주식수가 없는 과거 기록은 <strong>적정가</strong>로 판별 — 적정가가 그대로면 실제 변동(적정가는 주가에 반응하지 않음)</li>
+                                    <li>둘 다 확인이 안 되면 안전하게 제외</li>
+                                </ol>
+                                <div className="mt-1.5">제외된 종목은 종목수 옆에 건수로 표시됩니다. 적용된 한도는 조회 결과 상단에 나옵니다.</div>
+                            </div>
+                        </div>
+                        <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
+                            <div className="font-semibold text-slate-800 dark:text-slate-200 mb-1 text-sm">추천에서 빠진 종목 (표본 편향)</div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">
+                                수익률은 <strong>기준일과 최신일 스냅샷 양쪽에 모두 있는 종목</strong>으로만 계산됩니다.
+                                추천 로직은 저평가 스크리너이므로, 주가가 크게 오른 종목은 저평가 조건을 벗어나 다음 추천에서 빠지고
+                                그 시점부터 집계에서 사라집니다. 반대로 주가가 내린 종목은 더 싸져서 계속 남습니다.
+                                즉 <strong>승자가 우선적으로 빠지므로 평균수익률·승률이 실제보다 낮게</strong> 나올 수 있습니다.
+                                그 규모를 조회 결과 상단의 <strong>제외 비율</strong>과 <strong>추적불가</strong> 컬럼에서 확인하세요.
+                            </div>
+                        </div>
                     </section>
 
                     {/* 해석 방법 */}

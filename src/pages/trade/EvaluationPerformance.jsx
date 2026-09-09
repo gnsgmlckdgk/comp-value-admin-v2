@@ -17,6 +17,21 @@ const defaultFrom = () => {
     return d.toISOString().slice(0, 10);
 };
 
+const COLUMNS = ['그룹', '종목수', '추적불가', '평균수익률', '중앙값', '승률', '최고', '최저'];
+
+/**
+ * 추적불가 = 기준일엔 있었지만 수익률을 산출하지 못한 종목 수
+ * 저평가 조건을 벗어날 만큼 오른 종목이 우선적으로 추천에서 빠지므로, 이 값이 크면 집계가 실제보다 보수적이다.
+ */
+const UntrackedCell = ({ unmatched = 0, noBasePrice = 0 }) => {
+    const total = unmatched + noBasePrice;
+    if (total === 0) return <span className="text-slate-400">-</span>;
+    const detail = noBasePrice > 0
+        ? `추천 이탈 ${unmatched}종목 + 기준가 없음 ${noBasePrice}종목`
+        : `기준일 이후 추천 목록에서 빠져 수익률 산출 불가 ${unmatched}종목`;
+    return <span className="font-semibold text-amber-600 dark:text-amber-400" title={detail}>{total}</span>;
+};
+
 const SummaryTable = ({ title, data }) => (
     <div className="mb-6">
         <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">{title}</h3>
@@ -24,23 +39,38 @@ const SummaryTable = ({ title, data }) => (
             <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-800">
                     <tr>
-                        {['그룹', '종목수', '평균수익률', '승률', '최고', '최저'].map((h) => (
+                        {COLUMNS.map((h) => (
                             <th key={h} className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-right first:text-left whitespace-nowrap">{h}</th>
                         ))}
                     </tr>
                 </thead>
                 <tbody>
                     {(!data || data.length === 0) && (
-                        <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">데이터 없음</td></tr>
+                        <tr><td colSpan={COLUMNS.length} className="px-4 py-6 text-center text-slate-400">데이터 없음</td></tr>
                     )}
                     {data && data.map((s) => (
                         <tr key={s.group} className="border-t border-slate-100 dark:border-slate-800">
                             <td className="px-4 py-2.5 text-left font-medium text-slate-800 dark:text-slate-100">{s.group}</td>
-                            <td className="px-4 py-2.5 text-right text-slate-600 dark:text-slate-300">{s.count}</td>
-                            <td className="px-4 py-2.5 text-right">{fmtPct(s.avgReturnPct)}</td>
-                            <td className="px-4 py-2.5 text-right text-slate-600 dark:text-slate-300">{s.winRatePct != null ? `${s.winRatePct.toFixed(0)}%` : '-'}</td>
-                            <td className="px-4 py-2.5 text-right">{fmtPct(s.maxReturnPct)}</td>
-                            <td className="px-4 py-2.5 text-right">{fmtPct(s.minReturnPct)}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                {s.count}
+                                {s.excludedCount > 0 && (
+                                    <span
+                                        className="ml-1.5 text-xs text-amber-600 dark:text-amber-400"
+                                        title={`분할·병합 의심 또는 판별 불가로 ${s.excludedCount}종목 제외`}
+                                    >
+                                        (-{s.excludedCount})
+                                    </span>
+                                )}
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                                <UntrackedCell unmatched={s.unmatchedCount} noBasePrice={s.noBasePriceCount} />
+                            </td>
+                            {/* 집계 대상이 0종목이면 통계값이 없으므로 수치 대신 대시 표기 */}
+                            <td className="px-4 py-2.5 text-right">{s.count > 0 ? fmtPct(s.avgReturnPct) : '-'}</td>
+                            <td className="px-4 py-2.5 text-right">{s.count > 0 ? fmtPct(s.medianReturnPct) : '-'}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-600 dark:text-slate-300">{s.count > 0 && s.winRatePct != null ? `${s.winRatePct.toFixed(0)}%` : '-'}</td>
+                            <td className="px-4 py-2.5 text-right">{s.count > 0 ? fmtPct(s.maxReturnPct) : '-'}</td>
+                            <td className="px-4 py-2.5 text-right">{s.count > 0 ? fmtPct(s.minReturnPct) : '-'}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -112,8 +142,27 @@ const EvaluationPerformance = () => {
                 <>
                     <div className="mb-4 text-sm text-slate-500 dark:text-slate-400">
                         기준일 {result.baseDate || '-'} → 최신일 {result.latestDate || '-'}
+                        {result.largeMoveThresholdPct != null && (
+                            <span className="ml-2">· ±{result.largeMoveThresholdPct.toFixed(0)}% 초과 변동은 발행주식수·적정가로 분할·병합 여부를 판별</span>
+                        )}
                         {result.note && <span className="ml-2 text-amber-600 dark:text-amber-400">· {result.note}</span>}
                     </div>
+
+                    {/* 표본 편향 경고 — 추천에서 빠진 종목은 집계에서 통째로 사라지므로 그 규모를 먼저 보여준다 */}
+                    {result.baselineCount > 0 && (
+                        <div className="mb-4 rounded-lg border border-amber-100 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                            기준일 <strong>{result.baselineCount}종목</strong> 중{' '}
+                            <strong className="text-amber-700 dark:text-amber-400">
+                                {result.unmatchedCount}종목 ({result.unmatchedPct?.toFixed(1)}%)
+                            </strong>
+                            은 최신일 스냅샷에 없어 집계에서 제외됐습니다.
+                            {result.noBasePriceCount > 0 && ` (기준가 결측 ${result.noBasePriceCount}종목 별도 제외)`}
+                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                추천 로직은 저평가 스크리너이므로 주가가 오른 종목일수록 다음 추천에서 빠집니다.
+                                이 비율이 높을수록 아래 평균수익률·승률은 실제보다 낮게 나올 수 있습니다.
+                            </div>
+                        </div>
+                    )}
                     <SummaryTable title="투자판정별 성과" data={result.bySignal} />
                     <SummaryTable title="가치등급별 성과" data={result.byGrade} />
                 </>
